@@ -27,6 +27,10 @@ SCHEMA  = f"{CATALOG}.usp_strategy"
 
 def get_connection():
     token = request.headers.get("X-Forwarded-Access-Token")
+    if token:
+        app.logger.debug(f"X-Forwarded-Access-Token present: {token[:20]}...")
+    else:
+        app.logger.debug("X-Forwarded-Access-Token not present")
     return sql.connect(
         server_hostname = DATABRICKS_HOST,
         http_path       = HTTP_PATH,
@@ -940,4 +944,4 @@ def upsert_portfolio_notes(portfolio_id):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)
