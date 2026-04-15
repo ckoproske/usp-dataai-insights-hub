@@ -1,0 +1,959 @@
+from flask import Flask, request, jsonify, send_file
+from databricks import sql
+import os, uuid
+
+app = Flask(__name__)
+
+# ── Frontend routes ───────────────────────────────────────────────────────────
+
+@app.route("/")
+def index():
+    return send_file(os.path.join(os.path.dirname(__file__), "index.html"))
+
+@app.route("/dashboard.jsx")
+def dashboard():
+    return send_file(
+        os.path.join(os.path.dirname(__file__), "dashboard.jsx"),
+        mimetype="text/plain"
+    )
+
+# ── Database connection ───────────────────────────────────────────────────────
+
+DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "adb-527625614048962.2.azuredatabricks.net")
+HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/0cd0e380d94af214")
+CLIENT_ID       = os.environ.get("DATABRICKS_CLIENT_ID")
+CLIENT_SECRET   = os.environ.get("DATABRICKS_CLIENT_SECRET")
+
+CATALOG = "usp_data"
+SCHEMA  = f"{CATALOG}.usp_strategy"
+
+def get_token():
+    import urllib.request, urllib.parse, json
+    url = f"https://{DATABRICKS_HOST}/oidc/v1/token"
+    data = urllib.parse.urlencode({
+        "grant_type":    "client_credentials",
+        "client_id":     CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "scope":         "all-apis",
+    }).encode()
+    req = urllib.request.Request(url, data=data, method="POST")
+    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    with urllib.request.urlopen(req) as resp:
+        return json.loads(resp.read())["access_token"]
+
+def get_connection():
+    token = get_token()
+    return sql.connect(
+        server_hostname = DATABRICKS_HOST,
+        http_path       = HTTP_PATH,
+        access_token    = token,
+    )
+
+def query(sql_str, params=None):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql_str, params or [])
+            cols = [d[0] for d in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+def execute(sql_str, params=None):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(sql_str, params or [])
+
+def new_id():
+    return str(uuid.uuid4())
+
+# ── Health check ──────────────────────────────────────────────────────────────
+
+@app.route("/api/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TIER 1 — Strategy structure (read-only)
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/goals")
+def get_goals():
+    rows = query(f"SELECT * FROM {SCHEMA}.strategy_goals ORDER BY sort_order")
+    return jsonify(rows)
+
+@app.route("/api/portfolios")
+def get_portfolios():
+    rows = query(f"SELECT * FROM {SCHEMA}.portfolios ORDER BY sort_order")
+    return jsonify(rows)
+
+@app.route("/api/portfolios/<portfolio_id>/goals")
+def get_portfolio_goals(portfolio_id):
+    rows = query(
+        f"SELECT goal_id FROM {SCHEMA}.portfolio_goal_links WHERE portfolio_id = ?",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/bows")
+def get_all_bows():
+    rows = query(f"SELECT * FROM {SCHEMA}.bows ORDER BY sort_order")
+    return jsonify(rows)
+
+@app.route("/api/bows/<portfolio_id>")
+def get_bows_by_portfolio(portfolio_id):
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.bows WHERE portfolio_id = ? ORDER BY sort_order",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/portfolio-outcomes/<portfolio_id>")
+def get_portfolio_outcomes(portfolio_id):
+    rows = query(
+        f"""SELECT po.*
+            FROM {SCHEMA}.portfolio_outcomes po
+            WHERE po.portfolio_id = ?
+            ORDER BY po.sort_order""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/portfolio-indicators/<portfolio_id>")
+def get_portfolio_indicators(portfolio_id):
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.portfolio_indicators
+            WHERE portfolio_id = ?
+            ORDER BY outcome_id, indicator_id""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/bow-outcomes/<bow_id>")
+def get_bow_outcomes(bow_id):
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.bow_outcomes
+            WHERE bow_id = ?
+            ORDER BY sort_order""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/bow-portfolio-links/<bow_id>")
+def get_bow_portfolio_links(bow_id):
+    """Returns portfolio outcomes linked to this BOW's outcomes, with contribution type."""
+    rows = query(
+        f"""SELECT
+              l.bow_outcome_id,
+              l.portfolio_outcome_id,
+              l.contribution_type,
+              po.short_title AS portfolio_outcome_title
+            FROM {SCHEMA}.bow_portfolio_outcome_links l
+            JOIN {SCHEMA}.portfolio_outcomes po
+              ON l.portfolio_outcome_id = po.outcome_id
+            WHERE l.bow_outcome_id IN (
+              SELECT outcome_id FROM {SCHEMA}.bow_outcomes WHERE bow_id = ?
+            )
+            ORDER BY l.contribution_type, l.sort_order""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# EXECUTION TARGETS & STATUS
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/targets/<bow_id>")
+def get_targets(bow_id):
+    """Returns execution targets joined with their current status."""
+    rows = query(
+        f"""SELECT
+              t.target_id,
+              t.bow_id,
+              t.outcome_id,
+              t.year,
+              t.text,
+              t.sort_order,
+              s.completion,
+              s.notes,
+              s.last_updated,
+              s.updated_by
+            FROM {SCHEMA}.execution_targets t
+            LEFT JOIN {SCHEMA}.execution_target_status s
+              ON t.target_id = s.target_id
+             AND t.year      = s.year
+            WHERE t.bow_id = ?
+            ORDER BY t.year, t.sort_order""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/targets/<target_id>/status", methods=["POST"])
+def update_target_status(target_id):
+    """Upsert execution target status. Write to execution_target_status only — target text is read-only."""
+    data = request.json
+    year = data.get("year")
+    # Check if row exists
+    existing = query(
+        f"SELECT target_id FROM {SCHEMA}.execution_target_status WHERE target_id = ? AND year = ?",
+        [target_id, year]
+    )
+    if existing:
+        execute(
+            f"""UPDATE {SCHEMA}.execution_target_status
+                SET completion   = ?,
+                    notes        = ?,
+                    last_updated = current_timestamp(),
+                    updated_by   = ?
+                WHERE target_id  = ?
+                  AND year       = ?""",
+            [data.get("completion"), data.get("notes"),
+             data.get("updated_by", "dashboard"), target_id, year]
+        )
+    else:
+        execute(
+            f"""INSERT INTO {SCHEMA}.execution_target_status
+                (target_id, year, completion, notes, last_updated, updated_by)
+                VALUES (?, ?, ?, ?, current_timestamp(), ?)""",
+            [target_id, year, data.get("completion"), data.get("notes"),
+             data.get("updated_by", "dashboard")]
+        )
+    return jsonify({"status": "ok", "target_id": target_id})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INDICATORS & ACTUALS
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/indicators/<bow_id>")
+def get_indicators(bow_id):
+    """Returns BOW indicators with most recent actual per year."""
+    rows = query(
+        f"""SELECT
+              i.indicator_id,
+              i.bow_id,
+              i.outcome_id,
+              i.text,
+              i.data_source,
+              i.baseline,
+              i.target_2026,
+              i.target_2027,
+              i.target_2028,
+              i.target_2029,
+              i.target_2030,
+              a.year,
+              a.actual_value,
+              a.reading_date,
+              a.source_notes
+            FROM {SCHEMA}.bow_indicators i
+            LEFT JOIN (
+              SELECT a1.*
+              FROM {SCHEMA}.bow_indicator_actuals a1
+              WHERE a1.loaded_at = (
+                SELECT MAX(a2.loaded_at)
+                FROM {SCHEMA}.bow_indicator_actuals a2
+                WHERE a2.indicator_id = a1.indicator_id
+                  AND a2.year         = a1.year
+              )
+            ) a ON i.indicator_id = a.indicator_id
+            WHERE i.bow_id = ?
+            ORDER BY i.outcome_id, i.indicator_id, a.year""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/portfolio-actuals/<portfolio_id>")
+def get_portfolio_actuals(portfolio_id):
+    """Returns portfolio-level indicator actuals."""
+    rows = query(
+        f"""SELECT
+              i.indicator_id,
+              i.outcome_id,
+              i.text,
+              i.data_source,
+              i.baseline,
+              i.target_2026,
+              i.target_2027,
+              i.target_2028,
+              i.target_2029,
+              i.target_2030,
+              a.year,
+              a.actual_value,
+              a.reading_date
+            FROM {SCHEMA}.portfolio_indicators i
+            LEFT JOIN (
+              SELECT a1.*
+              FROM {SCHEMA}.portfolio_indicator_actuals a1
+              WHERE a1.loaded_at = (
+                SELECT MAX(a2.loaded_at)
+                FROM {SCHEMA}.portfolio_indicator_actuals a2
+                WHERE a2.indicator_id = a1.indicator_id
+                  AND a2.year         = a1.year
+              )
+            ) a ON i.indicator_id = a.indicator_id
+            WHERE i.portfolio_id = ?
+            ORDER BY i.outcome_id, i.indicator_id, a.year""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/goal-actuals")
+def get_goal_actuals():
+    """Returns goal-level actuals for all goals."""
+    rows = query(
+        f"""SELECT
+              g.goal_id,
+              g.metric,
+              g.unit,
+              g.goal_2030,
+              g.current_2026,
+              a.year,
+              a.actual_value,
+              a.reading_date
+            FROM {SCHEMA}.strategy_goals g
+            LEFT JOIN (
+              SELECT a1.*
+              FROM {SCHEMA}.strategy_goal_actuals a1
+              WHERE a1.loaded_at = (
+                SELECT MAX(a2.loaded_at)
+                FROM {SCHEMA}.strategy_goal_actuals a2
+                WHERE a2.goal_id = a1.goal_id
+                  AND a2.year    = a1.year
+              )
+            ) a ON g.goal_id = a.goal_id
+            ORDER BY g.sort_order, a.year"""
+    )
+    return jsonify(rows)
+
+@app.route("/api/actuals/bow/add", methods=["POST"])
+def add_bow_actual():
+    data = request.json
+    execute(
+        f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
+            (actual_id, indicator_id, bow_id, outcome_id, year,
+             actual_value, reading_date, source_notes, loaded_by, loaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+        [data.get("actual_id", new_id()), data["indicator_id"], data["bow_id"],
+         data["outcome_id"], data["year"], data["actual_value"],
+         data.get("reading_date"), data.get("source_notes"),
+         data.get("loaded_by", "dashboard")]
+    )
+    return jsonify({"status": "ok"})
+
+@app.route("/api/actuals/portfolio/add", methods=["POST"])
+def add_portfolio_actual():
+    data = request.json
+    execute(
+        f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
+            (actual_id, indicator_id, portfolio_id, outcome_id, year,
+             actual_value, reading_date, source_notes, loaded_by, loaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+        [data.get("actual_id", new_id()), data["indicator_id"], data["portfolio_id"],
+         data["outcome_id"], data["year"], data["actual_value"],
+         data.get("reading_date"), data.get("source_notes"),
+         data.get("loaded_by", "dashboard")]
+    )
+    return jsonify({"status": "ok"})
+
+@app.route("/api/actuals/goal/add", methods=["POST"])
+def add_goal_actual():
+    data = request.json
+    execute(
+        f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
+            (actual_id, goal_id, year, actual_value, reading_date,
+             source_notes, loaded_by, loaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+        [data.get("actual_id", new_id()), data["goal_id"], data["year"],
+         data["actual_value"], data.get("reading_date"),
+         data.get("source_notes"), data.get("loaded_by", "dashboard")]
+    )
+    return jsonify({"status": "ok"})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RATINGS — Claude-assessed (read) + restricted override (write)
+# Current year: read from bow_ratings / portfolio_outcome_ratings / goal_ratings
+# Historical confirmed: read from invest_bow_details (INVEST source of truth)
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/ratings/bow/<bow_id>")
+def get_bow_ratings(bow_id):
+    """Returns current Claude estimate for current year + confirmed historical from INVEST."""
+    current = query(
+        f"""SELECT
+              br.*,
+              TRUE AS is_estimate,
+              'Current year estimate — to be confirmed at annual reporting' AS rating_status
+            FROM {SCHEMA}.current_bow_ratings br
+            WHERE br.bow_id = ?""",
+        [bow_id]
+    )
+    historical = query(
+        f"""SELECT
+              b.bow_id,
+              d.Impact_Performance_Rating       AS impact_rating,
+              d.Impact_Performance_Rating_Rationale  AS impact_rationale,
+              d.Execution_Performance_Rating    AS execution_rating,
+              d.Execution_Performance_Rating_Rationale AS execution_rationale,
+              FALSE AS is_estimate,
+              'Confirmed — INVEST' AS rating_status
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.invest_bow_details d
+              ON b.invest_bow_id = d.BoW_ID
+            WHERE b.bow_id = ?""",
+        [bow_id]
+    )
+    return jsonify({"current": current, "historical": historical})
+
+@app.route("/api/ratings/portfolio/<portfolio_id>")
+def get_portfolio_ratings(portfolio_id):
+    """Returns most recent Claude estimate per portfolio outcome."""
+    rows = query(
+        f"""SELECT r.*
+            FROM {SCHEMA}.portfolio_outcome_ratings r
+            JOIN {SCHEMA}.portfolio_outcomes po
+              ON r.outcome_id = po.outcome_id
+            WHERE po.portfolio_id = ?
+              AND r.assessed_at = (
+                SELECT MAX(r2.assessed_at)
+                FROM {SCHEMA}.portfolio_outcome_ratings r2
+                WHERE r2.outcome_id = r.outcome_id
+                  AND r2.year       = r.year
+              )
+            ORDER BY po.sort_order""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/ratings/goals")
+def get_goal_ratings():
+    """Returns most recent Claude estimate per goal."""
+    rows = query(
+        f"""SELECT r.*
+            FROM {SCHEMA}.goal_ratings r
+            WHERE r.assessed_at = (
+              SELECT MAX(r2.assessed_at)
+              FROM {SCHEMA}.goal_ratings r2
+              WHERE r2.goal_id = r.goal_id
+                AND r2.year    = r.year
+            )
+            ORDER BY r.goal_id, r.year"""
+    )
+    return jsonify(rows)
+
+@app.route("/api/ratings/bow/<bow_id>/override", methods=["POST"])
+def override_bow_rating(bow_id):
+    """Restricted. Append a human override row to bow_ratings."""
+    data = request.json
+    execute(
+        f"""INSERT INTO {SCHEMA}.bow_ratings
+            (rating_id, bow_id, year,
+             impact_rating, impact_rationale, impact_override, impact_override_reasoning,
+             execution_rating, execution_rationale, execution_override, execution_override_reasoning,
+             assessed_by, assessed_at)
+            VALUES (?, ?, ?, ?, ?, TRUE, ?, ?, ?, TRUE, ?, ?, current_timestamp())""",
+        [new_id(), bow_id, data["year"],
+         data.get("impact_rating"), data.get("impact_rationale"), data.get("impact_override_reasoning"),
+         data.get("execution_rating"), data.get("execution_rationale"), data.get("execution_override_reasoning"),
+         data.get("assessed_by", "dashboard")]
+    )
+    return jsonify({"status": "ok"})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# KEY DECISIONS — multi-level
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/decisions/bow/<bow_id>")
+def get_bow_decisions(bow_id):
+    """Returns BOW-level and BOW-outcome-level decisions for a given BOW."""
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.key_decisions
+            WHERE bow_id = ?
+              AND level IN ('bow', 'bow_outcome')
+            ORDER BY status, timing""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/decisions/portfolio/<portfolio_id>")
+def get_portfolio_decisions(portfolio_id):
+    """Returns portfolio-outcome-level decisions for a given portfolio."""
+    rows = query(
+        f"""SELECT kd.*
+            FROM {SCHEMA}.key_decisions kd
+            JOIN {SCHEMA}.portfolio_outcomes po
+              ON kd.portfolio_outcome_id = po.outcome_id
+            WHERE po.portfolio_id = ?
+              AND kd.level = 'portfolio_outcome'
+            ORDER BY kd.status, kd.timing""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/decisions/goal/<goal_id>")
+def get_goal_decisions(goal_id):
+    """Returns goal-level decisions."""
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.key_decisions
+            WHERE goal_id = ?
+              AND level = 'goal'
+            ORDER BY status, timing""",
+        [goal_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/decisions/all")
+def get_all_decisions():
+    """Returns all decisions across all levels. Optional filter: ?level=bow&portfolio_id=ai-infra"""
+    level       = request.args.get("level")
+    portfolio_id = request.args.get("portfolio_id")
+    status      = request.args.get("status")
+
+    where = ["1=1"]
+    params = []
+
+    if level:
+        where.append("kd.level = ?")
+        params.append(level)
+    if status:
+        where.append("kd.status = ?")
+        params.append(status)
+    if portfolio_id:
+        where.append(f"""(
+            kd.goal_id IN (
+              SELECT goal_id FROM {SCHEMA}.portfolio_goal_links WHERE portfolio_id = ?
+            )
+            OR kd.portfolio_outcome_id IN (
+              SELECT outcome_id FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ?
+            )
+            OR kd.bow_id IN (
+              SELECT bow_id FROM {SCHEMA}.bows WHERE portfolio_id = ?
+            )
+        )""")
+        params.extend([portfolio_id, portfolio_id, portfolio_id])
+
+    rows = query(
+        f"""SELECT kd.*
+            FROM {SCHEMA}.key_decisions kd
+            WHERE {' AND '.join(where)}
+            ORDER BY kd.level, kd.status, kd.timing""",
+        params
+    )
+    return jsonify(rows)
+
+@app.route("/api/decisions/<decision_id>/update", methods=["POST"])
+def update_decision(decision_id):
+    data = request.json
+    execute(
+        f"""UPDATE {SCHEMA}.key_decisions
+            SET signals          = ?,
+                recorded_outcome = ?,
+                status           = ?,
+                last_updated     = current_timestamp(),
+                updated_by       = ?
+            WHERE decision_id    = ?""",
+        [data.get("signals"), data.get("recorded_outcome"),
+         data.get("status"), data.get("updated_by", "dashboard"),
+         decision_id]
+    )
+    return jsonify({"status": "ok", "id": decision_id})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INVESTMENTS — via INVEST views, joined through bows.invest_bow_id
+# All column names use INVEST PascalCase convention
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/investments/all")
+def get_all_investments():
+    """All investments with optional filters: ?portfolio_id=ai-infra&status=Active&year=2026"""
+    portfolio_id = request.args.get("portfolio_id")
+    status       = request.args.get("status")
+    year         = request.args.get("year")
+
+    where = ["1=1"]
+    params = []
+
+    if portfolio_id:
+        where.append("b.portfolio_id = ?")
+        params.append(portfolio_id)
+    if status:
+        where.append("i.Status = ?")
+        params.append(status)
+
+    rows = query(
+        f"""SELECT
+              i.*,
+              b.bow_id,
+              b.portfolio_id,
+              b.title AS bow_title,
+              o.internal_notes,
+              o.overlay_id
+            FROM {SCHEMA}.invest_investments i
+            JOIN {SCHEMA}.invest_bow_allocation a
+              ON i.Investment_ID = a.Investment_ID
+            JOIN {SCHEMA}.bows b
+              ON a.BoW_ID = b.invest_bow_id
+            LEFT JOIN {SCHEMA}.investment_overlays o
+              ON i.Investment_ID = o.investment_id
+            WHERE {' AND '.join(where)}
+            ORDER BY b.portfolio_id, b.sort_order, i.Investment_Name""",
+        params
+    )
+    return jsonify(rows)
+
+@app.route("/api/investments/bow/<bow_id>")
+def get_investments_by_bow(bow_id):
+    """Investments tagged to a specific BOW, joined via invest_bow_id."""
+    rows = query(
+        f"""SELECT
+              i.*,
+              a.Investment_Payment_Year,
+              a.Investment_Payment_Amount,
+              a.Investment_Payment_Status,
+              o.internal_notes,
+              o.overlay_id
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.invest_bow_allocation a
+              ON b.invest_bow_id = a.BoW_ID
+            JOIN {SCHEMA}.invest_investments i
+              ON a.Investment_ID = i.Investment_ID
+            LEFT JOIN {SCHEMA}.investment_overlays o
+              ON i.Investment_ID = o.investment_id
+            WHERE b.bow_id = ?
+            ORDER BY i.Status, i.Investment_Name""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/investments/portfolio/<portfolio_id>")
+def get_investments_by_portfolio(portfolio_id):
+    """Investments for all BOWs in a portfolio."""
+    rows = query(
+        f"""SELECT
+              i.*,
+              b.bow_id,
+              b.title AS bow_title,
+              a.Investment_Payment_Year,
+              a.Investment_Payment_Amount,
+              a.Investment_Payment_Status,
+              o.internal_notes,
+              o.overlay_id
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.invest_bow_allocation a
+              ON b.invest_bow_id = a.BoW_ID
+            JOIN {SCHEMA}.invest_investments i
+              ON a.Investment_ID = i.Investment_ID
+            LEFT JOIN {SCHEMA}.investment_overlays o
+              ON i.Investment_ID = o.investment_id
+            WHERE b.portfolio_id = ?
+            ORDER BY b.sort_order, i.Status, i.Investment_Name""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/investments/<investment_id>/bow-details")
+def get_investment_bow_details(investment_id):
+    """BOW details from INVEST for a specific investment."""
+    rows = query(
+        f"""SELECT
+              d.*,
+              b.bow_id,
+              b.portfolio_id
+            FROM {SCHEMA}.invest_bow_details d
+            JOIN {SCHEMA}.bows b
+              ON d.BoW_ID = b.invest_bow_id
+            JOIN {SCHEMA}.invest_bow_allocation a
+              ON d.BoW_ID = a.BoW_ID
+            WHERE a.Investment_ID = ?""",
+        [investment_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/investments/<investment_id>/overlay", methods=["POST"])
+def update_investment_overlay(investment_id):
+    """Upsert internal notes overlay for an investment."""
+    data = request.json
+    existing = query(
+        f"SELECT overlay_id FROM {SCHEMA}.investment_overlays WHERE investment_id = ?",
+        [investment_id]
+    )
+    if existing:
+        execute(
+            f"""UPDATE {SCHEMA}.investment_overlays
+                SET internal_notes = ?,
+                    last_updated   = current_timestamp(),
+                    updated_by     = ?
+                WHERE investment_id = ?""",
+            [data.get("internal_notes"), data.get("updated_by", "dashboard"),
+             investment_id]
+        )
+    else:
+        execute(
+            f"""INSERT INTO {SCHEMA}.investment_overlays
+                (overlay_id, investment_id, internal_notes, last_updated, updated_by)
+                VALUES (?, ?, ?, current_timestamp(), ?)""",
+            [new_id(), investment_id, data.get("internal_notes"),
+             data.get("updated_by", "dashboard")]
+        )
+    return jsonify({"status": "ok"})
+
+@app.route("/api/investments/budget-summary/<portfolio_id>")
+def get_budget_summary(portfolio_id):
+    """Payment summary by BOW for a portfolio, derived from invest_bow_allocation."""
+    rows = query(
+        f"""SELECT
+              b.bow_id,
+              b.title AS bow_title,
+              a.Investment_Payment_Year,
+              SUM(CASE WHEN a.Investment_Payment_Status = 'Paid'
+                  THEN a.Investment_Payment_Allocation_Amount ELSE 0 END) AS paid,
+              SUM(CASE WHEN a.Investment_Payment_Status != 'Paid'
+                  THEN a.Investment_Payment_Allocation_Amount ELSE 0 END) AS unpaid,
+              SUM(a.Investment_Payment_Allocation_Amount) AS total
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.invest_bow_allocation a
+              ON b.invest_bow_id = a.BoW_ID
+            WHERE b.portfolio_id = ?
+            GROUP BY b.bow_id, b.title, a.Investment_Payment_Year
+            ORDER BY b.sort_order, a.Investment_Payment_Year""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PENDING ACTUALS — submission queue
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/pending-actuals")
+def get_pending_actuals():
+    """Returns all pending submissions. Optional filter: ?status=pending"""
+    status = request.args.get("status", "pending")
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.pending_actuals
+            WHERE status = ?
+            ORDER BY submitted_at DESC""",
+        [status]
+    )
+    return jsonify(rows)
+
+@app.route("/api/pending-actuals/submit", methods=["POST"])
+def submit_actual():
+    """Submit a new actual for review. submitted_by from Databricks login."""
+    data = request.json
+    execute(
+        f"""INSERT INTO {SCHEMA}.pending_actuals
+            (pending_id, indicator_id, level, entity_id, year,
+             submitted_value, submitted_by, submitted_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
+        [new_id(), data.get("indicator_id"), data["level"],
+         data["entity_id"], data["year"], data["submitted_value"],
+         data.get("submitted_by", "dashboard")]
+    )
+    return jsonify({"status": "ok"})
+
+@app.route("/api/pending-actuals/<pending_id>/approve", methods=["POST"])
+def approve_actual(pending_id):
+    """Approve a pending actual. Moves to appropriate actuals table based on level."""
+    data = request.json
+    row = query(
+        f"SELECT * FROM {SCHEMA}.pending_actuals WHERE pending_id = ?",
+        [pending_id]
+    )
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+
+    r = row[0]
+    level    = r["level"]
+    reviewed_value = data.get("reviewed_value", r["submitted_value"])
+    reviewed_by    = data.get("reviewed_by", "dashboard")
+
+    if level == "bow":
+        execute(
+            f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
+                (actual_id, indicator_id, bow_id, outcome_id, year,
+                 actual_value, reading_date, source_notes, loaded_by, loaded_at)
+                VALUES (?, ?, ?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
+            [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
+             r["year"], reviewed_value, "pending_actuals_review", reviewed_by]
+        )
+    elif level == "portfolio":
+        execute(
+            f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
+                (actual_id, indicator_id, portfolio_id, outcome_id, year,
+                 actual_value, reading_date, source_notes, loaded_by, loaded_at)
+                VALUES (?, ?, ?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
+            [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
+             r["year"], reviewed_value, "pending_actuals_review", reviewed_by]
+        )
+    elif level == "goal":
+        execute(
+            f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
+                (actual_id, goal_id, year, actual_value, reading_date,
+                 source_notes, loaded_by, loaded_at)
+                VALUES (?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
+            [new_id(), r["entity_id"], r["year"], reviewed_value,
+             "pending_actuals_review", reviewed_by]
+        )
+
+    execute(
+        f"""UPDATE {SCHEMA}.pending_actuals
+            SET status         = 'approved',
+                reviewed_value = ?,
+                reviewed_by    = ?,
+                reviewed_at    = current_timestamp()
+            WHERE pending_id   = ?""",
+        [reviewed_value, reviewed_by, pending_id]
+    )
+    return jsonify({"status": "ok"})
+
+@app.route("/api/pending-actuals/<pending_id>/reject", methods=["POST"])
+def reject_actual(pending_id):
+    data = request.json
+    execute(
+        f"""UPDATE {SCHEMA}.pending_actuals
+            SET status      = 'rejected',
+                notes       = ?,
+                reviewed_by = ?,
+                reviewed_at = current_timestamp()
+            WHERE pending_id = ?""",
+        [data.get("notes"), data.get("reviewed_by", "dashboard"), pending_id]
+    )
+    return jsonify({"status": "ok"})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DECISION SCHEMA — confidence review (restricted access)
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/assumption-confidence")
+def get_assumption_confidence():
+    """Returns current confidence state per assumption. Optional filter: ?confidence=low"""
+    confidence = request.args.get("confidence")
+    portfolio_id = request.args.get("portfolio_id")
+
+    where = ["1=1"]
+    params = []
+
+    if confidence:
+        where.append("ac.confidence = ?")
+        params.append(confidence)
+
+    rows = query(
+        f"""SELECT ac.*
+            FROM {SCHEMA}.current_assumption_confidence ac
+            WHERE {' AND '.join(where)}
+            ORDER BY ac.confidence, ac.assumption_id""",
+        params
+    )
+    return jsonify(rows)
+
+@app.route("/api/assumption-confidence/<assumption_id>/override", methods=["POST"])
+def override_assumption_confidence(assumption_id):
+    """Restricted. Append a human override row to assumption_confidence."""
+    data = request.json
+    execute(
+        f"""INSERT INTO {SCHEMA}.assumption_confidence
+            (confidence_id, assumption_id, confidence, rationale,
+             data_considered, human_override, override_reasoning,
+             assessed_by, assessed_at)
+            VALUES (?, ?, ?, ?, ?, TRUE, ?, ?, current_timestamp())""",
+        [new_id(), assumption_id, data["confidence"], data.get("rationale"),
+         data.get("data_considered"), data.get("override_reasoning"),
+         data.get("assessed_by", "dashboard")]
+    )
+    return jsonify({"status": "ok"})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# NOTES
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/notes/bow/<bow_id>")
+def get_bow_notes(bow_id):
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.bow_notes
+            WHERE bow_id = ?
+            ORDER BY last_updated DESC""",
+        [bow_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/notes/bow/<bow_id>/upsert", methods=["POST"])
+def upsert_bow_note(bow_id):
+    data = request.json
+    outcome_id = data.get("outcome_id")
+    existing = query(
+        f"""SELECT note_id FROM {SCHEMA}.bow_notes
+            WHERE bow_id = ?
+              AND (outcome_id = ? OR (outcome_id IS NULL AND ? IS NULL))""",
+        [bow_id, outcome_id, outcome_id]
+    )
+    if existing:
+        execute(
+            f"""UPDATE {SCHEMA}.bow_notes
+                SET note_text    = ?,
+                    last_updated = current_timestamp(),
+                    updated_by   = ?
+                WHERE note_id    = ?""",
+            [data.get("note_text"), data.get("updated_by", "dashboard"),
+             existing[0]["note_id"]]
+        )
+    else:
+        execute(
+            f"""INSERT INTO {SCHEMA}.bow_notes
+                (note_id, bow_id, outcome_id, year, note_text, last_updated, updated_by)
+                VALUES (?, ?, ?, ?, ?, current_timestamp(), ?)""",
+            [new_id(), bow_id, outcome_id, data.get("year"),
+             data.get("note_text"), data.get("updated_by", "dashboard")]
+        )
+    return jsonify({"status": "ok"})
+
+@app.route("/api/notes/portfolio/<portfolio_id>")
+def get_portfolio_notes(portfolio_id):
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.portfolio_tracking
+            WHERE portfolio_id = ?
+            ORDER BY year DESC""",
+        [portfolio_id]
+    )
+    return jsonify(rows)
+
+@app.route("/api/notes/portfolio/<portfolio_id>/upsert", methods=["POST"])
+def upsert_portfolio_notes(portfolio_id):
+    data = request.json
+    year = data.get("year")
+    existing = query(
+        f"""SELECT tracking_id FROM {SCHEMA}.portfolio_tracking
+            WHERE portfolio_id = ? AND year = ?""",
+        [portfolio_id, year]
+    )
+    if existing:
+        execute(
+            f"""UPDATE {SCHEMA}.portfolio_tracking
+                SET notes            = ?,
+                    budget_annotation = ?,
+                    last_updated     = current_timestamp(),
+                    updated_by       = ?
+                WHERE tracking_id    = ?""",
+            [data.get("notes"), data.get("budget_annotation"),
+             data.get("updated_by", "dashboard"), existing[0]["tracking_id"]]
+        )
+    else:
+        execute(
+            f"""INSERT INTO {SCHEMA}.portfolio_tracking
+                (tracking_id, portfolio_id, year, notes, budget_annotation,
+                 last_updated, updated_by)
+                VALUES (?, ?, ?, ?, ?, current_timestamp(), ?)""",
+            [new_id(), portfolio_id, year, data.get("notes"),
+             data.get("budget_annotation"), data.get("updated_by", "dashboard")]
+        )
+    return jsonify({"status": "ok"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=False)
