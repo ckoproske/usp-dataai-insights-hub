@@ -5940,189 +5940,12 @@ function IconGrid() {
   );
 }
 
-// ── ExcelImportButton ─────────────────────────────────────────────────────────
-function ExcelImportButton({ onImport }) {
-  const [status, setStatus] = React.useState(null); // null | 'parsing' | 'success' | 'error'
-  const [message, setMessage] = React.useState('');
-  const [showPanel, setShowPanel] = React.useState(false);
-  const fileRef = React.useRef();
-
-  const parseExcel = async (file) => {
-    setStatus('parsing');
-    setMessage('Parsing file...');
-    try {
-      const buf = await file.arrayBuffer();
-      const { read, utils } = window.XLSX;
-      const wb = read(buf, { type: 'array' });
-
-      const result = { indicators: [], targets: [], descriptions: [] };
-
-      // Parse Indicators sheet
-      if (wb.SheetNames.includes('Indicators')) {
-        const rows = utils.sheet_to_json(wb.Sheets['Indicators'], { defval: '' });
-        rows.forEach(r => {
-          if (!r.indicator_id) return;
-          result.indicators.push({
-            bow_id: r.bow_id, outcome_id: r.outcome_id, indicator_id: r.indicator_id,
-            text: r.indicator_text, source: r.source || '', baseline: String(r.baseline || ''),
-            targets: { 2026: String(r.target_2026||''), 2027: String(r.target_2027||''), 2028: String(r.target_2028||''), 2029: String(r.target_2029||''), 2030: String(r.target_2030||'') },
-            actuals:  { 2026: String(r.actual_2026||''),  2027: String(r.actual_2027||''),  2028: String(r.actual_2028||''),  2029: String(r.actual_2029||''),  2030: String(r.actual_2030||'')  },
-          });
-        });
-      }
-
-      // Parse Execution_Targets sheet
-      if (wb.SheetNames.includes('Execution_Targets')) {
-        const rows = utils.sheet_to_json(wb.Sheets['Execution_Targets'], { defval: '' });
-        rows.forEach(r => {
-          if (!r.target_text || !r.bow_id) return;
-          result.targets.push({ bow_id: r.bow_id, outcome_id: r.outcome_id, year: Number(r.year), text: r.target_text });
-        });
-      }
-
-      // Parse Descriptions sheet
-      if (wb.SheetNames.includes('Descriptions')) {
-        const rows = utils.sheet_to_json(wb.Sheets['Descriptions'], { defval: '' });
-        rows.forEach(r => {
-          if (!r.field || !r.value) return;
-          result.descriptions.push({ entity_type: r.entity_type, portfolio_id: r.portfolio_id, bow_id: r.bow_id, outcome_id: r.outcome_id, field: r.field, value: r.value });
-        });
-      }
-
-      onImport(result);
-      const total = result.indicators.length + result.targets.length + result.descriptions.length;
-      setStatus('success');
-      setMessage(`Imported ${result.indicators.length} indicators, ${result.targets.length} targets, ${result.descriptions.length} descriptions.`);
-    } catch(e) {
-      setStatus('error');
-      setMessage('Error parsing file: ' + e.message);
-    }
-  };
-
-  return (
-    <div style={{position:"relative",display:"inline-block"}}>
-      <button onClick={()=>setShowPanel(v=>!v)}
-        style={{display:"inline-flex",alignItems:"center",gap:7,padding:"7px 16px",borderRadius:8,border:"1.5px solid "+BORDER,background:showPanel?"#F0F9FF":SURFACE,cursor:"pointer",fontSize:14,fontWeight:700,color:TEXT_SUB,transition:"all .15s"}}>
-        <span style={{fontSize:15}}>📥</span>
-        Import from Excel
-        {status==="success"&&<span style={{width:7,height:7,borderRadius:"50%",background:"#059669",display:"inline-block"}}/>}
-        {status==="error"&&<span style={{width:7,height:7,borderRadius:"50%",background:"#DC2626",display:"inline-block"}}/>}
-      </button>
-      {showPanel&&(
-        <div style={{position:"absolute",top:"calc(100% + 8px)",right:0,width:360,background:SURFACE,border:"1px solid "+BORDER,borderRadius:12,boxShadow:"0 8px 30px rgba(10,37,64,0.13)",padding:"18px 20px",zIndex:100}}>
-          <div style={{fontSize:14,fontWeight:700,color:TEXT,marginBottom:4}}>Import from Excel Template</div>
-          <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55,marginBottom:14}}>Upload the <strong>MIHub_Data_Template.xlsx</strong> file to update indicators, execution target text, and descriptions. Dashboard-only fields (ratings, completion status, notes) will not be changed.</div>
-          <input ref={fileRef} type="file" accept=".xlsx" style={{display:"none"}}
-            onChange={e=>{ if(e.target.files[0]) parseExcel(e.target.files[0]); }}/>
-          <button onClick={()=>fileRef.current.click()}
-            disabled={status==="parsing"}
-            style={{width:"100%",padding:"10px",borderRadius:8,border:"1.5px solid #2DBFAD",background:"#F0FDFB",cursor:"pointer",fontSize:14,fontWeight:700,color:"#0D9488",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-            <span>📂</span> {status==="parsing"?"Parsing…":"Choose File"}
-          </button>
-          {status&&(
-            <div style={{padding:"8px 12px",borderRadius:8,background:status==="success"?"#ECFDF5":status==="error"?"#FEF2F2":"#F0F9FF",border:"1px solid "+(status==="success"?"#BBF7D0":status==="error"?"#FCA5A5":"#BAE6FD")}}>
-              <div style={{fontSize:12,fontWeight:700,color:status==="success"?"#059669":status==="error"?"#DC2626":"#0369A1",marginBottom:2}}>{status==="success"?"✓ Import successful":status==="error"?"✗ Import failed":"⏳ Parsing"}</div>
-              <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>{message}</div>
-            </div>
-          )}
-          <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid "+BORDER,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <a href="#" onClick={e=>{e.preventDefault();alert("Download the template from the dashboard — contact Chelsea for the latest version.");}}
-              style={{fontSize:12,color:"#2DBFAD",fontWeight:600,textDecoration:"none"}}>📥 Download template</a>
-            <button onClick={()=>setShowPanel(false)} style={{fontSize:12,color:TEXT_SUB,background:"none",border:"none",cursor:"pointer"}}>Close</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
   const [data,setData] = useState(null);
   const [loading,setLoading] = useState(true);
   const [saveStatus,setSaveStatus] = useState("saved");
   const [activeView,setActiveView] = useState({type:"strategy"});
-  const [xlsxReady,setXlsxReady] = React.useState(!!window.XLSX);
-
-  React.useEffect(()=>{
-    if(window.XLSX){setXlsxReady(true);return;}
-    const s=document.createElement("script");
-    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-    s.onload=()=>setXlsxReady(true);
-    document.head.appendChild(s);
-  },[]);
-
-  const handleImport = React.useCallback((imported)=>{
-    setData(prev=>{
-      if(!prev) return prev;
-      const next = JSON.parse(JSON.stringify(prev));
-
-      // Merge indicators
-      imported.indicators.forEach(ind=>{
-        Object.values(next.portfolios).forEach(portData=>{
-          portData.bows.forEach(bow=>{
-            if(bow.id!==ind.bow_id) return;
-            bow.outcomes.forEach(o=>{
-              if(o.id!==ind.outcome_id) return;
-              const existing = o.impactIndicators.find(i=>i.id===ind.indicator_id);
-              if(existing){
-                existing.text=ind.text; existing.source=ind.source; existing.baseline=ind.baseline;
-                existing.targets=ind.targets; existing.actuals=ind.actuals;
-              }
-            });
-          });
-        });
-      });
-
-      // Merge execution target TEXT only (preserve completion/quarter/notes)
-      const targetsByBowOutcomeYear = {};
-      imported.targets.forEach(t=>{
-        const key = `${t.bow_id}|${t.outcome_id}|${t.year}`;
-        if(!targetsByBowOutcomeYear[key]) targetsByBowOutcomeYear[key]=[];
-        targetsByBowOutcomeYear[key].push(t.text);
-      });
-      Object.entries(targetsByBowOutcomeYear).forEach(([key,texts])=>{
-        const [bid,oid,yr]=key.split("|");
-        const year=Number(yr);
-        Object.values(next.portfolios).forEach(portData=>{
-          portData.bows.forEach(bow=>{
-            if(bow.id!==bid) return;
-            bow.outcomes.forEach(o=>{
-              if(o.id!==oid) return;
-              const existing = (o.executionTargets[year]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t});
-              // Update text, preserve status/quarter/notes
-              const merged = texts.map((text,i)=>{
-                const ex = existing[i];
-                return ex ? {...ex,text} : {text,completion:"Not Started",quarter:null,notes:""};
-              });
-              o.executionTargets[year]=merged;
-            });
-          });
-        });
-      });
-
-      // Merge descriptions
-      imported.descriptions.forEach(d=>{
-        Object.values(next.portfolios).forEach(portData=>{
-          if(d.entity_type==="bow"&&d.field==="description"){
-            portData.bows.forEach(bow=>{ if(bow.id===d.bow_id) bow.description=d.value; });
-          }
-          if(d.entity_type==="outcome"){
-            portData.bows.forEach(bow=>{
-              bow.outcomes.forEach(o=>{
-                if(o.id!==d.outcome_id) return;
-                if(d.field==="outcome_text") o.title=d.value;
-                if(d.field==="short_title") o.shortTitle=d.value;
-              });
-            });
-          }
-        });
-      });
-
-      return next;
-    });
-  },[]);
 
   const [usingPlaceholder, setUsingPlaceholder] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false);
@@ -6229,7 +6052,6 @@ function App() {
             )}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            {xlsxReady&&<ExcelImportButton onImport={handleImport}/>}
             {/* Save indicator */}
             <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:TEXT_MUTED}}>
               {saveStatus==="saving"&&<><span style={{width:5,height:5,borderRadius:"50%",background:YELLOW,display:"inline-block",animation:"pulse 1s ease-in-out infinite"}}/><span>Saving</span></>}
