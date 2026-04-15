@@ -6,28 +6,27 @@ const { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid,
 
 
 // ── Design System ─────────────────────────────────────────────────────────────
-// Palette: Deep slate base · warm off-white canvas · amber accent · vivid portfolio colors
-const BRAND        = "#0F1923";   // near-black slate
-const ACCENT       = "#F0A500";   // warm amber
-const ACCENT_LIGHT = "#FFF8E6";
-const ACCENT_MID   = "#FFE8A0";
-const BG           = "#F4F5F7";   // cool off-white
+// Gates Foundation brand theme: warm cream canvas, dark slate, orange accent
+const BRAND        = "#303A44";   // dark slate
+const ACCENT       = "#F85C02";   // Gates orange
+const ACCENT_LIGHT = "#FEF0E6";
+const ACCENT_MID   = "#FDDCCA";
+const BG           = "#F5F3ED";   // warm cream
 const SURFACE      = "#FFFFFF";
-const SURFACE_2    = "#F9FAFB";   // slightly off for alternating rows
-const BORDER       = "#E4E7EC";
-const BORDER_LIGHT = "#EEF0F3";
-const TEXT         = "#0F1923";
-const TEXT_SUB     = "#6B7280";
-const TEXT_MUTED   = "#9CA3AF";
-const YELLOW       = "#F0A500";
+const SURFACE_2    = "#F5F3ED";   // alternating row
+const BORDER       = "#D7CBB2";
+const BORDER_LIGHT = "#D7CBB2";
+const TEXT         = "#303A44";
+const TEXT_SUB     = "#666666";
+const TEXT_MUTED   = "#A49A8C";
+const YELLOW       = "#F85C02";
 const SIDEBAR_W    = 220;
 
-// Google Font injection — DM Sans for all text
+// Calibri body, Cambria headings — system fonts, no external dependency
 const FONT_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
   *, *::before, *::after { box-sizing: border-box; }
-  body { font-family: 'DM Sans', system-ui, sans-serif; }
-  
+  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; }
+
   @keyframes spin { to { transform: rotate(360deg) } }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -37,18 +36,18 @@ const FONT_CSS = `
   .fade-in { animation: fadeIn 0.18s ease both; }
 `;
 
-// Portfolio accent colors — vivid, intentional
+// Portfolio colors — muted tonal family per GF brand
 const PORT_COLORS = {
-  "cross-cutting": { color:"#E8437A", light:"#FDF1F5", label:"Cross Cutting Supports",  dark:"#C2295C" },
-  "ai-infra":      { color:"#7C3AED", light:"#F5F0FF", label:"AI Infrastructure",        dark:"#5B21B6" },
-  "sfl":           { color:"#0EA5E9", light:"#F0F9FF", label:"System Feedback Loops",    dark:"#0369A1" },
-  "hub":           { color:"#F0A500", light:"#FFFBEB", label:"Data & AI Enablement Hub", dark:"#B45309" },
+  "cross-cutting": { color:"#A49A8C", light:"#F5F3ED", label:"Cross Cutting Supports",  dark:"#7A7068" },
+  "ai-infra":      { color:"#3086AB", light:"#EBF4F9", label:"AI Infrastructure",        dark:"#1F5F80" },
+  "sfl":           { color:"#4EAB9A", light:"#ECF7F5", label:"System Feedback Loops",    dark:"#337A6C" },
+  "hub":           { color:"#FBAE40", light:"#FEF5E7", label:"Data & AI Enablement Hub", dark:"#C07D10" },
 };
 
 const STATUS = {
   "Exceeds Expectations":        { color:"#2563EB", bg:"#EFF6FF", pill:"#DBEAFE", label:"Exceeds Expectations" },
   "Meets Expectations":          { color:"#059669", bg:"#ECFDF5", pill:"#D1FAE5", label:"Meets Expectations" },
-  "Slightly Below Expectations": { color:"#D97706", bg:"#FFFBEB", pill:"#FEF3C7", label:"Slightly Below" },
+  "Slightly Below Expectations": { color:"#D97706", bg:"#FEF5E7", pill:"#FEF3C7", label:"Slightly Below" },
   "Below Expectations":          { color:"#DC2626", bg:"#FEF2F2", pill:"#FEE2E2", label:"Below Expectations" },
   "No Data":                     { color:"#9CA3AF", bg:"#F9FAFB", pill:"#F3F4F6", label:"Too Early to Tell" },
 };
@@ -57,7 +56,7 @@ const STATUS_ORDER = ["Exceeds Expectations","Meets Expectations","Slightly Belo
 const COMPLETION = {
   "Not Started": { color:"#9CA3AF", bg:"#F9FAFB", icon:"○", label:"Not Started" },
   "On Track":    { color:"#059669", bg:"#ECFDF5", icon:"◑", label:"On Track" },
-  "Delayed":     { color:"#D97706", bg:"#FFFBEB", icon:"⚠", label:"Delayed" },
+  "Delayed":     { color:"#D97706", bg:"#FEF5E7", icon:"⚠", label:"Delayed" },
   "Complete":    { color:"#2563EB", bg:"#EFF6FF", icon:"●", label:"Complete" },
 };
 const COMPLETION_ORDER = ["Not Started","On Track","Delayed","Complete"];
@@ -73,7 +72,7 @@ const BOW_SHORT_TITLES_CC = ["Measurement & MLE Routines","AI-Enabled Analytics"
 
 // 2030 Strategy Goals
 const STRATEGY_GOALS = [
-  { id:"g1", number:1, title:"Enable AI Solutions", color:"#6B48E8",
+  { id:"g1", number:1, title:"Enable AI Solutions", color:"#3086AB",
     target:"40% of learners reached by solutions embedding portable memory and context",
     earliest:"Q1 2026 — Annual Update in PR",
     source:"", updateFreq:"Annual",
@@ -101,7 +100,7 @@ const STRATEGY_GOALS = [
       ]},
     },
   },
-  { id:"g2", number:2, title:"Build Trusted Evidence in Education", color:"#2DBFAD",
+  { id:"g2", number:2, title:"Build Trusted Evidence in Education", color:"#4EAB9A",
     target:"50% of learners reached by solutions that have adopted evidence-based benchmarks and evaluation technology that improve safety and quality",
     earliest:"Q1 2026 — Annual Update in PR",
     source:"", updateFreq:"Annual",
@@ -131,7 +130,7 @@ const STRATEGY_GOALS = [
       ]},
     },
   },
-  { id:"g3", number:3, title:"Data-Informed Decision Making", color:"#E05252",
+  { id:"g3", number:3, title:"Data-Informed Decision Making", color:"#A49A8C",
     target:"% of district and PS data decision makers report using better, higher-quality data to support learning and advising",
     earliest:"Q4 2025 — Annual Update in PR",
     metric:"% decision makers", unit:"%", goal2030:70, current2026:28 },
@@ -232,19 +231,7 @@ const PLACEHOLDER = {
   i9:{baseline:24,data:[33,46,58,68,76],target:[40,52,63,72,82]},
 };
 
-// ── BOW Emoji Map ─────────────────────────────────────────────────────────────
-const BOW_EMOJI = {
-  "bow1": "📊",           // Advance Strategy Learning & Insight
-  "bow2": "⚙️",           // Enable Business & Strategy Execution
-  "sfl-bow1": "🌐",       // Build and Sustain EDU-Net
-  "sfl-bow2": "📍",       // Data in Place
-  "sfl-bow3": "🧬",       // Launch Competencies & Skills Genome Accelerator
-  "ai-infra-bow1": "🧠",  // Enhance Context & Personalization
-  "ai-infra-bow2": "🔬",  // Accelerate AI Evaluation, Evidence, and Guardrails
-  "ai-infra-bow3": "🚀",  // Mobilize Frontier Labs for Learner Success
-  "hub-bow1": "🛠️",       // Enable Data & AI Capabilities for Division
-};
-function getBowEmoji(id) { return BOW_EMOJI[id] || "📋"; }
+function getBowEmoji(id) { return ""; }
 
 const BOW_ACRONYM = {
   "bow1": "MLE",           // Advance Strategy Learning & Insight
@@ -280,14 +267,14 @@ const DEFAULT_DATA = {
         ],
       },
       bows:[
-        {id:"bow1",name:"Advance Strategy Learning & Insight",color:"#F0EEFF",tagColor:"#6B48E8",
+        {id:"bow1",name:"Advance Strategy Learning & Insight",color:"#EBF4F9",tagColor:"#3086AB",
           description:"The Learning & Insight Body of Work brings together measurement, learning, and evaluation (MLE) and Impact Accounting to help USP Data & AI team by supporting clear goal and target setting, tracking performance relative to expectations, timely learning, and transparent insight-sharing across BOWs, portfolios, and the broader strategy. The focus is on building practical systems that leverage an impact accounting approach to track progress toward key field goals, surface early signals, and help the data & AI team understand what is working, what is changing, and where shifts may be needed. This BoW also partners with the Data & AI Enablement Hub to ensure teams have the data and analytic tools needed to drive measurement and support stronger decision-making.\n\nOur work will strengthen the team's ability to generate and act on forward-looking insights about the data and AI ecosystem, clarifying the challenges, opportunities, and drivers of improvement that shape learner outcomes. It will deepen our understanding of where USP Data & AI has a unique role to play, illuminate the levers where philanthropy and other key actors are best positioned to accelerate progress, and highlight the assumptions and early signals that can shape our decisionmaking.",
           outcomes:[
             {id:"o1",number:1,shortTitle:"Measurement & MLE Routines",notes:"",manualStatus:null,title:"Clear measurement priorities and streamlined MLE routines equip the team with visibility into strategic progress, clarity on meaningful signals of impact, and the ability to integrate evidence into planning and decisionmaking.",executionTargets:{2026:[{text:"Establish and socialize measurement framework and reporting routines with team",completion:"On Track"},{text:"Develop MLE plans and results framework for a) strategy, b) all portfolios, and c) all BOWs",completion:"Not Started"},{text:"Launch data collection efforts and associated evaluations",completion:"Not Started"}],2027:[],2028:[],2029:[],2030:[]},impactIndicators:[{id:"i1",text:"% of team reporting high-level of clarity around measurement priorities",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"50",2027:"62",2028:"72",2029:"80",2030:"88"},actuals:{2026:"42",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i2",text:"% MLE plans completed on schedule",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"45",2027:"58",2028:"68",2029:"76",2030:"85"},actuals:{2026:"38",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i3",text:"# evaluations launched",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"40",2027:"52",2028:"63",2029:"72",2030:"82"},actuals:{2026:"30",2027:"",2028:"",2029:"",2030:""},manualStatus:null}]},
             {id:"o2",number:2,shortTitle:"AI-Enabled Analytics",notes:"",manualStatus:null,title:"The team leverages AI-enabled analytics, predictive models, and integrated dashboards to surface early signals, test assumptions, and enable faster learning cycles that inform portfolio and field strategy.",executionTargets:{2026:[{text:"Pilot Amb 45 ROI model with EDP and AI Insights KG integration",completion:"On Track"},{text:"Build Impact Forecasts and other reporting infra for all 2030 Data Goals",completion:"Not Started"},{text:"Develop Dynamic Leadership Reporting Dashboards",completion:"Not Started"}],2027:[],2028:[],2029:[],2030:[]},impactIndicators:[{id:"i4",text:"% utilization rate of TBD analytical tools",source:"",lastUpdated:"Jan 2026",updateFreq:"Quarterly",baseline:"",targets:{2026:"42",2027:"55",2028:"65",2029:"74",2030:"83"},actuals:{2026:"35",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i5",text:"% team expressing confidence in MLE data strengthening decisionmaking",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"55",2027:"65",2028:"74",2029:"82",2030:"88"},actuals:{2026:"50",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i6",text:"# dashboards deployed",source:"",lastUpdated:"",updateFreq:"",baseline:"",targets:{2026:"35",2027:"48",2028:"60",2029:"70",2030:"80"},actuals:{2026:"28",2027:"",2028:"",2029:"",2030:""},manualStatus:null}]},
             {id:"o3",number:3,shortTitle:"Cross-PST Collaboration",notes:"",manualStatus:null,title:"Cross-PST collaboration and a strong bias toward sharing insights and learning with the field deepen Data and AI team alignment, strengthen impact across the division in support of Amb45.",executionTargets:{2026:[{text:"Articulate a clear TOA for how Data and AI team enables each of the Amb 45 pillars",completion:"Not Started"},{text:"At least 3 learning routines established with PSTs",completion:"Not Started"},{text:"At least 2 technical assets uploaded to open GitHub repo",completion:"Complete"}],2027:[],2028:[],2029:[],2030:[]},impactIndicators:[{id:"i7",text:"# GitHub repo downloads",source:"",lastUpdated:"Mar 2026",updateFreq:"Real-time",baseline:"",targets:{2026:"15",2027:"30",2028:"48",2029:"64",2030:"78"},actuals:{2026:"10",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i8",text:"# learning routines established with PSTs",source:"",lastUpdated:"",updateFreq:"",baseline:"",targets:{2026:"50",2027:"60",2028:"70",2029:"78",2030:"86"},actuals:{2026:"45",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i9",text:"# cross-PST co-funded evaluations",source:"",lastUpdated:"",updateFreq:"",baseline:"",targets:{2026:"40",2027:"52",2028:"63",2029:"72",2030:"82"},actuals:{2026:"33",2027:"",2028:"",2029:"",2030:""},manualStatus:null}]},
           ]},
-        {id:"bow2",name:"Enable Business & Strategy Execution",color:"#FFF5F5",tagColor:"#E05252",description:"The Enable Business & Strategy Execution Body of Work provides operational infrastructure and coordination support across the portfolio.",outcomes:[]},
+        {id:"bow2",name:"Enable Business & Strategy Execution",color:"#F5F3ED",tagColor:"#A49A8C",description:"The Enable Business & Strategy Execution Body of Work provides operational infrastructure and coordination support across the portfolio.",outcomes:[]},
       ],
     },
     "ai-infra": {
@@ -340,7 +327,7 @@ const DEFAULT_DATA = {
       bows:[
         {
           id:"ai-infra-bow1", name:"Enhance Context & Personalization",
-          color:"#F0EEFF", tagColor:"#6B48E8", budget:"", delegate:"",
+          color:"#EBF4F9", tagColor:"#3086AB", budget:"", delegate:"",
           description:"The goal of the Enhance Context & Personalization body of work is to establish shared, safe, and reusable infrastructure that enables AI-enabled learning systems to retain and apply learner context over time, supporting more adaptive, equitable, and effective learning experiences across priority use cases.",
           outcomes:[
             {
@@ -369,7 +356,7 @@ const DEFAULT_DATA = {
         },
         {
           id:"ai-infra-bow2", name:"Accelerate AI Evaluation, Evidence, and Guardrails",
-          color:"#FFF5F5", tagColor:"#E05252", budget:"", delegate:"",
+          color:"#F5F3ED", tagColor:"#A49A8C", budget:"", delegate:"",
           description:"The goal of the Accelerate AI Evaluation, Evidence, and Guardrails body of work is to establish open, scalable evaluation infrastructure that enables developers and the field to assess the probable effectiveness and potential harms of AI-centric interventions before they reach learners and identify ways to improve effectiveness while mitigating harms for low-SES learners in high need contexts before and during deployment.",
           decisions:[
             {
@@ -458,7 +445,7 @@ const DEFAULT_DATA = {
         },
         {
           id:"ai-infra-bow3", name:"Mobilize Frontier Labs for Learner Success",
-          color:"#FFFBEB", tagColor:"#F59E0B", budget:"", delegate:"",
+          color:"#FEF5E7", tagColor:"#F59E0B", budget:"", delegate:"",
           description:"AI market power is rapidly concentrating among a small number of frontier labs. The technical decisions these actors make about model architecture, the datasets used to train and fine-tune models, contextual data integration, interoperability standards, evaluation methods, and embedded guardrails will shape not only how AI is deployed in education systems but how it is measured, improved, and governed over time.\n\nThis BoW engages frontier labs as upstream partners to align model development and infrastructure choices. The BoW does so by mobilizing frontier lab resources and expertise and directing them toward model and infrastructure improvements and beneficial deployments that advance learning acceleration, math course completion, personalized advising, and learning mobility in priority contexts.\n\nSpecifically, the foundation works with frontier labs to:\n• Advance interoperable, learner-centered infrastructure by supporting model capabilities and open standards (e.g., MCPs, contextual alignment with curricula, best-in-class tutoring standards, and competencies) that enable portable learner memory and coherent AI use across tools and institutions\n• Embed evaluation, evidence, and guardrails into model deployment in priority K–12 and postsecondary contexts",
           outcomes:[
             {
@@ -559,7 +546,7 @@ const DEFAULT_DATA = {
       },
       bows:[
         {
-          id:"sfl-bow1", name:"Build and Sustain EDU-Net", color:"#F0FDFB", tagColor:"#2DBFAD", budget:"", delegate:"",
+          id:"sfl-bow1", name:"Build and Sustain EDU-Net", color:"#ECF7F5", tagColor:"#4EAB9A", budget:"", delegate:"",
           description:"The goal of the EDU-Net body of work is to establish a trusted, secure, and interoperable network of data enclaves that connects fragmented public cross-sector and private data systems, enabling K\u201312 district and postsecondary administrators to generate deeper, timely, and actionable insights while accelerating the development and validation of AI-powered solutions that support learner success. As a shared public good, this infrastructure is designed to address the most pressing priorities of field actors, align to the Foundation's highest-leverage education and workforce priorities, and improve outcomes for learners who face the greatest barriers to economic mobility.",
           decisions:[
             {
@@ -683,7 +670,7 @@ const DEFAULT_DATA = {
           ],
         },
         {
-          id:"sfl-bow2", name:"Data in Place", color:"#F0EEFF", tagColor:"#6B48E8", budget:"", delegate:"",
+          id:"sfl-bow2", name:"Data in Place", color:"#EBF4F9", tagColor:"#3086AB", budget:"", delegate:"",
           description:"This BOW focuses on strengthening the conditions required for data- and AI-enabled solutions to be adopted, used, and sustained in service of USP program strategy goals. This body of work centers on building regional and statewide system feedback loops, data and AI readiness, and governance capacity so that integrated data translates into timely insight and action for practitioners, institutions, and policymakers.\n\nThe work is anchored in TX, WA, and CA where USP has place-based strategies and where state and regional systems are at critical inflection points. Across these contexts, the BOW advances three core objectives: enable regional system feedback loops by improving access to integrated data and accelerating time from data to insight for priority users; build data and AI readiness in place, including governance, privacy safeguards, interoperability, and human capacity for responsible adoption of AI-enabled tools; and activate implementation conditions that allow USP Data investments and PST-led solutions to be tested, adopted, and scaled in real-world settings.\n\nBy strengthening these conditions in place, this BOW enables near-term program impact while generating durable learning about how state and regional systems can support effective and equitable use of data and AI. By 2030, the goal is for 50% of districts in PW and WSI regions to achieve strategic institutional adoption of AI-enabled solutions, and for 100% of regional cross-sector data tools in those regions to reach thresholds for regular use.",
           outcomes:[
             {
@@ -733,7 +720,7 @@ const DEFAULT_DATA = {
           ],
         },
         {
-          id:"sfl-bow3", name:"Launch Competencies & Skills Genome Accelerator", color:"#FFFBEB", tagColor:"#F59E0B", budget:"", delegate:"",
+          id:"sfl-bow3", name:"Launch Competencies & Skills Genome Accelerator", color:"#FEF5E7", tagColor:"#F59E0B", budget:"", delegate:"",
           description:"Over the next four years, this body of work will integrate key competencies and skills data and public good infrastructure into AI-enabled education solutions, enabling learners, advisors, and institutions to make better-informed decisions in a rapidly changing labor market and unlocking new approaches to advising, assessment, and learner mobility. The CSGA BOW will accomplish this by creating a dynamic, AI-native public competency and skills knowledge graph that connects education and workforce data at the competency and skill level. This work will include integration and development of new data assets (e.g., course syllabi, catalogs, curricula, assessments, and transcripts; job postings, job execution measures, and task automation data), creation and deployment of a co-developed comprehensive knowledge graph with key stakeholders, tool development and refinement through demonstration pilots, and scaled use through use case-specific implementation embedded into critical education solutions.\n\nThe foundation's role includes increasing ecosystem coordination, bringing together Frontier Labs, solution providers focused on learning, and skills taxonomy developers to reduce field duplication and accelerate shared public asset dissemination and use.",
           outcomes:[
             {
@@ -776,7 +763,7 @@ const DEFAULT_DATA = {
     "hub": {
       portfolio: makePlaceholderPortfolio("hub","Data & AI Enablement Hub","The Data & AI Enablement Hub Portfolio ensures that teams across USP have the tools, resources, and capabilities needed to leverage data and AI effectively.",3,[]),
       bows:[
-        makePlaceholderBow("hub-bow1","Enable Data & AI Capabilities for Division","#FFFBEB","#F59E0B","[Placeholder] This BOW supports teams in building the skills and knowledge needed to use data and AI tools effectively.",3),
+        makePlaceholderBow("hub-bow1","Enable Data & AI Capabilities for Division","#FEF5E7","#F59E0B","[Placeholder] This BOW supports teams in building the skills and knowledge needed to use data and AI tools effectively.",3),
       ],
     },
   },
@@ -1604,7 +1591,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
             <div style={{fontSize:15,fontWeight:700,color:TEXT,textTransform:"uppercase",letterSpacing:0.8}}>AI Analysis</div>
             <span style={{fontSize:11,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.12)",borderRadius:4,padding:"2px 8px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
           </div>
-          <div style={{background:"linear-gradient(135deg, #FFFBEB 0%, #FFF8F0 100%)",borderRadius:10,border:"1px solid #FDE68A",padding:"16px 20px"}}>
+          <div style={{background:"linear-gradient(135deg, #FEF5E7 0%, #FFF8F0 100%)",borderRadius:10,border:"1px solid #FDE68A",padding:"16px 20px"}}>
             <div style={{fontSize:14,color:"#92400E",lineHeight:1.7,marginBottom:10}}>
               An AI-generated summary and assessment of progress will appear here, drawing on evidence across related BOWs and impact indicators to surface key signals, flag risks, and highlight where the work is on or off track.
             </div>
@@ -2022,7 +2009,7 @@ function BowRatingsPopover({ bow, onUpdate }) {
             {isEstimate !== undefined && (
               <span style={{ fontSize: 9, fontWeight: 600,
                 color: isEstimate ? "#D97706" : "#059669",
-                background: isEstimate ? "#FFFBEB" : "#ECFDF5",
+                background: isEstimate ? "#FEF5E7" : "#ECFDF5",
                 borderRadius: 3, padding: "1px 5px",
                 border: "1px solid " + (isEstimate ? "#FDE68A" : "#A7F3D0") }}>
                 {isEstimate ? "Estimate" : "Confirmed"}
@@ -2051,7 +2038,7 @@ function BowRatingsPopover({ bow, onUpdate }) {
           padding: "5px 13px", fontSize: 14, fontWeight: 700, borderRadius: 7,
           border: "1px solid " + BORDER, background: SURFACE,
           color: TEXT_SUB, cursor: "pointer", whiteSpace: "nowrap" }}>
-        <span style={{ fontSize: 14 }}>📊</span> BOW Ratings
+        BOW Ratings
       </button>
  
       {show && (
@@ -2525,8 +2512,7 @@ function BowReportingView({ bow, portColor }) {
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
 
       {/* ── Notice banner ── */}
-      <div style={{display:"flex",alignItems:"flex-start",gap:12,background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:10,padding:"12px 16px"}}>
-        <span style={{fontSize:16,flexShrink:0,marginTop:1}}>📋</span>
+      <div style={{display:"flex",alignItems:"flex-start",gap:12,background:"#FEF5E7",border:"1px solid #FDE68A",borderRadius:10,padding:"12px 16px"}}>
         <div>
           <div style={{fontSize:13,fontWeight:700,color:"#92400E",marginBottom:2}}>Reporting View — In Development</div>
           <div style={{fontSize:13,color:"#92400E",lineHeight:1.55,opacity:0.85}}>
@@ -2637,7 +2623,7 @@ function GoalProgressCard({ g, isPending, cardIdx }) {
         </div>
         {isPending&&(
           <div style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:YELLOW,fontWeight:600,marginTop:4}}>
-            <span>⏳</span> Portfolio targets pending
+            Portfolio targets pending
           </div>
         )}
       </div>
@@ -2669,10 +2655,10 @@ function GoalProgressCard({ g, isPending, cardIdx }) {
 const INVEST_STATUS_OPTS = [
   { id:"",           label:"No Status",     color:"#94A3B8", bg:"#F8FAFC" },
   { id:"active",     label:"Active",        color:"#059669", bg:"#ECFDF5" },
-  { id:"monitoring", label:"Monitoring",    color:"#D97706", bg:"#FFFBEB" },
+  { id:"monitoring", label:"Monitoring",    color:"#D97706", bg:"#FEF5E7" },
   { id:"at-risk",    label:"At Risk",       color:"#DC2626", bg:"#FEF2F2" },
   { id:"complete",   label:"Complete",      color:"#1D4ED8", bg:"#EFF6FF" },
-  { id:"paused",     label:"Paused",        color:"#7C3AED", bg:"#F5F3FF" },
+  { id:"paused",     label:"Paused",        color:"#3086AB", bg:"#EBF4F9" },
 ];
 
 const PLACEHOLDER_INVESTMENTS = {};
@@ -2779,7 +2765,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
   if (error) return (
     <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10,
       padding: "20px 24px", color: "#B91C1C", fontSize: 14 }}>
-      ⚠️ {error}
+      {error}
     </div>
   );
  
@@ -2842,7 +2828,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
                 Outstanding
               </div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "#F0A500", lineHeight: 1 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#F85C02", lineHeight: 1 }}>
                 {fmtM(totalOutst)}
               </div>
             </div>
@@ -2893,7 +2879,6 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
       {/* Source notice */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#EFF6FF",
         borderRadius: 8, border: "1px solid #BFDBFE", padding: "10px 16px" }}>
-        <span style={{ fontSize: 14 }}>🔗</span>
         <div style={{ fontSize: 12, color: "#1D4ED8", lineHeight: 1.5 }}>
           <strong>INVEST is the source of truth</strong> for grantee, amount, status, and dates.
           Fields marked <span style={{ background: "#DBEAFE", borderRadius: 3,
@@ -2910,7 +2895,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
               padding: "7px 12px 7px 32px", fontSize: 13, fontFamily: "inherit",
               outline: "none", color: TEXT, boxSizing: "border-box", background: SURFACE }} />
           <span style={{ position: "absolute", left: 10, top: "50%",
-            transform: "translateY(-50%)", fontSize: 13, opacity: 0.4 }}>🔍</span>
+            transform: "translateY(-50%)", fontSize: 13, opacity: 0.4 }}>&#x2315;</span>
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
           style={{ border: "1px solid " + BORDER, borderRadius: 8, padding: "7px 10px",
@@ -3261,7 +3246,7 @@ function BowDecisionsView({ bow, portColor, onUpdate }) {
 
   const STATUS_OPTS = [
     { id:"upcoming",  label:"Upcoming",    color:"#6B7A8D", bg:"#F1F5F9" },
-    { id:"active",    label:"Active",      color:"#D97706", bg:"#FFFBEB" },
+    { id:"active",    label:"Active",      color:"#D97706", bg:"#FEF5E7" },
     { id:"made",      label:"Decision Made", color:"#059669", bg:"#ECFDF5" },
   ];
 
@@ -3288,7 +3273,7 @@ function BowDecisionsView({ bow, portColor, onUpdate }) {
           <div style={{fontSize:17,fontWeight:700,color:TEXT,marginBottom:6}}>{bow.name}</div>
           <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.6,maxWidth:700}}>At key points over the life of this BOW, what decisions will need to be made — and what signals or evidence will inform those calls?</div>
         </div>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#FFFBEB",borderRadius:8,padding:"6px 14px",border:"1px solid #FDE68A",flexShrink:0}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#FEF5E7",borderRadius:8,padding:"6px 14px",border:"1px solid #FDE68A",flexShrink:0}}>
           <span style={{fontSize:14}}>🔑</span>
           <span style={{fontSize:13,fontWeight:700,color:"#92400E"}}>{decisions.length} decision{decisions.length!==1?"s":""}</span>
         </div>
@@ -3526,7 +3511,7 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:10,color:TEXT_SUB,marginBottom:1}}>{pct}% of target</div>
-                      {pending && <div style={{fontSize:10,color:YELLOW,fontWeight:600}}>⏳ Targets pending</div>}
+                      {pending && <div style={{fontSize:10,color:YELLOW,fontWeight:600}}>Targets pending</div>}
                     </div>
                   </div>
                 </div>
@@ -3667,7 +3652,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   if (error) return (
     <div style={{ background: "#FEF2F2", border: "1px solid #FECACA",
       borderRadius: 10, padding: "20px 24px", color: "#B91C1C", fontSize: 14 }}>
-      ⚠️ {error}
+      {error}
     </div>
   );
  
@@ -3784,7 +3769,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               padding: "6px 10px 6px 28px", fontSize: 12, fontFamily: "inherit",
               outline: "none", color: TEXT, boxSizing: "border-box" }} />
           <span style={{ position: "absolute", left: 9, top: "50%",
-            transform: "translateY(-50%)", fontSize: 12, opacity: 0.4 }}>🔍</span>
+            transform: "translateY(-50%)", fontSize: 12, opacity: 0.4 }}>&#x2315;</span>
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
           style={{ border: "1px solid " + BORDER, borderRadius: 8, padding: "6px 10px",
@@ -4144,7 +4129,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                           <div key={bow.id} onClick={()=>{setActiveTab("bow");setActiveBow(bow.id);setBowTab(null);setBowView("progress");setActiveBowOutcomeIdx(-1);}}
                             onMouseEnter={()=>setHoveredBow(i)} onMouseLeave={()=>setHoveredBow(null)}
                             style={{position:"relative",display:"flex",alignItems:"center",gap:8,borderRadius:8,padding:"10px 14px",background:SURFACE,border:"1px solid "+bc.tagColor+"44",borderLeft:"3px solid "+bc.tagColor,cursor:"pointer",minHeight:52,boxSizing:"border-box",transition:"box-shadow .15s",boxShadow:hoveredBow===i?"0 2px 10px rgba(0,0,0,0.08)":"none"}}>
-                            <span style={{fontSize:17,opacity:0.45,flexShrink:0}}>{getBowEmoji(bow.id)}</span>
                             <span style={{fontSize:13,fontWeight:700,color:TEXT,flex:1,lineHeight:1.3}}>{bow.name}</span>
                             <span style={{fontSize:13,fontWeight:600,color:bc.tagColor,flexShrink:0}}>→</span>
                             {hoveredBow===i&&bow.description&&(
@@ -4367,11 +4351,10 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               {/* BOW name row */}
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:22,opacity:0.4}}>{getBowEmoji(currentBow.id)}</span>
                   <span style={{fontSize:16,fontWeight:700,color:TEXT}}>{currentBow.name}</span>
                   <span style={{fontSize:11,fontWeight:600,color:TEXT_MUTED,background:BG,borderRadius:5,padding:"2px 7px",border:"1px solid "+BORDER}}>Body of Work</span>
                 </div>
-                <span style={{background:"#FFFBEB",color:"#92400E",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700,border:"1px solid #FDE68A"}}>WIP</span>
+                <span style={{background:"#FEF5E7",color:"#92400E",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700,border:"1px solid #FDE68A"}}>WIP</span>
                 <div style={{marginLeft:"auto"}}>
                   <BowRatingsPopover bow={currentBow} onUpdate={updated=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:updated))}/>
                 </div>
@@ -4545,10 +4528,10 @@ function GoalExplorer({ strategyRatings }) {
   const isAnyHovered = !!hovered;
 
   const PORTS = [
-    {id:"ai-infra",       label:"AI Infrastructure",          color:"#6B48E8", light:"#F0EEFF"},
-    {id:"sfl",            label:"System Feedback Loops",       color:"#06B6D4", light:"#ECFEFF"},
-    {id:"cross-cutting",  label:"Cross Cutting Supports",      color:"#EC4899", light:"#FDF2F8"},
-    {id:"hub",            label:"Data & AI Enablement Hub",    color:"#F59E0B", light:"#FFFBEB", note:"Enables all"},
+    {id:"ai-infra",       label:"AI Infrastructure",          color:"#3086AB", light:"#EBF4F9"},
+    {id:"sfl",            label:"System Feedback Loops",       color:"#4EAB9A", light:"#ECF7F5"},
+    {id:"cross-cutting",  label:"Cross Cutting Supports",      color:"#A49A8C", light:"#F5F3ED"},
+    {id:"hub",            label:"Data & AI Enablement Hub",    color:"#FBAE40", light:"#FEF5E7", note:"Enables all"},
   ];
 
   return (
@@ -4778,7 +4761,7 @@ function MomentumHeatmap({ points }) {
           </div>
 
           {/* National summary for active indicator */}
-          <div style={{background:"#FFFBEB",borderRadius:8,border:"1px solid #FDE68A",padding:"12px 14px"}}>
+          <div style={{background:"#FEF5E7",borderRadius:8,border:"1px solid #FDE68A",padding:"12px 14px"}}>
             <div style={{fontSize:11,fontWeight:700,color:"#92400E",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>National Avg.</div>
             <div style={{fontSize:22,fontWeight:800,color:"#B45309"}}>
               {Math.round(Object.values(STATE_COVERAGE).reduce((s,d)=>s+(d.v[activeIdx]||0),0)/Object.keys(STATE_COVERAGE).length)}%
@@ -4802,7 +4785,7 @@ function GoalDetailChart({ g }) {
   // ── Goals 1 & 2: line chart Y-o-Y left + interactive breakout right ──────────
   if (g.chartType === "bar-grouped") {
     const C_INSTRUCTION = "#0A2540";
-    const C_ADVISING    = "#6B48E8";
+    const C_ADVISING    = "#3086AB";
     const [expanded, setExpanded] = useState(null);
 
     const allRows = [
@@ -4989,7 +4972,7 @@ function GoalDetailChart({ g }) {
   if (g.chartType === "stacked-bar-leverage") {
     const LEVER_COLORS = {
       philanthropic: "#0A2540",
-      hyperscalers:  "#6B48E8",
+      hyperscalers:  "#3086AB",
       vcImpact:      "#F59E0B",
       public:        "#94A3B8",
     };
@@ -5084,7 +5067,7 @@ function GoalDetailChart({ g }) {
   // ── Goal 4: E-W Momentum Points horizontal bar chart + US heatmap ────────────
   if (g.chartType === "momentum-points") {
     const AMBER = "#F59E0B";
-    const AMBER_LIGHT = "#FFFBEB";
+    const AMBER_LIGHT = "#FEF5E7";
     const AMBER_MID = "#FDE68A";
     const points = g.momentumPoints.filter(p => p.short !== "All 5 (Composite)");
     const composite = g.momentumPoints.find(p => p.short === "All 5 (Composite)");
@@ -5240,7 +5223,7 @@ function GoalRatingDisplay({ goalId, goalRatings }) {
             {rs.label}
           </span>
           <span style={{ fontSize: 10, fontWeight: 600, color: "#D97706",
-            background: "#FFFBEB", borderRadius: 3, padding: "1px 6px",
+            background: "#FEF5E7", borderRadius: 3, padding: "1px 6px",
             border: "1px solid #FDE68A" }}>
             Current year estimate
           </span>
@@ -5320,7 +5303,6 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
             <DataMeta source={g.source} lastUpdated={g.earliest?.split("—")[0]?.trim()} updateFreq={g.updateFreq||"Annual"}/>
             {g.note && (
               <div style={{display:"flex",alignItems:"flex-start",gap:7,marginTop:8,padding:"8px 12px",background:"#EFF6FF",borderRadius:7,border:"1px solid #BFDBFE",maxWidth:600}}>
-                <span style={{fontSize:13,flexShrink:0,marginTop:1}}>💡</span>
                 <span style={{fontSize:12,color:"#1D4ED8",lineHeight:1.55}}>{g.note}</span>
               </div>
             )}
@@ -5334,7 +5316,7 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
         {/* AI Analysis Panel */}
         {showAI&&(
           <AIAnalysisPanel
-            portColor={{color:"#6B48E8",light:"#F0EEFF"}}
+            portColor={{color:"#3086AB",light:"#EBF4F9"}}
             onClose={()=>setShowAI(false)}
             context={JSON.stringify({
               goal: g.title,
@@ -5382,7 +5364,7 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
         </div>
 
         {/* Ambition 2045 — vertical RH sidebar */}
-        <div style={{width:220,flexShrink:0,borderLeft:"1px solid "+BORDER,background:"#FFFBEB",padding:"22px 18px",display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{width:220,flexShrink:0,borderLeft:"1px solid "+BORDER,background:"#FEF5E7",padding:"22px 18px",display:"flex",flexDirection:"column",gap:14}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
               <span style={{fontSize:16}}>⭐</span>
@@ -5485,7 +5467,7 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
             const pct = Math.round((g.current2026/g.goal2030)*100);
             // Performance color: green ≥90%, blue ≥70%, yellow ≥50%, red <50%
             const perfColor = pct >= 90 ? "#059669" : pct >= 70 ? "#2563EB" : pct >= 50 ? "#D97706" : "#DC2626";
-            const perfBg    = pct >= 90 ? "#ECFDF5" : pct >= 70 ? "#EFF6FF" : pct >= 50 ? "#FFFBEB" : "#FEF2F2";
+            const perfBg    = pct >= 90 ? "#ECFDF5" : pct >= 70 ? "#EFF6FF" : pct >= 50 ? "#FEF5E7" : "#FEF2F2";
             const perfBorder= pct >= 90 ? "#6EE7B7" : pct >= 70 ? "#BFDBFE" : pct >= 50 ? "#FDE68A" : "#FECACA";
             return (
               <div key={g.id}
@@ -5628,7 +5610,6 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
             borderBottom:"1px solid "+(detailPort?detailPort.color:detailBowPort?.color||BORDER)+"33",
             display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              {detailBow && <span style={{fontSize:18,opacity:0.5}}>{getBowEmoji(detailBow.id)}</span>}
               {detailPort && <span style={{width:10,height:10,borderRadius:"50%",background:detailPort.color,display:"inline-block"}}/>}
               <div>
                 <div style={{fontSize:10,fontWeight:600,color:(detailPort?detailPort.color:detailBowPort?.color),textTransform:"uppercase",letterSpacing:1.5,marginBottom:2}}>
@@ -6009,7 +5990,7 @@ function App() {
   const updateBows = (portId,bows) => setData(prev=>({...prev,portfolios:{...prev.portfolios,[portId]:{...prev.portfolios[portId],bows}}}));
 
   if(loading) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:16,background:BG,fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:16,background:BG,fontFamily:"Calibri,'Segoe UI',Arial,sans-serif"}}>
       <style>{FONT_CSS}</style>
       <div style={{width:36,height:36,border:"2.5px solid "+BORDER,borderTopColor:ACCENT,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
       <div style={{fontSize:14,color:TEXT_MUTED,letterSpacing:0.3}}>Loading…</div>
@@ -6029,7 +6010,7 @@ function App() {
     : (activePortData?.portfolio?.name || pc?.label || "");
 
   return (
-    <div style={{fontFamily:"'DM Sans',system-ui,sans-serif",minHeight:"100vh",background:BG,display:"flex",color:TEXT}}>
+    <div style={{fontFamily:"Calibri,'Segoe UI',Arial,sans-serif",minHeight:"100vh",background:BG,display:"flex",color:TEXT}}>
       <style>{FONT_CSS}</style>
       <Sidebar activeView={activeView} onNavigate={setActiveView} data={data}/>
 
@@ -6062,15 +6043,13 @@ function App() {
         </div>
 
         {/* Dev banner */}
-        <div style={{background:"#FFFBEB",borderBottom:"1px solid #FDE68A",padding:"7px 36px",display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:12,flexShrink:0}}>⚠️</span>
+        <div style={{background:"#FEF5E7",borderBottom:"1px solid #FDE68A",padding:"7px 36px",display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:12,color:"#92400E"}}><strong>In Development — Do Not Distribute.</strong> All indicators, targets, and progress data are placeholder values.</span>
         </div>
 
         {/* API / placeholder banner */}
         {usingPlaceholder && (
           <div style={{background:"#EFF6FF",borderBottom:"1px solid #BFDBFE",padding:"6px 36px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:12,flexShrink:0}}>{apiAvailable ? "📊" : "🔌"}</span>
             <span style={{fontSize:12,color:"#1D4ED8"}}>
               {apiAvailable
                 ? <><strong>Connected to Databricks</strong> — tables are empty. Showing placeholder data. Seed the tables to see live data.</>
@@ -6081,7 +6060,6 @@ function App() {
         )}
         {!usingPlaceholder && (
           <div style={{background:"#ECFDF5",borderBottom:"1px solid #6EE7B7",padding:"6px 36px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:12,flexShrink:0}}>✅</span>
             <span style={{fontSize:12,color:"#065F46"}}>
               <strong>Live data</strong> — connected to <code>usp_data.usp_strategy</code>.
             </span>
