@@ -6550,39 +6550,15 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio }) {
       {/* Hero block */}
       <div style={{
         background:BRAND, borderRadius:16, padding:"36px 40px",
-        display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:40,
         position:"relative", overflow:"hidden",
       }}>
-        <div style={{position:"absolute",top:-60,right:220,width:320,height:320,borderRadius:"50%",background:"radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%)",pointerEvents:"none"}}/>
-        <div style={{flex:1,position:"relative"}}>
+        <div style={{position:"absolute",top:-60,right:80,width:320,height:320,borderRadius:"50%",background:"radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%)",pointerEvents:"none"}}/>
+        <div style={{position:"relative"}}>
           <div style={{fontSize:10,fontWeight:600,letterSpacing:3,textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:12}}>
-            Ambition 2045 · Vision
+            USP Data & AI Strategy Vision
           </div>
-          <div style={{fontSize:20,lineHeight:1.7,color:"rgba(255,255,255,0.88)",maxWidth:680,fontWeight:400}}>
-            "By 2045 all learners—especially those historically underserved—and the adults who support them are empowered by safe, evidence-based, AI-enabled solutions that deliver personalized experiences."
-          </div>
-        </div>
-        <div style={{flexShrink:0,minWidth:180,position:"relative"}}>
-          <div style={{fontSize:10,fontWeight:600,letterSpacing:2.5,textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:12}}>Portfolios</div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {[
-              {id:"ai-infra",label:"AI Infrastructure"},
-              {id:"sfl",label:"System Feedback Loops"},
-              {id:"hub",label:"Data & AI Enablement Hub"},
-              {id:"cross-cutting",label:"Cross Cutting Supports"},
-            ].map(p=>{
-              const pc = PORT_COLORS[p.id];
-              return (
-                <button key={p.id} onClick={()=>onNavigateToPortfolio&&onNavigateToPortfolio(p.id)}
-                  style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",cursor:"pointer",textAlign:"left",transition:"all .15s",width:"100%"}}
-                  onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
-                  onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"}>
-                  <span style={{width:7,height:7,borderRadius:"50%",background:pc.color,flexShrink:0}}/>
-                  <span style={{fontSize:12,fontWeight:500,color:"rgba(255,255,255,0.75)",flex:1}}>{p.label}</span>
-                  <span style={{fontSize:10,color:"rgba(255,255,255,0.25)"}}>↗</span>
-                </button>
-              );
-            })}
+          <div style={{fontSize:22,lineHeight:1.7,color:"rgba(255,255,255,0.92)",fontWeight:600}}>
+            By 2045 all learners—especially those historically underserved—and the adults who support them are empowered by safe, evidence-based, AI-enabled solutions that deliver personalized experiences.
           </div>
         </div>
       </div>
