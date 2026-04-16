@@ -1398,7 +1398,7 @@ function IndicatorTile({ ind, iIdx, activeYear, editingInd, setEditingInd, onCha
   const yrIdx = YEARS.indexOf(activeYear);
   const isEditing = editingInd===iIdx;
   return (
-    <div style={{flexShrink:0,width:ind._fluid?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE,scrollSnapAlign:"start"}}>
+    <div style={{flexShrink:0,width:ind._fluid?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE}}>
       <div style={{padding:"14px 16px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
           <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.5,flex:1}}>{ind.text}</div>
@@ -1505,7 +1505,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
       <div style={{display:"flex",alignItems:"flex-start",minHeight:0}}>
 
         {/* Left — Execution */}
-        <div style={{flex:"0 0 300px",borderRight:"1px solid "+BORDER,padding:"18px 20px"}}>
+        <div style={{flex:"0 0 360px",borderRight:"1px solid "+BORDER,padding:"18px 20px"}}>
           {/* Year selector */}
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:14,flexWrap:"wrap"}}>
             <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginRight:2}}>Year</span>
@@ -1544,7 +1544,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
         {/* Right — Impact Indicators */}
         <div style={{flex:1,minWidth:0,padding:"18px 20px"}}>
           <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:14}}>Impact Indicators</div>
-          <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:8,scrollSnapType:"x mandatory"}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
             {outcome.impactIndicators.map((ind,i)=>{
               if(!ind.text) return null;
               return <IndicatorTile key={ind.id} ind={ind} iIdx={i} activeYear={activeYear}
