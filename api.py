@@ -58,6 +58,25 @@ def new_id():
 def health():
     return jsonify({"status": "ok"})
 
+@app.route("/api/debug")
+def debug():
+    """Temporary endpoint — surfaces the actual DB connection error instead of swallowing it."""
+    token = request.headers.get("X-Forwarded-Access-Token")
+    result = {
+        "token_present": bool(token),
+        "token_prefix": token[:20] if token else None,
+        "host": DATABRICKS_HOST,
+        "http_path": HTTP_PATH,
+    }
+    try:
+        rows = query(f"SELECT COUNT(*) as n FROM {SCHEMA}.strategy_goals")
+        result["db_status"] = "ok"
+        result["strategy_goals_count"] = rows[0]["n"] if rows else 0
+    except Exception as e:
+        result["db_status"] = "error"
+        result["error"] = str(e)
+    return jsonify(result)
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TIER 1 — Strategy structure (read-only)
