@@ -4820,6 +4820,55 @@ function AIInfraToa() {
   );
 }
 
+// ── Portfolio Overview — By the Numbers ──────────────────────────────────────
+function PortfolioByTheNumbers({ portId, portColor }) {
+  const pc = portColor || { color: ACCENT };
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const toNum = v => parseFloat(String(v||"0").replace(/[^0-9.]/g,""))||0;
+    loadAllInvestments({ portfolio_id: portId }).then(rows => {
+      if (cancelled) return;
+      const total = rows.reduce((s, inv) => s + toNum(inv.amount), 0);
+      setStats({ count: rows.length, totalBudget: total });
+    }).catch(() => {
+      if (!cancelled) setStats({ count: 0, totalBudget: 0 });
+    });
+    return () => { cancelled = true; };
+  }, [portId]);
+
+  const fmtM = n => {
+    if (!n) return "—";
+    if (n >= 1000000) return `$${(n/1000000).toFixed(1)}M`;
+    if (n >= 1000) return `$${Math.round(n/1000)}K`;
+    return `$${n}`;
+  };
+
+  const loading = stats === null;
+  const STATS = [
+    { label:"Investments",          value: loading ? "…" : String(stats.count||"0"),  sub:"grants & contracts" },
+    { label:"% Co-funded",          value: "—",                                        sub:"with other teams" },
+    { label:"Partners",             value: "—",                                        sub:"key external relationships" },
+    { label:"Total Budget",         value: loading ? "…" : fmtM(stats.totalBudget),   sub:"committed investment" },
+  ];
+
+  return (
+    <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 28px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
+      <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:18}}>By the Numbers</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+        {STATS.map((stat,i) => (
+          <div key={i} style={{padding:"18px 20px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
+            <div style={{fontSize:32,fontWeight:700,color:stat.value==="—"||stat.value==="…"?TEXT_MUTED:pc.color,marginBottom:6,letterSpacing:-1,lineHeight:1}}>{stat.value}</div>
+            <div style={{fontSize:13,fontWeight:600,color:TEXT,marginBottom:3}}>{stat.label}</div>
+            <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── PortfolioDashboard (per-portfolio full view) ───────────────────────────────
 function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, onUpdateBows, onNavigateToOutcome, onNavigateToBow, strategyRatings, onUpdateStrategyRatings }) {
   const { portfolio, bows } = portData;
@@ -5132,22 +5181,12 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 </div>
               </div>
 
-              {/* "drives toward" bridge */}
-              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 28px",background:SURFACE,borderTop:"1px solid "+BORDER}}>
-                <div style={{flex:1,height:1,background:`linear-gradient(to right, ${pc.color}30, transparent)`}}/>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 14px",borderRadius:20,border:"1px solid "+pc.color+"33",background:pc.color+"08"}}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M5 1 L5 7 M2 4.5 L5 7.5 L8 4.5" stroke={pc.color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
-                  </svg>
-                  <span style={{fontSize:9,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,opacity:0.8}}>drives toward</span>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M5 1 L5 7 M2 4.5 L5 7.5 L8 4.5" stroke={pc.color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
-                  </svg>
-                </div>
-                <div style={{flex:1,height:1,background:`linear-gradient(to left, ${pc.color}30, transparent)`}}/>
+            </div>
+            <PortfolioByTheNumbers portId={portId} portColor={pc}/>
+            <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
+              <div style={{padding:"16px 28px 12px",borderBottom:"1px solid "+BORDER}}>
+                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Key 2030 Goals</div>
               </div>
-
-              {/* 2030 Goals strip — full width, dynamic */}
               <PortfolioGoalsStrip goals={PORT_GOAL_MAP[portId]||[]} portId={portId} portColor={pc} ratings={strategyRatings||{}} onUpdateRatings={onUpdateStrategyRatings||(_=>{})} goalRatings={portData?.goalRatings||{}}/>
             </div>
           </div>
