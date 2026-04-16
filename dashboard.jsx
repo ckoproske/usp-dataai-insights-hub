@@ -1391,58 +1391,18 @@ function DataMeta({ source, lastUpdated, updateFreq, style }) {
 }
 
 // ── IndicatorTile ─────────────────────────────────────────────────────────────
-function IndicatorTile({ ind, iIdx, activeYear, editingInd, setEditingInd, onChangeManualStatus, onChangeBaseline, onChangeTargets, onChangeActuals, onChangeSource }) {
+function IndicatorTile({ ind, iIdx, activeYear }) {
   const { baseline:baselineVal, actuals:actualVals, targets:targetVals } = getIndData(ind);
   const sc = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
   const lineData = YEARS.map((yr,j)=>({year:String(yr),Actual:actualVals[j],Target:targetVals[j]}));
   const yrIdx = YEARS.indexOf(activeYear);
-  const isEditing = editingInd===iIdx;
   return (
     <div style={{flexShrink:0,width:ind._fluid?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE}}>
       <div style={{padding:"14px 16px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
-          <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.5,flex:1}}>{ind.text}</div>
-          <button onClick={e=>{e.stopPropagation();setEditingInd(isEditing?null:iIdx);}} style={{fontSize:11,fontWeight:600,cursor:"pointer",borderRadius:5,padding:"2px 9px",border:"1px solid "+(isEditing?ACCENT:BORDER),background:isEditing?ACCENT_LIGHT:BG,color:isEditing?ACCENT:TEXT_SUB,whiteSpace:"nowrap",flexShrink:0}}>{isEditing?"Done":"Update"}</button>
+        <div style={{marginBottom:6}}>
+          <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.5}}>{ind.text}</div>
         </div>
         <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
-        {isEditing&&(
-          <div style={{marginTop:10,padding:"12px",background:SURFACE,border:"1px solid "+BORDER,borderRadius:10}}>
-            <div style={{fontSize:13,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Update Data</div>
-            <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFC",borderRadius:8,border:"1px solid "+BORDER}}>
-              <div style={{fontSize:14,fontWeight:700,color:TEXT_SUB,marginBottom:4}}>Baseline</div>
-              <input value={ind.baseline||""} onChange={e=>onChangeBaseline(e.target.value)} placeholder="Enter baseline value" style={{width:"100%",border:"1px solid "+BORDER,borderRadius:5,padding:"5px 8px",fontSize:14,fontFamily:"inherit",outline:"none",color:TEXT,boxSizing:"border-box",background:SURFACE}}/>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
-              {YEARS.map((yr,j)=>(
-                <div key={yr}>
-                  <div style={{fontSize:12,fontWeight:700,color:activeYear===yr?ACCENT:TEXT_SUB,marginBottom:3,textAlign:"center"}}>{yr}</div>
-                  <div style={{marginBottom:3}}>
-                    <div style={{fontSize:9,color:TEXT_SUB,marginBottom:1}}>Target</div>
-                    <input value={ind.targets[yr]||""} onChange={e=>onChangeTargets({...ind.targets,[yr]:e.target.value})} style={{width:"100%",border:"1px solid "+BORDER,borderRadius:4,padding:"3px 5px",fontSize:13,fontFamily:"inherit",outline:"none",color:TEXT,boxSizing:"border-box",background:SURFACE_2}}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:9,color:TEXT_SUB,marginBottom:1}}>Actual</div>
-                    <input value={ind.actuals[yr]||""} onChange={e=>onChangeActuals({...ind.actuals,[yr]:e.target.value})} style={{width:"100%",border:"1px solid "+BORDER,borderRadius:4,padding:"3px 5px",fontSize:13,fontFamily:"inherit",outline:"none",color:TEXT,boxSizing:"border-box",background:"#F0FDF9"}}/>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:13,color:TEXT_SUB,minWidth:80}}>Source URL:</span>
-                <input value={ind.source||""} onChange={e=>onChangeSource(e.target.value)} placeholder="https://…" style={{flex:1,border:"1px solid "+BORDER,borderRadius:5,padding:"4px 8px",fontSize:13,fontFamily:"inherit",outline:"none",color:TEXT}}/>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:13,color:TEXT_SUB,minWidth:80}}>Last updated:</span>
-                <input value={ind.lastUpdated||""} onChange={e=>onChangeSource&&onChangeSource(ind.source||"",e.target.value,ind.updateFreq||"")} placeholder="e.g. Jan 2026" style={{flex:1,border:"1px solid "+BORDER,borderRadius:5,padding:"4px 8px",fontSize:13,fontFamily:"inherit",outline:"none",color:TEXT}}/>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:13,color:TEXT_SUB,minWidth:80}}>Frequency:</span>
-                <input value={ind.updateFreq||""} onChange={e=>onChangeSource&&onChangeSource(ind.source||"",ind.lastUpdated||"",e.target.value)} placeholder="e.g. Annual" style={{flex:1,border:"1px solid "+BORDER,borderRadius:5,padding:"4px 8px",fontSize:13,fontFamily:"inherit",outline:"none",color:TEXT}}/>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:"1px solid "+BORDER}}>
         <div style={{padding:"10px 12px",borderRight:"1px solid "+BORDER,textAlign:"center"}}>
