@@ -1563,31 +1563,6 @@ function BowOutcomePanel({ outcome, onUpdate }) {
 
       </div>
 
-      {/* Full-width bottom: Notes + AI Analysis */}
-      <div style={{borderTop:"1px solid "+BORDER,padding:"18px 20px",display:"flex",flexDirection:"column",gap:20}}>
-        <div>
-          <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:8}}>Notes and Next Steps</div>
-          <textarea value={outcome.notes||""} onChange={e=>onUpdate({...outcome,notes:e.target.value})} placeholder="Add notes, action items, or next steps"
-            style={{width:"100%",minHeight:80,border:"1px solid "+BORDER,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:TEXT,background:"#FFFDF5",resize:"vertical",lineHeight:1.7,boxSizing:"border-box",outline:"none"}}/>
-        </div>
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-            <span style={{fontSize:14}}>✦</span>
-            <div style={{fontSize:13,fontWeight:700,color:TEXT,textTransform:"uppercase",letterSpacing:0.8}}>AI Analysis</div>
-            <span style={{fontSize:10,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.12)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
-          </div>
-          <div style={{background:"linear-gradient(135deg, #FEF5E7 0%, #FFF8F0 100%)",borderRadius:10,border:"1px solid #FDE68A",padding:"14px 18px"}}>
-            <div style={{fontSize:13,color:"#92400E",lineHeight:1.7,marginBottom:8}}>
-              An AI-generated summary and assessment of progress will appear here, drawing on evidence across related BOWs and impact indicators to surface key signals, flag risks, and highlight where the work is on or off track.
-            </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {["Progress Summary","Risk Signals","Evidence Gaps","Recommended Actions"].map(tag=>(
-                <span key={tag} style={{fontSize:11,fontWeight:600,color:"#B45309",background:"rgba(180,83,9,0.08)",borderRadius:5,padding:"2px 9px",border:"1px solid rgba(180,83,9,0.15)"}}>{tag}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
