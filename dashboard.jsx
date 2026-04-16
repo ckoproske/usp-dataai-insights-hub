@@ -4866,6 +4866,55 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:0}}>
+      {/* Persistent portfolio banner — always visible */}
+      <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER}}>
+        <div style={{height:4,background:`linear-gradient(90deg, ${pc.color}, ${pc.color}88)`}}/>
+        <div style={{padding:"20px 28px 18px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:28}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:600,letterSpacing:2.5,textTransform:"uppercase",color:pc.color,marginBottom:8,opacity:0.9}}>Portfolio</div>
+            <div style={{fontSize:24,color:TEXT,marginBottom:10,fontWeight:400,letterSpacing:-0.3}}>{portfolio.name||pc.label}</div>
+            <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,maxWidth:680}}>{portfolio.description}</div>
+          </div>
+          <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"stretch",gap:10,minWidth:260}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>Bodies of Work</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {bows.map((bow,i)=>{
+                  const bc = BOW_COLORS_MAP[i]||BOW_COLORS_MAP[0];
+                  return (
+                    <div key={bow.id} onClick={()=>{setActiveTab("bow");setActiveBow(bow.id);setBowTab(null);setBowView("progress");setActiveBowOutcomeIdx(-1);}}
+                      onMouseEnter={()=>setHoveredBow(i)} onMouseLeave={()=>setHoveredBow(null)}
+                      style={{position:"relative",display:"flex",alignItems:"center",gap:8,borderRadius:8,padding:"10px 14px",background:SURFACE,border:"1px solid "+bc.tagColor+"44",borderLeft:"3px solid "+bc.tagColor,cursor:"pointer",minHeight:52,boxSizing:"border-box",transition:"box-shadow .15s",boxShadow:hoveredBow===i?"0 2px 10px rgba(0,0,0,0.08)":"none"}}>
+                      <span style={{fontSize:13,fontWeight:700,color:TEXT,flex:1,lineHeight:1.3}}>{bow.name}</span>
+                      <span style={{fontSize:13,fontWeight:600,color:bc.tagColor,flexShrink:0}}>→</span>
+                      {hoveredBow===i&&bow.description&&(
+                        <div style={{position:"absolute",bottom:"calc(100% + 6px)",right:0,width:280,background:SURFACE,border:"1px solid "+bc.tagColor+"55",borderRadius:8,padding:"10px 12px",boxShadow:"0 4px 16px rgba(10,37,64,0.12)",zIndex:10,pointerEvents:"none"}}>
+                          <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>{bow.description.split('\n\n')[0].slice(0,160)}{bow.description.length>160?"…":""}</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {hasTeam&&(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
+                <button onClick={()=>setShowTeam(v=>!v)}
+                  style={{display:"inline-flex",alignItems:"center",gap:6,background:showTeam?pc.color:SURFACE,color:showTeam?"#fff":TEXT_SUB,border:"1px solid "+(showTeam?pc.color:BORDER),borderRadius:8,padding:"7px 14px",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                  <span style={{fontSize:14}}>{showTeam?"✕":"👥"}</span>
+                  {showTeam?"Close":"Team Structure"}
+                </button>
+                {showTeam&&(
+                  <div style={{background:SURFACE,borderRadius:10,border:"1px solid "+BORDER,padding:"14px 16px",boxShadow:"0 4px 20px rgba(10,37,64,0.1)",minWidth:260}}>
+                    <div style={{fontSize:12,fontWeight:700,color:ACCENT,textTransform:"uppercase",letterSpacing:0.8,marginBottom:10}}>Team Structure</div>
+                    {isCrossC ? <OrgChart compact/> : <SFLOrgChart compact/>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
         {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Insights"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"}].map(tab=>{
@@ -4925,58 +4974,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       <div style={{padding:"28px 32px"}}>
         {activeTab==="portfolio-overview"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            {/* Portfolio hero */}
             <div style={{borderRadius:14,overflow:"hidden",border:"1px solid "+BORDER,background:SURFACE,boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-              {/* Color accent bar */}
-              <div style={{height:4,background:`linear-gradient(90deg, ${pc.color}, ${pc.color}88)`}}/>
-              <div style={{padding:"24px 28px 20px",borderBottom:"1px solid "+BORDER,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:28}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:10,fontWeight:600,letterSpacing:2.5,textTransform:"uppercase",color:pc.color,marginBottom:8,opacity:0.9}}>Portfolio</div>
-                  <div style={{fontSize:24,color:TEXT,marginBottom:10,fontWeight:400,letterSpacing:-0.3}}>{portfolio.name||pc.label}</div>
-                  <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,maxWidth:680}}>{portfolio.description}</div>
-                </div>
-                {/* Right: BOWs + Team button */}
-                <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"stretch",gap:10,minWidth:260}}>
-                  {/* BOW buttons */}
-                  <div>
-                    <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>Bodies of Work</div>
-                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                      {bows.map((bow,i)=>{
-                        const bc = BOW_COLORS_MAP[i]||BOW_COLORS_MAP[0];
-                        return (
-                          <div key={bow.id} onClick={()=>{setActiveTab("bow");setActiveBow(bow.id);setBowTab(null);setBowView("progress");setActiveBowOutcomeIdx(-1);}}
-                            onMouseEnter={()=>setHoveredBow(i)} onMouseLeave={()=>setHoveredBow(null)}
-                            style={{position:"relative",display:"flex",alignItems:"center",gap:8,borderRadius:8,padding:"10px 14px",background:SURFACE,border:"1px solid "+bc.tagColor+"44",borderLeft:"3px solid "+bc.tagColor,cursor:"pointer",minHeight:52,boxSizing:"border-box",transition:"box-shadow .15s",boxShadow:hoveredBow===i?"0 2px 10px rgba(0,0,0,0.08)":"none"}}>
-                            <span style={{fontSize:13,fontWeight:700,color:TEXT,flex:1,lineHeight:1.3}}>{bow.name}</span>
-                            <span style={{fontSize:13,fontWeight:600,color:bc.tagColor,flexShrink:0}}>→</span>
-                            {hoveredBow===i&&bow.description&&(
-                              <div style={{position:"absolute",bottom:"calc(100% + 6px)",right:0,width:280,background:SURFACE,border:"1px solid "+bc.tagColor+"55",borderRadius:8,padding:"10px 12px",boxShadow:"0 4px 16px rgba(10,37,64,0.12)",zIndex:10,pointerEvents:"none"}}>
-                                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>{bow.description.split('\n\n')[0].slice(0,160)}{bow.description.length>160?"…":""}</div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  {/* Team button */}
-                  {hasTeam&&(
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
-                      <button onClick={()=>setShowTeam(v=>!v)}
-                        style={{display:"inline-flex",alignItems:"center",gap:6,background:showTeam?pc.color:SURFACE,color:showTeam?"#fff":TEXT_SUB,border:"1px solid "+(showTeam?pc.color:BORDER),borderRadius:8,padding:"7px 14px",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                        <span style={{fontSize:14}}>{showTeam?"✕":"👥"}</span>
-                        {showTeam?"Close":"Team Structure"}
-                      </button>
-                      {showTeam&&(
-                        <div style={{background:SURFACE,borderRadius:10,border:"1px solid "+BORDER,padding:"14px 16px",boxShadow:"0 4px 20px rgba(10,37,64,0.1)",minWidth:260}}>
-                          <div style={{fontSize:12,fontWeight:700,color:ACCENT,textTransform:"uppercase",letterSpacing:0.8,marginBottom:10}}>Team Structure</div>
-                          {isCrossC ? <OrgChart compact/> : <SFLOrgChart compact/>}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
               {/* Activity → Outcome pairs, full width */}
               <div style={{display:"flex",alignItems:"stretch"}}>
                 <div style={{padding:"24px 28px",background:SURFACE,flex:1,borderTop:"1px solid "+BORDER}}>
