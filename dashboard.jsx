@@ -6646,7 +6646,6 @@ function App() {
             <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:TEXT_MUTED}}>
               {saveStatus==="saving"&&<><span style={{width:5,height:5,borderRadius:"50%",background:YELLOW,display:"inline-block",animation:"pulse 1s ease-in-out infinite"}}/><span>Saving</span></>}
               {saveStatus==="saved"&&<><span style={{width:5,height:5,borderRadius:"50%",background:"#10B981",display:"inline-block"}}/><span>Saved</span></>}
-              {saveStatus==="error"&&<><span style={{width:5,height:5,borderRadius:"50%",background:"#EF4444",display:"inline-block"}}/><span>Error</span></>}
             </div>
           </div>
         </div>
