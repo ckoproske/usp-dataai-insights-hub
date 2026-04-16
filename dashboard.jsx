@@ -1764,10 +1764,6 @@ function PortfolioOutcomesView({ portfolio, bows, portColor, onChange, initialId
           </div>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0}}>
             <AIAnalysisButton onClick={()=>setShowAI(v=>!v)} isOpen={showAI}/>
-            <div>
-              <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Overall Rating</div>
-              <OutcomeRatingCycler value={po.manualStatus} onChange={v=>updateIndicator(null,"manualStatus",v,true)}/>
-            </div>
           </div>
         </div>
 
@@ -1893,20 +1889,11 @@ function PortfolioOutcomePanel({ po, poIdx, onChange, portShortTitles }) {
             <div style={{fontSize:17,fontWeight:700,lineHeight:1.5,color:TEXT,letterSpacing:-0.2,marginBottom:6}}>{po.outcome}</div>
             <div style={{fontSize:14,color:TEXT_SUB}}>{"→ "+po.activity}</div>
           </div>
-          <span style={{background:manualRs?manualRs.pill:"#F1F5F9",color:manualRs?manualRs.color:"#94A3B8",borderRadius:7,padding:"5px 14px",fontSize:14,fontWeight:700,flexShrink:0,border:"1px solid "+(manualRs?manualRs.color+"44":"#E4EAF0")}}>
-            {manualRs?manualRs.label:"Rating not set"}
-          </span>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:"1px solid "+BORDER,background:SURFACE_2}}>
-        <div style={{padding:"12px 20px",borderRight:"1px solid "+BORDER}}>
-          <div style={{fontSize:13,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Overall Rating</div>
-          <OutcomeRatingCycler value={po.manualStatus} onChange={v=>onChange(null,"manualStatus",v,true)}/>
-        </div>
-        <div style={{padding:"12px 20px"}}>
-          <div style={{fontSize:13,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Impact (Auto)</div>
-          {impactStatus?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:impactStatus.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:impactStatus.color}}>{impactStatus.label}</span></div>:<span style={{fontSize:14,color:TEXT_SUB}}>No data</span>}
-        </div>
+      <div style={{padding:"10px 20px",borderBottom:"1px solid "+BORDER,background:SURFACE_2,display:"flex",alignItems:"center",gap:8}}>
+        <div style={{fontSize:13,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginRight:4}}>Impact</div>
+        {impactStatus?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:impactStatus.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:impactStatus.color}}>{impactStatus.label}</span></div>:<span style={{fontSize:14,color:TEXT_SUB}}>No data</span>}
       </div>
       <div style={{padding:"20px 24px"}}>
         <div style={{fontSize:14,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:14}}>Impact Indicators</div>
