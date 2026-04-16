@@ -1398,31 +1398,16 @@ function IndicatorTile({ ind, iIdx, activeYear, editingInd, setEditingInd, onCha
   const yrIdx = YEARS.indexOf(activeYear);
   const isEditing = editingInd===iIdx;
   return (
-    <div style={{flexShrink:0,width:ind._fluid?"100%":440,border:"1px solid "+BORDER,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 6px rgba(10,37,64,0.06)",background:SURFACE,scrollSnapAlign:"start"}}>
-      <div style={{padding:"16px 20px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
-        {/* Subtle label row */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <span style={{fontSize:11,fontWeight:600,color:TEXT_SUB,opacity:0.55,textTransform:"uppercase",letterSpacing:0.7}}>Indicator {iIdx+1}</span>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <StatusBadge status={ind.manualStatus||autoSuggestStatus(ind)} autoSuggested={!ind.manualStatus}/>
-            <button onClick={e=>{e.stopPropagation();setEditingInd(isEditing?null:iIdx);}} style={{fontSize:12,fontWeight:600,cursor:"pointer",borderRadius:6,padding:"3px 10px",border:"1px solid "+(isEditing?ACCENT:BORDER),background:isEditing?ACCENT_LIGHT:BG,color:isEditing?ACCENT:TEXT_SUB,whiteSpace:"nowrap"}}>{isEditing?"Done":"Update"}</button>
-          </div>
+    <div style={{flexShrink:0,width:ind._fluid?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE,scrollSnapAlign:"start"}}>
+      <div style={{padding:"14px 16px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
+          <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.5,flex:1}}>{ind.text}</div>
+          <button onClick={e=>{e.stopPropagation();setEditingInd(isEditing?null:iIdx);}} style={{fontSize:11,fontWeight:600,cursor:"pointer",borderRadius:5,padding:"2px 9px",border:"1px solid "+(isEditing?ACCENT:BORDER),background:isEditing?ACCENT_LIGHT:BG,color:isEditing?ACCENT:TEXT_SUB,whiteSpace:"nowrap",flexShrink:0}}>{isEditing?"Done":"Update"}</button>
         </div>
-        {/* Indicator text — primary focus */}
-        <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.55,marginBottom:(ind.source||ind.lastUpdated||ind.updateFreq)?8:0}}>{ind.text}</div>
         <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
         {isEditing&&(
           <div style={{marginTop:10,padding:"12px",background:SURFACE,border:"1px solid "+BORDER,borderRadius:10}}>
-            <div style={{fontSize:15,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Update Data Values</div>
-            <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFC",borderRadius:8,border:"1px solid "+BORDER}}>
-              <div style={{fontSize:14,fontWeight:700,color:TEXT_SUB,marginBottom:6}}>Manual Rating Override</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {STATUS_ORDER.map(s=>(
-                  <button key={s} onClick={()=>onChangeManualStatus(ind.manualStatus===s?null:s)} style={{fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:6,cursor:"pointer",border:"1px solid "+STATUS[s].color+"55",background:ind.manualStatus===s?STATUS[s].pill:"transparent",color:STATUS[s].color}}>{STATUS[s].label}</button>
-                ))}
-                {ind.manualStatus&&<button onClick={()=>onChangeManualStatus(null)} style={{fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:6,cursor:"pointer",border:"1px solid "+BORDER,background:"transparent",color:TEXT_SUB}}>Clear</button>}
-              </div>
-            </div>
+            <div style={{fontSize:13,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Update Data</div>
             <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFC",borderRadius:8,border:"1px solid "+BORDER}}>
               <div style={{fontSize:14,fontWeight:700,color:TEXT_SUB,marginBottom:4}}>Baseline</div>
               <input value={ind.baseline||""} onChange={e=>onChangeBaseline(e.target.value)} placeholder="Enter baseline value" style={{width:"100%",border:"1px solid "+BORDER,borderRadius:5,padding:"5px 8px",fontSize:14,fontFamily:"inherit",outline:"none",color:TEXT,boxSizing:"border-box",background:SURFACE}}/>
@@ -1516,46 +1501,50 @@ function BowOutcomePanel({ outcome, onUpdate }) {
   const addExec = () => onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:[...targets,{text:"",completion:"Not Started"}]}});
   return (
     <div style={{background:SURFACE,borderRadius:"0 0 12px 12px",border:"1px solid "+BORDER,borderTop:"none"}}>
-      <div style={{padding:"20px 24px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:22}}>
-          <span style={{fontSize:15,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginRight:4}}>Year</span>
-          {YEARS.map(yr=>{
-            const items=(outcome.executionTargets[yr]||[]).map(t=>typeof t==="string"?{completion:"Not Started"}:t);
-            const dot=items.length>0?(items.every(t=>migrateCompletion(t.completion)==="Complete")?"#059669":YELLOW):null;
-            return <button key={yr} onClick={()=>setActiveYear(yr)} style={{padding:"5px 16px",fontSize:15,fontWeight:700,borderRadius:20,cursor:"pointer",border:"none",background:activeYear===yr?ACCENT:BORDER+"88",color:activeYear===yr?"#fff":TEXT_SUB,position:"relative",transition:"all .15s"}}>
-              {yr}{dot&&<span style={{position:"absolute",top:0,right:0,width:8,height:8,borderRadius:"50%",background:dot,border:"2px solid #fff"}}/>}
-            </button>;
-          })}
-        </div>
-        <div style={{marginBottom:28}}>
-          <div style={{fontSize:15,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:10}}>Execution Targets — {activeYear}</div>
-          <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-            {targets.length===0&&<div style={{padding:"16px 20px",color:TEXT_SUB,fontSize:15}}>No targets for {activeYear} yet.</div>}
+      {/* Side-by-side: Execution (left) + Impact Indicators (right) */}
+      <div style={{display:"flex",alignItems:"flex-start",minHeight:0}}>
+
+        {/* Left — Execution */}
+        <div style={{flex:"0 0 300px",borderRight:"1px solid "+BORDER,padding:"18px 20px"}}>
+          {/* Year selector */}
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginRight:2}}>Year</span>
+            {YEARS.map(yr=>{
+              const items=(outcome.executionTargets[yr]||[]).map(t=>typeof t==="string"?{completion:"Not Started"}:t);
+              const dot=items.length>0?(items.every(t=>migrateCompletion(t.completion)==="Complete")?"#059669":YELLOW):null;
+              return <button key={yr} onClick={()=>setActiveYear(yr)} style={{padding:"3px 12px",fontSize:13,fontWeight:700,borderRadius:16,cursor:"pointer",border:"none",background:activeYear===yr?ACCENT:BORDER+"88",color:activeYear===yr?"#fff":TEXT_SUB,position:"relative",transition:"all .15s"}}>
+                {yr}{dot&&<span style={{position:"absolute",top:0,right:0,width:7,height:7,borderRadius:"50%",background:dot,border:"2px solid #fff"}}/>}
+              </button>;
+            })}
+          </div>
+          <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Execution Targets — {activeYear}</div>
+          <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
+            {targets.length===0&&<div style={{padding:"14px 16px",color:TEXT_SUB,fontSize:13}}>No targets for {activeYear} yet.</div>}
             {targets.map((t,i)=>{
               const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
               const isDone=t.completion==="Complete";
               return (
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"14px 20px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
-                  <span style={{width:8,height:8,borderRadius:"50%",background:TEXT_SUB,flexShrink:0,marginTop:6,display:"inline-block"}}/>
-                  <div style={{flex:1,paddingTop:2,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s"}}>
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
+                  <span style={{width:7,height:7,borderRadius:"50%",background:TEXT_SUB,flexShrink:0,marginTop:5,display:"inline-block"}}/>
+                  <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
                     <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
                   </div>
                   <CompletionCycler value={t.completion} onChange={v=>updExec(i,"completion",v)}/>
                 </div>
               );
             })}
-            <div style={{padding:"12px 20px",background:"#FAFBFC",borderTop:targets.length?"1px solid "+BORDER:"none"}}>
-              <button onClick={addExec} style={{fontSize:15,color:ACCENT,background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{width:22,height:22,borderRadius:"50%",border:"2px dashed "+ACCENT,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:15,lineHeight:1}}>+</span>Add target
+            <div style={{padding:"10px 14px",background:"#FAFBFC",borderTop:targets.length?"1px solid "+BORDER:"none"}}>
+              <button onClick={addExec} style={{fontSize:13,color:ACCENT,background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:18,height:18,borderRadius:"50%",border:"2px dashed "+ACCENT,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,lineHeight:1}}>+</span>Add target
               </button>
             </div>
           </div>
         </div>
-        <div style={{borderTop:"1px solid "+BORDER,paddingTop:20}}>
-          <div style={{marginBottom:14}}>
-            <div style={{fontSize:15,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8}}>Impact Indicators</div>
-          </div>
-          <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:8,scrollSnapType:"x mandatory"}}>
+
+        {/* Right — Impact Indicators */}
+        <div style={{flex:1,minWidth:0,padding:"18px 20px"}}>
+          <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:14}}>Impact Indicators</div>
+          <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:8,scrollSnapType:"x mandatory"}}>
             {outcome.impactIndicators.map((ind,i)=>{
               if(!ind.text) return null;
               return <IndicatorTile key={ind.id} ind={ind} iIdx={i} activeYear={activeYear}
@@ -1566,29 +1555,34 @@ function BowOutcomePanel({ outcome, onUpdate }) {
                 onChangeActuals={v=>updInd(i,"actuals",v)}
                 onChangeSource={v=>updInd(i,"source",v)}/>;
             })}
+            {outcome.impactIndicators.filter(ind=>ind.text).length===0&&(
+              <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:4}}>No indicators defined yet.</div>
+            )}
           </div>
-          <div style={{fontSize:14,color:TEXT_SUB,marginTop:6,textAlign:"right"}}>scroll to see all indicators</div>
-        </div>
-        <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid "+BORDER}}>
-          <div style={{fontSize:15,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:10}}>Notes and Next Steps</div>
-          <textarea value={outcome.notes||""} onChange={e=>onUpdate({...outcome,notes:e.target.value})} placeholder="Add notes, action items, or next steps"
-            style={{width:"100%",minHeight:100,border:"1px solid "+BORDER,borderRadius:10,padding:"12px 14px",fontSize:15,fontFamily:"inherit",color:TEXT,background:"#FFFDF5",resize:"vertical",lineHeight:1.7,boxSizing:"border-box",outline:"none"}}/>
         </div>
 
-        {/* AI Analysis */}
-        <div style={{marginTop:20,paddingTop:20,borderTop:"1px solid "+BORDER}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontSize:16}}>✦</span>
-            <div style={{fontSize:15,fontWeight:700,color:TEXT,textTransform:"uppercase",letterSpacing:0.8}}>AI Analysis</div>
-            <span style={{fontSize:11,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.12)",borderRadius:4,padding:"2px 8px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
+      </div>
+
+      {/* Full-width bottom: Notes + AI Analysis */}
+      <div style={{borderTop:"1px solid "+BORDER,padding:"18px 20px",display:"flex",flexDirection:"column",gap:20}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:8}}>Notes and Next Steps</div>
+          <textarea value={outcome.notes||""} onChange={e=>onUpdate({...outcome,notes:e.target.value})} placeholder="Add notes, action items, or next steps"
+            style={{width:"100%",minHeight:80,border:"1px solid "+BORDER,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:TEXT,background:"#FFFDF5",resize:"vertical",lineHeight:1.7,boxSizing:"border-box",outline:"none"}}/>
+        </div>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:14}}>✦</span>
+            <div style={{fontSize:13,fontWeight:700,color:TEXT,textTransform:"uppercase",letterSpacing:0.8}}>AI Analysis</div>
+            <span style={{fontSize:10,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.12)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
           </div>
-          <div style={{background:"linear-gradient(135deg, #FEF5E7 0%, #FFF8F0 100%)",borderRadius:10,border:"1px solid #FDE68A",padding:"16px 20px"}}>
-            <div style={{fontSize:14,color:"#92400E",lineHeight:1.7,marginBottom:10}}>
+          <div style={{background:"linear-gradient(135deg, #FEF5E7 0%, #FFF8F0 100%)",borderRadius:10,border:"1px solid #FDE68A",padding:"14px 18px"}}>
+            <div style={{fontSize:13,color:"#92400E",lineHeight:1.7,marginBottom:8}}>
               An AI-generated summary and assessment of progress will appear here, drawing on evidence across related BOWs and impact indicators to surface key signals, flag risks, and highlight where the work is on or off track.
             </div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {["Progress Summary","Risk Signals","Evidence Gaps","Recommended Actions"].map(tag=>(
-                <span key={tag} style={{fontSize:12,fontWeight:600,color:"#B45309",background:"rgba(180,83,9,0.08)",borderRadius:5,padding:"3px 10px",border:"1px solid rgba(180,83,9,0.15)"}}>{tag}</span>
+                <span key={tag} style={{fontSize:11,fontWeight:600,color:"#B45309",background:"rgba(180,83,9,0.08)",borderRadius:5,padding:"2px 9px",border:"1px solid rgba(180,83,9,0.15)"}}>{tag}</span>
               ))}
             </div>
           </div>
