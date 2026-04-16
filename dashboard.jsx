@@ -4165,12 +4165,6 @@ function DAHToa() {
   const laneGridCols = "130px 0.8fr 1fr";
   return (
     <div style={{ background:C.bg, color:C.text }}>
-      <ToaPortfolioHeader
-        title="Data & AI Enablement Hub Portfolio"
-        description="The Data & AI Enablement Hub is an enabling portfolio that strengthens shared capabilities and conditions across the division, allowing program teams to execute more effectively and at greater scale — accelerating progress toward the Data & AI team's strategy goals and the division's 2045 Ambition. The Hub operates as a shared service and advisory partner for U.S. Program teams, working through three interconnected service lines to ensure teams don't have to build foundational expertise, infrastructure, or learning capacity independently. Each service line delivers distinct value on its own; together, they compound over time as shared infrastructure, expert access, and cross-team learning reinforce each other."
-        bows={[{ label:"Enable Data & AI Capabilities for Division", color:C.teal }]}
-        accentColor={C.teal}
-      />
       <div style={{ padding:"0 18px 18px" }}>
         <div style={{ marginBottom:6 }}>
           <div style={{ display:"grid", gridTemplateColumns:`${laneGridCols} 36px 420px`, gap:6, alignItems:"end", marginBottom:4 }}>
@@ -4322,13 +4316,6 @@ function SFLToa() {
   ];
   return (
     <div style={{ background:C.bg, color:C.text }}>
-      <ToaPortfolioHeader
-        title="System Feedback Loops Portfolio"
-        description="The System Feedback Loops portfolio focuses on building and/or strengthening shared public-good data and AI infrastructure that provides timely, actionable insights to districts and postsecondary institutions, supports cross-sector collaboration, and enables rapid-cycle testing of AI solutions."
-        problem={SFL_PROBLEM}
-        bows={SFL_BOWS}
-        accentColor={C.s1}
-      />
       <div style={{ padding:"0 18px 18px" }}>
         <div style={{ marginBottom:6 }}>
           <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, alignItems:"end", marginBottom:4 }}>
@@ -4483,12 +4470,6 @@ function CCToa() {
   const gridCols = "180px 0.85fr 1fr";
   return (
     <div style={{ background:C.bg, color:C.text }}>
-      <ToaPortfolioHeader
-        title="Cross-Cutting Portfolio"
-        description="The Cross-Cutting Portfolio provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time. It brings together business and strategy support with measurement, learning, evaluation, and impact accounting to strengthen decision-making, align resources, and ensure the strategy remains focused and responsive."
-        bows={CC_BOWS}
-        accentColor={C.c2}
-      />
       <div style={{ padding:"0 18px 18px" }}>
         <div style={{ marginBottom:6 }}>
           <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, alignItems:"end", marginBottom:4 }}>
@@ -4703,17 +4684,6 @@ function AIInfraToa() {
   const activeSi = activeLane === lane1.id ? 0 : activeLane === lane2.id ? 1 : activeLane === lane3.id ? 2 : null;
   return (
     <div style={{ background:CI.bg, color:CI.text }}>
-      <ToaPortfolioHeader
-        title="AI Infrastructure Portfolio"
-        description="This portfolio aims to enable the shared infrastructure, adoption pathways, evidence practices, and alignment needed to advance AI driven personalization and ensure AI-enabled education solutions are built, adopted, and scaled responsibly."
-        problem="AI-enabled education solutions are advancing rapidly, but the conditions for responsible and equitable scale are fragmented or underdeveloped. Without intentional intervention, AI adoption risks reinforcing or widening existing inequities as benefits accrue unevenly across contexts."
-        bows={[
-          { label:"Enhance Context & Personalization", color:CI.lane2 },
-          { label:"Accelerate AI Evaluation, Evidence, and Guardrails", color:CI.lane3 },
-          { label:"Mobilize Frontier Labs for Learner Success", color:CI.lane1 },
-        ]}
-        accentColor={CI.lane1}
-      />
       <div style={{ padding:"0 18px 14px" }}>
         <div style={{ marginBottom:5 }}>
           <div style={{ display:"grid", gridTemplateColumns:`${laneGridCols} 40px 360px`, gap:5, alignItems:"end", marginBottom:4 }}>
