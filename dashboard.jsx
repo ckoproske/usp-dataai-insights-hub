@@ -5177,20 +5177,14 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                               <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.35,marginBottom:6}}>{BOW_TITLES[i]||o.shortTitle||"Outcome "+(i+1)}</div>
                               <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.6,marginBottom:12}}>{o.title}</div>
                             </div>
-                            <div style={{padding:"10px 18px 12px",borderTop:"1px solid "+(manualRs?manualRs.color+"22":BORDER),background:manualRs?manualRs.pill+"88":"#FAFBFC",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                            <div style={{padding:"10px 18px 12px",borderTop:"1px solid "+(manualRs?manualRs.color+"22":BORDER),background:manualRs?manualRs.pill+"88":"#FAFBFC",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                               <div>
-                                <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Overall Rating</div>
-                                <OutcomeRatingCycler value={o.manualStatus} onChange={v=>updateBowOutcome(activeBow,o.id,{...o,manualStatus:v})}/>
+                                <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Execution {progressYear}</div>
+                                {exec?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:exec.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:exec.color}}>{exec.completed}/{exec.total}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>No targets</span>}
                               </div>
-                              <div style={{display:"flex",gap:16}}>
-                                <div>
-                                  <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Execution {progressYear}</div>
-                                  {exec?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:exec.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:exec.color}}>{exec.completed}/{exec.total}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>No targets</span>}
-                                </div>
-                                <div>
-                                  <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Impact</div>
-                                  {impact?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:impact.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:impact.color}}>{impact.label.replace(" Expectations","")}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>—</span>}
-                                </div>
+                              <div>
+                                <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Impact</div>
+                                {impact?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:impact.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:impact.color}}>{impact.label.replace(" Expectations","")}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>—</span>}
                               </div>
                             </div>
                           </div>
