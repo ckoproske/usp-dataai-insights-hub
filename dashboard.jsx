@@ -1493,11 +1493,6 @@ function BowOutcomePanel({ outcome, onUpdate }) {
                 </div>
               );
             })}
-            <div style={{padding:"10px 14px",background:"#FAFBFC",borderTop:targets.length?"1px solid "+BORDER:"none"}}>
-              <button onClick={addExec} style={{fontSize:13,color:ACCENT,background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:18,height:18,borderRadius:"50%",border:"2px dashed "+ACCENT,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,lineHeight:1}}>+</span>Add target
-              </button>
-            </div>
           </div>
         </div>
 
@@ -6656,29 +6651,16 @@ function App() {
           </div>
         </div>
 
-        {/* Dev banner */}
-        <div style={{background:"#FEF5E7",borderBottom:"1px solid #FDE68A",padding:"7px 36px",display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:12,color:"#92400E"}}><strong>In Development — Do Not Distribute.</strong> All indicators, targets, and progress data are placeholder values.</span>
-        </div>
 
-        {/* API / placeholder banner */}
-        {usingPlaceholder && (
-          <div style={{background:"#EFF6FF",borderBottom:"1px solid #BFDBFE",padding:"6px 36px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:12,color:"#1D4ED8"}}>
-              {apiAvailable
-                ? <><strong>Connected to Databricks</strong> — tables are empty. Showing placeholder data. Seed the tables to see live data.</>
-                : <><strong>API not reachable</strong> — showing placeholder data. Deploy <code>api.py</code> to your Databricks App to connect live data.</>
-              }
-            </span>
-          </div>
-        )}
-        {!usingPlaceholder && (
-          <div style={{background:"#ECFDF5",borderBottom:"1px solid #6EE7B7",padding:"6px 36px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:12,color:"#065F46"}}>
-              <strong>Live data</strong> — connected to <code>usp_data.usp_strategy</code>.
-            </span>
-          </div>
-        )}
+        {/* Connection status bar */}
+        <div style={{padding:"5px 36px",borderBottom:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:6,background:SURFACE}}>
+          {!usingPlaceholder
+            ? <><span style={{width:6,height:6,borderRadius:"50%",background:"#10B981",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#065F46",fontWeight:600}}>Live</span><span style={{fontSize:11,color:TEXT_MUTED}}>— connected to <code>usp_data.usp_strategy</code></span></>
+            : apiAvailable
+              ? <><span style={{width:6,height:6,borderRadius:"50%",background:YELLOW,display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#92400E",fontWeight:600}}>Connected</span><span style={{fontSize:11,color:TEXT_MUTED}}>— database tables empty, showing placeholder data</span></>
+              : <><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#B91C1C",fontWeight:600}}>Offline</span><span style={{fontSize:11,color:TEXT_MUTED}}>— API not reachable, showing placeholder data</span></>
+          }
+        </div>
 
         {/* Page content */}
         <div style={{flex:1,padding:"32px 36px",maxWidth:1600,width:"100%",boxSizing:"border-box"}}>
