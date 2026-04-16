@@ -4868,7 +4868,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
     <div style={{display:"flex",flexDirection:"column",gap:0}}>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"measurement",label:"Measurement & Insights"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"},{id:"theory-of-action",label:"Theory of Action"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Insights"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
             :tab.id==="investments"?activeTab==="investments"
             :tab.id==="partners"?activeTab==="partners"
