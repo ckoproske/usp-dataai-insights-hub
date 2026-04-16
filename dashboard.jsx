@@ -4004,6 +4004,852 @@ function PortfolioPartnersView({ portId, portColor }) {
   );
 }
 
+// ── Theory of Action — Shared Design Tokens & Components ─────────────────────
+const C = {
+  bg:"#ffffff", white:"#ffffff", off:"#f5f7fb",
+  navy:"#17243d", navyMid:"#223050",
+  teal:"#0b7575", tealMid:"#0d9898", tealLt:"#3dbaba", tealPale:"#e2f3f3", tealBd:"#9acece",
+  gold:"#a05000", goldMid:"#cc7000", goldLt:"#e89020", goldPale:"#fdf0dc", goldBd:"#e0b050",
+  slate:"#455878", slateMid:"#607898", slatePale:"#e8edf5", slateBd:"#b8c8de",
+  text:"#17243d", textMid:"#364870", textSub:"#556088", textDim:"#8898b8",
+  bd:"#cdd8ec", bdMid:"#b8c8de",
+  lane1:"#0b5fa5", lane1Pale:"#e6f1fb", lane1Bd:"#85b7eb", lane1Hdr:"#063870",
+  lane2:"#186030", lane2Pale:"#e2f2e8", lane2Bd:"#80b898", lane2Hdr:"#0d3a1c",
+  lane3:"#7a3080", lane3Pale:"#f0e6f5", lane3Bd:"#c490d0", lane3Hdr:"#4a1a50",
+  s1:"#0b5fa5", s1Pale:"#e6f1fb", s2:"#186030", s2Pale:"#e2f2e8",
+  s3:"#7a3080", s3Pale:"#f0e6f5", s4:"#a05000", s4Pale:"#fdf0dc",
+  s5:"#455878", s5Pale:"#e8edf5", s6:"#2d6e8e", s6Pale:"#e4f2f8",
+  c1:"#0b5fa5", c1Pale:"#e6f1fb", c2:"#7a3080", c2Pale:"#f0e6f5",
+  c3:"#186030", c3Pale:"#e2f2e8", c4:"#a05000", c4Pale:"#fdf0dc",
+};
+const CI = {
+  ...C,
+  lane1:"#0b7575", lane1Pale:"#e2f3f3", lane1Bd:"#9acece", lane1Hdr:"#083d3d",
+  lane2:"#4a1a8a", lane2Pale:"#ede8f8", lane2Bd:"#b8a0e0", lane2Hdr:"#2d0f5a",
+  lane3:"#186030", lane3Pale:"#e2f2e8", lane3Bd:"#80b898", lane3Hdr:"#0d3a1c",
+  green:"#186030", greenPale:"#e8f5ee", greenBorder:"#6ab88a",
+  offwhite:"#f5f7fb",
+  p1:"#157060", p1p:"#dff2ec",
+  p2:"#4a1a8a", p2p:"#ede8f8",
+  p3:"#482070", p3p:"#ecdff5",
+  p4:"#683010", p4p:"#f5ece0",
+};
+
+function StageHead({ num, label, sub, color }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+      <div style={{ width:28, height:28, borderRadius:"50%", background:color||C.navy, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:C.white, boxShadow:`0 2px 6px ${color||C.navy}40` }}>{num}</div>
+      <div style={{ fontSize:11, fontWeight:800, color:color||C.navy, letterSpacing:"0.06em", textTransform:"uppercase", textAlign:"center", lineHeight:1.2 }}>{label}</div>
+      {sub && <div style={{ fontSize:10, color:C.textDim, fontStyle:"italic", textAlign:"center" }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Connector() {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", paddingTop:40, gap:2 }}>
+      <div style={{ flex:"0 0 32px", width:2, background:`linear-gradient(to bottom, ${C.bd}, ${C.gold})`, borderRadius:1 }} />
+      <svg width="24" height="24" viewBox="0 0 30 30" fill="none">
+        <circle cx="15" cy="15" r="14" fill={`${C.gold}25`} stroke={C.gold} strokeWidth="2"/>
+        <path d="M10 13 L15 18 L20 13" stroke={C.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      </svg>
+      <div style={{ fontSize:8, fontWeight:800, color:C.goldMid, letterSpacing:"0.12em", textTransform:"uppercase", writingMode:"vertical-rl", transform:"rotate(180deg)", paddingBottom:4 }}>drives</div>
+    </div>
+  );
+}
+
+function ImpactPanel({ num, children }) {
+  return (
+    <div style={{ background:`${C.gold}05`, border:`1.5px solid ${C.gold}40`, borderTop:`3px solid ${C.gold}`, borderRadius:10, overflow:"hidden", boxShadow:`0 2px 10px ${C.gold}15` }}>
+      <div style={{ background:`${C.gold}0a`, borderBottom:`1px solid ${C.gold}25`, padding:"7px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ width:20, height:20, borderRadius:"50%", background:C.gold, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:C.white, flexShrink:0 }}>{num}</div>
+        <div style={{ fontSize:11, fontWeight:800, color:C.goldMid, letterSpacing:"0.06em", textTransform:"uppercase" }}>2030 Impact Goals</div>
+      </div>
+      <div style={{ padding:"12px 14px", display:"flex", flexDirection:"column", gap:12 }}>{children}</div>
+    </div>
+  );
+}
+
+function CrossCuttingCards({ items }) {
+  return (
+    <div>
+      <div style={{ fontSize:11, fontWeight:800, color:C.gold, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Cross-Cutting Indicators</div>
+      <div style={{ fontSize:10, color:C.textDim, fontStyle:"italic", marginBottom:8 }}>Compounding effect across all activity areas</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {items.map((ind, i) => (
+          <div key={i} style={{ background:C.off, border:`1px solid ${C.goldBd}60`, borderLeft:`3px solid ${C.gold}`, borderRadius:"0 7px 7px 0", padding:"8px 12px" }}>
+            <div style={{ fontSize:12, color:C.textMid, lineHeight:1.55 }}>{ind}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BidirectionalDivider() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      <div style={{ flex:1, height:1, background:C.bd }} />
+      <svg width="28" height="14" viewBox="0 0 28 14" fill="none" style={{ flexShrink:0 }}>
+        <line x1="2" y1="7" x2="26" y2="7" stroke={C.textDim} strokeWidth="1.2" strokeLinecap="round"/>
+        <polyline points="7,3 2,7 7,11" stroke={C.textDim} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <polyline points="21,3 26,7 21,11" stroke={C.textDim} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      </svg>
+      <div style={{ flex:1, height:1, background:C.bd }} />
+    </div>
+  );
+}
+
+function ToaPortfolioHeader({ title, description, problem, bows, accentColor }) {
+  const accent = accentColor || C.teal;
+  return (
+    <div style={{ padding:"16px 18px 0" }}>
+      <div style={{ background:C.slatePale, border:`1px solid ${C.slateBd}`, borderLeft:`4px solid ${accent}`, borderRadius:8, padding:"12px 16px", marginBottom:10, display:"flex", gap:0, alignItems:"stretch" }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:11, fontWeight:800, color:accent, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{title}</div>
+          <div style={{ fontSize:12, color:C.textMid, lineHeight:1.65 }}>{description}</div>
+          {problem && (
+            <>
+              <div style={{ height:1, background:C.slateBd, margin:"10px 0" }} />
+              <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+                <div style={{ flexShrink:0, background:C.navy, color:C.white, fontSize:9, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", padding:"3px 8px", borderRadius:4, marginTop:1 }}>Problem / Gap</div>
+                <div style={{ fontSize:12, color:C.textSub, lineHeight:1.65, fontStyle:"italic" }}>{problem}</div>
+              </div>
+            </>
+          )}
+        </div>
+        {bows && bows.length > 0 && (
+          <>
+            <div style={{ width:1, background:C.slateBd, margin:"0 16px", flexShrink:0 }} />
+            <div style={{ flexShrink:0, display:"flex", flexDirection:"column", justifyContent:"center", gap:5, minWidth:140 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:C.textDim, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>Bodies of Work</div>
+              {bows.map(b => (
+                <div key={b.label} style={{ display:"flex", alignItems:"center", gap:6, background:C.white, border:`1px solid ${b.color}35`, borderLeft:`3px solid ${b.color}`, borderRadius:"0 5px 5px 0", padding:"4px 10px" }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:b.color }}>{b.label}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      <div style={{ marginBottom:8 }}>
+        <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:C.navy, letterSpacing:"-0.02em", lineHeight:1.1 }}>Theory of Action</h2>
+        <div style={{ width:40, height:3, background:accent, borderRadius:2, marginTop:5 }} />
+      </div>
+    </div>
+  );
+}
+
+// ── D&A Hub TOA ───────────────────────────────────────────────────────────────
+const DAH_LANES = [
+  { id:"advisory", label:"AI Advisory & Network", icon:"◎", color:C.lane1, pale:C.lane1Pale, bd:C.lane1Bd,
+    activities:["On-demand technical and strategic guidance on AI use cases, data readiness, evaluation approaches, infrastructure tradeoffs, and risk considerations","Curated SME bench spanning research methods, learning sciences, implementation, data/AI infrastructure, privacy, and AI governance","Repeatable advisory formats: decision pathway reviews, evidence readouts, risk and equity framing sessions","Defined advisory roles — evidence reviewers, implementation realists, risk/governance and equity lenses"],
+    outcome:{ title:"Program teams have access to timely, credible expert guidance", body:"Enabling them to pressure-test assumptions, weigh tradeoffs, and make better-informed choices without having to source that expertise independently." },
+    indicators:["# inbound advisory requests","% of requests fulfilled","% of teams with repeat engagement","% reporting advisory influenced a decision","NPS for advisory engagements"] },
+  { id:"infra", label:"Data Insights Infrastructure", icon:"⬡", color:C.lane2, pale:C.lane2Pale, bd:C.lane2Bd,
+    activities:["Market Insights & Context: cross-division data product integrating evidence signals, market context, and implementation considerations","Insights Engine for AI Effectiveness: synthesizes research, market intelligence, and pilot data to surface patterns, risks, and opportunity areas","Impact Accounting Models: extracts effect-size evidence to support MLE functions, scenario analysis, and cost-effectiveness estimates","Supporting dashboards and reporting infrastructure where reuse is high"],
+    outcome:{ title:"Teams draw on shared analytical tools and frameworks that enable more consistent interpretation of evidence", body:"Reducing duplicative analytical build and freeing teams to focus on program-specific judgment rather than foundational capability they shouldn't have to rebuild independently." },
+    indicators:["# unique users across shared tools/products","% rating shared tools as useful or actionable","% reporting tools influenced how they interpreted evidence","NPS for shared tools and products"] },
+  { id:"learning", label:"AI Learning Community", icon:"⟳", color:C.lane3, pale:C.lane3Pale, bd:C.lane3Bd,
+    activities:["Regular learning lab series: ongoing talks anchored in live program questions, featuring researchers and practitioners sharing evidence and frontier developments","Targeted convenings: curated demonstrations bringing together researchers, practitioners, and technologists to explore emerging approaches","Small-group discussions and short-format learning groups: facilitated sessions to pressure-test design choices and recalibrate strategy","Circulation of insights from advisory engagements, pilots, and investments across teams"],
+    outcome:{ title:"Insights from advisory engagements, pilots, and investments circulate across teams rather than staying siloed", body:"Building shared intuition about what is working, what remains uncertain, and where caution is warranted as the AI and education landscape evolves." },
+    indicators:["% of USP staff participating in Hub learning annually","% self-reported increase in AI literacy or confidence","% reporting Hub learning changed how they approach AI decisions","NPS for learning community activities"] },
+];
+const DAH_CROSS = ["% of USP staff (S/PO + D/DDs) reporting Hub support contributed to a significant AI-related decision","Composite NPS across all three service lines"];
+
+function DAHToa() {
+  const [activeLane, setActiveLane] = useState(null);
+  const [expandedIndicators, setExpandedIndicators] = useState({});
+  const toggle = id => setActiveLane(p => p === id ? null : id);
+  const toggleInd = (id, e) => { e.stopPropagation(); setExpandedIndicators(p => ({ ...p, [id]: !p[id] })); };
+  const laneGridCols = "130px 0.8fr 1fr";
+  return (
+    <div style={{ background:C.bg, color:C.text }}>
+      <ToaPortfolioHeader
+        title="Data & AI Enablement Hub Portfolio"
+        description="The Data & AI Enablement Hub is an enabling portfolio that strengthens shared capabilities and conditions across the division, allowing program teams to execute more effectively and at greater scale — accelerating progress toward the Data & AI team's strategy goals and the division's 2045 Ambition. The Hub operates as a shared service and advisory partner for U.S. Program teams, working through three interconnected service lines to ensure teams don't have to build foundational expertise, infrastructure, or learning capacity independently. Each service line delivers distinct value on its own; together, they compound over time as shared infrastructure, expert access, and cross-team learning reinforce each other."
+        bows={[{ label:"Enable Data & AI Capabilities for Division", color:C.teal }]}
+        accentColor={C.teal}
+      />
+      <div style={{ padding:"0 18px 18px" }}>
+        <div style={{ marginBottom:6 }}>
+          <div style={{ display:"grid", gridTemplateColumns:`${laneGridCols} 36px 420px`, gap:6, alignItems:"end", marginBottom:4 }}>
+            <StageHead num="1" label="Service Lines" sub="How does the Hub operate?" color={C.slate} />
+            <StageHead num="2" label="Core Activities" sub="What does each line do?" color={C.teal} />
+            <StageHead num="3" label="Outcomes & Indicators" sub="What changes as a result?" color={C.teal} />
+            <div />
+            <StageHead num="4" label="2030 Impact Goals" sub="What does this make possible?" color={C.gold} />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:`${laneGridCols} 36px 420px`, gap:6, alignItems:"center", marginBottom:6 }}>
+            <div style={{ height:2, background:`linear-gradient(90deg, ${C.slate}60, ${C.teal})`, borderRadius:2 }} />
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:C.teal }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.teal}/></svg></div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.teal}, ${C.slate})` }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.slate}/></svg></div>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+              <div style={{ flex:"0 0 20px", width:2, background:`linear-gradient(to bottom, ${C.bd}, ${C.gold})`, borderRadius:1 }} />
+              <svg width="18" height="18" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="13" fill={`${C.gold}25`} stroke={C.gold} strokeWidth="2"/><path d="M10 13 L15 18 L20 13" stroke={C.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+            </div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.slate}, ${C.gold})`, borderRadius:2 }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.gold}/></svg></div>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 36px 420px", gap:0, alignItems:"start" }}>
+          <div style={{ borderRight:`2px solid ${C.bd}`, paddingRight:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:laneGridCols, gap:4, alignItems:"stretch" }}>
+              {DAH_LANES.map((lane, li) => {
+                const isActive = activeLane === lane.id;
+                const isDimmed = activeLane && !isActive;
+                return (
+                  <div key={lane.id} style={{ display:"contents" }}>
+                    <div onClick={() => toggle(lane.id)} style={{ borderRadius:8, background:isActive?lane.pale:`${lane.color}10`, border:`1px solid ${isActive?lane.color:`${lane.color}35`}`, borderLeft:`4px solid ${lane.color}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:4, justifyContent:"center", cursor:"pointer", opacity:isDimmed?0.4:1, transition:"all 0.15s", boxShadow:isActive?`0 2px 16px ${lane.color}30`:"0 1px 3px rgba(0,0,0,0.08)", gridRow:li+1 }}>
+                      <div style={{ fontSize:18, color:lane.color, lineHeight:1 }}>{lane.icon}</div>
+                      <div style={{ fontSize:13, fontWeight:800, color:lane.color, lineHeight:1.3 }}>{lane.label}</div>
+                      <div style={{ fontSize:9, color:`${lane.color}99`, fontStyle:"italic" }}>Click to highlight</div>
+                    </div>
+                    <div style={{ borderRadius:8, background:`${lane.color}04`, border:`1.5px solid ${isActive?lane.color:C.bd}`, padding:"9px 10px", opacity:isDimmed?0.4:1, transition:"all 0.15s", boxShadow:"0 1px 3px rgba(0,0,0,0.04)", gridRow:li+1 }}>
+                      <div style={{ fontSize:11, fontWeight:800, color:lane.color, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:5 }}>Core Activities</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {lane.activities.map((act, i) => (
+                          <div key={i} style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
+                            <div style={{ width:4, height:4, borderRadius:"50%", background:lane.color, marginTop:6, flexShrink:0, opacity:0.7 }} />
+                            <div style={{ fontSize:12, color:C.textMid, lineHeight:1.5 }}>{act}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ gridRow:li+1, display:"flex", gap:0, opacity:isDimmed?0.4:1, transition:"all 0.15s" }}>
+                      <div onClick={() => toggle(lane.id)} style={{ flex:1, borderRadius:expandedIndicators[lane.id]?"8px 0 0 8px":8, background:isActive?lane.pale:`${C.teal}06`, border:`1.5px solid ${isActive?lane.color:`${C.teal}30`}`, borderRight:expandedIndicators[lane.id]?`1.5px solid ${lane.color}30`:undefined, padding:"9px 12px", cursor:"pointer", transition:"all 0.15s", display:"flex", flexDirection:"column", gap:6 }}>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:1 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <div style={{ width:18, height:18, borderRadius:"50%", background:lane.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:C.white, flexShrink:0 }}>{li+1}</div>
+                            <div style={{ fontSize:11, fontWeight:800, color:lane.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Outcome {li+1}</div>
+                          </div>
+                          <button onClick={(e) => toggleInd(lane.id, e)} style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0, background:"none", border:`1px solid ${lane.color}40`, borderRadius:5, padding:"3px 7px", cursor:"pointer", fontFamily:"inherit" }}>
+                            <div style={{ fontSize:10, fontWeight:800, color:lane.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Leading Indicators</div>
+                            <div style={{ background:`${lane.color}15`, borderRadius:8, padding:"1px 5px", fontSize:10, fontWeight:700, color:lane.color }}>{lane.indicators.length}</div>
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:expandedIndicators[lane.id]?"rotate(-90deg)":"rotate(0deg)", transition:"transform 0.2s", flexShrink:0 }}><path d="M3 5 L7 9 L11 5" stroke={lane.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                        </div>
+                        <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.5, paddingRight:210 }}>{lane.outcome.title} — {lane.outcome.body}</div>
+                      </div>
+                      {expandedIndicators[lane.id] && (
+                        <div style={{ width:220, flexShrink:0, borderRadius:"0 8px 8px 0", background:`${lane.color}07`, border:`1.5px solid ${lane.color}40`, borderLeft:"none", padding:"9px 10px", display:"flex", flexDirection:"column", gap:5 }}>
+                          <div style={{ fontSize:10, fontWeight:800, color:lane.color, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Leading Indicators</div>
+                          {lane.indicators.map((ind, i) => (
+                            <div key={i} style={{ display:"flex", gap:5, alignItems:"flex-start", paddingBottom:4, borderBottom:i<lane.indicators.length-1?`1px solid ${lane.color}15`:"none" }}>
+                              <div style={{ width:4, height:4, borderRadius:"50%", background:lane.color, marginTop:5, flexShrink:0, opacity:0.6 }} />
+                              <div style={{ fontSize:12, color:C.textMid, lineHeight:1.45 }}>{ind}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {activeLane && <div style={{ textAlign:"center", marginTop:6 }}><button onClick={() => setActiveLane(null)} style={{ background:"none", border:`1px solid ${C.bd}`, borderRadius:5, padding:"4px 14px", fontSize:12, color:C.textDim, cursor:"pointer" }}>Clear filter ✕</button></div>}
+          </div>
+          <Connector />
+          <ImpactPanel num="4">
+            <CrossCuttingCards items={DAH_CROSS} />
+            <div style={{ height:1, background:C.bd }} />
+            <div style={{ fontSize:12, color:C.textMid, lineHeight:1.6, fontStyle:"italic" }}>The Data & AI Enablement Hub accelerates progress toward the Data & AI team's strategy goals and the division's 2045 Ambition — allowing program teams to execute more effectively and at greater scale.</div>
+            <BidirectionalDivider />
+            <div>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:8 }}>
+                <div style={{ width:3, borderRadius:2, background:C.goldMid, alignSelf:"stretch", minHeight:24, flexShrink:0 }} />
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.goldMid, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:1 }}>Impact Enabled</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:C.navy, lineHeight:1.2 }}>Ambition 2045</div>
+                </div>
+              </div>
+              <div style={{ background:`${C.teal}06`, border:`1px solid ${C.tealBd}`, borderLeft:`3px solid ${C.teal}`, borderRadius:"0 7px 7px 0", padding:"10px 12px" }}>
+                <div style={{ fontSize:10, fontWeight:800, color:C.teal, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>Division Enablement</div>
+                <div style={{ fontSize:12, color:C.textMid, lineHeight:1.6 }}>The Hub doesn't directly drive Amb45 outcomes, but creates the conditions for the division to do so. By ensuring program teams have timely expert guidance, shared analytical infrastructure, and access to circulating learning, the Hub raises the quality and pace of AI-related investment across the division — making it possible for each portfolio to pursue the 2045 vision with greater confidence and coherence.</div>
+              </div>
+            </div>
+          </ImpactPanel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SFL TOA ───────────────────────────────────────────────────────────────────
+const SFL_ACTIVITIES = [
+  { id:"data-avail", label:"Increase data availability", icon:"◈", color:C.s1, pale:C.s1Pale,
+    outcome:"New and expanded education and workforce AI-ready data focused on priority questions is accessed and linked across systems",
+    indicators:["% of districts/states adopting or piloting data sources related to multimodal, system conditions, wealth, and comp/skills","% of districts/states with increased availability to high quality and comprehensive data","% of US learners represented across integrated private, federal, state, and other data sources"] },
+  { id:"data-util", label:"Build and expand data utilities", icon:"⬡", color:C.s2, pale:C.s2Pale,
+    outcome:"Infrastructure in place to enable more timely and personalized data feedback loops that inform and strengthen decision-making",
+    indicators:["X% of platforms enabling custom disaggregation queries","40% reduction in average time to insight on key Essential Questions","% systems implementing user-centered, AI-driven data access platforms (e.g., NLP-based dashboards)"] },
+  { id:"sensemaking", label:"Accelerate sensemaking using digital public good integration", icon:"◎", color:C.s3, pale:C.s3Pale,
+    outcome:"Data & analytics is translated into actionable insights, leveraging AI, that decisionmakers can understand and use — supported by sufficient capacity and tools to act on insights",
+    indicators:["% of districts/states with increased availability to high quality and comprehensive data","% systems implementing user-centered, AI-driven data access platforms","40% reduction in average time to insight on key Essential Questions"] },
+  { id:"governance", label:"Establish shared governance and standards, w/ systems open by default", icon:"⊕", color:C.s4, pale:C.s4Pale,
+    outcome:"Data sharing agreements, privacy protections, and norms of use enable repeated, reliable use of data across institutions and over time",
+    indicators:["Increase in templatized DSAs that cover multiple institutions and sectors, reducing time to data submission","% of pilot states/districts with interoperable data systems linking EW + social systems"] },
+  { id:"inplace", label:"Leverage In-Place coordination to accelerate learning & scale", icon:"⟳", color:C.s5, pale:C.s5Pale,
+    outcome:"Regional or state contexts provide the coordination needed to test, refine, and scale feedback loops in ways that align with local decision needs",
+    indicators:["50% of districts in Pathways and WSI regions have strategic institutional adoption of AI-enabled solutions","100% of regional cross-sector data tools in Pathways and WSI regions hit thresholds for regular use"] },
+  { id:"ecosystem", label:"Strengthen ecosystem coordination", icon:"⇄", color:C.s6, pale:C.s6Pale, isTbd:true,
+    outcome:"Shared agreement and alignment across key stakeholders", indicators:[] },
+];
+const SFL_CROSS = ["% of district and PS data decision makers using higher-quality data to improve learning, advising, mobility, and credentials of value","X% of field leaders have timely, comprehensive data to consistently measure and assess all Amb45 EW Momentum Points"];
+const SFL_PROBLEM = "EW systems generate increasing amounts of data, yet feedback loops from insight to decision remain fragmented and uneven. Practitioners often lack clarity on what 'good' looks like, and traditional assessments and credentials fail to capture changing real-world skills. Siloed data systems and limited AI and data capacity further constrain progress. As a result, systems and leaders are not equipped with learner-centered feedback loops that enable continuous improvement at the pace required.";
+const SFL_BOWS = [{ label:"Build and Sustain EDU-Net", color:"#e07070" },{ label:"Advance Data & AI Feedback Loops in Place", color:"#70a8e0" },{ label:"Launch Competencies & Skills Genome Accelerator", color:"#70c090" }];
+
+function SFLToa() {
+  const [expandedIndicators, setExpandedIndicators] = useState({});
+  const toggleInd = (id, e) => { e.stopPropagation(); setExpandedIndicators(p => ({ ...p, [id]: !p[id] })); };
+  const gridCols = "180px 1fr";
+  const [hoveredBuckets, setHoveredBuckets] = useState({});
+  const [expandedBuckets, setExpandedBuckets] = useState({});
+  const SFL_BUCKETS = [
+    { label:"EW Momentum Points", color:C.slate, pale:C.slatePale, contribution:"System Feedback Loops builds the data and AI infrastructure needed to track progress across all Amb45 EW Momentum Points — giving field leaders timely, comprehensive data to measure and assess outcomes at scale.",
+      priorities:[
+        { n:"All Momentum Points", title:"Field leaders have timely, comprehensive data", t1:"X% with access", t2:"Across all EW Momentum Points" },
+      ]},
+    { label:"Instruction", color:C.teal, pale:C.tealPale, contribution:"By enabling faster, more personalized feedback loops for districts, SFL accelerates the division's ability to drive learning gains and improve instructional effectiveness for learners furthest from opportunity.",
+      priorities:[
+        { n:"Priority 1", title:"Full Stack Instruction & Tutoring", t1:"1.6 grade levels/yr", t2:"7.4m + 4.4m students" },
+        { n:"Priority 2", title:"AI-Enabled Gateway Math", t1:"80% avg pass rates", t2:"355k students / 450 institutions" },
+      ]},
+    { label:"Navigation", color:C.s1, pale:C.s1Pale, contribution:"SFL strengthens the PS and WF data infrastructure that advisors and learners depend on to make informed decisions. A central mechanism is CSGA — a dynamic, AI-native public knowledge graph that links real-time education and workforce data at the competency and skill level, powering personalized advising, credit mobility, career coaching, and skill-based assessment. By reducing the time to update skill definitions using AI, CSGA enables tools and advisors to better reflect a changing labor market in ways that static taxonomies cannot.",
+      priorities:[
+        { n:"Priority 3", title:"AI-Enabled Personalized Advising", t1:"+5pp college enrollment", t2:"8.6m at LLM scale" },
+        { n:"Priority 4", title:"AI-Enabled Learning Mobility", t1:"37–45% credit transfer", t2:"1.6m students impacted" },
+      ]},
+  ];
+  return (
+    <div style={{ background:C.bg, color:C.text }}>
+      <ToaPortfolioHeader
+        title="System Feedback Loops Portfolio"
+        description="The System Feedback Loops portfolio focuses on building and/or strengthening shared public-good data and AI infrastructure that provides timely, actionable insights to districts and postsecondary institutions, supports cross-sector collaboration, and enables rapid-cycle testing of AI solutions."
+        problem={SFL_PROBLEM}
+        bows={SFL_BOWS}
+        accentColor={C.s1}
+      />
+      <div style={{ padding:"0 18px 18px" }}>
+        <div style={{ marginBottom:6 }}>
+          <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, alignItems:"end", marginBottom:4 }}>
+            <StageHead num="1" label="Activities" sub="What are we doing?" color={C.slate} />
+            <StageHead num="2" label="Portfolio Outcomes" sub="What changes as a result?" color={C.teal} />
+            <div />
+            <StageHead num="3" label="2030 Impact Goals" sub="What does this make possible?" color={C.gold} />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, alignItems:"center", marginBottom:4 }}>
+            <div style={{ height:2, background:`linear-gradient(90deg, ${C.slate}60, ${C.teal})`, borderRadius:2 }} />
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.teal}, ${C.slate})` }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.slate}/></svg></div>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+              <div style={{ flex:"0 0 20px", width:2, background:`linear-gradient(to bottom, ${C.bd}, ${C.gold})`, borderRadius:1 }} />
+              <svg width="18" height="18" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="13" fill={`${C.gold}25`} stroke={C.gold} strokeWidth="2"/><path d="M10 13 L15 18 L20 13" stroke={C.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+            </div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.slate}, ${C.gold})`, borderRadius:2 }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.gold}/></svg></div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, marginBottom:6 }}>
+            <div />
+            <div style={{ padding:"2px 4px" }}><div style={{ fontSize:12, fontWeight:700, color:C.textSub, lineHeight:1.5, fontStyle:"italic" }}>Progress toward faster and more effective system feedback loops requires multiple enabling conditions to move together — accelerating progress toward the division's 2045 Ambition.</div></div>
+            <div /><div />
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 36px 420px", gap:0, alignItems:"start" }}>
+          <div style={{ borderRight:`2px solid ${C.bd}`, paddingRight:12 }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              {SFL_ACTIVITIES.map((act, ai) => (
+                <div key={act.id} style={{ display:"grid", gridTemplateColumns:gridCols, gap:4 }}>
+                  <div style={{ borderRadius:8, background:`${act.color}10`, border:`1px solid ${act.color}35`, borderLeft:`4px solid ${act.color}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:4, justifyContent:"center", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                    <div style={{ fontSize:16, color:act.color, lineHeight:1 }}>{act.icon}</div>
+                    <div style={{ fontSize:13, fontWeight:800, color:act.color, lineHeight:1.3 }}>{act.label}</div>
+                    {act.isTbd && <div style={{ fontSize:9, background:`${act.color}20`, border:`1px solid ${act.color}40`, borderRadius:3, padding:"1px 6px", color:act.color, fontWeight:700, width:"fit-content" }}>TBD</div>}
+                  </div>
+                  <div style={{ display:"flex", gap:0, minWidth:0 }}>
+                    <div style={{ flex:1, borderRadius:expandedIndicators[act.id]?"8px 0 0 8px":8, background:`${C.teal}06`, border:`1.5px solid ${C.teal}30`, borderRight:expandedIndicators[act.id]?`1.5px solid ${act.color}30`:undefined, padding:"9px 12px", display:"flex", flexDirection:"column", gap:6, minWidth:0 }}>
+                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <div style={{ width:18, height:18, borderRadius:"50%", background:act.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:C.white, flexShrink:0 }}>{ai+1}</div>
+                          <div style={{ fontSize:11, fontWeight:800, color:act.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Outcome {ai+1}</div>
+                        </div>
+                        <button onClick={(e) => toggleInd(act.id, e)} style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0, background:"none", border:`1px solid ${act.color}40`, borderRadius:5, padding:"3px 7px", cursor:"pointer", fontFamily:"inherit" }}>
+                          <div style={{ fontSize:10, fontWeight:800, color:act.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Leading Indicators</div>
+                          {act.indicators.length > 0 && <div style={{ background:`${act.color}15`, borderRadius:8, padding:"1px 5px", fontSize:10, fontWeight:700, color:act.color }}>{act.indicators.length}</div>}
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:expandedIndicators[act.id]?"rotate(-90deg)":"rotate(0deg)", transition:"transform 0.2s", flexShrink:0 }}><path d="M3 5 L7 9 L11 5" stroke={act.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.5, paddingRight:expandedIndicators[act.id]?0:160 }}>{act.outcome}</div>
+                    </div>
+                    {expandedIndicators[act.id] && (
+                      <div style={{ width:240, flexShrink:0, borderRadius:"0 8px 8px 0", background:`${act.color}08`, border:`1.5px solid ${act.color}40`, borderLeft:"none", padding:"9px 10px", display:"flex", flexDirection:"column", gap:5 }}>
+                        <div style={{ fontSize:10, fontWeight:800, color:act.color, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Leading Indicators</div>
+                        {act.indicators.length > 0 ? act.indicators.map((ind, i) => (
+                          <div key={i} style={{ display:"flex", gap:5, alignItems:"flex-start", paddingBottom:4, borderBottom:i<act.indicators.length-1?`1px solid ${act.color}15`:"none" }}>
+                            <div style={{ width:4, height:4, borderRadius:"50%", background:act.color, marginTop:5, flexShrink:0, opacity:0.6 }} />
+                            <div style={{ fontSize:12, color:C.textMid, lineHeight:1.45 }}>{ind}</div>
+                          </div>
+                        )) : <div style={{ fontSize:11, color:C.textDim, fontStyle:"italic" }}>Indicators to be developed</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Connector />
+          <ImpactPanel num="3">
+            <div>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:5 }}>
+                <div style={{ width:3, borderRadius:2, background:C.gold, alignSelf:"stretch", minHeight:24, flexShrink:0 }} />
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.gold, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:1 }}>Impact Achieved</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:C.navy, lineHeight:1.2 }}>2030 Strategy Goals</div>
+                </div>
+              </div>
+              <div style={{ fontSize:10, color:C.textDim, fontStyle:"italic", marginBottom:8 }}>Conditions we want to see across the system</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {SFL_CROSS.map((ind, i) => <div key={i} style={{ background:C.off, border:`1px solid ${C.goldBd}60`, borderLeft:`3px solid ${C.gold}`, borderRadius:"0 7px 7px 0", padding:"8px 12px" }}><div style={{ fontSize:12, color:C.textMid, lineHeight:1.55 }}>{ind}</div></div>)}
+              </div>
+            </div>
+            <BidirectionalDivider />
+            <div>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:8 }}>
+                <div style={{ width:3, borderRadius:2, background:C.goldMid, alignSelf:"stretch", minHeight:24, flexShrink:0 }} />
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.goldMid, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:1 }}>Impact Enabled</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:C.navy, lineHeight:1.2 }}>Ambition 2045</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {SFL_BUCKETS.map((bucket, bi) => {
+                  const isOpen = expandedBuckets[bi];
+                  return (
+                    <div key={bi}>
+                      <button onClick={() => setExpandedBuckets(p => ({...p,[bi]:!p[bi]}))} style={{ display:"flex", alignItems:"center", gap:8, width:"100%", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", padding:0, marginBottom:3 }}>
+                        <div style={{ fontSize:12, fontWeight:800, color:bucket.color, letterSpacing:"0.06em", textTransform:"uppercase", background:bucket.pale, padding:"4px 10px", borderLeft:`3px solid ${bucket.color}`, borderRadius:"0 4px 4px 0" }}>{bucket.label}</div>
+                        <div style={{ flex:1, height:1, background:C.bd }} />
+                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s", flexShrink:0 }}>
+                          <path d="M3 5 L7 9 L11 5" stroke={bucket.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      {isOpen && (
+                        <div style={{ background:`${bucket.color}04`, border:`1px solid ${bucket.color}20`, borderLeft:`3px solid ${bucket.color}`, borderRadius:"0 6px 6px 0", padding:"8px 10px", display:"flex", flexDirection:"column", gap:8 }}>
+                          <div style={{ fontSize:8, fontWeight:800, color:bucket.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>SFL Contribution</div>
+                          <div style={{ fontSize:11, color:C.textMid, lineHeight:1.6, marginBottom:4 }}>{bucket.contribution}</div>
+                          <div style={{ height:1, background:C.bd }} />
+                          {bucket.priorities.map(p => (
+                            <div key={p.n}>
+                              <div style={{ fontSize:10, fontWeight:800, color:C.gold, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>{p.n}</div>
+                              <div style={{ fontSize:12, fontWeight:700, color:C.navy, lineHeight:1.3, marginBottom:2 }}>{p.title}</div>
+                              <div style={{ fontSize:11, color:C.textMid, lineHeight:1.5 }}>{p.t1} · {p.t2}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </ImpactPanel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Cross-Cutting TOA ─────────────────────────────────────────────────────────
+const CC_ACTIVITIES = [
+  { id:"alignment", label:"Drive cross-division alignment through coordination with PSTs around shared goals", icon:"◎", color:C.c1, pale:C.c1Pale,
+    inputs:["Develop and manage processes to enable cross-PST coordination and clarity around shared goals and priorities"],
+    outcomeArea:"Cross-Division Alignment", outcome:"Coordination and alignment across and between Data and PST priorities enable more integrated and impactful collaboration.",
+    indicators:[{text:"% PSTs reporting strong partnership and clarity on Data & AI shared goals",num:1},{text:"% of PST leads who report that cross-cutting support is responsive to their needs",num:2},{text:"# of PST members who attended at least 1 USP Data learning session",num:3},{text:"# co-funded investments with PSTs",num:4},{text:"# large-scale, cross-PST collaborative touchpoints",num:5}] },
+  { id:"insights", label:"Use data and evidence to generate and share actionable insights", icon:"⬡", color:C.c2, pale:C.c2Pale,
+    inputs:["MLE dashboards tracking portfolio and BOW progress against strategy goals","Impact forecasting models and scenario analyses to inform investment decisions","Evidence synthesis and targeted analyses surfacing signals across the division","Impact accounting models extracting effect-size evidence for cost-effectiveness estimates"],
+    outcomeArea:"Data-Driven Insights", outcome:"Clear signals of progress, impact forecasts, and other evidence consistently inform portfolio and BOW decision-making.",
+    indicators:[{text:"% team who agree/strongly agree that MLE data and insights have strengthened their decision-making",num:6},{text:"% of team reporting high level of clarity around measurement priorities for their portfolio",num:7},{text:"% utilization rate of key analytical tools (CRM, Evidence Base, MLE Dashboards, etc.)",num:8}] },
+  { id:"operations", label:"Lead continuous improvement effort to enhance team coordination and impact", icon:"⟳", color:C.c3, pale:C.c3Pale,
+    inputs:["Streamlined investment processes — from idea generation through funding and execution","Planning and portfolio management tools that increase cross-team visibility","Operational norms, meeting cadences, and coordination infrastructure","Onboarding systems and role clarity frameworks for new team members"],
+    outcomeArea:"Operations & Efficiency", outcome:"Efficient planning and investment processes enable faster decision-making, increased cross-team visibility and connection, and faster paths to alignment and execution.",
+    indicators:[{text:"Average # of days to complete an investment (from idea to funded investment)",num:9},{text:"% of team members who feel empowered (agree-strongly agree) to get the work done for which they are responsible",num:10},{text:"% of team members who agree/strongly agree that processes for their work are efficient and appropriate for driving towards impact",num:11},{text:"% of team members who agree/strongly agree that their colleagues generally avoid complexity when it's not productive",num:12}] },
+  { id:"culture", label:"Establish inclusive norm, culture, alignment practices, and onboarding approaches", icon:"◈", color:C.c4, pale:C.c4Pale,
+    inputs:["Team values and norms development and ongoing reinforcement practices","Inclusion and belonging initiatives, psychological safety frameworks","Leadership modeling and manager development resources","Culture assessment cycles and structured feedback loops"],
+    outcomeArea:"Inclusion & Culture", outcome:"Team members feel a shared culture of trust, inclusion, and clarity that supports effective collaboration and impact.",
+    indicators:[{text:"% of team members who report we are living into our team's values/norms",num:13},{text:"% of team members comfortable sharing opinions that differ from others' views",num:14},{text:"% of team members who feel their work team leader fosters a welcoming environment",num:15},{text:"% of team members who feel a sense of trust and belonging on our team",num:16}] },
+];
+const CC_CROSS = ["% of USP Data & AI staff who agree/strongly agree that team systems, processes, and culture enable them to do their best work","% of team who agree/strongly agree that data and evidence consistently inform portfolio and BOW decision-making"];
+const CC_BOWS = [{ label:"Advance Strategy Learning & Insight", color:"#2060a0" },{ label:"Enable Business & Strategy Execution", color:"#e07070" },{ label:"Invest Reserve in Strategic Opportunities", color:"#7a3080" }];
+
+function CCToa() {
+  const [expandedIndicators, setExpandedIndicators] = useState({});
+  const toggleInd = (id, e) => { e.stopPropagation(); setExpandedIndicators(p => ({ ...p, [id]: !p[id] })); };
+  const gridCols = "180px 0.85fr 1fr";
+  return (
+    <div style={{ background:C.bg, color:C.text }}>
+      <ToaPortfolioHeader
+        title="Cross-Cutting Portfolio"
+        description="The Cross-Cutting Portfolio provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time. It brings together business and strategy support with measurement, learning, evaluation, and impact accounting to strengthen decision-making, align resources, and ensure the strategy remains focused and responsive."
+        bows={CC_BOWS}
+        accentColor={C.c2}
+      />
+      <div style={{ padding:"0 18px 18px" }}>
+        <div style={{ marginBottom:6 }}>
+          <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, alignItems:"end", marginBottom:4 }}>
+            <StageHead num="1" label="Activities" sub="What are we doing?" color={C.slate} />
+            <StageHead num="2" label="Investments & Inputs" sub="What are we funding and building?" color={C.teal} />
+            <StageHead num="3" label="Portfolio Outcomes" sub="What changes as a result?" color={C.teal} />
+            <div />
+            <StageHead num="4" label="2030 Impact Goals" sub="What does this make possible?" color={C.gold} />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:`${gridCols} 36px 420px`, gap:6, alignItems:"center", marginBottom:6 }}>
+            <div style={{ height:2, background:`linear-gradient(90deg, ${C.slate}60, ${C.teal})`, borderRadius:2 }} />
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:C.teal }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.teal}/></svg></div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.teal}, ${C.slate})` }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.slate}/></svg></div>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+              <div style={{ flex:"0 0 20px", width:2, background:`linear-gradient(to bottom, ${C.bd}, ${C.gold})`, borderRadius:1 }} />
+              <svg width="18" height="18" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="13" fill={`${C.gold}25`} stroke={C.gold} strokeWidth="2"/><path d="M10 13 L15 18 L20 13" stroke={C.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+            </div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.slate}, ${C.gold})`, borderRadius:2 }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.gold}/></svg></div>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 36px 420px", gap:0, alignItems:"start" }}>
+          <div style={{ borderRight:`2px solid ${C.bd}`, paddingRight:12 }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              {CC_ACTIVITIES.map((act, ai) => (
+                <div key={act.id} style={{ display:"grid", gridTemplateColumns:gridCols, gap:4 }}>
+                  <div style={{ borderRadius:8, background:`${act.color}10`, border:`1px solid ${act.color}35`, borderLeft:`4px solid ${act.color}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:4, justifyContent:"center", boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                    <div style={{ fontSize:16, color:act.color, lineHeight:1 }}>{act.icon}</div>
+                    <div style={{ fontSize:13, fontWeight:800, color:act.color, lineHeight:1.3 }}>{act.label}</div>
+                  </div>
+                  <div style={{ borderRadius:8, background:`${C.teal}04`, border:`1.5px solid ${C.bd}`, padding:"9px 10px", boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <div style={{ fontSize:11, fontWeight:800, color:act.color, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:5 }}>Investments & Inputs</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {act.inputs.map((inp, i) => (
+                        <div key={i} style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
+                          <div style={{ width:4, height:4, borderRadius:"50%", background:act.color, marginTop:6, flexShrink:0, opacity:0.7 }} />
+                          <div style={{ fontSize:12, color:C.textMid, lineHeight:1.5 }}>{inp}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:0, minWidth:0 }}>
+                    <div style={{ flex:1, borderRadius:expandedIndicators[act.id]?"8px 0 0 8px":8, background:`${C.teal}06`, border:`1.5px solid ${C.teal}30`, borderRight:expandedIndicators[act.id]?`1.5px solid ${act.color}30`:undefined, padding:"9px 12px", display:"flex", flexDirection:"column", gap:6, minWidth:0 }}>
+                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <div style={{ width:18, height:18, borderRadius:"50%", background:act.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:C.white, flexShrink:0 }}>{ai+1}</div>
+                          <div style={{ fontSize:11, fontWeight:800, color:act.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Outcome {ai+1}</div>
+                        </div>
+                        <button onClick={(e) => toggleInd(act.id, e)} style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0, background:"none", border:`1px solid ${act.color}40`, borderRadius:5, padding:"3px 7px", cursor:"pointer", fontFamily:"inherit" }}>
+                          <div style={{ fontSize:10, fontWeight:800, color:act.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Leading Indicators</div>
+                          <div style={{ background:`${act.color}15`, borderRadius:8, padding:"1px 5px", fontSize:10, fontWeight:700, color:act.color }}>{act.indicators.length}</div>
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:expandedIndicators[act.id]?"rotate(-90deg)":"rotate(0deg)", transition:"transform 0.2s", flexShrink:0 }}><path d="M3 5 L7 9 L11 5" stroke={act.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.5, paddingRight:expandedIndicators[act.id]?0:160 }}>{act.outcome}</div>
+                    </div>
+                    {expandedIndicators[act.id] && (
+                      <div style={{ width:260, flexShrink:0, borderRadius:"0 8px 8px 0", background:`${act.color}08`, border:`1.5px solid ${act.color}40`, borderLeft:"none", padding:"9px 10px", display:"flex", flexDirection:"column", gap:5 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+                          <div style={{ fontSize:10, fontWeight:800, color:act.color, letterSpacing:"0.08em", textTransform:"uppercase" }}>Leading Indicators</div>
+                          <div style={{ background:`${act.color}15`, border:`1px solid ${act.color}30`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700, color:act.color, fontStyle:"italic" }}>Draft</div>
+                        </div>
+                        {act.indicators.map((ind, i) => (
+                          <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start", paddingBottom:5, borderBottom:i<act.indicators.length-1?`1px solid ${act.color}15`:"none" }}>
+                            <div style={{ fontSize:10, fontWeight:800, color:`${act.color}80`, minWidth:18, flexShrink:0, paddingTop:2 }}>{ind.num}</div>
+                            <div style={{ fontSize:12, color:C.textMid, lineHeight:1.45 }}>{ind.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Connector />
+          <ImpactPanel num="4">
+            <div style={{ height:1, background:C.bd }} />
+            <div style={{ fontSize:12, color:C.textMid, lineHeight:1.6, fontStyle:"italic" }}>The Cross-Cutting Portfolio strengthens the team's ability to execute its strategy effectively and adapt over time — accelerating progress toward the Data & AI team's goals and the division's 2045 Ambition.</div>
+            <BidirectionalDivider />
+            <div>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:8 }}>
+                <div style={{ width:3, borderRadius:2, background:C.goldMid, alignSelf:"stretch", minHeight:24, flexShrink:0 }} />
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.goldMid, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:1 }}>Impact Enabled</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:C.navy, lineHeight:1.2 }}>Ambition 2045</div>
+                </div>
+              </div>
+              <div style={{ background:`${C.slate}06`, border:`1px solid ${C.slateBd}`, borderLeft:`3px solid ${C.slate}`, borderRadius:"0 7px 7px 0", padding:"10px 12px" }}>
+                <div style={{ fontSize:10, fontWeight:800, color:C.slate, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>Division Effectiveness</div>
+                <div style={{ fontSize:12, color:C.textMid, lineHeight:1.6 }}>By strengthening team alignment, decision-making quality, and operational efficiency, the Cross-Cutting portfolio ensures the division can pursue and sustain progress toward the 2045 Ambition at the pace and with the level of coordination required.</div>
+              </div>
+            </div>
+          </ImpactPanel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── AI Infrastructure TOA ─────────────────────────────────────────────────────
+const AI_LANES = [
+  { id:"model", label:"Frontier Model Efficacy", icon:"◈", color:CI.lane1, pale:CI.lane1Pale, bd:CI.lane1Bd, hdr:CI.lane1Hdr,
+    inputs:[{ title:"Datasets, Benchmarks & Evaluation Tech", items:["Domain + Subject specific benchmark datasets for tutoring, instruction, advising & navigation","Evaluation technologies assessing efficacy, safety & equity for priority populations","Simulated testing environments mirroring under-resourced school contexts","Synthetic learner panels & AI constitutions for pre-market validation"] }],
+    outcome:{ title:"Improved model performance in priority education domains", body:"AI models show measurable improvements in efficacy and reduced harms for tutoring, instruction, advising, and navigation — validated in education-specific contexts for low-SES learners." },
+    goalsImpact:true },
+  { id:"connect", label:"Contextualization & Alignment", icon:"⇄", color:CI.lane2, pale:CI.lane2Pale, bd:CI.lane2Bd, hdr:CI.lane2Hdr,
+    inputs:[{ title:"Portable Memory, A2A & Context Protocols", items:["Portable learner memory specs enabling AI to retain context across sessions","Agent-to-agent (A2A) protocols for seamless exchange of learner data & intent","Model Context Protocols (MCPs) ensuring personalization is portable across tools"] },{ title:"Middleware, MCPs & Curricular Knowledge Graphs", items:["Middleware & MCPs ensuring AI aligns to curricula, standards & existing technologies","Domain knowledge graphs (CSGA) linking competencies, skills & learning pathways","Standards integration (1EdTech, EdFi, IEEE) for interoperability across institutions"] }],
+    outcome:{ title:"Personalized, portable AI that aligns to learner and institutional context", body:"AI tutors, advisors, and EdTech systems can securely exchange learner data and intent across environments — with context that aligns to the curricula, standards, and tools learners and institutions already rely on." },
+    goalsImpact:true },
+  { id:"eco", label:"Safety & Guardrails", icon:"⊕", color:CI.lane3, pale:CI.lane3Pale, bd:CI.lane3Bd, hdr:CI.lane3Hdr, isMultiplier:true,
+    inputs:[{ title:"Standards, Protocols & Privacy Guardrails", items:["Open-source guardrail protocols & standards for safe, ethical learner data use","Privacy-preserving governance frameworks embedded into models and platforms","Age-appropriate data use protocols & field-facing assets","Public benchmark transparency and shared AI in Education knowledge base"] }],
+    outcome:{ title:"A market that rewards responsible, safe, and equitable AI development", body:"Evidence of product performance and efficacy creates a reinforcing feedback loop informing how AI systems are designed, improved, assessed, and procured, so higher-quality evidence leads to higher-quality products over time as developers compete on safety and efficacy." },
+    goalsImpact:false },
+];
+const AI_GOALS = [
+  { id:"G1", label:"Goal 1", title:"Enable AI Solutions", metric:"40% of learners reached by solutions embedding portable memory & context", laneIds:["model","connect","eco"] },
+  { id:"G2", label:"Goal 2", title:"Build Trusted Evidence", metric:"50% of learners reached by solutions using evidence-based benchmarks improving safety & quality", laneIds:["model","connect","eco"] },
+];
+const AI_PILLARS = [
+  { n:"1", title:"Full Stack Instruction & Tutoring", color:CI.p1, pale:CI.p1p, t1:"1.6 grade levels/yr", t2:"7.4m + 4.4m students", contribution:"AI Infrastructure creates the foundational conditions for effective AI-enabled instruction — enabling personalized, persistent learning experiences through portable learner context, and ensuring instructional AI tools are safe, evaluated, and aligned to the curricula and standards learners rely on." },
+  { n:"2", title:"AI-Enabled Gateway Math", color:CI.p2, pale:CI.p2p, t1:"80% avg pass rates", t2:"355k students / 450 institutions", contribution:"AI Infrastructure creates the foundational conditions for effective AI-enabled instruction — enabling personalized, persistent learning experiences through portable learner context, and ensuring instructional AI tools are safe, evaluated, and aligned to the curricula and standards learners rely on." },
+  { n:"3", title:"AI-Enabled Personalized Advising", color:CI.p3, pale:CI.p3p, t1:"+5pp college enrollment", t2:"8.6m at LLM scale", contribution:"AI Infrastructure enables AI-powered navigation tools to access and retain learner context across institutions, ensuring advisors and AI systems can provide trustworthy, personalized guidance — and that learner records and credentials are interoperable, enabling seamless mobility across pathways." },
+  { n:"4", title:"AI-Enabled Learning Mobility", color:CI.p4, pale:CI.p4p, t1:"37–45% credit transfer", t2:"1.6m students impacted", contribution:"AI Infrastructure enables AI-powered navigation tools to access and retain learner context across institutions, ensuring advisors and AI systems can provide trustworthy, personalized guidance — and that learner records and credentials are interoperable, enabling seamless mobility across pathways." },
+];
+
+function AIAmb45Panel({ hoveredPriority, setHoveredPriority, activeLane }) {
+  const [expandedBucket, setExpandedBucket] = useState(null);
+  const filteredGoals = activeLane ? AI_GOALS.filter(g => g.laneIds.includes(activeLane)) : AI_GOALS;
+  const buckets = [{ label:"Instruction", pillars:[AI_PILLARS[0],AI_PILLARS[1]] },{ label:"Navigation", pillars:[AI_PILLARS[2],AI_PILLARS[3]] }];
+  return (
+    <div style={{ padding:"12px 14px", display:"flex", flexDirection:"column", gap:12 }}>
+      <div>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:5 }}>
+          <div style={{ width:3, borderRadius:2, background:CI.gold, alignSelf:"stretch", minHeight:28, flexShrink:0 }} />
+          <div>
+            <div style={{ fontSize:10, fontWeight:800, color:CI.gold, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Impact Achieved</div>
+            <div style={{ fontSize:13, fontWeight:800, color:CI.navy, lineHeight:1.2 }}>2030 Scale Goals</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {filteredGoals.map(g => (
+            <div key={g.id}>
+              <div style={{ fontSize:10, fontWeight:800, color:CI.gold, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>{g.label}</div>
+              <div style={{ fontSize:13, fontWeight:700, color:CI.navy, lineHeight:1.3, marginBottom:2 }}>{g.title}</div>
+              <div style={{ fontSize:11, color:CI.textMid, lineHeight:1.5 }}>{g.metric}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <BidirectionalDivider />
+      <div>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:8 }}>
+          <div style={{ width:3, borderRadius:2, background:CI.goldMid, alignSelf:"stretch", minHeight:28, flexShrink:0 }} />
+          <div>
+            <div style={{ fontSize:10, fontWeight:800, color:CI.goldMid, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Impact Enabled</div>
+            <div style={{ fontSize:13, fontWeight:800, color:CI.navy, lineHeight:1.2 }}>Ambition 2045</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          {buckets.map(bucket => {
+            const isOpen = expandedBucket === bucket.label;
+            return (
+              <div key={bucket.label}>
+                <button onClick={() => setExpandedBucket(isOpen ? null : bucket.label)} style={{ display:"flex", alignItems:"center", gap:8, width:"100%", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", padding:0, marginBottom:3 }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:CI.slate, letterSpacing:"0.06em", textTransform:"uppercase", background:CI.slatePale, padding:"4px 10px", borderLeft:`3px solid ${CI.slate}`, borderRadius:"0 4px 4px 0" }}>{bucket.label}</div>
+                  <div style={{ flex:1, height:1, background:CI.bd }} />
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s", flexShrink:0 }}>
+                    <path d="M3 5 L7 9 L11 5" stroke={CI.slate} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                {isOpen && (
+                  <div style={{ background:`${CI.teal}04`, border:`1px solid ${CI.teal}20`, borderLeft:`3px solid ${CI.teal}`, borderRadius:"0 6px 6px 0", padding:"8px 10px", display:"flex", flexDirection:"column", gap:8 }}>
+                    <div style={{ fontSize:8, fontWeight:800, color:CI.teal, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>AI Infrastructure Contribution</div>
+                    <div style={{ fontSize:11, color:CI.textMid, lineHeight:1.6, marginBottom:4 }}>{bucket.pillars[0].contribution}</div>
+                    <div style={{ height:1, background:CI.bd }} />
+                    {bucket.pillars.map(p => (
+                      <div key={p.n}>
+                        <div style={{ fontSize:10, fontWeight:800, color:CI.gold, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>Priority {p.n}</div>
+                        <div style={{ fontSize:12, fontWeight:700, color:CI.navy, lineHeight:1.3, marginBottom:2 }}>{p.title}</div>
+                        <div style={{ fontSize:11, color:CI.textMid, lineHeight:1.5 }}>{p.t1} · {p.t2}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AIInfraToa() {
+  const [activeLane, setActiveLane] = useState(null);
+  const [hoveredPriority, setHoveredPriority] = useState(null);
+  const toggle = id => setActiveLane(p => p === id ? null : id);
+  const laneGridCols = "150px 0.75fr 78px 0.65fr";
+  const lane1 = AI_LANES[0], lane2 = AI_LANES[1], lane3 = AI_LANES[2];
+  const isActive1 = activeLane === lane1.id, isActive2 = activeLane === lane2.id, isActive3 = activeLane === lane3.id;
+  const mergedLayers = [
+    { label:"Pre-training", sub:"foundation" },
+    { label:"Post-training", sub:"quality signals" },
+    { label:"Domain Fine-tuning", sub:"specialization" },
+    { label:"Inference Context", sub:"real-time" },
+  ];
+  const swimData = [
+    { color:CI.lane1, pale:CI.lane1Pale, bd:CI.lane1Bd, active:[false,true,true,true], notes:[null,"Benchmarks → RLHF quality signals for accuracy, equity & trust","Curated datasets specialize models for tutoring, math & advising","Evaluation benchmarks drive procurement & field adoption decisions"], isEco:false },
+    { color:CI.lane2, pale:CI.lane2Pale, bd:CI.lane2Bd, active:[false,false,true,true], notes:[null,null,"CSGA knowledge graph aligns AI to curricula, standards & competency frameworks","Portable memory & A2A protocols enable persistent personalization at inference"], isEco:false },
+    { color:CI.lane3, pale:CI.lane3Pale, bd:CI.lane3Bd, active:[false,true,true,true], notes:[null,"Responsible AI & RLHF guardrails embed safety into base model weights","Safety & bias properties baked into domain-specialized models","Age-appropriate protocols & privacy governance operationalize responsible AI"], isEco:true },
+  ];
+  const activeSi = activeLane === lane1.id ? 0 : activeLane === lane2.id ? 1 : activeLane === lane3.id ? 2 : null;
+  return (
+    <div style={{ background:CI.bg, color:CI.text }}>
+      <ToaPortfolioHeader
+        title="AI Infrastructure Portfolio"
+        description="This portfolio aims to enable the shared infrastructure, adoption pathways, evidence practices, and alignment needed to advance AI driven personalization and ensure AI-enabled education solutions are built, adopted, and scaled responsibly."
+        problem="AI-enabled education solutions are advancing rapidly, but the conditions for responsible and equitable scale are fragmented or underdeveloped. Without intentional intervention, AI adoption risks reinforcing or widening existing inequities as benefits accrue unevenly across contexts."
+        bows={[
+          { label:"Enhance Context & Personalization", color:CI.lane2 },
+          { label:"Accelerate AI Evaluation, Evidence, and Guardrails", color:CI.lane3 },
+          { label:"Mobilize Frontier Labs for Learner Success", color:CI.lane1 },
+        ]}
+        accentColor={CI.lane1}
+      />
+      <div style={{ padding:"0 18px 14px" }}>
+        <div style={{ marginBottom:5 }}>
+          <div style={{ display:"grid", gridTemplateColumns:`${laneGridCols} 40px 360px`, gap:5, alignItems:"end", marginBottom:4 }}>
+            <StageHead num="1" label="Improvement Domains" sub="What are we trying to improve?" color={CI.slate} />
+            <StageHead num="2" label="Investments & Inputs" sub="What are we funding and building?" color={CI.teal} />
+            <div style={{ textAlign:"center", paddingBottom:4 }}><div style={{ fontSize:8, fontWeight:800, letterSpacing:"0.12em", color:CI.teal, textTransform:"uppercase", lineHeight:1.3 }}>Cross-Cutting Accelerant</div></div>
+            <StageHead num="3" label="Enabling Outcomes" sub="What changes as a result?" color={CI.teal} />
+            <div />
+            <StageHead num="4" label="Impact Achieved & Enabled" sub="What does this make possible?" color={CI.gold} />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:`${laneGridCols} 40px 360px`, gap:5, alignItems:"center" }}>
+            <div style={{ height:2, background:`linear-gradient(90deg, ${CI.slate}60, ${CI.teal})`, borderRadius:2 }} />
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:CI.teal }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={CI.teal}/></svg></div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, borderTop:`2px dashed ${CI.teal}50` }} /></div>
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${CI.teal}, ${CI.slate})` }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={CI.slate}/></svg></div>
+            <div />
+            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${CI.slate}, ${CI.gold})`, borderRadius:2 }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={CI.gold}/></svg></div>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 40px 360px", gap:0, alignItems:"start" }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:4, borderRight:`2px solid ${CI.bd}`, paddingRight:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:laneGridCols, gap:3, alignItems:"stretch" }}>
+              {[lane1,lane2,lane3].map((lane, li) => {
+                const isAct = [isActive1,isActive2,isActive3][li];
+                return (
+                  <div key={lane.id} style={{ display:"contents" }}>
+                    <div onClick={() => toggle(lane.id)} style={{ borderRadius:8, background:isAct?lane.pale:`${lane.color}10`, border:`2px solid ${isAct?lane.color:`${lane.color}30`}`, borderLeft:`4px solid ${lane.color}`, padding:"8px 10px", display:"flex", flexDirection:"column", gap:3, justifyContent:"center", cursor:"pointer", boxShadow:isAct?`0 2px 16px ${lane.color}25`:"0 1px 3px rgba(0,0,0,0.08)", gridRow:li+1 }}>
+                      <div style={{ fontSize:15, color:lane.color }}>{lane.icon}</div>
+                      <div style={{ fontSize:13, fontWeight:800, color:CI.navy, lineHeight:1.3 }}>{lane.label}</div>
+                      {lane.isMultiplier && <div style={{ background:`${lane.color}30`, border:`1px solid ${lane.color}60`, borderRadius:4, padding:"2px 6px", fontSize:9, color:lane.color, fontWeight:800, textAlign:"center", letterSpacing:"0.08em", textTransform:"uppercase" }}>× Multiplier</div>}
+                    </div>
+                    <div style={{ borderRadius:8, background:`${CI.teal}04`, border:`1.5px solid ${isAct?lane.color:CI.bd}`, padding:"8px 10px", gridRow:li+1, boxShadow:"0 1px 3px rgba(0,0,0,0.07)" }}>
+                      {lane.inputs.map((inp,ii) => (
+                        <div key={ii} style={{ marginBottom:ii<lane.inputs.length-1?8:0 }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:lane.color, marginBottom:3 }}>{inp.title}</div>
+                          {inp.items.map((item,i) => <div key={i} style={{ display:"flex", gap:7, alignItems:"flex-start", marginBottom:4 }}><div style={{ width:5, height:5, borderRadius:"50%", background:lane.color, marginTop:5, flexShrink:0, opacity:0.7 }} /><div style={{ fontSize:11, color:CI.textMid, lineHeight:1.45 }}>{item}</div></div>)}
+                        </div>
+                      ))}
+                    </div>
+                    <div onClick={() => toggle(lane.id)} style={{ borderRadius:8, background:isAct?lane.pale:`${CI.teal}06`, border:`1.5px solid ${isAct?lane.color:`${CI.teal}30`}`, padding:"8px 10px 8px 14px", display:"flex", flexDirection:"column", justifyContent:"center", cursor:"pointer", gridRow:li+1, gridColumn:4 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                        <div style={{ width:18, height:18, borderRadius:"50%", background:lane.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:CI.white, flexShrink:0 }}>{li+1}</div>
+                        <div style={{ fontSize:10, fontWeight:800, color:lane.color, letterSpacing:"0.06em", textTransform:"uppercase" }}>Outcome {li+1}</div>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:CI.navy, lineHeight:1.2, marginBottom:1 }}>{lane.outcome.title}</div>
+                      <div style={{ fontSize:12, color:CI.textMid, lineHeight:1.5 }}>{lane.outcome.body}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ gridColumn:3, gridRow:"1 / 4", background:`${CI.teal}08`, border:`1.5px solid ${CI.tealBd}`, borderTop:`3px solid ${CI.teal}`, borderRadius:8, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"14px 12px", gap:10, textAlign:"center" }}>
+                <div style={{ fontSize:11, fontWeight:800, color:CI.navy, lineHeight:1.35 }}>Align actors to unlock scale & leverage</div>
+                <div style={{ fontSize:9, color:CI.textDim, fontStyle:"italic", lineHeight:1.5 }}>Influences all lanes simultaneously</div>
+              </div>
+            </div>
+            {activeLane && <div style={{ textAlign:"center" }}><button onClick={() => setActiveLane(null)} style={{ background:"none", border:`1px solid ${CI.bd}`, borderRadius:5, padding:"4px 14px", fontSize:12, color:CI.textDim, cursor:"pointer" }}>Clear filter ✕</button></div>}
+            <div style={{ marginTop:4 }}>
+              <div style={{ background:`${CI.teal}12`, border:`1.5px solid ${CI.teal}50`, borderBottom:"none", borderRadius:"8px 8px 0 0", padding:"4px 10px", display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ width:20, height:20, borderRadius:"50%", background:CI.teal, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:CI.white, flexShrink:0 }}>3</div>
+                <div style={{ fontSize:10, fontWeight:800, color:CI.teal }}>Enabling Outcomes</div>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink:0 }}><path d="M7 2 L7 11 M3 8 L7 12 L11 8" stroke={CI.teal} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div style={{ fontSize:10, fontWeight:700, color:CI.teal }}>Where do these outcomes drive improvements in the AI development pipeline?</div>
+                <div style={{ flex:1 }} />
+                <div style={{ fontSize:9, color:`${CI.teal}90`, fontStyle:"italic" }}>Deep dive ↓</div>
+              </div>
+              <div style={{ background:`${CI.teal}03`, border:`1.5px solid ${CI.teal}50`, borderTop:"none", borderRadius:"0 0 8px 8px", padding:"8px 12px", boxShadow:"0 2px 6px rgba(0,0,0,0.06)" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:5, paddingBottom:4, borderBottom:`1px solid ${CI.bd}` }}>
+                  <div style={{ fontSize:10, color:CI.textDim }}>Upstream → Closest to Learner</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    {[{color:CI.lane1,label:"Frontier Model Efficacy"},{color:CI.lane2,label:"Contextualization"},{color:CI.lane3,label:"Safety & Guardrails"}].map(l => (
+                      <div key={l.label} style={{ display:"flex", alignItems:"center", gap:4 }}><div style={{ width:10, height:10, borderRadius:2, background:l.color, flexShrink:0 }} /><span style={{ fontSize:11, color:l.color, fontWeight:700 }}>{l.label}</span></div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:4, marginBottom:4 }}>
+                  {mergedLayers.map((sl, i) => (
+                    <div key={i} style={{ textAlign:"center", padding:"2px 2px 3px", borderBottom:`1px solid ${CI.bd}` }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:i===3?CI.teal:CI.navy, lineHeight:1.2 }}>{sl.label}</div>
+                      <div style={{ fontSize:11, color:CI.textDim, fontStyle:"italic" }}>{sl.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:6 }}>
+                  {[0,1,2,3].map(gi => (
+                    <div key={gi}>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:4, marginBottom:3, padding:"2px 0" }}>
+                        {swimData.map((sw, si) => {
+                          const isActive = sw.active[gi];
+                          const isDimmed = activeSi !== null && si !== activeSi;
+                          const isBright = activeSi === si && isActive;
+                          return (
+                            <div key={si} style={{ opacity:isDimmed?0.2:1, transition:"opacity 0.18s" }}>
+                              {sw.isEco
+                                ? <div style={{ width:isBright?12:8, height:isBright?12:8, borderRadius:"50%", border:`2px dashed ${sw.color}${isActive?"ff":"40"}`, background:isBright?`${sw.color}30`:"transparent", transition:"all 0.18s" }} />
+                                : <div style={{ width:isBright?15:isActive?11:6, height:isBright?15:isActive?11:6, borderRadius:"50%", background:isActive?sw.color:CI.white, border:`2px solid ${isActive?sw.color:`${sw.color}30`}`, boxShadow:isBright?`0 0 0 5px ${sw.color}40`:isActive?`0 0 0 2px ${sw.color}20`:"none", transition:"all 0.18s" }} />
+                              }
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                        {swimData.map((sw, si) => {
+                          const note = sw.notes[gi];
+                          if (!note) return null;
+                          const isDimmed = activeSi !== null && si !== activeSi;
+                          return (
+                            <div key={si} style={{ opacity:isDimmed?0.2:1, transition:"opacity 0.18s", background:sw.pale, border:`1px solid ${sw.bd}`, borderTop:`2px solid ${sw.color}`, borderRadius:"0 0 4px 4px", padding:"2px 4px" }}>
+                              <div style={{ fontSize:11, color:sw.color, lineHeight:1.5 }}>{note}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", paddingTop:36, gap:2 }}>
+            <div style={{ flex:"0 0 32px", width:2, background:`linear-gradient(to bottom, ${CI.bd}, ${CI.gold})`, borderRadius:1 }} />
+            <svg width="24" height="24" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="14" fill={`${CI.gold}25`} stroke={CI.gold} strokeWidth="2"/><path d="M10 13 L15 18 L20 13" stroke={CI.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+            <div style={{ fontSize:8, fontWeight:800, color:CI.goldMid, letterSpacing:"0.12em", textTransform:"uppercase", writingMode:"vertical-rl", transform:"rotate(180deg)", paddingBottom:4 }}>drives</div>
+          </div>
+          <div style={{ background:`${CI.gold}05`, border:`1.5px solid ${CI.gold}40`, borderTop:`3px solid ${CI.gold}`, borderRadius:10, overflow:"hidden", boxShadow:`0 2px 10px ${CI.gold}15` }}>
+            <div style={{ background:`${CI.gold}0a`, borderBottom:`1px solid ${CI.gold}25`, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+              <div style={{ width:20, height:20, borderRadius:"50%", background:CI.gold, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:CI.white, flexShrink:0 }}>4</div>
+              <div style={{ fontSize:11, fontWeight:800, color:CI.goldMid, letterSpacing:"0.06em", textTransform:"uppercase" }}>Impact Achieved & Enabled</div>
+            </div>
+            <AIAmb45Panel hoveredPriority={hoveredPriority} setHoveredPriority={setHoveredPriority} activeLane={activeLane} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PortfolioDashboard (per-portfolio full view) ───────────────────────────────
 function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, onUpdateBows, onNavigateToOutcome, onNavigateToBow, strategyRatings, onUpdateStrategyRatings }) {
   const { portfolio, bows } = portData;
@@ -4020,7 +4866,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
   const [expandedOutcomePanel,setExpandedOutcomePanel] = useState(null); // {idx, panel} | null
 
   const currentBow = bows.find(b=>b.id===activeBow);
-  const inMeasurement = activeTab!=="portfolio-overview"&&activeTab!=="investments"&&activeTab!=="partners";
+  const inMeasurement = activeTab!=="portfolio-overview"&&activeTab!=="investments"&&activeTab!=="partners"&&activeTab!=="theory-of-action";
 
   const updateBowOutcome = (bowId,outcomeId,updated) => onUpdateBows(bows.map(b=>b.id!==bowId?b:{...b,outcomes:b.outcomes.map(o=>o.id!==outcomeId?o:updated)}));
   const updateBowOutcomeByIdx = (bowId,oIdx,updated) => onUpdateBows(bows.map(b=>b.id!==bowId?b:{...b,outcomes:b.outcomes.map((o,i)=>i!==oIdx?o:updated)}));
@@ -4052,16 +4898,18 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
     <div style={{display:"flex",flexDirection:"column",gap:0}}>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"measurement",label:"Measurement & Insights"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"measurement",label:"Measurement & Insights"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"},{id:"theory-of-action",label:"Theory of Action"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
             :tab.id==="investments"?activeTab==="investments"
             :tab.id==="partners"?activeTab==="partners"
+            :tab.id==="theory-of-action"?activeTab==="theory-of-action"
             :inMeasurement;
           return <button key={tab.id}
             onClick={()=>{
               if(tab.id==="portfolio-overview") setActiveTab("portfolio-overview");
               else if(tab.id==="investments") setActiveTab("investments");
               else if(tab.id==="partners") setActiveTab("partners");
+              else if(tab.id==="theory-of-action") setActiveTab("theory-of-action");
               else if(!inMeasurement) setActiveTab("portfolio-progress");
             }}
             style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
@@ -4344,6 +5192,14 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         )}
         {activeTab==="partners"&&(
           <PortfolioPartnersView portId={portId} portColor={pc}/>
+        )}
+        {activeTab==="theory-of-action"&&(
+          <div style={{margin:"-28px -32px",overflowX:"auto"}}>
+            {portId==="ai-infra"&&<AIInfraToa/>}
+            {portId==="sfl"&&<SFLToa/>}
+            {portId==="hub"&&<DAHToa/>}
+            {portId==="cross-cutting"&&<CCToa/>}
+          </div>
         )}
         {activeTab==="bow"&&currentBow&&(
           <div>
