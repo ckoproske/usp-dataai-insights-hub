@@ -1180,10 +1180,12 @@ function execAutoStatus(outcome, year) {
   const yr = year || CURRENT_YEAR;
   const allT = (outcome.executionTargets[yr]||[]).map(t=>typeof t==="string"?{completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
   if (!allT.length) return null;
-  const pct = Math.round((allT.filter(t=>t.completion==="Complete").length/allT.length)*100);
-  if (pct>=90) return {pct,year:yr,...STATUS["Meets Expectations"]};
-  if (pct>=60) return {pct,year:yr,...STATUS["Slightly Below Expectations"]};
-  return {pct,year:yr,...STATUS["Below Expectations"]};
+  const completed = allT.filter(t=>t.completion==="Complete").length;
+  const total = allT.length;
+  const pct = Math.round((completed/total)*100);
+  if (pct>=90) return {pct,completed,total,year:yr,...STATUS["Meets Expectations"]};
+  if (pct>=60) return {pct,completed,total,year:yr,...STATUS["Slightly Below Expectations"]};
+  return {pct,completed,total,year:yr,...STATUS["Below Expectations"]};
 }
 function impactAutoStatus(outcome) {
   const s = outcome.impactIndicators.map(i=>autoSuggestStatus(i));
@@ -1514,17 +1516,6 @@ function BowOutcomePanel({ outcome, onUpdate }) {
   const addExec = () => onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:[...targets,{text:"",completion:"Not Started"}]}});
   return (
     <div style={{background:SURFACE,borderRadius:"0 0 12px 12px",border:"1px solid "+BORDER,borderTop:"none"}}>
-      <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,padding:"20px 24px",borderLeft:"4px solid "+(manualRs?manualRs.color:BORDER)}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1.2,color:TEXT_SUB,marginBottom:6}}>Outcome {outcome.number}</div>
-            <div style={{fontSize:17,fontWeight:700,lineHeight:1.5,color:TEXT,letterSpacing:-0.2}}>{outcome.title}</div>
-          </div>
-          <span style={{background:manualRs?manualRs.pill:"#F1F5F9",color:manualRs?manualRs.color:"#94A3B8",borderRadius:7,padding:"5px 14px",fontSize:14,fontWeight:700,flexShrink:0,border:"1px solid "+(manualRs?manualRs.color+"44":"#E4EAF0")}}>
-            {manualRs?manualRs.label:"Rating not set"}
-          </span>
-        </div>
-      </div>
       <div style={{padding:"20px 24px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:22}}>
           <span style={{fontSize:15,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginRight:4}}>Year</span>
@@ -5170,27 +5161,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               <div>
                 {currentBow.outcomes.length>0&&(
                   <div>
-                    {/* Year selector */}
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                      <span style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.6}}>Execution year</span>
-                      <div style={{display:"flex",background:BG,border:"1px solid "+BORDER,borderRadius:8,padding:3,gap:2}}>
-                        {YEARS.map(yr=>{
-                          const hasData = currentBow.outcomes.some(o=>(o.executionTargets[yr]||[]).length>0);
-                          return (
-                            <button key={yr} onClick={()=>setProgressYear(yr)}
-                              style={{padding:"3px 12px",fontSize:12,fontWeight:700,borderRadius:6,border:"none",cursor:"pointer",
-                                background:progressYear===yr?SURFACE:"transparent",
-                                color:progressYear===yr?TEXT:TEXT_SUB,
-                                boxShadow:progressYear===yr?"0 1px 4px rgba(10,37,64,0.10)":"none",
-                                opacity:hasData||progressYear===yr?1:0.4,
-                                transition:"all .15s",position:"relative"}}>
-                              {yr}
-                              {hasData&&progressYear!==yr&&<span style={{position:"absolute",top:2,right:2,width:4,height:4,borderRadius:"50%",background:pc.color}}/>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
                     <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:0}}>
                       {currentBow.outcomes.map((o,i)=>{
                         const active=i===activeBowOutcomeIdx;
@@ -5215,7 +5185,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                               <div style={{display:"flex",gap:16}}>
                                 <div>
                                   <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Execution {progressYear}</div>
-                                  {exec?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:exec.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:exec.color}}>{exec.pct}%</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>No targets</span>}
+                                  {exec?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:exec.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:exec.color}}>{exec.completed}/{exec.total}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>No targets</span>}
                                 </div>
                                 <div>
                                   <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Impact</div>
