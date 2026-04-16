@@ -20,7 +20,7 @@ def dashboard():
 # ── Database connection ───────────────────────────────────────────────────────
 
 DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "adb-527625614048962.2.azuredatabricks.net")
-HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/0cd0e380d94af214")
+HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/8e81112c186dc16b")
 
 CATALOG = "usp_data"
 SCHEMA  = f"{CATALOG}.usp_strategy"
