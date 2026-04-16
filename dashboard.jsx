@@ -4854,16 +4854,31 @@ function PortfolioByTheNumbers({ portId, portColor }) {
   ];
 
   return (
-    <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 28px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-      <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:18}}>By the Numbers</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-        {STATS.map((stat,i) => (
-          <div key={i} style={{padding:"18px 20px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
-            <div style={{fontSize:32,fontWeight:700,color:stat.value==="—"||stat.value==="…"?TEXT_MUTED:pc.color,marginBottom:6,letterSpacing:-1,lineHeight:1}}>{stat.value}</div>
-            <div style={{fontSize:13,fontWeight:600,color:TEXT,marginBottom:3}}>{stat.label}</div>
-            <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
-          </div>
-        ))}
+    <div style={{
+      borderRadius:14,overflow:"hidden",
+      border:"1px solid "+BORDER,
+      background:`linear-gradient(135deg,${pc.color}12 0%,${SURFACE} 60%)`,
+      boxShadow:"0 1px 8px rgba(0,0,0,0.05)",
+    }}>
+      <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}66)`}}/>
+      <div style={{padding:"24px 32px"}}>
+        <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2.5,marginBottom:20,opacity:0.85}}>By the Numbers</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0}}>
+          {STATS.map((stat,i) => (
+            <div key={i} style={{
+              padding:"4px 28px 4px"+(i===0?"0":""),
+              borderLeft:i===0?"none":"1px solid "+BORDER,
+            }}>
+              <div style={{
+                fontSize:44,fontWeight:800,
+                color:stat.value==="—"||stat.value==="…"?BORDER:pc.color,
+                letterSpacing:-2,lineHeight:1,marginBottom:8,
+              }}>{stat.value}</div>
+              <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:3}}>{stat.label}</div>
+              <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -5023,166 +5038,46 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       <div style={{padding:"28px 32px"}}>
         {activeTab==="portfolio-overview"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            <div style={{borderRadius:14,overflow:"hidden",border:"1px solid "+BORDER,background:SURFACE,boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-              {/* Activity → Outcome pairs, full width */}
-              <div style={{display:"flex",alignItems:"stretch"}}>
-                <div style={{padding:"24px 28px",background:SURFACE,flex:1,borderTop:"1px solid "+BORDER}}>
-                  <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:(isSFL||portId==="ai-infra")?8:18}}>
-                    <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Portfolio Outcomes</div>
-                  </div>
-                  {isSFL&&(
-                    <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6,marginBottom:18,maxWidth:700,paddingLeft:1}}>
-                      Progress toward faster and more effective system feedback loops requires multiple enabling conditions to move together.
-                    </div>
-                  )}
-                  {portId==="ai-infra"&&(
-                    <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6,marginBottom:18,maxWidth:700,paddingLeft:1}}>
-                      Progress toward more responsible and effective AI driven personalization requires multiple enabling conditions to move together.
-                    </div>
-                  )}
-                  <div style={{display:"flex",flexDirection:"column",gap:0}}>
-                    {/* Column headers — shown once */}
-                    <div style={{display:"flex",alignItems:"center",marginBottom:8,paddingLeft:44}}>
-                      <div style={{flex:"0 0 260px",fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,paddingLeft:16}}>Activity</div>
-                      <div style={{flex:1,fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,paddingLeft:16}}>Outcome</div>
-                    </div>
-                    {OUTCOMES_FOR_PANEL.map((o,i)=>{
-                      const rs=o.manualStatus&&STATUS[o.manualStatus]?STATUS[o.manualStatus]:null;
-                      const isLast = i === OUTCOMES_FOR_PANEL.length - 1;
-                      const po = portfolio.portfolioOutcomes[i];
-                      const expandedKey = `${i}`;
-                      const isExpanded = expandedOutcomePanel?.idx === i;
-                      const activePanel = isExpanded ? expandedOutcomePanel.panel : null;
 
-                      return (
-                        <div key={o.id} style={{marginBottom:isLast?0:2}}>
-                          {/* Main row */}
-                          <div style={{
-                            display:"flex",alignItems:"stretch",
-                            borderRadius:isExpanded?"10px 10px 0 0":10,
-                            border:"1px solid "+(isExpanded?pc.color+"66":rs?rs.color+"55":BORDER),
-                            borderBottom:isExpanded?"none":undefined,
-                            overflow:"hidden",background:SURFACE,transition:"box-shadow .15s",
-                          }}
-                            onMouseEnter={e=>{ if(!isExpanded) e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.07)"; }}
-                            onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-
-                            {/* Left accent bar */}
-                            <div style={{width:4,background:pc.color,flexShrink:0}}/>
-
-                            {/* Number badge */}
-                            <div style={{width:40,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:pc.color+"0A",borderRight:"1px solid "+pc.color+"18"}}>
-                              <span style={{fontSize:11,fontWeight:700,color:pc.color,width:22,height:22,borderRadius:"50%",border:"1.5px solid "+pc.color+"55",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{i+1}</span>
-                            </div>
-
-                            {/* Activity */}
-                            <div style={{flex:"0 0 260px",padding:"14px 18px",background:pc.color+"05",borderRight:"1px dashed "+pc.color+"30"}}>
-                              <div style={{fontSize:14,fontWeight:600,color:TEXT,lineHeight:1.5}}>{o.activity||"—"}</div>
-                            </div>
-
-                            {/* Outcome */}
-                            <div style={{flex:1,padding:"14px 18px",minWidth:0}}>
-                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:rs?6:0}}>
-                                {rs&&<span style={{display:"inline-flex",alignItems:"center",gap:3,background:rs.pill,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700,color:rs.color,whiteSpace:"nowrap"}}><span style={{width:5,height:5,borderRadius:"50%",background:rs.color,display:"inline-block"}}/>{rs.label}</span>}
-                              </div>
-                              <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.35,marginBottom:5}}>{o.shortTitle}</div>
-                              <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6}}>{o.outcome}</div>
-                            </div>
-
-                            {/* Right actions */}
-                            <div style={{flex:"0 0 auto",display:"flex",flexDirection:"column",justifyContent:"center",gap:5,padding:"12px 14px",borderLeft:"1px solid "+BORDER,background:SURFACE_2}}>
-                              {[["indicators","Indicators"],["investments","💼 Investments"],["partners","🤝 Partners"]].map(([panel,label])=>{
-                                const isActive = isExpanded && activePanel===panel;
-                                return (
-                                  <button key={panel}
-                                    onClick={()=>setExpandedOutcomePanel(isActive ? null : {idx:i, panel})}
-                                    style={{fontSize:10,fontWeight:isActive?700:500,
-                                      color:isActive?pc.color:TEXT_MUTED,
-                                      background:isActive?pc.color+"15":SURFACE,
-                                      border:"1px solid "+(isActive?pc.color+"55":BORDER),
-                                      borderRadius:5,padding:"4px 10px",cursor:"pointer",
-                                      whiteSpace:"nowrap",textAlign:"left",transition:"all .12s"}}
-                                    onMouseEnter={e=>{ if(!isActive){e.currentTarget.style.borderColor=pc.color;e.currentTarget.style.color=pc.color;} }}
-                                    onMouseLeave={e=>{ if(!isActive){e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.color=TEXT_MUTED;} }}>
-                                    {label}{isActive?" ✕":""}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Inline drawer */}
-                          {isExpanded && (
-                            <div style={{border:"1px solid "+pc.color+"55",borderTop:"1px solid "+pc.color+"22",borderRadius:"0 0 10px 10px",background:pc.color+"04",padding:"14px 16px 16px",animation:"fadeUp .15s ease"}}>
-
-                              {activePanel==="indicators" && (
-                                <div>
-                                  <div style={{fontSize:9,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Leading Indicators</div>
-                                  {po?.indicators?.length ? (
-                                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                                      {po.indicators.map((ind,j)=>(
-                                        <div key={ind.id||j} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"8px 12px",background:SURFACE,borderRadius:7,border:"1px solid "+BORDER}}>
-                                          <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{j+1}</span>
-                                          <div style={{flex:1}}>
-                                            <div style={{fontSize:12,color:TEXT,lineHeight:1.5}}>{ind.text}</div>
-                                            {ind.baseline&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>Baseline: {ind.baseline}</div>}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div style={{fontSize:12,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined yet.</div>
-                                  )}
-                                </div>
-                              )}
-
-                              {activePanel==="investments" && (
-                                <div>
-                                  <div style={{fontSize:9,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Investments</div>
-                                  {(() => {
-                                    const invs = bows.flatMap(bow => {
-                                      const base = (PLACEHOLDER_INVESTMENTS[bow.id]||[]);
-                                      const custom = Object.values(bow.investmentOverlays||{}).filter(v=>v.isCustom);
-                                      return [...base,...custom];
-                                    });
-                                    return invs.length ? (
-                                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                                        {invs.map((inv,j)=>(
-                                          <div key={inv.id||j} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",background:SURFACE,borderRadius:7,border:"1px solid "+BORDER}}>
-                                            <div style={{flex:1}}>
-                                              <div style={{fontSize:12,fontWeight:600,color:TEXT}}>{inv.grantee}</div>
-                                              <div style={{fontSize:11,color:TEXT_MUTED}}>{inv.initiative}</div>
-                                            </div>
-                                            <div style={{fontSize:11,fontWeight:600,color:TEXT_MUTED,flexShrink:0}}>{inv.amount||"—"}</div>
-                                            <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>{inv.year}</div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div style={{fontSize:12,color:TEXT_MUTED,fontStyle:"italic"}}>No investments linked yet. Add them in the Investments tab.</div>
-                                    );
-                                  })()}
-                                </div>
-                              )}
-
-                              {activePanel==="partners" && (
-                                <div>
-                                  <div style={{fontSize:9,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Partners</div>
-                                  <div style={{fontSize:12,color:TEXT_MUTED,fontStyle:"italic"}}>Partner data coming soon. Partners will appear here once added in the Partners tab.</div>
-                                </div>
-                              )}
-
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-            </div>
+            {/* By the Numbers — prominent strip */}
             <PortfolioByTheNumbers portId={portId} portColor={pc}/>
+
+            {/* Portfolio Outcomes — horizontal tiles */}
+            <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 28px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
+              <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:18}}>Portfolio Outcomes</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+                {OUTCOMES_FOR_PANEL.map((o,i)=>(
+                  <div key={o.id} style={{
+                    flex:"1 1 260px",minWidth:220,maxWidth:"100%",
+                    borderRadius:12,overflow:"hidden",
+                    border:"1px solid "+BORDER,
+                    display:"flex",flexDirection:"column",
+                    boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
+                    background:SURFACE,
+                  }}>
+                    {/* Colored top bar */}
+                    <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`,flexShrink:0}}/>
+                    <div style={{padding:"18px 20px",display:"flex",flexDirection:"column",gap:10,flex:1}}>
+                      {/* Number + short title */}
+                      <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                        <span style={{
+                          flexShrink:0,width:24,height:24,borderRadius:"50%",
+                          background:pc.color+"18",border:"1.5px solid "+pc.color+"55",
+                          fontSize:11,fontWeight:700,color:pc.color,
+                          display:"inline-flex",alignItems:"center",justifyContent:"center",
+                          marginTop:1,
+                        }}>{i+1}</span>
+                        <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.4}}>{o.shortTitle}</div>
+                      </div>
+                      {/* Outcome description */}
+                      <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65,paddingLeft:34}}>{o.outcome}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Key 2030 Goals */}
             <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
               <div style={{padding:"16px 28px 12px",borderBottom:"1px solid "+BORDER}}>
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Key 2030 Goals</div>
