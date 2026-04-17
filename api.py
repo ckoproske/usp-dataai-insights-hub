@@ -87,6 +87,18 @@ def debug():
         """)
         result["db_status"] = "ok"
         result["table_counts"] = counts[0] if counts else {}
+
+        # Sample IDs from each key table — helps diagnose ID mismatches
+        bow_ids      = query(f"SELECT bow_id, title FROM {SCHEMA}.bows ORDER BY sort_order")
+        ind_bow_ids  = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_indicators ORDER BY bow_id")
+        out_bow_ids  = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_outcomes ORDER BY bow_id")
+        tgt_bow_ids  = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.execution_targets ORDER BY bow_id")
+        sample_ind   = query(f"SELECT indicator_id, bow_id, outcome_id, text FROM {SCHEMA}.bow_indicators LIMIT 3")
+        result["bows_table_ids"]       = [r["bow_id"] for r in bow_ids]
+        result["bow_indicators_bow_ids"] = [r["bow_id"] for r in ind_bow_ids]
+        result["bow_outcomes_bow_ids"]   = [r["bow_id"] for r in out_bow_ids]
+        result["execution_targets_bow_ids"] = [r["bow_id"] for r in tgt_bow_ids]
+        result["sample_indicators"]    = sample_ind
     except Exception as e:
         result["db_status"] = "error"
         result["error"] = str(e)
@@ -97,6 +109,25 @@ def debug():
 # ═════════════════════════════════════════════════════════════════════════════
 # TIER 1 — Strategy structure (read-only)
 # ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/debug-ids")
+def debug_ids():
+    """Exposes the actual bow_id values in each table — use to diagnose ID mismatches."""
+    try:
+        bows    = query(f"SELECT bow_id FROM {SCHEMA}.bows ORDER BY sort_order")
+        ind_ids = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_indicators")
+        out_ids = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_outcomes")
+        tgt_ids = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.execution_targets")
+        sample  = query(f"SELECT indicator_id, bow_id, outcome_id FROM {SCHEMA}.bow_indicators LIMIT 5")
+        return jsonify({
+            "bows":               [r["bow_id"] for r in bows],
+            "bow_indicators":     [r["bow_id"] for r in ind_ids],
+            "bow_outcomes":       [r["bow_id"] for r in out_ids],
+            "execution_targets":  [r["bow_id"] for r in tgt_ids],
+            "sample_indicator_rows": sample,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "type": type(e).__name__}), 500
 
 @app.route("/api/goals")
 def get_goals():
