@@ -4849,13 +4849,29 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             :tab.id==="theory-of-action"?activeTab==="theory-of-action"
             :tab.id==="decision-insights"?activeTab==="decision-insights"
             :inMeasurement;
+          if(tab.id==="decision-insights") {
+            return (
+              <button key={tab.id} onClick={()=>setActiveTab("decision-insights")}
+                style={{
+                  padding:"10px 14px",marginLeft:"auto",marginRight:8,alignSelf:"center",
+                  fontWeight:600,fontSize:12,cursor:"pointer",letterSpacing:0.2,
+                  border:"1.5px solid "+ACCENT+"55",borderRadius:7,
+                  background:active?ACCENT+"12":"transparent",
+                  color:active?ACCENT:ACCENT,
+                  display:"flex",alignItems:"center",gap:5,
+                  transition:"all .15s",
+                }}>
+                {tab.label}
+                <span style={{fontSize:10,opacity:0.7}}>↗</span>
+              </button>
+            );
+          }
           return <button key={tab.id}
             onClick={()=>{
               if(tab.id==="portfolio-overview") setActiveTab("portfolio-overview");
               else if(tab.id==="investments") setActiveTab("investments");
               else if(tab.id==="partners") setActiveTab("partners");
               else if(tab.id==="theory-of-action") setActiveTab("theory-of-action");
-              else if(tab.id==="decision-insights") setActiveTab("decision-insights");
               else if(!inMeasurement) setActiveTab("portfolio-progress");
             }}
             style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
