@@ -1731,8 +1731,19 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>Contributing BOW Outcomes</div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  {bowProgress.map(b=>{
-                    const visible = b.outcomes.filter(o=>o.title||o.shortTitle);
+                  {(()=>{
+                    // Cap total contributing outcomes at 4 across all BOWs
+                    const MAX = 4;
+                    let remaining = MAX;
+                    return bowProgress.map(b=>{
+                      const visible = b.outcomes.filter(o=>o.title||o.shortTitle);
+                      if(!visible.length||remaining<=0) return null;
+                      const slice = visible.slice(0,remaining);
+                      remaining -= slice.length;
+                      return {...b, outcomes:slice};
+                    }).filter(Boolean);
+                  })().map(b=>{
+                    const visible = b.outcomes;
                     if(!visible.length) return null;
                     return (
                       <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
