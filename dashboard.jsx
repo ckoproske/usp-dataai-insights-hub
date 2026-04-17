@@ -1738,53 +1738,46 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                 </div>
               </div>
 
-              {/* Contributing BOW Outcomes */}
+              {/* Contributing BOWs — progress + outcomes combined */}
               <div>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>Contributing BOW Outcomes</div>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>Contributing BOWs</div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  {(bows||[]).map(b=>{
-                    const visible = b.outcomes.filter(o=>o.shortTitle||o.title);
-                    if(!visible.length) return null;
+                  {bowProgress.map(b=>{
+                    const visible = b.outcomes.filter(o=>o.title||o.shortTitle);
                     return (
-                      <div key={b.id}>
-                        <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,marginBottom:5,paddingBottom:4,borderBottom:"1px solid "+BORDER}}>{b.name}</div>
-                        <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                          {visible.map((o,oi)=>(
-                            <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"3px 0"}}>
-                              <span style={{width:5,height:5,borderRadius:"50%",background:pc.color+"88",flexShrink:0,marginTop:5}}/>
-                              <span style={{fontSize:12,color:TEXT,lineHeight:1.45}}>{o.shortTitle||o.title}</span>
+                      <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
+                        {/* BOW header — name + progress stats */}
+                        <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:visible.length?"1px solid "+BORDER:"none",background:pc.color+"05"}}>
+                          <div style={{flex:1,fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.3}}>{b.name}</div>
+                          <div style={{display:"flex",gap:14,flexShrink:0}}>
+                            <div style={{textAlign:"right"}}>
+                              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec {activeYear}</div>
+                              {b.exec
+                                ? <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}}><span style={{width:6,height:6,borderRadius:"50%",background:b.exec.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.exec.color}}>{b.exec.completed}/{b.exec.total}</span></div>
+                                : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
                             </div>
-                          ))}
+                            <div style={{textAlign:"right"}}>
+                              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Impact</div>
+                              {b.impact
+                                ? <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}}><span style={{width:6,height:6,borderRadius:"50%",background:b.impact.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.impact.color}}>{b.impact.label.replace(" Expectations","")}</span></div>
+                                : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                            </div>
+                          </div>
                         </div>
+                        {/* Outcome list */}
+                        {visible.length>0&&(
+                          <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                            {visible.map((o,oi)=>(
+                              <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                                <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                                <span style={{fontSize:12,color:TEXT,lineHeight:1.55}}>{o.title||o.shortTitle}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* BOW Progress Summary */}
-              <div>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>BOW Progress</div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {bowProgress.map(b=>(
-                    <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,background:SURFACE}}>
-                      <div style={{flex:1,fontSize:12,fontWeight:700,color:TEXT,lineHeight:1.3}}>{b.name}</div>
-                      <div style={{display:"flex",gap:14,flexShrink:0}}>
-                        <div>
-                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:3}}>Exec {activeYear}</div>
-                          {b.exec
-                            ? <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:6,height:6,borderRadius:"50%",background:b.exec.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.exec.color}}>{b.exec.completed}/{b.exec.total}</span></div>
-                            : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                        </div>
-                        <div>
-                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:3}}>Impact</div>
-                          {b.impact
-                            ? <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:6,height:6,borderRadius:"50%",background:b.impact.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.impact.color}}>{b.impact.label.replace(" Expectations","")}</span></div>
-                            : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
 
