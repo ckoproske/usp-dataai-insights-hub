@@ -6318,6 +6318,206 @@ function ConnectorColumn({ leftItems, rightItems, getLeftId, getRightId, isConne
   );
 }
 
+// ── MeasurementHierarchyView ──────────────────────────────────────────────────
+function MeasurementHierarchyView() {
+  const [expanded, setExpanded] = useState(null);
+
+  const LI_COLOR    = "#7C3AED";
+  const INVEST_COLOR= "#6B7280";
+
+  // Primary hierarchy tiers
+  const TIERS = [
+    {
+      id:"ambition",
+      tier:null,
+      label:"Ambition 2045",
+      tag:"North star · long-term vision",
+      color:BRAND,
+      desc:"The Foundation's long-term vision for equitable, AI-enabled learning outcomes. Not directly measured — it sets the direction that all strategy goals and investments are oriented toward.",
+      arrow:"guides",
+      lateral:null,
+    },
+    {
+      id:"goals",
+      tier:"Tier 1",
+      label:"2030 Strategy Goals",
+      tag:"5 goals",
+      color:"#3086AB",
+      desc:"Five time-bound goals defining what the team commits to achieving by 2030. Each goal has a metric, a 2026 baseline, and a 2030 target. Goals are contributed to by portfolios in a many-to-many relationship — only AI Infrastructure and System Feedback Loops contribute directly.",
+      arrow:"pursued through",
+      lateral:null,
+    },
+    {
+      id:"portfolios",
+      tier:"Tier 2",
+      label:"Portfolios",
+      tag:"4 portfolios",
+      color:"#4EAB9A",
+      desc:"Four thematic investment areas. AI Infrastructure and System Feedback Loops are direct drivers of the 2030 goals (M:N). Cross-Cutting Supports and Data & AI Enablement Hub are internal enablers — they support team execution and strategy effectiveness but do not contribute directly to any 2030 goal.",
+      arrow:"define",
+      lateral:null,
+    },
+    {
+      id:"port-outcomes",
+      tier:"Tier 3",
+      label:"Portfolio Outcomes",
+      tag:"activity–outcome pairs",
+      color:"#FBAE40",
+      desc:"Specific results each portfolio is working toward. Each pairs a discrete activity (what the team does) with an expected outcome (what changes as a result). Portfolio Outcomes sit between the broad 2030 Goals and the detailed BOW Outcomes.",
+      arrow:"executed via",
+      lateral:{
+        label:"Leading Indicators",
+        sublabel:"Portfolio-level · parsimonious set",
+        color:LI_COLOR,
+        note:"A curated, small set of forward-looking signals per Portfolio Outcome. Draws from a subset of BOW-level indicators, and may include additional indicators not tracked within any individual BOW.",
+      },
+    },
+    {
+      id:"bows",
+      tier:"Tier 4",
+      label:"Bodies of Work (BOWs)",
+      tag:"10 BOWs across 4 portfolios",
+      color:ACCENT,
+      desc:"Ten major workstreams — the primary unit of execution. Each BOW defines a focused area of work, the outcomes it aims to produce, and the investments made to deliver it. Nested within one portfolio.",
+      arrow:"produce",
+      lateral:null,
+    },
+    {
+      id:"bow-outcomes",
+      tier:"Tier 5",
+      label:"BOW Outcomes",
+      tag:"specific measurable results",
+      color:"#059669",
+      desc:"The most granular outcome-level element. Aggregate upward toward Portfolio Outcomes in a many-to-many relationship (tracked in bow_portfolio_outcome_links, distinguishing direct vs. indirect contributions). Investments link directly to BOW Outcomes via INVEST.",
+      arrow:"tracked by",
+      lateral:{
+        label:"Leading Indicators",
+        sublabel:"BOW-level · one set per BOW",
+        color:LI_COLOR,
+        note:"Each BOW has its own set of forward-looking signals. Partial overlap with portfolio-level indicators — some BOW indicators surface to the portfolio set, others remain BOW-specific. The portfolio set may also include indicators not present at BOW level.",
+      },
+    },
+    {
+      id:"execution",
+      tier:"Tier 6",
+      label:"Execution Targets",
+      tag:"milestones & deliverables",
+      color:"#DC2626",
+      desc:"The most granular tracking layer. Specific milestones and deliverables tied to BOW Outcomes, defining what success looks like within a given strategy period.",
+      arrow:null,
+      lateral:{
+        label:"Investments",
+        sublabel:"Lateral · via INVEST (Salesforce)",
+        color:INVEST_COLOR,
+        note:"Grants and funded activities managed in INVEST — read-only here. Linked via bows.invest_bow_id. Investments connect laterally into the hierarchy at two points: BOW Outcomes (which outcomes each grant advances) and Execution Targets (milestone-level tracking).",
+      },
+    },
+  ];
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+
+      {/* Intro */}
+      <div style={{marginBottom:24,padding:"14px 20px",background:SURFACE,borderRadius:10,border:"1px solid "+BORDER}}>
+        <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.75}}>
+          The strategy is organized across <strong>seven measurement tiers</strong> — from the long-term Ambition 2045 vision down to granular execution targets. Two lateral elements, <span style={{color:LI_COLOR,fontWeight:600}}>Leading Indicators</span> and <span style={{color:INVEST_COLOR,fontWeight:600}}>Investments</span>, connect into the hierarchy at specific points rather than sitting in the primary chain. Click any tier to read its full description.
+        </div>
+      </div>
+
+      {/* Hierarchy grid — main column + lateral column */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:"0 20px",alignItems:"start"}}>
+        {TIERS.map((tier) => (
+          <React.Fragment key={tier.id}>
+
+            {/* ── Tier card (left column) ── */}
+            <div
+              onClick={()=>setExpanded(expanded===tier.id?null:tier.id)}
+              style={{
+                borderRadius:10,overflow:"hidden",
+                border:"1.5px solid "+(expanded===tier.id?tier.color:BORDER),
+                background:expanded===tier.id?tier.color+"0B":SURFACE,
+                cursor:"pointer",transition:"all .15s",
+                boxShadow:expanded===tier.id?"0 2px 12px rgba(0,0,0,0.07)":"none",
+                display:"flex",
+              }}>
+              <div style={{width:5,flexShrink:0,background:tier.color}}/>
+              <div style={{flex:1,padding:"13px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:expanded===tier.id?6:0}}>
+                  {tier.tier&&(
+                    <span style={{fontSize:9,fontWeight:700,color:tier.color,background:tier.color+"15",borderRadius:4,padding:"2px 7px",letterSpacing:0.6,textTransform:"uppercase",flexShrink:0}}>
+                      {tier.tier}
+                    </span>
+                  )}
+                  <span style={{fontSize:13,fontWeight:700,color:TEXT,flex:1}}>{tier.label}</span>
+                  <span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>{tier.tag}</span>
+                  <span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0,marginLeft:4,transition:"transform .15s",display:"inline-block",transform:expanded===tier.id?"rotate(90deg)":"none"}}>›</span>
+                </div>
+                {expanded===tier.id&&(
+                  <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.75,paddingTop:4,borderTop:"1px solid "+tier.color+"22",marginTop:4}}>
+                    {tier.desc}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Lateral card (right column) ── */}
+            {tier.lateral ? (
+              <div style={{position:"relative"}}>
+                {/* Dashed horizontal connector */}
+                <div style={{position:"absolute",top:"50%",left:-22,width:22,height:0,
+                  borderTop:"1.5px dashed "+tier.lateral.color+"77",transform:"translateY(-50%)"}}/>
+                <div style={{position:"absolute",top:"50%",left:-8,fontSize:9,color:tier.lateral.color+"99",transform:"translateY(-60%)"}}>►</div>
+
+                <div style={{
+                  borderRadius:10,border:"1.5px dashed "+tier.lateral.color+"55",
+                  background:tier.lateral.color+"08",
+                  padding:"11px 14px",
+                }}>
+                  <div style={{fontSize:11,fontWeight:700,color:tier.lateral.color,marginBottom:2}}>{tier.lateral.label}</div>
+                  <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:expanded===tier.id?8:0,lineHeight:1.4}}>{tier.lateral.sublabel}</div>
+                  {expanded===tier.id&&(
+                    <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.65,paddingTop:6,borderTop:"1px solid "+tier.lateral.color+"22"}}>
+                      {tier.lateral.note}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div/>
+            )}
+
+            {/* ── Connector arrow between tiers ── */}
+            {tier.arrow && (
+              <React.Fragment>
+                <div style={{display:"flex",alignItems:"stretch",padding:"0 0 0 16px",height:34}}>
+                  <div style={{width:1.5,background:BORDER,marginRight:10}}/>
+                  <div style={{display:"flex",alignItems:"center",gap:0}}>
+                    <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic",letterSpacing:0.2}}>{tier.arrow}</span>
+                  </div>
+                </div>
+                <div/>
+              </React.Fragment>
+            )}
+
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Leading indicator overlap note */}
+      <div style={{marginTop:24,padding:"13px 18px",borderRadius:10,border:"1px solid "+LI_COLOR+"33",background:LI_COLOR+"06",
+        borderLeft:"4px solid "+LI_COLOR}}>
+        <div style={{fontSize:11,fontWeight:700,color:LI_COLOR,marginBottom:5,textTransform:"uppercase",letterSpacing:0.8}}>
+          Leading Indicators — Partial Overlap Relationship
+        </div>
+        <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.75}}>
+          The two leading indicator sets are <strong>not a simple roll-up</strong>. Some BOW-level indicators surface to the portfolio level; others remain BOW-specific. The portfolio set may also include indicators not present in any individual BOW — reflecting signals relevant at portfolio scale. This relationship is one of <em>partial overlap with portfolio-level additions</em>.
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ── Strategy Overview ─────────────────────────────────────────────────────────
 function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, selectedGoal }) {
   const ratings = data.strategyRatings||{};
@@ -6347,7 +6547,7 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
 
       {/* Sub-nav */}
       <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4}}>
-        {[["goals","Goals"],["map","Strategy Map"]].map(([id,label])=>(
+        {[["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
           <button key={id} onClick={()=>setActiveTab(id)}
             style={{padding:"10px 20px",fontSize:13,fontWeight:activeTab===id?600:400,border:"none",background:"none",cursor:"pointer",
               borderBottom:activeTab===id?"2px solid "+ACCENT:"2px solid transparent",
@@ -6365,6 +6565,9 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
       )}
       {activeTab==="map" && (
         <StrategyMap data={data} onNavigateToPortfolio={onNavigateToPortfolio}/>
+      )}
+      {activeTab==="hierarchy" && (
+        <MeasurementHierarchyView/>
       )}
 
     </div>
