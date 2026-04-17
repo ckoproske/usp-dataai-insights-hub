@@ -5260,6 +5260,30 @@ function ScenarioModelingButton() {
   );
 }
 
+// ── CoLeverageButton ─────────────────────────────────────────────────────────
+function CoLeverageButton() {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{position:"relative",display:"inline-block"}}>
+      <button
+        onMouseEnter={()=>setHovered(true)}
+        onMouseLeave={()=>setHovered(false)}
+        style={{display:"inline-flex",alignItems:"center",gap:8,padding:"9px 18px",borderRadius:8,border:"2px dashed "+BORDER,background:SURFACE,cursor:"default",fontSize:14,fontWeight:700,color:TEXT_SUB,transition:"opacity .15s",opacity:hovered?1:0.7}}>
+        <span style={{fontSize:15}}>🔗</span>
+        USP Co-Leverage Tracking
+        <span style={{fontSize:11,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.15)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
+      </button>
+      {hovered&&(
+        <div style={{position:"absolute",bottom:"calc(100% + 8px)",left:0,zIndex:20,background:BRAND,borderRadius:10,padding:"14px 16px",boxShadow:"0 8px 24px rgba(10,37,64,0.18)",width:340,pointerEvents:"none"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:6}}>USP Co-Leverage Tracking</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.6}}>Track co-investment and leverage across USP portfolio partners — hyperscalers, philanthropic organizations, VC and impact investors, and public funders — to monitor progress toward the 2–3x leverage goal.</div>
+          <div style={{marginTop:10,fontSize:12,color:"rgba(255,255,255,0.4)"}}>This tool is under development and will be available in a future release.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MomentumHeatmap ───────────────────────────────────────────────────────────
 // Placeholder state-level coverage data per momentum point (0–100)
 const STATE_COVERAGE = {
@@ -5702,6 +5726,7 @@ function GoalDetailChart({ g }) {
               <div style={{fontSize:11,color:"#065F46",marginTop:2,opacity:0.7}}>Optimistic scenario with Hyperscaler uptake</div>
             </div>
             <ScenarioModelingButton/>
+            <CoLeverageButton/>
           </div>
         </div>
       </div>
@@ -6632,6 +6657,7 @@ function Sidebar({ activeView, onNavigate, data }) {
         </div>
         {[
           {label:"Decision Insights & Forecasts", soon:true},
+          {label:"USP Co-Leverage Tracking", soon:true},
           {label:"ROI Calculator", soon:true},
         ].map(t=>(
           <NavItem key={t.label} label={t.label} muted soon={t.soon}/>
