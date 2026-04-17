@@ -4998,7 +4998,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
           <PortfolioPartnersView portId={portId} portColor={pc}/>
         )}
         {activeTab==="theory-of-action"&&(
-          <div style={{margin:"-28px -32px",overflowX:"auto"}}>
+          <div style={{margin:"0 -32px",overflowX:"auto"}}>
             {portId==="ai-infra"&&<AIInfraToa/>}
             {portId==="sfl"&&<SFLToa/>}
             {portId==="hub"&&<DAHToa/>}
