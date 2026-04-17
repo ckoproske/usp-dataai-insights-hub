@@ -5956,30 +5956,9 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
             )}
           </div>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0}}>
-            <AIAnalysisButton onClick={()=>setShowAI(v=>!v)} isOpen={showAI}/>
            <GoalRatingDisplay goalId={g.id} goalRatings={goalRatings} />
           </div>
         </div>
-
-        {/* AI Analysis Panel */}
-        {showAI&&(
-          <AIAnalysisPanel
-            portColor={{color:"#3086AB",light:"#EBF4F9"}}
-            onClose={()=>setShowAI(false)}
-            context={JSON.stringify({
-              goal: g.title,
-              target: g.target,
-              metric: g.metric,
-              current2026: g.current2026,
-              unit: g.unit,
-              goal2030: g.goal2030,
-              pctOfTarget: Math.round(g.current2026/g.goal2030*100),
-              rating: ratings[g.id]||"Not set",
-              contributingPortfolios: contributingPorts.map(id=>PORT_COLORS[id]?.label||id),
-              earliestData: g.earliest,
-            }, null, 2)}
-          />
-        )}
 
         {/* Goal-specific chart */}
         <GoalDetailChart g={g} />
@@ -6652,7 +6631,7 @@ function Sidebar({ activeView, onNavigate, data }) {
           Tools
         </div>
         {[
-          {label:"Future Impact Modeler", soon:true},
+          {label:"Decision Insights & Forecasts", soon:true},
           {label:"ROI Calculator", soon:true},
         ].map(t=>(
           <NavItem key={t.label} label={t.label} muted soon={t.soon}/>
