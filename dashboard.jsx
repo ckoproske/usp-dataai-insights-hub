@@ -1469,6 +1469,24 @@ function BowOutcomePanel({ outcome, onUpdate }) {
   const targets = (outcome.executionTargets[activeYear]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
   const updExec = (tIdx,f,v) => { const arr=targets.map((t,i)=>i!==tIdx?t:{...t,[f]:v}); onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:arr}}); };
   const addExec = () => onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:[...targets,{text:"",completion:"Not Started"}]}});
+
+  // Detect placeholder content — true when DB hasn't populated this section yet
+  const isPlaceholderTarget = t => t.text && t.text.startsWith("[Placeholder]");
+  const isPlaceholderInd    = i => i.text && i.text.startsWith("[Placeholder]");
+  const targetsArePlaceholder = targets.length > 0 && targets.every(isPlaceholderTarget);
+  const visibleInds = outcome.impactIndicators.filter(i => i.text);
+  const indsArePlaceholder    = visibleInds.length > 0 && visibleInds.every(isPlaceholderInd);
+
+  const NotYetLoaded = ({label}) => (
+    <div style={{padding:"18px 16px",display:"flex",alignItems:"center",gap:10,borderRadius:8,border:"1px dashed "+BORDER,background:BG}}>
+      <span style={{fontSize:16,opacity:0.4}}>⏳</span>
+      <div>
+        <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,marginBottom:1}}>Data not yet loaded</div>
+        <div style={{fontSize:11,color:TEXT_MUTED}}>{label} for this outcome haven't been entered into the database yet.</div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{background:SURFACE,borderRadius:"0 0 12px 12px",border:"1px solid "+BORDER,borderTop:"none"}}>
       {/* Side-by-side: Execution (left) + Impact Indicators (right) */}
@@ -1488,42 +1506,49 @@ function BowOutcomePanel({ outcome, onUpdate }) {
             })}
           </div>
           <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Execution Targets — {activeYear}</div>
-          <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
-            {targets.length===0&&<div style={{padding:"14px 16px",color:TEXT_SUB,fontSize:13}}>No targets for {activeYear} yet.</div>}
-            {targets.map((t,i)=>{
-              const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
-              const isDone=t.completion==="Complete";
-              return (
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
-                  <span style={{width:7,height:7,borderRadius:"50%",background:TEXT_SUB,flexShrink:0,marginTop:5,display:"inline-block"}}/>
-                  <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
-                    <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
+          {targetsArePlaceholder ? (
+            <NotYetLoaded label="Execution targets"/>
+          ) : (
+            <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
+              {targets.length===0&&<div style={{padding:"14px 16px",color:TEXT_SUB,fontSize:13}}>No targets for {activeYear} yet.</div>}
+              {targets.map((t,i)=>{
+                const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
+                const isDone=t.completion==="Complete";
+                return (
+                  <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
+                    <span style={{width:7,height:7,borderRadius:"50%",background:TEXT_SUB,flexShrink:0,marginTop:5,display:"inline-block"}}/>
+                    <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
+                      <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
+                    </div>
+                    <CompletionCycler value={t.completion} onChange={v=>updExec(i,"completion",v)}/>
                   </div>
-                  <CompletionCycler value={t.completion} onChange={v=>updExec(i,"completion",v)}/>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right — Impact Indicators */}
         <div style={{flex:1,minWidth:0,padding:"18px 20px"}}>
           <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:14}}>Impact Indicators</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
-            {outcome.impactIndicators.map((ind,i)=>{
-              if(!ind.text) return null;
-              return <IndicatorTile key={ind.id} ind={ind} iIdx={i} activeYear={activeYear}
-                editingInd={editingInd} setEditingInd={setEditingInd}
-                onChangeManualStatus={v=>updInd(i,"manualStatus",v)}
-                onChangeBaseline={v=>updInd(i,"baseline",v)}
-                onChangeTargets={v=>updInd(i,"targets",v)}
-                onChangeActuals={v=>updInd(i,"actuals",v)}
-                onChangeSource={v=>updInd(i,"source",v)}/>;
-            })}
-            {outcome.impactIndicators.filter(ind=>ind.text).length===0&&(
-              <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:4}}>No indicators defined yet.</div>
-            )}
-          </div>
+          {indsArePlaceholder ? (
+            <NotYetLoaded label="Impact indicators"/>
+          ) : (
+            <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+              {visibleInds.map((ind,i)=>(
+                <IndicatorTile key={ind.id} ind={ind} iIdx={i} activeYear={activeYear}
+                  editingInd={editingInd} setEditingInd={setEditingInd}
+                  onChangeManualStatus={v=>updInd(outcome.impactIndicators.indexOf(ind),"manualStatus",v)}
+                  onChangeBaseline={v=>updInd(outcome.impactIndicators.indexOf(ind),"baseline",v)}
+                  onChangeTargets={v=>updInd(outcome.impactIndicators.indexOf(ind),"targets",v)}
+                  onChangeActuals={v=>updInd(outcome.impactIndicators.indexOf(ind),"actuals",v)}
+                  onChangeSource={v=>updInd(outcome.impactIndicators.indexOf(ind),"source",v)}/>
+              ))}
+              {visibleInds.length===0&&(
+                <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:4}}>No indicators defined yet.</div>
+              )}
+            </div>
+          )}
         </div>
 
       </div>
@@ -2207,7 +2232,10 @@ function YearlyPlanView({ bow, onUpdate }) {
             <div style={{background:SURFACE,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,borderBottom:"1px solid "+BORDER,borderLeft:"4px solid "+rs.color}}>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1.2,color:TEXT_SUB,marginBottom:3}}>Outcome {o.number}</div>
-                <div style={{fontSize:15,fontWeight:700,lineHeight:1.4,color:TEXT}}>{o.title}</div>
+                {o.title&&o.title.startsWith("[Placeholder]")
+                  ? <div style={{fontSize:14,color:TEXT_MUTED,fontStyle:"italic"}}>Outcome description not yet loaded from database</div>
+                  : <div style={{fontSize:15,fontWeight:700,lineHeight:1.4,color:TEXT}}>{o.title}</div>
+                }
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
                 <Chip label={rs.label} color={rs.color} bg={rs.pill}/>
