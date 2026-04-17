@@ -4903,47 +4903,65 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             {/* By the Numbers — prominent strip */}
             <PortfolioByTheNumbers portId={portId} portColor={pc}/>
 
-            {/* Portfolio Outcomes — horizontal tiles */}
-            <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 28px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-              <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:18}}>Portfolio Outcomes</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
-                {OUTCOMES_FOR_PANEL.map((o,i)=>(
-                  <div key={o.id} style={{
-                    flex:"1 1 260px",minWidth:220,maxWidth:"100%",
-                    borderRadius:12,overflow:"hidden",
-                    border:"1px solid "+BORDER,
-                    display:"flex",flexDirection:"column",
-                    boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
-                    background:SURFACE,
-                  }}>
-                    {/* Colored top bar */}
-                    <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`,flexShrink:0}}/>
-                    <div style={{padding:"18px 20px",display:"flex",flexDirection:"column",gap:10,flex:1}}>
-                      {/* Number + short title */}
-                      <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                        <span style={{
-                          flexShrink:0,width:24,height:24,borderRadius:"50%",
-                          background:pc.color+"18",border:"1.5px solid "+pc.color+"55",
-                          fontSize:11,fontWeight:700,color:pc.color,
-                          display:"inline-flex",alignItems:"center",justifyContent:"center",
-                          marginTop:1,
-                        }}>{i+1}</span>
-                        <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.4}}>{o.shortTitle}</div>
-                      </div>
-                      {/* Outcome description */}
-                      <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65,paddingLeft:34}}>{o.outcome}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Two-column: outcomes left, goals right */}
+            <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
 
-            {/* Key 2030 Goals */}
-            <div style={{background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-              <div style={{padding:"16px 28px 12px",borderBottom:"1px solid "+BORDER}}>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Key 2030 Goals</div>
+              {/* Portfolio Outcomes — left */}
+              <div style={{flex:1,minWidth:0,background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 28px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
+                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:18}}>Portfolio Outcomes</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+                  {OUTCOMES_FOR_PANEL.map((o,i)=>(
+                    <div key={o.id} style={{
+                      flex:"1 1 260px",minWidth:220,maxWidth:"100%",
+                      borderRadius:12,overflow:"hidden",
+                      border:"1px solid "+BORDER,
+                      display:"flex",flexDirection:"column",
+                      boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
+                      background:SURFACE,
+                    }}>
+                      <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`,flexShrink:0}}/>
+                      <div style={{padding:"18px 20px",display:"flex",flexDirection:"column",gap:10,flex:1}}>
+                        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                          <span style={{
+                            flexShrink:0,width:24,height:24,borderRadius:"50%",
+                            background:pc.color+"18",border:"1.5px solid "+pc.color+"55",
+                            fontSize:11,fontWeight:700,color:pc.color,
+                            display:"inline-flex",alignItems:"center",justifyContent:"center",
+                            marginTop:1,
+                          }}>{i+1}</span>
+                          <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.4}}>{o.shortTitle}</div>
+                        </div>
+                        <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65,paddingLeft:34}}>{o.outcome}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <PortfolioGoalsStrip goals={PORT_GOAL_MAP[portId]||[]} portId={portId} portColor={pc} ratings={strategyRatings||{}} onUpdateRatings={onUpdateStrategyRatings||(_=>{})} goalRatings={portData?.goalRatings||{}} onNavigateToGoal={onNavigateToStrategy}/>
+
+              {/* 2030 Strategy Goals — right */}
+              <div style={{flexShrink:0,width:260,background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 20px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
+                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:14}}>2030 Strategy Goals</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
+                    const g = STRATEGY_GOALS.find(x=>x.number===gNum);
+                    if(!g) return null;
+                    return (
+                      <div key={g.id}
+                        onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
+                        style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,
+                          border:"1px solid "+g.color+"44",background:g.color+"08",
+                          cursor:onNavigateToStrategy?"pointer":"default",transition:"box-shadow .15s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.1)";}}
+                        onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                        <span style={{width:24,height:24,borderRadius:"50%",background:g.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.number}</span>
+                        <span style={{fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
+                        {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
           </div>
         )}
