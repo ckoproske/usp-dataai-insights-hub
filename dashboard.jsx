@@ -796,7 +796,11 @@ async function saveToStorage(d) {
  
 // ── API health check ──────────────────────────────────────────────────────────
 async function isAPIReady() {
-  try { await apiFetch("/api/health"); return true; } catch { return false; }
+  try {
+    const h = await apiFetch("/api/health");
+    // h.db === "error" means API is up but warehouse is unreachable
+    return h.db === "ok" ? "ok" : "db-error";
+  } catch { return false; }
 }
  
 // ── Load from API, merge into DEFAULT_DATA shape ──────────────────────────────
@@ -6746,13 +6750,13 @@ function App() {
   const [activeView,setActiveView] = useState({type:"strategy"});
 
   const [usingPlaceholder, setUsingPlaceholder] = useState(false);
-  const [apiAvailable, setApiAvailable] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState(false); // "ok" | "db-error" | false
 
   useEffect(() => {
     async function init() {
       const ready = await isAPIReady();
       setApiAvailable(ready);
-      if (ready) {
+      if (ready === "ok") {
         const { data: apiData, fromAPI } = await loadFromAPI();
         if (apiData) {
           const stored = await loadFromStorage();
@@ -6880,9 +6884,11 @@ function App() {
         <div style={{padding:"5px 36px",borderBottom:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:6,background:SURFACE}}>
           {!usingPlaceholder
             ? <><span style={{width:6,height:6,borderRadius:"50%",background:"#10B981",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#065F46",fontWeight:600}}>Live</span><span style={{fontSize:11,color:TEXT_MUTED}}>— connected to <code>usp_data.usp_strategy</code></span></>
-            : apiAvailable
-              ? <><span style={{width:6,height:6,borderRadius:"50%",background:YELLOW,display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#92400E",fontWeight:600}}>Connected</span><span style={{fontSize:11,color:TEXT_MUTED}}>— database tables empty, showing placeholder data</span></>
-              : <><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#B91C1C",fontWeight:600}}>Offline</span><span style={{fontSize:11,color:TEXT_MUTED}}>— API not reachable, showing placeholder data</span></>
+            : apiAvailable==="db-error"
+              ? <><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#B91C1C",fontWeight:600}}>DB Unreachable</span><span style={{fontSize:11,color:TEXT_MUTED}}>— API is up but cannot connect to warehouse · showing placeholder data · </span><a href="/api/debug" target="_blank" style={{fontSize:11,color:"#B91C1C",textDecoration:"underline",cursor:"pointer"}}>view diagnostic</a></>
+              : apiAvailable==="ok"
+                ? <><span style={{width:6,height:6,borderRadius:"50%",background:YELLOW,display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#92400E",fontWeight:600}}>Connected</span><span style={{fontSize:11,color:TEXT_MUTED}}>— warehouse reachable but tables appear empty · showing placeholder data</span></>
+                : <><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#B91C1C",fontWeight:600}}>Offline</span><span style={{fontSize:11,color:TEXT_MUTED}}>— API not reachable · showing placeholder data</span></>
           }
         </div>
 

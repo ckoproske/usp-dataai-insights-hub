@@ -56,7 +56,12 @@ def new_id():
 
 @app.route("/api/health")
 def health():
-    return jsonify({"status": "ok"})
+    """Lightweight check that also verifies DB connectivity."""
+    try:
+        rows = query(f"SELECT COUNT(*) AS n FROM {SCHEMA}.strategy_goals")
+        return jsonify({"status": "ok", "db": "ok", "goals_count": rows[0]["n"] if rows else 0})
+    except Exception as e:
+        return jsonify({"status": "ok", "db": "error", "error": str(e)}), 200
 
 @app.route("/api/debug")
 def debug():
