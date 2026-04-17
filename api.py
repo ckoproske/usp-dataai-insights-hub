@@ -21,15 +21,28 @@ def dashboard():
 
 DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "adb-527625614048962.2.azuredatabricks.net")
 HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/0cd0e380d94af214")
+CLIENT_ID       = os.environ.get("DATABRICKS_CLIENT_ID")
+CLIENT_SECRET   = os.environ.get("DATABRICKS_CLIENT_SECRET")
 
 CATALOG = "usp_data"
 SCHEMA  = f"{CATALOG}.usp_strategy"
 
+def get_token():
+    import urllib.request, urllib.parse, json
+    url = f"https://{DATABRICKS_HOST}/oidc/v1/token"
+    data = urllib.parse.urlencode({
+        "grant_type":    "client_credentials",
+        "client_id":     CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "scope":         "all-apis",
+    }).encode()
+    req = urllib.request.Request(url, data=data, method="POST")
+    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    with urllib.request.urlopen(req) as resp:
+        return json.loads(resp.read())["access_token"]
+
 def get_connection():
-    token = request.headers.get("X-Forwarded-Access-Token")
-    app.logger.info(f"DB connect → host={DATABRICKS_HOST} http_path={HTTP_PATH} token={'present' if token else 'MISSING'}")
-    if not token:
-        raise Exception(f"X-Forwarded-Access-Token header is missing — cannot authenticate with Databricks")
+    token = get_token()
     return sql.connect(
         server_hostname = DATABRICKS_HOST,
         http_path       = HTTP_PATH,
@@ -119,6 +132,23 @@ def debug():
         except Exception as e:
             invest_status[tbl] = f"ERROR: {str(e)[:200]}"
     result["invest_table_status"] = invest_status
+
+    # Probe candidate view names in usp_data.invest directly
+    INVEST_SCHEMA = "usp_data.invest"
+    candidate_views = [
+        "v_investments", "v_bow_allocation", "v_bow_details",
+        "investments", "bow_allocation", "bow_details",
+        "v_invest_investments", "v_invest_bow_allocation",
+    ]
+    invest_source_status = {}
+    for v in candidate_views:
+        try:
+            rows = query(f"SELECT COUNT(*) AS n FROM {INVEST_SCHEMA}.{v}")
+            invest_source_status[v] = rows[0]["n"] if rows else 0
+        except Exception as e:
+            msg = str(e)[:120]
+            invest_source_status[v] = "NOT FOUND" if "TABLE_OR_VIEW_NOT_FOUND" in msg or "does not exist" in msg.lower() else f"ERROR: {msg}"
+    result["invest_source_candidates"] = invest_source_status
 
     return jsonify(result)
 
