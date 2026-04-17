@@ -819,8 +819,6 @@ async function loadFromAPI() {
       apiFetch("/api/ratings/goals").catch(() => []),
     ]);
  
-    console.log("[API] goals:", goals.length, "portfolios:", portfolios.length, "bows:", bows.length, "goalActuals:", goalActuals.length);
-
     if (goals.length > 0) {
       anyRealData = true;
       base.strategyGoalsMeta = goals;
@@ -896,8 +894,6 @@ async function loadFromAPI() {
       Promise.all(allBowIds.map(id => apiFetch(`/api/ratings/bow/${id}`).catch(() => ({ current: [], historical: [] })))),
     ]);
  
-    console.log("[API] BOW targets/outcomes per bow:", allBowIds.map((id,i)=>({id, targets:allTargets[i].length, outcomes:allBowOutcomes[i].length})));
-
     allBowIds.forEach((bowId, idx) => {
       const targets    = allTargets[idx];
       const bowOutcomes = allBowOutcomes[idx];
@@ -970,8 +966,6 @@ async function loadFromAPI() {
     const allIndicators = await Promise.all(
       allBowIds.map(id => apiFetch(`/api/indicators/${id}`).catch(() => []))
     );
-
-    console.log("[API] Indicators per bow:", allBowIds.map((id,i)=>({id, indicators:allIndicators[i].length})));
 
     allBowIds.forEach((bowId, idx) => {
       const indicators = allIndicators[idx];
