@@ -1711,7 +1711,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                     if(!g) return null;
                     return (
                       <div key={g.id}
-                        onClick={()=>onNavigateToStrategy&&onNavigateToStrategy()}
+                        onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
                         style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,
                           border:"1px solid "+g.color+"44",background:g.color+"08",
                           cursor:onNavigateToStrategy?"pointer":"default",transition:"box-shadow .15s"}}
@@ -3312,9 +3312,8 @@ function GoalsSidebar({ goals, portId, portColor }) {
 
 
 // ── PortfolioGoalsStrip ───────────────────────────────────────────────────────
-function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRatings, goalRatings }) {
+function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRatings, goalRatings, onNavigateToGoal }) {
   const [hovered, setHovered] = useState(null);
-  const [expanded, setExpanded] = useState(null); // goal number | null
   const pc = portColor || { color: ACCENT };
   const isPending = (GOAL_TARGETS_PENDING[portId]||[]);
 
@@ -3344,32 +3343,31 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
             const pct = Math.round((g.current2026 / g.goal2030) * 100);
             const pending = isPending.includes(g.number);
             const isHov = hovered === g.number;
-            const isExp = expanded === g.number;
 
             return (
               <div key={g.id} style={{position:"relative"}}
                 onMouseEnter={()=>setHovered(g.number)}
                 onMouseLeave={()=>setHovered(null)}>
                 <div
-                  onClick={()=>setExpanded(isExp ? null : g.number)}
+                  onClick={()=>onNavigateToGoal&&onNavigateToGoal(g.number)}
                   style={{
                     borderRadius:10,
-                    border:"1.5px solid "+(isExp ? g.color : isHov ? g.color+"88" : BORDER),
-                    background: isExp ? g.color+"0D" : isHov ? g.color+"06" : BG,
+                    border:"1.5px solid "+(isHov ? g.color+"88" : BORDER),
+                    background: isHov ? g.color+"06" : BG,
                     padding:"14px 16px",
                     transition:"all .2s",
-                    boxShadow: isExp ? "0 4px 20px rgba(10,37,64,0.10)" : isHov ? "0 2px 10px rgba(10,37,64,0.07)" : "none",
-                    cursor:"pointer",
+                    boxShadow: isHov ? "0 2px 10px rgba(10,37,64,0.07)" : "none",
+                    cursor:onNavigateToGoal?"pointer":"default",
                   }}>
                   {/* Goal number badge + title */}
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <span style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,flex:1}}>
                       {g.title}
                     </span>
-                    <span style={{fontSize:11,color:isExp?g.color:TEXT_SUB,opacity:0.6,flexShrink:0}}>{isExp?"▴":"▾"}</span>
+                    {onNavigateToGoal&&<span style={{fontSize:11,color:TEXT_MUTED,opacity:0.6,flexShrink:0}}>↗</span>}
                   </div>
                   {/* Full target text — always visible */}
-                  <div style={{fontSize:13,fontWeight:600,color:isExp||isHov?TEXT:TEXT_SUB,lineHeight:1.45,marginBottom:10,transition:"color .2s"}}>
+                  <div style={{fontSize:13,fontWeight:600,color:isHov?TEXT:TEXT_SUB,lineHeight:1.45,marginBottom:10,transition:"color .2s"}}>
                     {g.target}
                   </div>
 
@@ -3386,7 +3384,7 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
                       <span style={{fontSize:10,color:TEXT_SUB}}>0</span>
-                      <span style={{fontSize:10,fontWeight:700,color:isExp||isHov?g.color:TEXT_SUB,transition:"color .2s"}}>
+                      <span style={{fontSize:10,fontWeight:700,color:isHov?g.color:TEXT_SUB,transition:"color .2s"}}>
                         {g.goal2030}{g.unit} goal
                       </span>
                     </div>
@@ -3410,32 +3408,6 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
         </div>
       </div>
 
-      {/* Expanded full goal detail */}
-      {expanded && (
-        <div style={{
-          borderTop:"2px solid "+((goalData.find(g=>g.number===expanded)||{}).color||ACCENT),
-          background:BG,
-          padding:"24px 24px",
-          animation:"fadeSlideIn .18s ease",
-        }}>
-          <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>
-              Goal {expanded} — Full Detail
-            </div>
-            <button onClick={()=>setExpanded(null)}
-              style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:7,padding:"5px 14px",fontSize:13,fontWeight:700,color:TEXT_SUB,cursor:"pointer"}}>
-              ✕ Close
-            </button>
-          </div>
-          <GoalTabExplorer
-            ratings={ratings||{}}
-            onUpdateRatings={onUpdateRatings||(_=>{})}
-            initialGoal={expanded}
-            goalRatings={goalRatings}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -4971,7 +4943,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               <div style={{padding:"16px 28px 12px",borderBottom:"1px solid "+BORDER}}>
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Key 2030 Goals</div>
               </div>
-              <PortfolioGoalsStrip goals={PORT_GOAL_MAP[portId]||[]} portId={portId} portColor={pc} ratings={strategyRatings||{}} onUpdateRatings={onUpdateStrategyRatings||(_=>{})} goalRatings={portData?.goalRatings||{}}/>
+              <PortfolioGoalsStrip goals={PORT_GOAL_MAP[portId]||[]} portId={portId} portColor={pc} ratings={strategyRatings||{}} onUpdateRatings={onUpdateStrategyRatings||(_=>{})} goalRatings={portData?.goalRatings||{}} onNavigateToGoal={onNavigateToStrategy}/>
             </div>
           </div>
         )}
@@ -5871,6 +5843,10 @@ function GoalRatingDisplay({ goalId, goalRatings }) {
 function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings }) {
   const [activeGoal, setActiveGoal] = useState(initialGoal || 1);
   const [showAI, setShowAI] = useState(false);
+
+  // Sync when initialGoal prop changes (e.g. navigating from portfolio page)
+  useEffect(() => { if (initialGoal) setActiveGoal(initialGoal); }, [initialGoal]);
+
   const g = STRATEGY_GOALS.find(sg=>sg.number===activeGoal);
   const rs = ratings[g.id]&&STATUS[ratings[g.id]] ? STATUS[ratings[g.id]] : null;
 
@@ -6336,9 +6312,12 @@ function ConnectorColumn({ leftItems, rightItems, getLeftId, getRightId, isConne
 }
 
 // ── Strategy Overview ─────────────────────────────────────────────────────────
-function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio }) {
+function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, selectedGoal }) {
   const ratings = data.strategyRatings||{};
   const [activeTab, setActiveTab] = useState("goals");
+
+  // When navigating here from a portfolio goal badge, switch to Goals tab
+  useEffect(() => { if (selectedGoal) setActiveTab("goals"); }, [selectedGoal]);
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:28}}>
@@ -6374,7 +6353,7 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio }) {
       {/* Content */}
       {activeTab==="goals" && (
         <div>
-          <GoalTabExplorer ratings={ratings} onUpdateRatings={onUpdateRatings} goalRatings={data.goalRatings||{}}/>
+          <GoalTabExplorer ratings={ratings} onUpdateRatings={onUpdateRatings} goalRatings={data.goalRatings||{}} initialGoal={selectedGoal}/>
         </div>
       )}
       {activeTab==="map" && (
@@ -6634,6 +6613,24 @@ function App() {
               {saveStatus==="saving"&&<><span style={{width:5,height:5,borderRadius:"50%",background:YELLOW,display:"inline-block",animation:"pulse 1s ease-in-out infinite"}}/><span>Saving</span></>}
               {saveStatus==="saved"&&<><span style={{width:5,height:5,borderRadius:"50%",background:"#10B981",display:"inline-block"}}/><span>Saved</span></>}
             </div>
+            {/* Submit Data button */}
+            <button
+              title="Open management app to submit actuals or request BOW updates"
+              style={{
+                display:"flex",alignItems:"center",gap:6,
+                padding:"7px 16px",
+                background:ACCENT,color:"#fff",
+                border:"none",borderRadius:8,
+                fontSize:12,fontWeight:700,cursor:"pointer",
+                letterSpacing:0.2,
+                boxShadow:"0 1px 4px rgba(248,92,2,0.25)",
+                transition:"background .15s,box-shadow .15s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.background="#D94E02";e.currentTarget.style.boxShadow="0 2px 8px rgba(248,92,2,0.35)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background=ACCENT;e.currentTarget.style.boxShadow="0 1px 4px rgba(248,92,2,0.25)";}}>
+              <span style={{fontSize:13,lineHeight:1}}>↑</span>
+              Submit Data
+            </button>
           </div>
         </div>
 
@@ -6651,7 +6648,7 @@ function App() {
         {/* Page content */}
         <div style={{flex:1,padding:"32px 36px",maxWidth:1600,width:"100%",boxSizing:"border-box"}}>
           {activeView.type==="strategy"&&(
-            <StrategyOverview data={data} onUpdateRatings={r=>setData(prev=>({...prev,strategyRatings:r}))} onNavigateToPortfolio={id=>setActiveView({type:"portfolio",portId:id})}/>
+            <StrategyOverview data={data} onUpdateRatings={r=>setData(prev=>({...prev,strategyRatings:r}))} onNavigateToPortfolio={id=>setActiveView({type:"portfolio",portId:id})} selectedGoal={activeView.goalNumber}/>
           )}
           {activeView.type==="portfolio"&&activePortData&&(
             <PortfolioDashboard
@@ -6664,7 +6661,7 @@ function App() {
               onUpdateBows={bows=>updateBows(activePortId,bows)}
               onNavigateToOutcome={idx=>{}}
               onNavigateToBow={bowId=>{}}
-              onNavigateToStrategy={()=>setActiveView({type:"strategy"})}/>
+              onNavigateToStrategy={(goalNumber)=>setActiveView({type:"strategy",goalNumber})}/>
           )}
         </div>
       </div>
