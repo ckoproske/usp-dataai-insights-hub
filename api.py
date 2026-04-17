@@ -72,9 +72,13 @@ def debug():
         "schema": SCHEMA,
     }
     try:
-        rows = query(f"SELECT COUNT(*) as n FROM {SCHEMA}.strategy_goals")
+        goals = query(f"SELECT goal_id, title FROM {SCHEMA}.strategy_goals ORDER BY sort_order")
+        bows  = query(f"SELECT bow_id, portfolio_id, title FROM {SCHEMA}.bows ORDER BY sort_order")
+        outcomes = query(f"SELECT outcome_id, bow_id FROM {SCHEMA}.bow_outcomes ORDER BY sort_order LIMIT 10")
         result["db_status"] = "ok"
-        result["strategy_goals_count"] = rows[0]["n"] if rows else 0
+        result["goals"] = goals
+        result["bows"]  = bows
+        result["bow_outcome_sample"] = outcomes
     except Exception as e:
         result["db_status"] = "error"
         result["error"] = str(e)
