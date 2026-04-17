@@ -72,13 +72,21 @@ def debug():
         "schema": SCHEMA,
     }
     try:
-        goals = query(f"SELECT goal_id, title FROM {SCHEMA}.strategy_goals ORDER BY sort_order")
-        bows  = query(f"SELECT bow_id, portfolio_id, title FROM {SCHEMA}.bows ORDER BY sort_order")
-        outcomes = query(f"SELECT outcome_id, bow_id FROM {SCHEMA}.bow_outcomes ORDER BY sort_order LIMIT 10")
+        counts = query(f"""
+            SELECT
+              (SELECT COUNT(*) FROM {SCHEMA}.strategy_goals)            AS goals,
+              (SELECT COUNT(DISTINCT goal_id) FROM {SCHEMA}.strategy_goals) AS goals_distinct,
+              (SELECT COUNT(*) FROM {SCHEMA}.bows)                      AS bows,
+              (SELECT COUNT(*) FROM {SCHEMA}.bow_outcomes)              AS bow_outcomes,
+              (SELECT COUNT(*) FROM {SCHEMA}.execution_targets)         AS execution_targets,
+              (SELECT COUNT(*) FROM {SCHEMA}.execution_target_status)   AS target_statuses,
+              (SELECT COUNT(*) FROM {SCHEMA}.bow_indicators)            AS bow_indicators,
+              (SELECT COUNT(*) FROM {SCHEMA}.bow_indicator_actuals)     AS indicator_actuals,
+              (SELECT COUNT(*) FROM {SCHEMA}.portfolio_outcomes)        AS portfolio_outcomes,
+              (SELECT COUNT(*) FROM {SCHEMA}.portfolio_indicators)      AS portfolio_indicators
+        """)
         result["db_status"] = "ok"
-        result["goals"] = goals
-        result["bows"]  = bows
-        result["bow_outcome_sample"] = outcomes
+        result["table_counts"] = counts[0] if counts else {}
     except Exception as e:
         result["db_status"] = "error"
         result["error"] = str(e)
