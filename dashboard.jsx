@@ -970,18 +970,18 @@ async function loadFromAPI() {
     const allIndicators = await Promise.all(
       allBowIds.map(id => apiFetch(`/api/indicators/${id}`).catch(() => []))
     );
- 
+
     console.log("[API] Indicators per bow:", allBowIds.map((id,i)=>({id, indicators:allIndicators[i].length})));
 
     allBowIds.forEach((bowId, idx) => {
       const indicators = allIndicators[idx];
       if (indicators.length === 0) return;
       anyRealData = true;
- 
+
       Object.values(base.portfolios).forEach(portData => {
         const bow = portData.bows.find(b => b.id === bowId);
         if (!bow) return;
- 
+
         // Group indicators by outcome_id
         const byOutcome = {};
         indicators.forEach(ind => {
@@ -1011,7 +1011,7 @@ async function loadFromAPI() {
               String(ind.actual_value);
           }
         });
- 
+
         bow.outcomes.forEach(o => {
           const inds = byOutcome[o.id];
           if (!inds) return;
@@ -1019,7 +1019,69 @@ async function loadFromAPI() {
         });
       });
     });
- 
+
+    // ── Step 4: Portfolio outcomes + portfolio-level indicators ─────────────
+    const allPortIds = Object.keys(base.portfolios);
+
+    const [allPortOutcomes, allPortActuals] = await Promise.all([
+      Promise.all(allPortIds.map(id => apiFetch(`/api/portfolio-outcomes/${id}`).catch(() => []))),
+      Promise.all(allPortIds.map(id => apiFetch(`/api/portfolio-actuals/${id}`).catch(() => []))),
+    ]);
+
+    allPortIds.forEach((portId, idx) => {
+      const portOutcomes = allPortOutcomes[idx];
+      const portActuals  = allPortActuals[idx];
+      if (portOutcomes.length === 0) return;
+      anyRealData = true;
+
+      const portData = base.portfolios[portId];
+      if (!portData) return;
+
+      // Build portfolio indicators grouped by outcome_id from the actuals join
+      // One DB row per (indicator × year) — accumulate actuals across rows
+      const indsByOutcome = {};
+      portActuals.forEach(a => {
+        if (!indsByOutcome[a.outcome_id]) indsByOutcome[a.outcome_id] = {};
+        if (!indsByOutcome[a.outcome_id][a.indicator_id]) {
+          indsByOutcome[a.outcome_id][a.indicator_id] = {
+            id:          a.indicator_id,
+            text:        a.text || "",
+            source:      a.data_source || "",
+            baseline:    a.baseline !== null ? String(a.baseline) : "",
+            manualStatus: null,
+            targets: {
+              2026: a.target_2026 !== null ? String(a.target_2026) : "",
+              2027: a.target_2027 !== null ? String(a.target_2027) : "",
+              2028: a.target_2028 !== null ? String(a.target_2028) : "",
+              2029: a.target_2029 !== null ? String(a.target_2029) : "",
+              2030: a.target_2030 !== null ? String(a.target_2030) : "",
+            },
+            actuals: {},
+          };
+        }
+        if (a.year && a.actual_value !== null && a.actual_value !== undefined) {
+          indsByOutcome[a.outcome_id][a.indicator_id].actuals[a.year] = String(a.actual_value);
+        }
+      });
+
+      // Merge portfolio outcomes — preserve manualStatus from existing DEFAULT_DATA
+      portData.portfolio.portfolioOutcomes = portOutcomes.map(po => {
+        const existing = portData.portfolio.portfolioOutcomes.find(e => e.id === po.outcome_id);
+        const indicators = indsByOutcome[po.outcome_id]
+          ? Object.values(indsByOutcome[po.outcome_id])
+          : (existing ? existing.indicators : []);
+        return {
+          id:          po.outcome_id,
+          shortTitle:  po.short_title  || (existing ? existing.shortTitle : ""),
+          activity:    po.activity     || (existing ? existing.activity   : ""),
+          // DB column may be outcome_text or outcome depending on schema
+          outcome:     po.outcome_text || po.outcome || (existing ? existing.outcome : ""),
+          manualStatus: existing ? existing.manualStatus : null,
+          indicators,
+        };
+      });
+    });
+
   } catch (err) {
     console.warn("API load failed, using placeholder data:", err);
     return { data: null, fromAPI: false };
