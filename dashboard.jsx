@@ -4761,7 +4761,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
   const [expandedOutcomePanel,setExpandedOutcomePanel] = useState(null); // {idx, panel} | null
 
   const currentBow = bows.find(b=>b.id===activeBow);
-  const inMeasurement = activeTab!=="portfolio-overview"&&activeTab!=="investments"&&activeTab!=="partners"&&activeTab!=="theory-of-action";
+  const inMeasurement = activeTab!=="portfolio-overview"&&activeTab!=="investments"&&activeTab!=="partners"&&activeTab!=="theory-of-action"&&activeTab!=="decision-insights";
 
   const updateBowOutcome = (bowId,outcomeId,updated) => onUpdateBows(bows.map(b=>b.id!==bowId?b:{...b,outcomes:b.outcomes.map(o=>o.id!==outcomeId?o:updated)}));
   const updateBowOutcomeByIdx = (bowId,oIdx,updated) => onUpdateBows(bows.map(b=>b.id!==bowId?b:{...b,outcomes:b.outcomes.map((o,i)=>i!==oIdx?o:updated)}));
@@ -4842,11 +4842,12 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       </div>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Insights"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Reporting"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"},{id:"decision-insights",label:"Decision Insights & Forecasts"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
             :tab.id==="investments"?activeTab==="investments"
             :tab.id==="partners"?activeTab==="partners"
             :tab.id==="theory-of-action"?activeTab==="theory-of-action"
+            :tab.id==="decision-insights"?activeTab==="decision-insights"
             :inMeasurement;
           return <button key={tab.id}
             onClick={()=>{
@@ -4854,6 +4855,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               else if(tab.id==="investments") setActiveTab("investments");
               else if(tab.id==="partners") setActiveTab("partners");
               else if(tab.id==="theory-of-action") setActiveTab("theory-of-action");
+              else if(tab.id==="decision-insights") setActiveTab("decision-insights");
               else if(!inMeasurement) setActiveTab("portfolio-progress");
             }}
             style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
@@ -4974,6 +4976,23 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         {activeTab==="partners"&&(
           <PortfolioPartnersView portId={portId} portColor={pc}/>
         )}
+        {activeTab==="decision-insights"&&(
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:360}}>
+            <div style={{textAlign:"center",maxWidth:480}}>
+              <div style={{width:56,height:56,borderRadius:16,background:pc.color+"15",border:"1.5px solid "+pc.color+"33",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:26}}>
+                ✦
+              </div>
+              <div style={{fontSize:20,fontWeight:700,color:TEXT,marginBottom:10}}>Decision Insights & Forecasts</div>
+              <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,marginBottom:24}}>
+                This view will connect directly to the portfolio dashboard within our AI-enabled forecasting and analysis tool, surfacing predictive insights, scenario models, and decision-support signals for this portfolio.
+              </div>
+              <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",borderRadius:20,background:pc.color+"12",border:"1px solid "+pc.color+"33"}}>
+                <span style={{width:7,height:7,borderRadius:"50%",background:pc.color,display:"inline-block",animation:"pulse 2s ease-in-out infinite"}}/>
+                <span style={{fontSize:12,fontWeight:600,color:pc.color}}>Coming Soon</span>
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab==="theory-of-action"&&(
           <div style={{margin:"0 -32px",overflowX:"auto"}}>
             {portId==="ai-infra"&&<AIInfraToa/>}
@@ -5036,7 +5055,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             </div>
             {/* View toggle */}
             <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid "+BORDER}}>
-              {[["progress","Progress"],["reporting","Reporting"],["investments","Investments"],...(currentBow.decisions?.length>0?[["decisions","Decisions"]]:[])].map(([v,label])=>(
+              {[["progress","Progress"],["reporting","Reporting"],...(currentBow.decisions?.length>0?[["decisions","Decisions"]]:[])].map(([v,label])=>(
                 <button key={v} onClick={()=>setBowView(v)}
                   style={{padding:"10px 18px",fontSize:13,fontWeight:bowView===v?600:400,border:"none",background:"none",cursor:"pointer",
                     borderBottom:bowView===v?"2px solid "+pc.color:"2px solid transparent",
@@ -5090,7 +5109,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               </div>
             )}
             {bowView==="reporting"&&<BowReportingView bow={currentBow} portColor={pc}/>}
-            {bowView==="investments"&&<BowInvestmentsView bow={currentBow} portColor={pc} onUpdate={updated=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:updated))}/>}
             {bowView==="decisions"&&currentBow.decisions?.length>0&&<BowDecisionsView bow={currentBow} portColor={pc}
               onUpdate={updated=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...updated}))}/>}
           </div>
