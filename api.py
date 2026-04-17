@@ -103,6 +103,23 @@ def debug():
         result["db_status"] = "error"
         result["error"] = str(e)
         result["error_type"] = type(e).__name__
+
+    # Check invest tables individually so we can pinpoint which one is failing
+    invest_tables = [
+        "invest_investments",
+        "invest_bow_allocation",
+        "invest_bow_details",
+        "investment_overlays",
+    ]
+    invest_status = {}
+    for tbl in invest_tables:
+        try:
+            rows = query(f"SELECT COUNT(*) AS n FROM {SCHEMA}.{tbl}")
+            invest_status[tbl] = rows[0]["n"] if rows else 0
+        except Exception as e:
+            invest_status[tbl] = f"ERROR: {str(e)[:200]}"
+    result["invest_table_status"] = invest_status
+
     return jsonify(result)
 
 
