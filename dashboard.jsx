@@ -4710,8 +4710,8 @@ function PortfolioByTheNumbers({ portId, portColor }) {
   const STATS = [
     { label:"Investments",          value: loading ? "…" : String(stats.count||"0"),  sub:"grants & contracts" },
     { label:"% Co-funded",          value: "—",                                        sub:"with other teams" },
-    { label:"Partners",             value: "—",                                        sub:"key external relationships" },
     { label:"Total Budget",         value: loading ? "…" : fmtM(stats.totalBudget),   sub:"committed investment" },
+    { label:"Partners",             value: "—",                                        sub:"key external relationships" },
   ];
 
   return (
