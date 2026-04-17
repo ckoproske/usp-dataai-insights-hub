@@ -6074,17 +6074,9 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <div style={{width:24,height:2,background:ACCENT,borderRadius:1}}/>
-          <span style={{fontSize:12,color:TEXT_MUTED}}>Active connection</span>
+          <span style={{fontSize:12,color:TEXT_MUTED}}>Highlighted connection</span>
         </div>
-        <div style={{width:1,height:16,background:BORDER}}/>
-        <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Goal progress</span>
-        {[["#059669","≥90%"],["#2563EB","≥70%"],["#D97706","≥50%"],["#DC2626","<50%"]].map(([c,l])=>(
-          <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
-            <span style={{width:8,height:8,borderRadius:"50%",background:c,display:"inline-block"}}/>
-            <span style={{fontSize:11,color:TEXT_MUTED}}>{l}</span>
-          </div>
-        ))}
-        <span style={{fontSize:12,color:TEXT_MUTED,marginLeft:"auto"}}>Click a portfolio or BOW to see detail below ↓</span>
+        <span style={{fontSize:12,color:TEXT_MUTED,marginLeft:"auto"}}>Hover to highlight connections · Click a portfolio or BOW for detail ↓</span>
       </div>
 
       {/* Three-column map */}
@@ -6096,34 +6088,20 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
           {STRATEGY_GOALS.map(g => {
             const lit = goalLit(g.number);
             const dim = goalDim(g.number);
-            const pct = Math.round((g.current2026/g.goal2030)*100);
-            // Performance color: green ≥90%, blue ≥70%, yellow ≥50%, red <50%
-            const perfColor = pct >= 90 ? "#059669" : pct >= 70 ? "#2563EB" : pct >= 50 ? "#D97706" : "#DC2626";
-            const perfBg    = pct >= 90 ? "#ECFDF5" : pct >= 70 ? "#EFF6FF" : pct >= 50 ? "#FEF5E7" : "#FEF2F2";
-            const perfBorder= pct >= 90 ? "#6EE7B7" : pct >= 70 ? "#BFDBFE" : pct >= 50 ? "#FDE68A" : "#FECACA";
             return (
               <div key={g.id}
                 onMouseEnter={()=>setHoveredGoal(g.number)}
                 onMouseLeave={()=>setHoveredGoal(null)}
                 style={{marginBottom:8,borderRadius:10,
-                  border:"1.5px solid "+(lit?perfBorder:BORDER),
-                  background:lit?perfBg:SURFACE,
-                  padding:"12px 14px",transition:"all .18s",opacity:dim?0.25:1,
+                  border:"1.5px solid "+(lit?g.color:BORDER),
+                  background:lit?g.color+"0D":SURFACE,
+                  padding:"12px 14px",transition:"all .18s",opacity:dim?0.2:1,
                   boxShadow:lit?"0 2px 10px rgba(0,0,0,0.06)":"none"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                  <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,letterSpacing:1}}>G{g.number}</span>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                  <span style={{fontSize:10,fontWeight:700,color:lit?g.color:TEXT_MUTED,letterSpacing:1}}>G{g.number}</span>
                   <span style={{fontSize:12,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
-                  {/* Performance dot */}
-                  <span style={{width:8,height:8,borderRadius:"50%",background:perfColor,flexShrink:0,display:"inline-block"}}/>
                 </div>
-                <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.5,marginBottom:8}}>{g.target}</div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{flex:1,height:3,background:BORDER,borderRadius:2,overflow:"hidden"}}>
-                    <div style={{width:pct+"%",height:"100%",background:perfColor,borderRadius:2}}/>
-                  </div>
-                  <span style={{fontSize:10,fontWeight:700,color:perfColor,minWidth:28,textAlign:"right"}}>{pct}%</span>
-                </div>
-                <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2,opacity:0.6}}>{g.current2026}{g.unit} → {g.goal2030}{g.unit}</div>
+                <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.5}}>{g.target}</div>
               </div>
             );
           })}
@@ -6158,17 +6136,11 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
                     background:isSelected?p.color+"0D":lit?SURFACE_2:SURFACE,
                     padding:"12px 14px",cursor:"pointer",transition:"all .18s",
                     boxShadow:isSelected?"0 3px 14px rgba(0,0,0,0.08)":"none"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{width:8,height:8,borderRadius:"50%",background:p.color,flexShrink:0}}/>
                     <span style={{fontSize:13,fontWeight:600,color:isSelected?p.color:TEXT,flex:1}}>{p.label}</span>
                     <span style={{fontSize:11,color:TEXT_MUTED}}>{bows.length} BOW{bows.length!==1?"s":""}</span>
                     <span style={{fontSize:11,color:isSelected?p.color:TEXT_MUTED,transition:"transform .15s",display:"inline-block",transform:isSelected?"rotate(90deg)":"rotate(0deg)"}}>›</span>
-                  </div>
-                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                    {(PORT_GOAL_MAP[p.id]||[]).map(gNum=>{
-                      const g = STRATEGY_GOALS.find(sg=>sg.number===gNum);
-                      return <span key={gNum} style={{fontSize:10,fontWeight:700,color:g?.color||TEXT_MUTED,background:(g?.color||TEXT_MUTED)+"12",borderRadius:4,padding:"1px 6px"}}>G{gNum}</span>;
-                    })}
                   </div>
                 </div>
               </div>
@@ -6218,7 +6190,6 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
                       <span style={{width:3,height:32,borderRadius:2,background:p.color,flexShrink:0}}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:12,fontWeight:isSel?600:400,color:isSel?p.color:TEXT,lineHeight:1.3}}>{b.name}</div>
-                        {b.outcomes?.length>0&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{b.outcomes.length} outcomes</div>}
                       </div>
                       <span style={{fontSize:10,color:isSel?p.color:TEXT_MUTED,transition:"transform .15s",transform:isSel?"rotate(90deg)":"rotate(0deg)"}}>›</span>
                     </div>
