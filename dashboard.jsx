@@ -1629,7 +1629,6 @@ ${context}`;
 // ── PortfolioOutcomesView ─────────────────────────────────────────────────────
 function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, initialIdx, portShortTitles, onNavigateToStrategy }) {
   const [activeIdx, setActiveIdx] = useState(initialIdx ?? 0);
-  const [activeYear, setActiveYear] = useState(2026);
   const pc = portColor || { color: ACCENT, light: ACCENT_LIGHT };
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
   const po = portfolio.portfolioOutcomes[activeIdx] || portfolio.portfolioOutcomes[0];
@@ -1639,7 +1638,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
     const exec = execAutoStatus({
       impactIndicators:[],
       executionTargets: Object.fromEntries(YEARS.map(y=>[y, b.outcomes.flatMap(o=>(o.executionTargets[y]||[]))]))
-    }, activeYear);
+    }, CURRENT_YEAR);
     const impact = impactAutoStatus({impactIndicators: b.outcomes.flatMap(o=>(o.impactIndicators||[]))});
     return { id:b.id, name:b.name, exec, impact, outcomes:b.outcomes };
   });
@@ -1686,23 +1685,13 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
 
             {/* Left — Impact Indicators */}
             <div style={{flex:"0 0 58%",borderRight:"1px solid "+BORDER,padding:"20px 22px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+              <div style={{marginBottom:16}}>
                 <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8}}>Impact Indicators</span>
-                <div style={{marginLeft:"auto",display:"flex",background:BG,border:"1px solid "+BORDER,borderRadius:8,padding:3,gap:2}}>
-                  {YEARS.map(yr=>(
-                    <button key={yr} onClick={e=>{e.stopPropagation();setActiveYear(yr);}}
-                      style={{padding:"2px 11px",fontSize:12,fontWeight:700,borderRadius:6,border:"none",cursor:"pointer",
-                        background:activeYear===yr?SURFACE:"transparent",color:activeYear===yr?TEXT:TEXT_MUTED,
-                        boxShadow:activeYear===yr?"0 1px 4px rgba(10,37,64,0.10)":"none",transition:"all .15s"}}>
-                      {yr}
-                    </button>
-                  ))}
-                </div>
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
                 {po.indicators.map((ind,iIdx)=>{
                   if(!ind.text) return null;
-                  return <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={activeYear}/>;
+                  return <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR}/>;
                 })}
                 {po.indicators.filter(ind=>ind.text).length===0&&(
                   <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
@@ -1751,7 +1740,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                           <div style={{flex:1,fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.3}}>{b.name}</div>
                           <div style={{display:"flex",gap:14,flexShrink:0}}>
                             <div style={{textAlign:"right"}}>
-                              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec {activeYear}</div>
+                              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec {CURRENT_YEAR}</div>
                               {b.exec
                                 ? <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}}><span style={{width:6,height:6,borderRadius:"50%",background:b.exec.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.exec.color}}>{b.exec.completed}/{b.exec.total}</span></div>
                                 : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
