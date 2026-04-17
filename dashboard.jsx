@@ -1627,170 +1627,171 @@ ${context}`;
 
 
 // ── PortfolioOutcomesView ─────────────────────────────────────────────────────
-function PortfolioOutcomesView({ portfolio, bows, portColor, onChange, initialIdx, portShortTitles }) {
-  const [activeIdx, setActiveIdx] = useState(initialIdx||0);
-  const [editingInd, setEditingInd] = useState(null);
+function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, initialIdx, portShortTitles, onNavigateToStrategy }) {
+  const [activeIdx, setActiveIdx] = useState(initialIdx ?? 0);
   const [activeYear, setActiveYear] = useState(2026);
-  const [showAI, setShowAI] = useState(false);
   const pc = portColor || { color: ACCENT, light: ACCENT_LIGHT };
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
-  const po = portfolio.portfolioOutcomes[activeIdx];
-  const manualRs = po.manualStatus&&STATUS[po.manualStatus] ? STATUS[po.manualStatus] : null;
-  const impactStatus = impactAutoStatus({impactIndicators:po.indicators});
+  const po = portfolio.portfolioOutcomes[activeIdx] || portfolio.portfolioOutcomes[0];
 
-  const updateIndicator = (iIdx, f, v, isOutcome) => {
-    if (isOutcome) onChange({...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,pi)=>pi!==activeIdx?p:{...p,[f]:v})});
-    else onChange({...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,pi)=>pi!==activeIdx?p:{...p, indicators: p.indicators.map((ind,ii)=>ii!==iIdx?ind:{...ind,[f]:v})})});
-  };
-
-  // Find BOWs that have outcomes linking to this portfolio outcome (by index approximation)
-  // Show all BOWs as contributing — with their execution status
-  const bowsWithStatus = (bows||[]).map(b => {
-    const yr = b.yearRatings?.[activeYear];
-    const execRs = yr?.execution ? STATUS[yr.execution] : null;
-    const impactRs = yr?.impact ? STATUS[yr.impact] : null;
-    const exec = execAutoStatus({impactIndicators:[], executionTargets: Object.fromEntries(YEARS.map(y=>[y, b.outcomes.flatMap(o=>(o.executionTargets[y]||[]))]))}, activeYear);
-    return { id:b.id, name:b.name, execRs, impactRs, execPct: exec?.pct||null };
+  // BOW progress for all BOWs
+  const bowProgress = (bows||[]).map(b => {
+    const exec = execAutoStatus({
+      impactIndicators:[],
+      executionTargets: Object.fromEntries(YEARS.map(y=>[y, b.outcomes.flatMap(o=>(o.executionTargets[y]||[]))]))
+    }, activeYear);
+    const impact = impactAutoStatus({impactIndicators: b.outcomes.flatMap(o=>(o.impactIndicators||[]))});
+    return { id:b.id, name:b.name, exec, impact, outcomes:b.outcomes };
   });
 
   return (
-    <div style={{display:"flex",gap:0,background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,boxShadow:"0 2px 8px rgba(10,37,64,0.06)"}}>
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
-      {/* Left tabs */}
-      <div style={{width:210,flexShrink:0,borderRight:"1px solid "+BORDER,background:SURFACE_2}}>
-        <div style={{padding:"14px 16px 8px",fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8}}>Portfolio Outcomes</div>
+      {/* ── Outcome tiles ── */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
         {portfolio.portfolioOutcomes.map((p,i)=>{
           const isActive = i===activeIdx;
-          const rs = p.manualStatus&&STATUS[p.manualStatus] ? STATUS[p.manualStatus] : null;
+          const pImpact = impactAutoStatus({impactIndicators:p.indicators});
           return (
-            <button key={p.id} onClick={()=>setActiveIdx(i)}
-              style={{width:"100%",padding:"12px 16px",border:"none",background:isActive?SURFACE:"transparent",cursor:"pointer",textAlign:"left",borderBottom:"1px solid "+BORDER,borderLeft:isActive?"3px solid "+pc.color:"3px solid transparent",transition:"all .15s",display:"flex",alignItems:"flex-start",gap:8}}>
-              <span style={{fontSize:12,fontWeight:800,color:isActive?pc.color:TEXT_SUB,minWidth:16,marginTop:1}}>{i+1}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:isActive?700:500,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35,marginBottom:4}}>{SHORT_TITLES[i]||p.shortTitle}</div>
-                {rs&&<span style={{display:"inline-flex",alignItems:"center",gap:3,background:rs.pill,borderRadius:4,padding:"1px 6px",fontSize:11,fontWeight:700,color:rs.color}}>{rs.label}</span>}
+            <div key={p.id} onClick={()=>setActiveIdx(i)}
+              style={{flex:"1 1 240px",minWidth:200,borderRadius:12,overflow:"hidden",
+                border:"1.5px solid "+(isActive?pc.color:BORDER),
+                background:isActive?pc.color+"08":SURFACE,
+                cursor:"pointer",transition:"all .15s",
+                boxShadow:isActive?"0 4px 16px rgba(0,0,0,0.08)":"0 1px 4px rgba(0,0,0,0.04)"}}>
+              <div style={{height:3,background:isActive?pc.color:pc.color+"44",flexShrink:0}}/>
+              <div style={{padding:"16px 18px 12px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <span style={{fontSize:11,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Outcome {i+1}</span>
+                  <span style={{fontSize:12,color:isActive?pc.color:TEXT_MUTED,fontWeight:600}}>{isActive?"▴":"▾"}</span>
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.4,marginBottom:6}}>{SHORT_TITLES[i]||p.shortTitle}</div>
+                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>{p.outcome}</div>
               </div>
-            </button>
+              <div style={{padding:"9px 18px 11px",borderTop:"1px solid "+(isActive?pc.color+"33":BORDER),background:isActive?pc.color+"06":"#FAFBFC",display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Impact</span>
+                {pImpact
+                  ? <><span style={{width:7,height:7,borderRadius:"50%",background:pImpact.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:pImpact.color}}>{pImpact.label.replace(" Expectations","")}</span></>
+                  : <span style={{fontSize:12,color:TEXT_MUTED}}>No data</span>}
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {/* Right detail panel */}
-      <div style={{flex:1,padding:"22px 26px",display:"flex",flexDirection:"column",gap:20,minWidth:0}}>
+      {/* ── Expanded detail ── */}
+      {po && (
+        <div style={{border:"1.5px solid "+pc.color+"44",borderRadius:12,overflow:"hidden",background:SURFACE,boxShadow:"0 2px 12px rgba(10,37,64,0.07)"}}>
+          <div style={{display:"flex",alignItems:"flex-start"}}>
 
-        {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:6}}>Outcome {activeIdx+1}</div>
-            <div style={{fontSize:18,fontWeight:800,color:TEXT,lineHeight:1.3,marginBottom:8}}>{SHORT_TITLES[activeIdx]||po.shortTitle}</div>
-            <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.65,maxWidth:600}}>{po.outcome}</div>
-            <div style={{fontSize:13,color:TEXT_SUB,marginTop:6,opacity:0.7}}>→ {po.activity}</div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0}}>
-            <AIAnalysisButton onClick={()=>setShowAI(v=>!v)} isOpen={showAI}/>
-          </div>
-        </div>
-
-        {/* AI Analysis Panel */}
-        {showAI&&(
-          <AIAnalysisPanel
-            portColor={pc}
-            onClose={()=>setShowAI(false)}
-            context={JSON.stringify({
-              outcome: po.outcome,
-              activity: po.activity,
-              rating: po.manualStatus||"Not set",
-              indicators: po.indicators.map(ind=>({
-                text: ind.text,
-                manualStatus: ind.manualStatus,
-                targets: ind.targets,
-                actuals: ind.actuals,
-                baseline: ind.baseline,
-              })),
-              bows: bowsWithStatus.map(b=>({
-                name: b.name,
-                execution: b.execRs?.label||b.execPct||"No data",
-                impact: b.impactRs?.label||"No data",
-              })),
-            }, null, 2)}
-          />
-        )}
-
-        {/* Impact Indicators — elevated section */}
-        <div style={{borderTop:"2px solid "+pc.color+"33",paddingTop:20}}>
-          {/* Section header */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-            <div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                <div style={{width:3,height:20,borderRadius:2,background:pc.color,flexShrink:0}}/>
-                <div style={{fontSize:14,fontWeight:800,color:TEXT,textTransform:"uppercase",letterSpacing:0.8}}>Impact Indicators</div>
-              </div>
-              <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55,maxWidth:580,paddingLeft:11}}>
-                These indicators serve as signals to understand whether our efforts are leading to change.
-              </div>
-            </div>
-            <div style={{display:"flex",gap:4,flexShrink:0,marginTop:2}}>
-              {YEARS.map(yr=>(
-                <button key={yr} onClick={()=>setActiveYear(yr)}
-                  style={{padding:"3px 10px",fontSize:12,fontWeight:700,borderRadius:10,cursor:"pointer",border:"none",background:activeYear===yr?pc.color:BORDER+"88",color:activeYear===yr?"#fff":TEXT_SUB,transition:"all .15s"}}>
-                  {yr}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Indicator tiles */}
-          <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:10,paddingTop:12,scrollSnapType:"x mandatory",WebkitOverflowScrolling:"touch",cursor:"grab"}}>
-            {po.indicators.map((ind,iIdx)=>{
-              if(!ind.text) return null;
-              return <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={activeYear}
-                editingInd={editingInd} setEditingInd={setEditingInd}
-                onChangeManualStatus={v=>updateIndicator(iIdx,"manualStatus",v)}
-                onChangeBaseline={v=>updateIndicator(iIdx,"baseline",v)}
-                onChangeTargets={v=>updateIndicator(iIdx,"targets",v)}
-                onChangeActuals={v=>updateIndicator(iIdx,"actuals",v)}
-                onChangeSource={v=>updateIndicator(iIdx,"source",v)}/>;
-            })}
-            {po.indicators.length===0&&<div style={{fontSize:14,color:TEXT_SUB,padding:"8px 0"}}>No indicators defined yet.</div>}
-          </div>
-        </div>
-
-        {/* BOWs — compact row */}
-        <div>
-          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:10}}>Contributing BOWs</div>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {bowsWithStatus.map(b=>(
-              <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,borderRadius:8,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,padding:"10px 16px",background:SURFACE,flex:1,minWidth:200}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:6,lineHeight:1.3}}>{b.name}</div>
-                  <div style={{display:"flex",gap:16}}>
-                    <div>
-                      <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>Execution</div>
-                      {b.execRs ? (
-                        <span style={{fontSize:12,fontWeight:700,color:b.execRs.color,background:b.execRs.pill,borderRadius:4,padding:"2px 7px",border:"1px solid "+b.execRs.color+"33"}}>{b.execRs.label}</span>
-                      ) : b.execPct!==null ? (
-                        <span style={{fontSize:12,fontWeight:700,color:TEXT_SUB}}>{b.execPct}%</span>
-                      ) : (
-                        <span style={{fontSize:12,color:TEXT_SUB}}>No rating</span>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>Impact</div>
-                      {b.impactRs ? (
-                        <span style={{fontSize:12,fontWeight:700,color:b.impactRs.color,background:b.impactRs.pill,borderRadius:4,padding:"2px 7px",border:"1px solid "+b.impactRs.color+"33"}}>{b.impactRs.label}</span>
-                      ) : (
-                        <span style={{fontSize:12,color:TEXT_SUB}}>No rating</span>
-                      )}
-                    </div>
-                  </div>
+            {/* Left — Impact Indicators */}
+            <div style={{flex:"0 0 58%",borderRight:"1px solid "+BORDER,padding:"20px 22px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+                <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8}}>Impact Indicators</span>
+                <div style={{marginLeft:"auto",display:"flex",background:BG,border:"1px solid "+BORDER,borderRadius:8,padding:3,gap:2}}>
+                  {YEARS.map(yr=>(
+                    <button key={yr} onClick={e=>{e.stopPropagation();setActiveYear(yr);}}
+                      style={{padding:"2px 11px",fontSize:12,fontWeight:700,borderRadius:6,border:"none",cursor:"pointer",
+                        background:activeYear===yr?SURFACE:"transparent",color:activeYear===yr?TEXT:TEXT_MUTED,
+                        boxShadow:activeYear===yr?"0 1px 4px rgba(10,37,64,0.10)":"none",transition:"all .15s"}}>
+                      {yr}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-            {(!bows||bows.length===0)&&<div style={{fontSize:13,color:TEXT_SUB}}>No BOWs defined</div>}
+              <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+                {po.indicators.map((ind,iIdx)=>{
+                  if(!ind.text) return null;
+                  return <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={activeYear}/>;
+                })}
+                {po.indicators.filter(ind=>ind.text).length===0&&(
+                  <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Right — Goals + BOW Outcomes + BOW Progress */}
+            <div style={{flex:1,minWidth:0,padding:"20px 22px",display:"flex",flexDirection:"column",gap:22}}>
+
+              {/* 2030 Goals */}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>2030 Goals</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
+                    const g = STRATEGY_GOALS.find(x=>x.number===gNum);
+                    if(!g) return null;
+                    return (
+                      <div key={g.id}
+                        onClick={()=>onNavigateToStrategy&&onNavigateToStrategy()}
+                        style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,
+                          border:"1px solid "+g.color+"44",background:g.color+"08",
+                          cursor:onNavigateToStrategy?"pointer":"default",transition:"box-shadow .15s"}}
+                        onMouseEnter={e=>{if(onNavigateToStrategy)e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.1)";}}
+                        onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                        <span style={{width:24,height:24,borderRadius:"50%",background:g.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.number}</span>
+                        <span style={{fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
+                        {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
+                      </div>
+                    );
+                  })}
+                  {!(PORT_GOAL_MAP[portId]||[]).length&&<span style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No goals mapped.</span>}
+                </div>
+              </div>
+
+              {/* Contributing BOW Outcomes */}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>Contributing BOW Outcomes</div>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {(bows||[]).map(b=>{
+                    const visible = b.outcomes.filter(o=>o.shortTitle||o.title);
+                    if(!visible.length) return null;
+                    return (
+                      <div key={b.id}>
+                        <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,marginBottom:5,paddingBottom:4,borderBottom:"1px solid "+BORDER}}>{b.name}</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                          {visible.map((o,oi)=>(
+                            <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"3px 0"}}>
+                              <span style={{width:5,height:5,borderRadius:"50%",background:pc.color+"88",flexShrink:0,marginTop:5}}/>
+                              <span style={{fontSize:12,color:TEXT,lineHeight:1.45}}>{o.shortTitle||o.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* BOW Progress Summary */}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>BOW Progress</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {bowProgress.map(b=>(
+                    <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,background:SURFACE}}>
+                      <div style={{flex:1,fontSize:12,fontWeight:700,color:TEXT,lineHeight:1.3}}>{b.name}</div>
+                      <div style={{display:"flex",gap:14,flexShrink:0}}>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:3}}>Exec {activeYear}</div>
+                          {b.exec
+                            ? <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:6,height:6,borderRadius:"50%",background:b.exec.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.exec.color}}>{b.exec.completed}/{b.exec.total}</span></div>
+                            : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:3}}>Impact</div>
+                          {b.impact
+                            ? <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:6,height:6,borderRadius:"50%",background:b.impact.color,display:"inline-block"}}/><span style={{fontSize:12,fontWeight:700,color:b.impact.color}}>{b.impact.label.replace(" Expectations","")}</span></div>
+                            : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 }
@@ -4787,7 +4788,7 @@ function PortfolioByTheNumbers({ portId, portColor }) {
 }
 
 // ── PortfolioDashboard (per-portfolio full view) ───────────────────────────────
-function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, onUpdateBows, onNavigateToOutcome, onNavigateToBow, strategyRatings, onUpdateStrategyRatings }) {
+function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, onUpdateBows, onNavigateToOutcome, onNavigateToBow, onNavigateToStrategy, strategyRatings, onUpdateStrategyRatings }) {
   const { portfolio, bows } = portData;
   const pc = PORT_COLORS[portId] || PORT_COLORS["cross-cutting"];
   const [activeTab,setActiveTab] = useState("portfolio-overview");
@@ -4989,7 +4990,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
           </div>
         )}
         {activeTab==="portfolio-progress"&&(
-          <PortfolioOutcomesView portfolio={portfolio} bows={bows} portColor={pc} onChange={p=>onUpdatePortfolio(p)} initialIdx={activePortfolioOutcomeIdx} portShortTitles={SHORT_TITLES}/>
+          <PortfolioOutcomesView portId={portId} portfolio={portfolio} bows={bows} portColor={pc} onChange={p=>onUpdatePortfolio(p)} initialIdx={activePortfolioOutcomeIdx} portShortTitles={SHORT_TITLES} onNavigateToStrategy={onNavigateToStrategy}/>
         )}
         {activeTab==="investments"&&(
           <PortfolioInvestmentsRollup bows={bows} portColor={pc} portId={portId} onUpdateBows={onUpdateBows}/>
@@ -6676,7 +6677,8 @@ function App() {
               onUpdatePortfolio={p=>updatePortfolio(activePortId,p)}
               onUpdateBows={bows=>updateBows(activePortId,bows)}
               onNavigateToOutcome={idx=>{}}
-              onNavigateToBow={bowId=>{}}/>
+              onNavigateToBow={bowId=>{}}
+              onNavigateToStrategy={()=>setActiveView({type:"strategy"})}/>
           )}
         </div>
       </div>
