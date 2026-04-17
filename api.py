@@ -27,10 +27,9 @@ SCHEMA  = f"{CATALOG}.usp_strategy"
 
 def get_connection():
     token = request.headers.get("X-Forwarded-Access-Token")
-    if token:
-        app.logger.debug(f"X-Forwarded-Access-Token present: {token[:20]}...")
-    else:
-        app.logger.debug("X-Forwarded-Access-Token not present")
+    app.logger.info(f"DB connect → host={DATABRICKS_HOST} http_path={HTTP_PATH} token={'present' if token else 'MISSING'}")
+    if not token:
+        raise Exception(f"X-Forwarded-Access-Token header is missing — cannot authenticate with Databricks")
     return sql.connect(
         server_hostname = DATABRICKS_HOST,
         http_path       = HTTP_PATH,
@@ -65,13 +64,16 @@ def health():
 
 @app.route("/api/debug")
 def debug():
-    """Temporary endpoint — surfaces the actual DB connection error instead of swallowing it."""
+    """Surfaces DB connection details and any errors — use to diagnose connectivity issues."""
     token = request.headers.get("X-Forwarded-Access-Token")
     result = {
         "token_present": bool(token),
         "token_prefix": token[:20] if token else None,
         "host": DATABRICKS_HOST,
         "http_path": HTTP_PATH,
+        "host_source": "env" if os.environ.get("DATABRICKS_HOST") else "hardcoded default",
+        "http_path_source": "env" if os.environ.get("DATABRICKS_HTTP_PATH") else "hardcoded default",
+        "schema": SCHEMA,
     }
     try:
         rows = query(f"SELECT COUNT(*) as n FROM {SCHEMA}.strategy_goals")
@@ -80,6 +82,7 @@ def debug():
     except Exception as e:
         result["db_status"] = "error"
         result["error"] = str(e)
+        result["error_type"] = type(e).__name__
     return jsonify(result)
 
 
