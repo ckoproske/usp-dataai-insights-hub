@@ -55,10 +55,10 @@ function teamColor(name) {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return TEAM_PALETTE[h % TEAM_PALETTE.length];
 }
-// Strip everything up to and including the last "/" from INVEST team names
+// Strip everything up to and including the last "/" or "\" from INVEST team names
 function cleanTeam(name) {
   if (!name) return "";
-  const idx = name.lastIndexOf("/");
+  const idx = Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\"));
   return idx !== -1 ? name.slice(idx + 1).trim() : name;
 }
 
