@@ -4957,10 +4957,15 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
           if(tab.id==="decision-insights") {
             return (
               <button key={tab.id} onClick={()=>setActiveTab("decision-insights")}
-                style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
-                  borderBottom:active?"2px solid "+pc.color:"2px solid transparent",
-                  color:active?pc.color:TEXT_MUTED,marginBottom:-1,transition:"color .15s",letterSpacing:0.1}}>
+                style={{padding:"8px 14px",fontWeight:600,fontSize:12,cursor:"pointer",letterSpacing:0.2,
+                  border:"1.5px solid "+(active?pc.color:ACCENT+"66"),borderRadius:7,
+                  background:active?pc.color+"18":ACCENT+"08",
+                  color:active?pc.color:ACCENT,
+                  display:"flex",alignItems:"center",gap:5,
+                  alignSelf:"center",marginLeft:8,
+                  transition:"all .15s"}}>
                 {tab.label}
+                <span style={{fontSize:11,opacity:0.8}}>↗</span>
               </button>
             );
           }
@@ -6656,8 +6661,8 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
       </div>
 
       {/* Sub-nav */}
-      <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4}}>
-        {[["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"],["decision-insights","Decision Insights & Forecasts"]].map(([id,label])=>(
+      <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4,alignItems:"center"}}>
+        {[["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
           <button key={id} onClick={()=>setActiveTab(id)}
             style={{padding:"10px 20px",fontSize:13,fontWeight:activeTab===id?600:400,border:"none",background:"none",cursor:"pointer",
               borderBottom:activeTab===id?"2px solid "+ACCENT:"2px solid transparent",
@@ -6665,6 +6670,15 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
             {label}
           </button>
         ))}
+        <button onClick={()=>setActiveTab("decision-insights")}
+          style={{padding:"8px 14px",fontWeight:600,fontSize:12,cursor:"pointer",letterSpacing:0.2,
+            border:"1.5px solid "+(activeTab==="decision-insights"?ACCENT:ACCENT+"66"),borderRadius:7,
+            background:activeTab==="decision-insights"?ACCENT+"18":ACCENT+"08",
+            color:ACCENT,display:"flex",alignItems:"center",gap:5,
+            marginLeft:8,transition:"all .15s"}}>
+          Decision Insights & Forecasts
+          <span style={{fontSize:11,opacity:0.8}}>↗</span>
+        </button>
       </div>
 
       {/* Content */}
