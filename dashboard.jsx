@@ -3051,26 +3051,32 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                   </div>
 
                   {/* Teams */}
-                  <div style={{ padding: "10px 14px", borderRight: "1px solid " + BORDER,
-                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
-                    {inv.managingTeam && (() => { const c = teamColor(inv.managingTeam); return (
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
-                        borderRadius: 20, background: c.bg, color: c.color,
-                        whiteSpace: "nowrap", alignSelf: "flex-start" }}>
-                        {inv.managingTeam}
-                      </span>
-                    ); })()}
-                    {inv.supportingTeam && (() => { const c = teamColor(inv.supportingTeam); return (
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
-                        borderRadius: 20, background: c.bg, color: c.color,
-                        whiteSpace: "nowrap", alignSelf: "flex-start", opacity: 0.8 }}>
-                        {inv.supportingTeam}
-                      </span>
-                    ); })()}
-                    {!inv.managingTeam && !inv.supportingTeam && (
-                      <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
-                    )}
-                  </div>
+                  {(() => {
+                    const managing   = inv.managingTeam   !== "USP Data" ? inv.managingTeam   : "";
+                    const supporting = inv.supportingTeam !== "USP Data" ? inv.supportingTeam : "";
+                    return (
+                      <div style={{ padding: "10px 14px", borderRight: "1px solid " + BORDER,
+                        display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
+                        {managing && (() => { const c = teamColor(managing); return (
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
+                            borderRadius: 20, background: c.bg, color: c.color,
+                            wordBreak: "break-word", alignSelf: "flex-start" }}>
+                            {managing}
+                          </span>
+                        ); })()}
+                        {supporting && (() => { const c = teamColor(supporting); return (
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
+                            borderRadius: 20, background: c.bg, color: c.color,
+                            wordBreak: "break-word", alignSelf: "flex-start", opacity: 0.8 }}>
+                            {supporting}
+                          </span>
+                        ); })()}
+                        {!managing && !supporting && (
+                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Outstanding */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
@@ -3926,26 +3932,32 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                   </div>
 
                   {/* Teams */}
-                  <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
-                    {inv.managingTeam && (() => { const c = teamColor(inv.managingTeam); return (
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
-                        borderRadius: 20, background: c.bg, color: c.color,
-                        whiteSpace: "nowrap", alignSelf: "flex-start" }}>
-                        {inv.managingTeam}
-                      </span>
-                    ); })()}
-                    {inv.supportingTeam && (() => { const c = teamColor(inv.supportingTeam); return (
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
-                        borderRadius: 20, background: c.bg, color: c.color,
-                        whiteSpace: "nowrap", alignSelf: "flex-start", opacity: 0.8 }}>
-                        {inv.supportingTeam}
-                      </span>
-                    ); })()}
-                    {!inv.managingTeam && !inv.supportingTeam && (
-                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
-                    )}
-                  </div>
+                  {(() => {
+                    const managing   = inv.managingTeam   !== "USP Data" ? inv.managingTeam   : "";
+                    const supporting = inv.supportingTeam !== "USP Data" ? inv.supportingTeam : "";
+                    return (
+                      <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
+                        display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
+                        {managing && (() => { const c = teamColor(managing); return (
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
+                            borderRadius: 20, background: c.bg, color: c.color,
+                            wordBreak: "break-word", alignSelf: "flex-start" }}>
+                            {managing}
+                          </span>
+                        ); })()}
+                        {supporting && (() => { const c = teamColor(supporting); return (
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
+                            borderRadius: 20, background: c.bg, color: c.color,
+                            wordBreak: "break-word", alignSelf: "flex-start", opacity: 0.8 }}>
+                            {supporting}
+                          </span>
+                        ); })()}
+                        {!managing && !supporting && (
+                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Status — from INVEST, read-only */}
                   <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
