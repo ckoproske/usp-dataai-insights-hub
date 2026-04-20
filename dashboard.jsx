@@ -55,6 +55,12 @@ function teamColor(name) {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return TEAM_PALETTE[h % TEAM_PALETTE.length];
 }
+// Strip "U.S. Program/" prefix (and anything before it) from INVEST team names
+function cleanTeam(name) {
+  if (!name) return "";
+  const idx = name.indexOf("U.S. Program/");
+  return idx !== -1 ? name.slice(idx + "U.S. Program/".length).trim() : name;
+}
 
 // Portfolio colors — muted tonal family per GF brand
 const PORT_COLORS = {
@@ -1178,8 +1184,8 @@ async function loadBowInvestments(bowId) {
       endDate:        inv.End_Date             || "",
       strategicFit:   inv.Strategic_Fit        || "",
       projectOverview: inv.Project_Overview    || "",
-      managingTeam:   inv.Managing_Team        || "",
-      supportingTeam: inv.Supporting_Team      || "",
+      managingTeam:   cleanTeam(inv.Managing_Team   || ""),
+      supportingTeam: cleanTeam(inv.Supporting_Team || ""),
       // Internal overlay fields
       internal_notes: inv.internal_notes       || "",
       overlay_id:     inv.overlay_id           || null,
@@ -1223,8 +1229,8 @@ async function loadAllInvestments(filters = {}) {
       bow_id:         inv.bow_id                 || "",
       bow_title:      inv.bow_title              || "",
       portfolio_id:   inv.portfolio_id           || "",
-      managingTeam:   inv.Managing_Team          || "",
-      supportingTeam: inv.Supporting_Team        || "",
+      managingTeam:   cleanTeam(inv.Managing_Team   || ""),
+      supportingTeam: cleanTeam(inv.Supporting_Team || ""),
       internal_notes: inv.internal_notes         || "",
       overlay_id:     inv.overlay_id             || null,
     }));
