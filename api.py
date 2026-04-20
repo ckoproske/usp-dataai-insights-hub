@@ -669,7 +669,7 @@ def get_all_investments():
         params.append(status)
 
     rows = query(
-        f"""SELECT DISTINCT
+        f"""SELECT
               i.*,
               b.bow_id,
               b.portfolio_id,
@@ -677,7 +677,7 @@ def get_all_investments():
               o.internal_notes,
               o.overlay_id
             FROM {SCHEMA}.invest_investments i
-            JOIN {SCHEMA}.invest_bow_allocation a
+            JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
               ON i.Investment_ID = a.Investment_ID
             JOIN {SCHEMA}.bows b
               ON a.BoW_ID = b.invest_bow_id
@@ -693,12 +693,12 @@ def get_all_investments():
 def get_investments_by_bow(bow_id):
     """Investments tagged to a specific BOW, joined via invest_bow_id."""
     rows = query(
-        f"""SELECT DISTINCT
+        f"""SELECT
               i.*,
               o.internal_notes,
               o.overlay_id
             FROM {SCHEMA}.bows b
-            JOIN {SCHEMA}.invest_bow_allocation a
+            JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
               ON b.invest_bow_id = a.BoW_ID
             JOIN {SCHEMA}.invest_investments i
               ON a.Investment_ID = i.Investment_ID
@@ -714,14 +714,14 @@ def get_investments_by_bow(bow_id):
 def get_investments_by_portfolio(portfolio_id):
     """Investments for all BOWs in a portfolio."""
     rows = query(
-        f"""SELECT DISTINCT
+        f"""SELECT
               i.*,
               b.bow_id,
               b.title AS bow_title,
               o.internal_notes,
               o.overlay_id
             FROM {SCHEMA}.bows b
-            JOIN {SCHEMA}.invest_bow_allocation a
+            JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
               ON b.invest_bow_id = a.BoW_ID
             JOIN {SCHEMA}.invest_investments i
               ON a.Investment_ID = i.Investment_ID
