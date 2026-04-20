@@ -36,6 +36,26 @@ const FONT_CSS = `
   .fade-in { animation: fadeIn 0.18s ease both; }
 `;
 
+// Team pill colors — deterministic hash of team name → consistent color from palette
+const TEAM_PALETTE = [
+  { bg: "#EEF4F8", color: "#1F5F80" },  // blue
+  { bg: "#EDF7F5", color: "#337A6C" },  // teal
+  { bg: "#FEF5E7", color: "#C07D10" },  // amber
+  { bg: "#EDE9FE", color: "#5B21B6" },  // purple
+  { bg: "#FDF2EE", color: "#9A3412" },  // rust
+  { bg: "#DCFCE7", color: "#14532D" },  // green
+  { bg: "#F3E8FF", color: "#6B21A8" },  // violet
+  { bg: "#E0F2FE", color: "#075985" },  // sky
+  { bg: "#FEE2E2", color: "#991B1B" },  // red
+  { bg: "#F3F4F6", color: "#374151" },  // gray
+];
+function teamColor(name) {
+  if (!name) return TEAM_PALETTE[TEAM_PALETTE.length - 1];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  return TEAM_PALETTE[h % TEAM_PALETTE.length];
+}
+
 // Portfolio colors — muted tonal family per GF brand
 const PORT_COLORS = {
   "cross-cutting": { color:"#A49A8C", light:"#F5F3ED", label:"Cross Cutting Supports",  dark:"#7A7068" },
@@ -1158,6 +1178,8 @@ async function loadBowInvestments(bowId) {
       endDate:        inv.End_Date             || "",
       strategicFit:   inv.Strategic_Fit        || "",
       projectOverview: inv.Project_Overview    || "",
+      managingTeam:   inv.Managing_Team        || "",
+      supportingTeam: inv.Supporting_Team      || "",
       // Internal overlay fields
       internal_notes: inv.internal_notes       || "",
       overlay_id:     inv.overlay_id           || null,
@@ -1201,6 +1223,8 @@ async function loadAllInvestments(filters = {}) {
       bow_id:         inv.bow_id                 || "",
       bow_title:      inv.bow_title              || "",
       portfolio_id:   inv.portfolio_id           || "",
+      managingTeam:   inv.Managing_Team          || "",
+      supportingTeam: inv.Supporting_Team        || "",
       internal_notes: inv.internal_notes         || "",
       overlay_id:     inv.overlay_id             || null,
     }));
@@ -2921,12 +2945,12 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "2fr 2.5fr 110px 130px 110px 2fr",
+            gridTemplateColumns: "2fr 2.5fr 110px 180px 130px 110px 2fr",
             background: "#F8FAFC", borderBottom: "2px solid " + BORDER }}>
-            {["Grantee", "Initiative", "Amount", "Outstanding", "Status", "Notes"].map((h, i) => (
+            {["Grantee", "Initiative", "Amount", "Teams", "Outstanding", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700,
                 color: TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6,
-                borderRight: i < 5 ? "1px solid " + BORDER : "none" }}>
+                borderRight: i < 6 ? "1px solid " + BORDER : "none" }}>
                 {h}
               </div>
             ))}
@@ -2947,7 +2971,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
  
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "2fr 2.5fr 110px 130px 110px 2fr",
+                  gridTemplateColumns: "2fr 2.5fr 110px 180px 130px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg, transition: "background .15s" }}>
  
                   {/* Grantee */}
@@ -2982,7 +3006,29 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                       {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
                     </div>
                   </div>
- 
+
+                  {/* Teams */}
+                  <div style={{ padding: "10px 14px", borderRight: "1px solid " + BORDER,
+                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
+                    {inv.managingTeam && (() => { const c = teamColor(inv.managingTeam); return (
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
+                        borderRadius: 20, background: c.bg, color: c.color,
+                        whiteSpace: "nowrap", alignSelf: "flex-start" }}>
+                        {inv.managingTeam}
+                      </span>
+                    ); })()}
+                    {inv.supportingTeam && (() => { const c = teamColor(inv.supportingTeam); return (
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
+                        borderRadius: 20, background: c.bg, color: c.color,
+                        whiteSpace: "nowrap", alignSelf: "flex-start", opacity: 0.8 }}>
+                        {inv.supportingTeam}
+                      </span>
+                    ); })()}
+                    {!inv.managingTeam && !inv.supportingTeam && (
+                      <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
+                    )}
+                  </div>
+
                   {/* Outstanding */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
@@ -3745,12 +3791,12 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "130px 2fr 2fr 90px 110px 2fr",
+            gridTemplateColumns: "130px 2fr 2fr 90px 180px 110px 2fr",
             background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-            {["BOW", "Grantee", "Initiative", "Amount", "Status", "Notes"].map((h, i) => (
+            {["BOW", "Grantee", "Initiative", "Amount", "Teams", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "9px 12px", fontSize: 10, fontWeight: 700,
                 color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
-                borderRight: i < 5 ? "1px solid " + BORDER : "none" }}>
+                borderRight: i < 6 ? "1px solid " + BORDER : "none" }}>
                 {h}
               </div>
             ))}
@@ -3771,7 +3817,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "130px 2fr 2fr 90px 110px 2fr",
+                  gridTemplateColumns: "130px 2fr 2fr 90px 180px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
  
                   {/* BOW */}
@@ -3813,7 +3859,29 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                       {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
                     </span>
                   </div>
- 
+
+                  {/* Teams */}
+                  <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
+                    {inv.managingTeam && (() => { const c = teamColor(inv.managingTeam); return (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
+                        borderRadius: 20, background: c.bg, color: c.color,
+                        whiteSpace: "nowrap", alignSelf: "flex-start" }}>
+                        {inv.managingTeam}
+                      </span>
+                    ); })()}
+                    {inv.supportingTeam && (() => { const c = teamColor(inv.supportingTeam); return (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
+                        borderRadius: 20, background: c.bg, color: c.color,
+                        whiteSpace: "nowrap", alignSelf: "flex-start", opacity: 0.8 }}>
+                        {inv.supportingTeam}
+                      </span>
+                    ); })()}
+                    {!inv.managingTeam && !inv.supportingTeam && (
+                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                    )}
+                  </div>
+
                   {/* Status — from INVEST, read-only */}
                   <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
