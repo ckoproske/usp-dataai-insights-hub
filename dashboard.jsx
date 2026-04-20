@@ -1216,7 +1216,8 @@ async function loadAllInvestments(filters = {}) {
   const qs = params.toString() ? `?${params.toString()}` : "";
   try {
     const rows = await apiFetch(`/api/investments/all${qs}`);
-    return rows.map(inv => ({
+    // Map each raw row
+    const mapped = rows.map(inv => ({
       id:             inv.Investment_ID,
       grantee:        inv.Grantee_Vendor        || "",
       initiative:     inv.Investment_Name        || "",
@@ -1231,13 +1232,30 @@ async function loadAllInvestments(filters = {}) {
       bow_id:         inv.bow_id                 || "",
       bow_title:      inv.bow_title              || "",
       portfolio_id:   inv.portfolio_id           || "",
-      investmentUrl:  inv.Investment_URL           || "",
-      description:    inv.Public_Description      || "",
+      investmentUrl:  inv.Investment_URL         || "",
+      description:    inv.Public_Description     || "",
       managingTeam:   cleanTeam(inv.Managing_Team   || ""),
       supportingTeam: cleanTeam(inv.Supporting_Team || ""),
       internal_notes: inv.internal_notes         || "",
       overlay_id:     inv.overlay_id             || null,
     }));
+    // Deduplicate by Investment_ID — collect all BOW associations into arrays
+    const byId = {};
+    mapped.forEach(inv => {
+      if (!byId[inv.id]) {
+        byId[inv.id] = {
+          ...inv,
+          bowIds:    inv.bow_id    ? [inv.bow_id]    : [],
+          bowTitles: inv.bow_title ? [inv.bow_title] : [],
+        };
+      } else {
+        if (inv.bow_id    && !byId[inv.id].bowIds.includes(inv.bow_id))
+          byId[inv.id].bowIds.push(inv.bow_id);
+        if (inv.bow_title && !byId[inv.id].bowTitles.includes(inv.bow_title))
+          byId[inv.id].bowTitles.push(inv.bow_title);
+      }
+    });
+    return Object.values(byId);
   } catch (err) {
     console.warn("loadAllInvestments failed:", err);
     return [];
@@ -3630,7 +3648,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   const bowOptions = [{ id: "all", name: "All BOWs" }, ...bows.map(b => ({ id: b.id, name: b.name }))];
  
   const filtered = investments
-    .filter(inv => selectedBow === "all" || inv.bow_id === selectedBow)
+    .filter(inv => selectedBow === "all" || (inv.bowIds || []).includes(selectedBow))
     .filter(inv => !filterStatus || inv.status === filterStatus)
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
@@ -3831,7 +3849,6 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
             const isEditing  = editingId === inv.id;
             const isSaving   = savingId === inv.id;
             const rowBg      = idx % 2 === 0 ? SURFACE : SURFACE_2;
-            const bow        = bows.find(b => b.id === inv.bow_id);
             const statusColor = inv.status === "Active"     ? "#10B981"
               : inv.status === "In Process" ? "#60A5FA"
               : inv.status === "Closed"     ? "#9CA3AF"
@@ -3885,11 +3902,19 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                   </div>
 
                   {/* BOW */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: pc.color,
-                      lineHeight: 1.3 }}>
-                      {bow?.name || inv.bow_title || "—"}
-                    </div>
+                  <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
+                    {inv.bowTitles && inv.bowTitles.length > 0
+                      ? inv.bowTitles.map((title, i) => (
+                          <span key={i} style={{ fontSize: 10, fontWeight: 600,
+                            color: pc.color, background: pc.color + "15",
+                            borderRadius: 4, padding: "2px 6px",
+                            whiteSpace: "nowrap", alignSelf: "flex-start" }}>
+                            {title}
+                          </span>
+                        ))
+                      : <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                    }
                   </div>
 
                   {/* Amount */}
