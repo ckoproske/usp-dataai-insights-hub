@@ -669,7 +669,7 @@ def get_all_investments():
         params.append(status)
 
     rows = query(
-        f"""SELECT
+        f"""SELECT DISTINCT
               i.*,
               b.bow_id,
               b.portfolio_id,
@@ -693,11 +693,8 @@ def get_all_investments():
 def get_investments_by_bow(bow_id):
     """Investments tagged to a specific BOW, joined via invest_bow_id."""
     rows = query(
-        f"""SELECT
+        f"""SELECT DISTINCT
               i.*,
-              a.Investment_Payment_Year,
-              a.Investment_Payment_Amount,
-              a.Investment_Payment_Status,
               o.internal_notes,
               o.overlay_id
             FROM {SCHEMA}.bows b
@@ -717,13 +714,10 @@ def get_investments_by_bow(bow_id):
 def get_investments_by_portfolio(portfolio_id):
     """Investments for all BOWs in a portfolio."""
     rows = query(
-        f"""SELECT
+        f"""SELECT DISTINCT
               i.*,
               b.bow_id,
               b.title AS bow_title,
-              a.Investment_Payment_Year,
-              a.Investment_Payment_Amount,
-              a.Investment_Payment_Status,
               o.internal_notes,
               o.overlay_id
             FROM {SCHEMA}.bows b
