@@ -2953,9 +2953,9 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "2fr 2.5fr 3fr 110px 180px 130px 110px 2fr",
+            gridTemplateColumns: "2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
             background: "#F8FAFC", borderBottom: "2px solid " + BORDER }}>
-            {["Grantee", "Investment Title", "Description", "Amount", "Teams", "Outstanding", "Status", "Notes"].map((h, i) => (
+            {["Investment Title", "Grantee", "Description", "Amount", "Teams", "Outstanding", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700,
                 color: TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6,
                 borderRight: i < 7 ? "1px solid " + BORDER : "none" }}>
@@ -2979,21 +2979,9 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
  
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "2fr 2.5fr 3fr 110px 180px 130px 110px 2fr",
+                  gridTemplateColumns: "2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg, transition: "background .15s" }}>
- 
-                  {/* Grantee */}
-                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
-                      {inv.grantee || "—"}
-                    </div>
-                    {inv.owner && (
-                      <div style={{ fontSize: 11, color: TEXT_SUB, marginTop: 3 }}>
-                        👤 {inv.owner}
-                      </div>
-                    )}
-                  </div>
- 
+
                   {/* Initiative */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 13, color: TEXT, lineHeight: 1.4 }}>
@@ -3003,6 +2991,18 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                     {inv.stage && (
                       <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
                         {inv.stage}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Grantee */}
+                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
+                      {inv.grantee || "—"}
+                    </div>
+                    {inv.owner && (
+                      <div style={{ fontSize: 11, color: TEXT_SUB, marginTop: 3 }}>
+                        👤 {inv.owner}
                       </div>
                     )}
                   </div>
@@ -3806,9 +3806,9 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "130px 2fr 2fr 3fr 90px 180px 110px 2fr",
+            gridTemplateColumns: "2fr 2fr 3fr 130px 90px 180px 110px 2fr",
             background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-            {["BOW", "Grantee", "Investment Title", "Description", "Amount", "Teams", "Status", "Notes"].map((h, i) => (
+            {["Investment Title", "Grantee", "Description", "BOW", "Amount", "Teams", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "9px 12px", fontSize: 10, fontWeight: 700,
                 color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
                 borderRight: i < 7 ? "1px solid " + BORDER : "none" }}>
@@ -3832,29 +3832,9 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "130px 2fr 2fr 3fr 90px 180px 110px 2fr",
+                  gridTemplateColumns: "2fr 2fr 3fr 130px 90px 180px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
- 
-                  {/* BOW */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: pc.color,
-                      lineHeight: 1.3 }}>
-                      {bow?.name || inv.bow_title || "—"}
-                    </div>
-                  </div>
- 
-                  {/* Grantee */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
-                      {inv.grantee || "—"}
-                    </div>
-                    {inv.owner && (
-                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 1 }}>
-                        👤 {inv.owner}
-                      </div>
-                    )}
-                  </div>
- 
+
                   {/* Initiative */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 12, color: TEXT, lineHeight: 1.35 }}>
@@ -3867,10 +3847,30 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                     )}
                   </div>
 
+                  {/* Grantee */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
+                      {inv.grantee || "—"}
+                    </div>
+                    {inv.owner && (
+                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 1 }}>
+                        👤 {inv.owner}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Description */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 11, color: TEXT_SUB, lineHeight: 1.5 }}>
                       {inv.description || <span style={{ color: TEXT_MUTED }}>—</span>}
+                    </div>
+                  </div>
+
+                  {/* BOW */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: pc.color,
+                      lineHeight: 1.3 }}>
+                      {bow?.name || inv.bow_title || "—"}
                     </div>
                   </div>
 
