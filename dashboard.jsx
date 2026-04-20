@@ -55,11 +55,13 @@ function teamColor(name) {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return TEAM_PALETTE[h % TEAM_PALETTE.length];
 }
-// Strip everything up to and including the last "/" or "\" from INVEST team names
+// Extract the division segment from INVEST team names.
+// Format is "Prefix\Division\Sub-team" — we always want the Division (parts[1]).
+// Falls back to the full name if no separator is present.
 function cleanTeam(name) {
   if (!name) return "";
-  const idx = Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\"));
-  return idx !== -1 ? name.slice(idx + 1).trim() : name;
+  const parts = name.split(/[\\\/]/);
+  return (parts.length > 1 ? parts[1] : parts[0]).trim();
 }
 
 // Portfolio colors — muted tonal family per GF brand
