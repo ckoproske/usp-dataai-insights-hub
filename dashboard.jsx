@@ -2953,7 +2953,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
           <div style={{ display: "grid",
             gridTemplateColumns: "2fr 2.5fr 110px 180px 130px 110px 2fr",
             background: "#F8FAFC", borderBottom: "2px solid " + BORDER }}>
-            {["Grantee", "Initiative", "Amount", "Teams", "Outstanding", "Status", "Notes"].map((h, i) => (
+            {["Grantee", "Investment Title", "Amount", "Teams", "Outstanding", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700,
                 color: TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6,
                 borderRight: i < 6 ? "1px solid " + BORDER : "none" }}>
@@ -3799,7 +3799,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
           <div style={{ display: "grid",
             gridTemplateColumns: "130px 2fr 2fr 90px 180px 110px 2fr",
             background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-            {["BOW", "Grantee", "Initiative", "Amount", "Teams", "Status", "Notes"].map((h, i) => (
+            {["BOW", "Grantee", "Investment Title", "Amount", "Teams", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "9px 12px", fontSize: 10, fontWeight: 700,
                 color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
                 borderRight: i < 6 ? "1px solid " + BORDER : "none" }}>
