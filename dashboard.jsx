@@ -1182,6 +1182,7 @@ async function loadBowInvestments(bowId) {
       coordinator:    inv.Investment_Coordinator || "",
       startDate:      inv.Start_Date           || "",
       endDate:        inv.End_Date             || "",
+      investmentUrl:  inv.Investment_URL         || "",
       description:    inv.Public_Description    || "",
       strategicFit:   inv.Strategic_Fit        || "",
       projectOverview: inv.Project_Overview    || "",
@@ -1230,6 +1231,7 @@ async function loadAllInvestments(filters = {}) {
       bow_id:         inv.bow_id                 || "",
       bow_title:      inv.bow_title              || "",
       portfolio_id:   inv.portfolio_id           || "",
+      investmentUrl:  inv.Investment_URL           || "",
       description:    inv.Public_Description      || "",
       managingTeam:   cleanTeam(inv.Managing_Team   || ""),
       supportingTeam: cleanTeam(inv.Supporting_Team || ""),
@@ -2984,8 +2986,16 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
 
                   {/* Initiative */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 13, color: TEXT, lineHeight: 1.4 }}>
-                      {inv.initiative}
+                    <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                      {inv.investmentUrl
+                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                            style={{ color: "#3086AB", textDecoration: "none", fontWeight: 500 }}
+                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
+                            {inv.initiative}
+                          </a>
+                        : <span style={{ color: TEXT }}>{inv.initiative}</span>
+                      }
                     </div>
                     <div style={{ fontSize: 11, color: TEXT_SUB, marginTop: 2 }}>{inv.type}</div>
                     {inv.stage && (
@@ -3837,8 +3847,16 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
 
                   {/* Initiative */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 12, color: TEXT, lineHeight: 1.35 }}>
-                      {inv.initiative || "—"}
+                    <div style={{ fontSize: 12, lineHeight: 1.35 }}>
+                      {inv.investmentUrl
+                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                            style={{ color: "#3086AB", textDecoration: "none", fontWeight: 500 }}
+                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
+                            {inv.initiative || "—"}
+                          </a>
+                        : <span style={{ color: TEXT }}>{inv.initiative || "—"}</span>
+                      }
                     </div>
                     {inv.type && (
                       <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
