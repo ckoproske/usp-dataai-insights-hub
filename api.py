@@ -797,7 +797,10 @@ def get_budget_summary(portfolio_id):
             FROM {SCHEMA}.bows b
             JOIN {SCHEMA}.invest_bow_allocation a
               ON b.invest_bow_id = a.BoW_ID
+            JOIN {SCHEMA}.invest_investments i
+              ON a.Investment_ID = i.Investment_ID
             WHERE b.portfolio_id = ?
+              AND i.Status IN ('Active', 'In Process')
             GROUP BY b.bow_id, b.title, a.Investment_Payment_Year
             ORDER BY b.sort_order, a.Investment_Payment_Year""",
         [portfolio_id]
