@@ -3909,7 +3909,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                           <span key={i} style={{ fontSize: 10, fontWeight: 600,
                             color: pc.color, background: pc.color + "15",
                             borderRadius: 4, padding: "2px 6px",
-                            whiteSpace: "nowrap", alignSelf: "flex-start" }}>
+                            wordBreak: "break-word", alignSelf: "flex-start" }}>
                             {title}
                           </span>
                         ))
