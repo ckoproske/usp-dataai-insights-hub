@@ -4957,17 +4957,10 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
           if(tab.id==="decision-insights") {
             return (
               <button key={tab.id} onClick={()=>setActiveTab("decision-insights")}
-                style={{
-                  padding:"10px 14px",marginLeft:"auto",marginRight:8,alignSelf:"center",
-                  fontWeight:600,fontSize:12,cursor:"pointer",letterSpacing:0.2,
-                  border:"1.5px solid "+ACCENT+"55",borderRadius:7,
-                  background:active?ACCENT+"12":"transparent",
-                  color:active?ACCENT:ACCENT,
-                  display:"flex",alignItems:"center",gap:5,
-                  transition:"all .15s",
-                }}>
+                style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
+                  borderBottom:active?"2px solid "+pc.color:"2px solid transparent",
+                  color:active?pc.color:TEXT_MUTED,marginBottom:-1,transition:"color .15s",letterSpacing:0.1}}>
                 {tab.label}
-                <span style={{fontSize:10,opacity:0.7}}>↗</span>
               </button>
             );
           }
