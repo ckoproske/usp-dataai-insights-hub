@@ -6086,14 +6086,6 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
         {/* Goal-specific chart */}
         <GoalDetailChart g={g} />
 
-        {/* Scenario forecasting teaser — compact, below chart */}
-        <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:7,
-          border:"1px dashed "+ACCENT+"88",background:ACCENT_LIGHT,width:"fit-content"}}>
-          <span style={{fontSize:11}}>🔮</span>
-          <span style={{fontSize:11,fontWeight:600,color:"#92400E"}}>Scenario Forecasting</span>
-          <span style={{fontSize:9,fontWeight:700,color:ACCENT,background:"rgba(240,165,0,0.2)",borderRadius:3,padding:"1px 5px",letterSpacing:0.5,textTransform:"uppercase",border:"1px solid "+ACCENT+"44"}}>Coming Soon</span>
-        </div>
-
         {/* Contributing portfolios — show all 4, light up contributors */}
         <div>
           <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:10}}>Contributing Portfolios</div>
@@ -6665,7 +6657,7 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
 
       {/* Sub-nav */}
       <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4}}>
-        {[["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
+        {[["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"],["decision-insights","Decision Insights & Forecasts"]].map(([id,label])=>(
           <button key={id} onClick={()=>setActiveTab(id)}
             style={{padding:"10px 20px",fontSize:13,fontWeight:activeTab===id?600:400,border:"none",background:"none",cursor:"pointer",
               borderBottom:activeTab===id?"2px solid "+ACCENT:"2px solid transparent",
@@ -6686,6 +6678,23 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
       )}
       {activeTab==="hierarchy" && (
         <MeasurementHierarchyView/>
+      )}
+      {activeTab==="decision-insights" && (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:360}}>
+          <div style={{textAlign:"center",maxWidth:480}}>
+            <div style={{width:56,height:56,borderRadius:16,background:ACCENT+"15",border:"1.5px solid "+ACCENT+"33",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:26}}>
+              ✦
+            </div>
+            <div style={{fontSize:20,fontWeight:700,color:TEXT,marginBottom:10}}>Decision Insights & Forecasts</div>
+            <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,marginBottom:24}}>
+              This view will surface predictive insights, scenario models, and decision-support signals for the 2030 strategy goals.
+            </div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",borderRadius:20,background:ACCENT+"12",border:"1px solid "+ACCENT+"33"}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:ACCENT,display:"inline-block",animation:"pulse 2s ease-in-out infinite"}}/>
+              <span style={{fontSize:12,fontWeight:600,color:ACCENT}}>Coming Soon</span>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
