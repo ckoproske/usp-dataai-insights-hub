@@ -2728,7 +2728,6 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
     });
  
   const totalAmt   = investments.reduce((s, inv) => s + toNum(inv.amount), 0);
-  const totalPaid  = investments.reduce((s, inv) => s + toNum(inv.paidAmount), 0);
   const totalOutst = investments.reduce((s, inv) => s + toNum(inv.outstanding), 0);
  
   // Budget bar buckets — derived from INVEST Status field
@@ -2804,16 +2803,6 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
               </div>
               <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", lineHeight: 1 }}>
                 {fmtM(totalAmt)}
-              </div>
-            </div>
-            <div style={{ width: 1, background: "rgba(255,255,255,0.12)" }} />
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)",
-                textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
-                Paid
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "#10B981", lineHeight: 1 }}>
-                {fmtM(totalPaid)}
               </div>
             </div>
             <div style={{ width: 1, background: "rgba(255,255,255,0.12)" }} />
@@ -2932,12 +2921,12 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "2fr 2.5fr 110px 130px 130px 110px 90px",
+            gridTemplateColumns: "2fr 2.5fr 110px 130px 110px 2fr",
             background: "#F8FAFC", borderBottom: "2px solid " + BORDER }}>
-            {["Grantee", "Initiative", "Amount", "Paid", "Outstanding", "Status", ""].map((h, i) => (
+            {["Grantee", "Initiative", "Amount", "Outstanding", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700,
                 color: TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6,
-                borderRight: i < 6 ? "1px solid " + BORDER : "none" }}>
+                borderRight: i < 5 ? "1px solid " + BORDER : "none" }}>
                 {h}
               </div>
             ))}
@@ -2958,7 +2947,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
  
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "2fr 2.5fr 110px 130px 130px 110px 90px",
+                  gridTemplateColumns: "2fr 2.5fr 110px 130px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg, transition: "background .15s" }}>
  
                   {/* Grantee */}
@@ -2994,14 +2983,6 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                     </div>
                   </div>
  
-                  {/* Paid */}
-                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#10B981" }}>
-                      {inv.paidAmount ? fmtM(toNum(inv.paidAmount)) : "—"}
-                    </div>
-                  </div>
- 
                   {/* Outstanding */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
@@ -3024,75 +3005,72 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                     )}
                   </div>
  
-                  {/* Notes button */}
+                  {/* Notes — inline, always visible, click ✎ to edit */}
                   <div style={{ padding: "10px 14px", display: "flex",
-                    alignItems: "center", justifyContent: "center" }}>
-                    <button onClick={() => setEditingId(isEditing ? null : inv.id)}
-                      style={{ fontSize: 12, fontWeight: 700, cursor: "pointer",
-                        borderRadius: 6, padding: "4px 10px",
-                        border: "1px solid " + (isEditing ? pc.color : BORDER),
-                        background: isEditing ? pc.color : BG,
-                        color: isEditing ? "#fff" : TEXT_SUB,
-                        whiteSpace: "nowrap", transition: "all .15s" }}>
-                      {isEditing ? "Done" : "✎ Notes"}
-                    </button>
+                    flexDirection: "column", gap: 6 }}>
+                    {isEditing ? (
+                      <>
+                        <InvestmentNotesEditor
+                          value={inv.internal_notes || ""}
+                          onSave={notes => saveNotes(inv.id, notes)}
+                          isSaving={isSaving}
+                        />
+                        <button onClick={() => setEditingId(null)}
+                          style={{ alignSelf: "flex-start", fontSize: 11, fontWeight: 700,
+                            cursor: "pointer", borderRadius: 5, padding: "3px 8px",
+                            border: "1px solid " + pc.color, background: pc.color,
+                            color: "#fff", whiteSpace: "nowrap" }}>
+                          Done
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <div style={{ flex: 1, fontSize: 12, lineHeight: 1.5,
+                          color: inv.internal_notes ? TEXT : TEXT_MUTED,
+                          fontStyle: inv.internal_notes ? "normal" : "italic" }}>
+                          {inv.internal_notes || "Add note…"}
+                        </div>
+                        <button onClick={() => setEditingId(inv.id)}
+                          style={{ fontSize: 11, cursor: "pointer", flexShrink: 0,
+                            border: "1px solid " + BORDER, borderRadius: 5,
+                            padding: "2px 7px", background: BG, color: TEXT_SUB }}>
+                          ✎
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
- 
-                {/* Expanded notes panel */}
+
+                {/* INVEST metadata panel — shown while editing notes */}
                 {isEditing && (
                   <div style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
-                    padding: "16px 18px", display: "grid",
-                    gridTemplateColumns: "1fr 1fr", gap: 16 }}>
- 
-                    {/* Internal notes */}
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center",
-                        gap: 6, marginBottom: 6 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_SUB,
-                          textTransform: "uppercase", letterSpacing: 0.5 }}>
-                          Internal Notes
+                    padding: "12px 18px", display: "flex", flexWrap: "wrap", gap: "10px 28px" }}>
+                    {[
+                      ["Investment Owner", inv.owner],
+                      ["Coordinator",      inv.coordinator],
+                      ["Start Date",       inv.startDate],
+                      ["End Date",         inv.endDate],
+                      ["Workflow Step",    inv.stage],
+                    ].filter(([, v]) => v).map(([label, val]) => (
+                      <div key={label}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_SUB,
+                          textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+                          {label}
                         </div>
-                        <span style={{ fontSize: 10, background: "#DBEAFE",
-                          color: "#1D4ED8", borderRadius: 3,
-                          padding: "1px 5px", fontWeight: 700 }}>Internal</span>
+                        <div style={{ fontSize: 13, color: TEXT }}>{val}</div>
                       </div>
-                      <InvestmentNotesEditor
-                        value={inv.internal_notes || ""}
-                        onSave={notes => saveNotes(inv.id, notes)}
-                        isSaving={isSaving}
-                      />
-                    </div>
- 
-                    {/* INVEST read-only details */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {[
-                        ["Investment Owner", inv.owner],
-                        ["Coordinator",      inv.coordinator],
-                        ["Start Date",       inv.startDate],
-                        ["End Date",         inv.endDate],
-                        ["Workflow Step",    inv.stage],
-                      ].filter(([, v]) => v).map(([label, val]) => (
-                        <div key={label}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_SUB,
-                            textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
-                            {label}
-                          </div>
-                          <div style={{ fontSize: 13, color: TEXT }}>{val}</div>
+                    ))}
+                    {inv.strategicFit && (
+                      <div style={{ width: "100%" }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_SUB,
+                          textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+                          Strategic Fit
                         </div>
-                      ))}
-                      {inv.strategicFit && (
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_SUB,
-                            textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
-                            Strategic Fit
-                          </div>
-                          <div style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>
-                            {inv.strategicFit}
-                          </div>
+                        <div style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>
+                          {inv.strategicFit}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -3591,8 +3569,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
     });
  
   const totalAmt  = filtered.reduce((s, inv) => s + toNum(inv.amount), 0);
-  const totalPaid = filtered.reduce((s, inv) => s + toNum(inv.paidAmount), 0);
- 
+
   const INVEST_STATUSES = [
     { key: "Active",     label: "Active",     color: "#10B981" },
     { key: "In Process", label: "In Process", color: "#60A5FA" },
@@ -3662,19 +3639,9 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                 {fmtM(totalAmt)}
               </div>
             </div>
-            <div style={{ width: 1, background: "rgba(255,255,255,0.1)" }} />
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)",
-                textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
-                Paid
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#10B981" }}>
-                {fmtM(totalPaid)}
-              </div>
-            </div>
           </div>
         </div>
- 
+
         {/* Budget bar by INVEST status */}
         <div style={{ padding: "0 24px 18px" }}>
           <div style={{ display: "flex", justifyContent: "space-between",
@@ -3778,12 +3745,12 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "130px 2fr 2fr 90px 110px 110px 90px",
+            gridTemplateColumns: "130px 2fr 2fr 90px 110px 2fr",
             background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-            {["BOW", "Grantee", "Initiative", "Amount", "Paid", "Status", ""].map((h, i) => (
+            {["BOW", "Grantee", "Initiative", "Amount", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "9px 12px", fontSize: 10, fontWeight: 700,
                 color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
-                borderRight: i < 6 ? "1px solid " + BORDER : "none" }}>
+                borderRight: i < 5 ? "1px solid " + BORDER : "none" }}>
                 {h}
               </div>
             ))}
@@ -3804,7 +3771,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "130px 2fr 2fr 90px 110px 110px 90px",
+                  gridTemplateColumns: "130px 2fr 2fr 90px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
  
                   {/* BOW */}
@@ -3847,14 +3814,6 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                     </span>
                   </div>
  
-                  {/* Paid */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#10B981" }}>
-                      {inv.paidAmount ? fmtM(toNum(inv.paidAmount)) : "—"}
-                    </span>
-                  </div>
- 
                   {/* Status — from INVEST, read-only */}
                   <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
@@ -3869,56 +3828,60 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                     )}
                   </div>
  
-                  {/* Notes button */}
+                  {/* Notes — inline, always visible, click ✎ to edit */}
                   <div style={{ padding: "8px 12px", display: "flex",
-                    alignItems: "center", justifyContent: "center" }}>
-                    <button onClick={() => setEditingId(isEditing ? null : inv.id)}
-                      style={{ fontSize: 10, cursor: "pointer", borderRadius: 5,
-                        padding: "3px 7px",
-                        border: "1px solid " + (isEditing ? pc.color : BORDER),
-                        background: isEditing ? pc.color : BG,
-                        color: isEditing ? "#fff" : TEXT_MUTED,
-                        whiteSpace: "nowrap" }}>
-                      {isEditing ? "Done" : "✎"}
-                    </button>
+                    flexDirection: "column", gap: 5 }}>
+                    {isEditing ? (
+                      <>
+                        <PortfolioNotesEditor
+                          value={inv.internal_notes || ""}
+                          onSave={notes => saveNotes(inv.id, notes)}
+                          isSaving={isSaving}
+                        />
+                        <button onClick={() => setEditingId(null)}
+                          style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: 700,
+                            cursor: "pointer", borderRadius: 5, padding: "2px 7px",
+                            border: "1px solid " + pc.color, background: pc.color,
+                            color: "#fff", whiteSpace: "nowrap" }}>
+                          Done
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                        <div style={{ flex: 1, fontSize: 11, lineHeight: 1.5,
+                          color: inv.internal_notes ? TEXT : TEXT_MUTED,
+                          fontStyle: inv.internal_notes ? "normal" : "italic" }}>
+                          {inv.internal_notes || "Add note…"}
+                        </div>
+                        <button onClick={() => setEditingId(inv.id)}
+                          style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
+                            border: "1px solid " + BORDER, borderRadius: 4,
+                            padding: "2px 6px", background: BG, color: TEXT_MUTED }}>
+                          ✎
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
- 
-                {/* Expanded notes panel */}
+
+                {/* INVEST metadata panel — shown while editing notes */}
                 {isEditing && (
                   <div style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
-                    padding: "12px 16px", display: "grid",
-                    gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>
-                        Internal Notes{" "}
-                        <span style={{ background: "#DBEAFE", color: "#1D4ED8",
-                          borderRadius: 3, padding: "1px 5px",
-                          fontWeight: 700, marginLeft: 4 }}>Internal</span>
-                      </div>
-                      <PortfolioNotesEditor
-                        value={inv.internal_notes || ""}
-                        onSave={notes => saveNotes(inv.id, notes)}
-                        isSaving={isSaving}
-                      />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {[
-                        ["Investment Owner", inv.owner],
-                        ["Workflow Step",    inv.stage],
-                        ["Start Date",       inv.startDate],
-                        ["End Date",         inv.endDate],
-                      ].filter(([, v]) => v).map(([label, val]) => (
-                        <div key={label}>
-                          <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
-                            textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
-                            {label}
-                          </div>
-                          <div style={{ fontSize: 12, color: TEXT }}>{val}</div>
+                    padding: "10px 16px", display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
+                    {[
+                      ["Investment Owner", inv.owner],
+                      ["Workflow Step",    inv.stage],
+                      ["Start Date",       inv.startDate],
+                      ["End Date",         inv.endDate],
+                    ].filter(([, v]) => v).map(([label, val]) => (
+                      <div key={label}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+                          textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+                          {label}
                         </div>
-                      ))}
-                    </div>
+                        <div style={{ fontSize: 12, color: TEXT }}>{val}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
