@@ -658,7 +658,7 @@ def get_all_investments():
     status       = request.args.get("status")
     year         = request.args.get("year")
 
-    where = ["1=1"]
+    where = ["i.Status IN ('Active', 'In Process')"]
     params = []
 
     if portfolio_id:
@@ -705,6 +705,7 @@ def get_investments_by_bow(bow_id):
             LEFT JOIN {SCHEMA}.investment_overlays o
               ON i.Investment_ID = o.investment_id
             WHERE b.bow_id = ?
+              AND i.Status IN ('Active', 'In Process')
             ORDER BY i.Status, i.Investment_Name""",
         [bow_id]
     )
@@ -728,6 +729,7 @@ def get_investments_by_portfolio(portfolio_id):
             LEFT JOIN {SCHEMA}.investment_overlays o
               ON i.Investment_ID = o.investment_id
             WHERE b.portfolio_id = ?
+              AND i.Status IN ('Active', 'In Process')
             ORDER BY b.sort_order, i.Status, i.Investment_Name""",
         [portfolio_id]
     )
