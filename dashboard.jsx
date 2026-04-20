@@ -55,10 +55,11 @@ function teamColor(name) {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return TEAM_PALETTE[h % TEAM_PALETTE.length];
 }
-// Strip "U.S. Program(s)/" prefix (and anything before it) from INVEST team names
+// Strip everything up to and including the last "/" from INVEST team names
 function cleanTeam(name) {
   if (!name) return "";
-  return name.replace(/^.*U\.S\. Programs?\//, "").trim();
+  const idx = name.lastIndexOf("/");
+  return idx !== -1 ? name.slice(idx + 1).trim() : name;
 }
 
 // Portfolio colors — muted tonal family per GF brand
