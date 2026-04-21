@@ -3090,15 +3090,24 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
  
                   {/* Status — from INVEST, read-only */}
                   <div style={{ padding: "10px 14px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
+                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
                     {inv.status ? (
                       <span style={{ fontSize: 11, fontWeight: 700, color: statusColor,
                         background: statusColor + "15", borderRadius: 5,
-                        padding: "3px 8px", border: "1px solid " + statusColor + "30" }}>
+                        padding: "3px 8px", border: "1px solid " + statusColor + "30",
+                        alignSelf: "flex-start" }}>
                         {inv.status}
                       </span>
                     ) : (
                       <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
+                    )}
+                    {inv.status === "In Process" && inv.stage && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280",
+                        background: "#F3F4F6", borderRadius: 5, padding: "2px 7px",
+                        border: "1px solid #E5E7EB", alignSelf: "flex-start",
+                        whiteSpace: "nowrap" }}>
+                        {inv.stage}
+                      </span>
                     )}
                   </div>
  
@@ -3963,15 +3972,24 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
 
                   {/* Status — from INVEST, read-only */}
                   <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
+                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
                     {inv.status ? (
                       <span style={{ fontSize: 10, fontWeight: 700, color: statusColor,
                         background: statusColor + "15", borderRadius: 5,
-                        padding: "2px 7px", border: "1px solid " + statusColor + "30" }}>
+                        padding: "2px 7px", border: "1px solid " + statusColor + "30",
+                        alignSelf: "flex-start" }}>
                         {inv.status}
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                    )}
+                    {inv.status === "In Process" && inv.stage && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280",
+                        background: "#F3F4F6", borderRadius: 5, padding: "2px 7px",
+                        border: "1px solid #E5E7EB", alignSelf: "flex-start",
+                        whiteSpace: "nowrap" }}>
+                        {inv.stage}
+                      </span>
                     )}
                   </div>
  
