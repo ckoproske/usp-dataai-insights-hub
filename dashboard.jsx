@@ -7544,7 +7544,7 @@ function Sidebar({ activeView, onNavigate, data }) {
           USP Data & AI
         </div>
         <div style={{fontSize:17, color:"#fff", lineHeight:1.25}}>
-          Measurement &<br/>Insights Hub
+          Measurement & Insights<br/>Dashboard
         </div>
       </div>
 
@@ -7747,7 +7747,7 @@ function App() {
     : pc?.label || "";
 
   const pageTitle = activeView.type==="strategy"
-    ? "USP Data & AI"
+    ? "USP Data & AI Measurement & Insights Dashboard"
     : activeView.type==="all-investments"
     ? "All Investments"
     : (activePortData?.portfolio?.name || pc?.label || "");
