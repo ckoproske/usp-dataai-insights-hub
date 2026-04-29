@@ -6974,6 +6974,13 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
   );
 }
 // ── Sidebar ───────────────────────────────────────────────────────────────────
+const PORTFOLIOS = [
+  {id:"ai-infra",      label:"AI Infrastructure"},
+  {id:"sfl",           label:"System Feedback Loops"},
+  {id:"hub",           label:"Data & AI Enablement Hub"},
+  {id:"cross-cutting", label:"Cross Cutting Supports"},
+];
+
 function IconTable() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -7469,12 +7476,6 @@ function AllInvestmentsView() {
 }
 
 function Sidebar({ activeView, onNavigate, data }) {
-  const PORTFOLIOS = [
-    {id:"ai-infra",      label:"AI Infrastructure"},
-    {id:"sfl",           label:"System Feedback Loops"},
-    {id:"hub",           label:"Data & AI Enablement Hub"},
-    {id:"cross-cutting", label:"Cross Cutting Supports"},
-  ];
   const isStrategyActive  = activeView.type==="strategy";
   const isAllInvActive    = activeView.type==="all-investments";
   const isPortActive = (id) => activeView.type==="portfolio" && activeView.portId===id;
