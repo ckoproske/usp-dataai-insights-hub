@@ -2751,7 +2751,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState(null);
   const [editingId, setEditingId]       = useState(null);
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterStatuses, setFilterStatuses] = useState([]);
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -2813,9 +2813,8 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
 
   const filtered = investments
     .filter(inv => {
-      if (!filterStatus) return true;
-      if (filterStatus === "Active") return inv.status === "Active";
-      return inv.stage === filterStatus;
+      if (!filterStatuses.length) return true;
+      return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
     .filter(inv => !search || [inv.grantee, inv.initiative, inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
@@ -3032,9 +3031,9 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 {/* Status — filter dropdown */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
                   <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(!!filterStatus), padding: "10px 14px", cursor: "pointer",
+                    style={{ ...hStyle(filterStatuses.length > 0), padding: "10px 14px", cursor: "pointer",
                       userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    Status{filterStatus ? ` · ${filterStatus}` : ""}
+                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
                     <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
                   </div>
                   {openDropdown === "status" && (
@@ -3044,16 +3043,34 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                       <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
                         background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
                         padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
-                        {STAGE_FILTER_OPTIONS.map(opt => (
-                          <div key={opt.value}
-                            onClick={() => { setFilterStatus(opt.value); setOpenDropdown(null); }}
-                            style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                              background: filterStatus === opt.value ? pc.color + "12" : "transparent",
-                              color: filterStatus === opt.value ? pc.color : TEXT,
-                              fontWeight: filterStatus === opt.value ? 700 : 400 }}>
-                            {opt.label}
-                          </div>
-                        ))}
+                        {STAGE_FILTER_OPTIONS.map(opt => {
+                          const isClear = opt.value === "";
+                          const isSelected = isClear ? filterStatuses.length === 0 : filterStatuses.includes(opt.value);
+                          return (
+                            <div key={opt.value}
+                              onClick={() => {
+                                if (isClear) { setFilterStatuses([]); setOpenDropdown(null); }
+                                else setFilterStatuses(prev =>
+                                  prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]
+                                );
+                              }}
+                              style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                background: isSelected ? pc.color + "12" : "transparent",
+                                color: isSelected ? pc.color : TEXT,
+                                fontWeight: isSelected ? 700 : 400,
+                                display: "flex", alignItems: "center", gap: 8 }}>
+                              {!isClear && (
+                                <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+                                  border: "1.5px solid " + (isSelected ? pc.color : BORDER),
+                                  background: isSelected ? pc.color : "transparent",
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                  {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                                </span>
+                              )}
+                              {opt.label}
+                            </div>
+                          );
+                        })}
                       </div>
                     </>
                   )}
@@ -3694,7 +3711,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   const [editingId, setEditingId]       = useState(null);
   const [savingId, setSavingId]         = useState(null);
   const [search, setSearch]             = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterStatuses, setFilterStatuses] = useState([]);
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -3756,9 +3773,8 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   const filtered = investments
     .filter(inv => selectedBow === "all" || (inv.bowIds || []).includes(selectedBow))
     .filter(inv => {
-      if (!filterStatus) return true;
-      if (filterStatus === "Active") return inv.status === "Active";
-      return inv.stage === filterStatus;
+      if (!filterStatuses.length) return true;
+      return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
@@ -3958,9 +3974,9 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                 {/* Status — filter dropdown */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
                   <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(!!filterStatus), padding: "9px 12px", cursor: "pointer",
+                    style={{ ...hStyle(filterStatuses.length > 0), padding: "9px 12px", cursor: "pointer",
                       userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    Status{filterStatus ? ` · ${filterStatus}` : ""}
+                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
                     <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
                   </div>
                   {openDropdown === "status" && (
@@ -3970,16 +3986,34 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                       <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
                         background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
                         padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
-                        {STAGE_FILTER_OPTIONS.map(opt => (
-                          <div key={opt.value}
-                            onClick={() => { setFilterStatus(opt.value); setOpenDropdown(null); }}
-                            style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                              background: filterStatus === opt.value ? pc.color + "12" : "transparent",
-                              color: filterStatus === opt.value ? pc.color : TEXT,
-                              fontWeight: filterStatus === opt.value ? 700 : 400 }}>
-                            {opt.label}
-                          </div>
-                        ))}
+                        {STAGE_FILTER_OPTIONS.map(opt => {
+                          const isClear = opt.value === "";
+                          const isSelected = isClear ? filterStatuses.length === 0 : filterStatuses.includes(opt.value);
+                          return (
+                            <div key={opt.value}
+                              onClick={() => {
+                                if (isClear) { setFilterStatuses([]); setOpenDropdown(null); }
+                                else setFilterStatuses(prev =>
+                                  prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]
+                                );
+                              }}
+                              style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                background: isSelected ? pc.color + "12" : "transparent",
+                                color: isSelected ? pc.color : TEXT,
+                                fontWeight: isSelected ? 700 : 400,
+                                display: "flex", alignItems: "center", gap: 8 }}>
+                              {!isClear && (
+                                <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+                                  border: "1.5px solid " + (isSelected ? pc.color : BORDER),
+                                  background: isSelected ? pc.color : "transparent",
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                  {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                                </span>
+                              )}
+                              {opt.label}
+                            </div>
+                          );
+                        })}
                       </div>
                     </>
                   )}
@@ -7001,7 +7035,7 @@ function AllInvestmentsView() {
   const [editingId, setEditingId]       = useState(null);
   const [savingId, setSavingId]         = useState(null);
   const [search, setSearch]             = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterStatuses, setFilterStatuses] = useState([]);
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -7061,9 +7095,8 @@ function AllInvestmentsView() {
   const filtered = investments
     .filter(inv => selectedPortfolio === "all" || inv.portfolio_id === selectedPortfolio)
     .filter(inv => {
-      if (!filterStatus) return true;
-      if (filterStatus === "Active") return inv.status === "Active";
-      return inv.stage === filterStatus;
+      if (!filterStatuses.length) return true;
+      return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
@@ -7248,9 +7281,9 @@ function AllInvestmentsView() {
                 {plainCol("Co-Funding Team", true)}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
                   <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(!!filterStatus), padding: "9px 12px", cursor: "pointer",
+                    style={{ ...hStyle(filterStatuses.length > 0), padding: "9px 12px", cursor: "pointer",
                       userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    Status{filterStatus ? ` · ${filterStatus}` : ""}
+                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
                     <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
                   </div>
                   {openDropdown === "status" && (
@@ -7260,16 +7293,34 @@ function AllInvestmentsView() {
                       <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
                         background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
                         padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
-                        {STAGE_FILTER_OPTIONS.map(opt => (
-                          <div key={opt.value}
-                            onClick={() => { setFilterStatus(opt.value); setOpenDropdown(null); }}
-                            style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                              background: filterStatus === opt.value ? pc.color + "12" : "transparent",
-                              color: filterStatus === opt.value ? pc.color : TEXT,
-                              fontWeight: filterStatus === opt.value ? 700 : 400 }}>
-                            {opt.label}
-                          </div>
-                        ))}
+                        {STAGE_FILTER_OPTIONS.map(opt => {
+                          const isClear = opt.value === "";
+                          const isSelected = isClear ? filterStatuses.length === 0 : filterStatuses.includes(opt.value);
+                          return (
+                            <div key={opt.value}
+                              onClick={() => {
+                                if (isClear) { setFilterStatuses([]); setOpenDropdown(null); }
+                                else setFilterStatuses(prev =>
+                                  prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]
+                                );
+                              }}
+                              style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                background: isSelected ? pc.color + "12" : "transparent",
+                                color: isSelected ? pc.color : TEXT,
+                                fontWeight: isSelected ? 700 : 400,
+                                display: "flex", alignItems: "center", gap: 8 }}>
+                              {!isClear && (
+                                <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+                                  border: "1.5px solid " + (isSelected ? pc.color : BORDER),
+                                  background: isSelected ? pc.color : "transparent",
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                  {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                                </span>
+                              )}
+                              {opt.label}
+                            </div>
+                          );
+                        })}
                       </div>
                     </>
                   )}
