@@ -3125,21 +3125,13 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                         background: statusColor + "15", borderRadius: 5,
                         padding: "3px 8px", border: "1px solid " + statusColor + "30",
                         alignSelf: "flex-start" }}>
-                        {inv.status}
+                        {inv.status === "In Process" && inv.stage ? inv.stage : inv.status}
                       </span>
                     ) : (
                       <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
                     )}
-                    {inv.status === "In Process" && inv.stage && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280",
-                        background: "#F3F4F6", borderRadius: 5, padding: "2px 7px",
-                        border: "1px solid #E5E7EB", alignSelf: "flex-start",
-                        whiteSpace: "nowrap" }}>
-                        {inv.stage}
-                      </span>
-                    )}
                   </div>
- 
+
                   {/* Notes — inline, always visible, click ✎ to edit */}
                   <div style={{ padding: "10px 14px", display: "flex",
                     flexDirection: "column", gap: 6 }}>
@@ -4015,21 +4007,13 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                         background: statusColor + "15", borderRadius: 5,
                         padding: "2px 7px", border: "1px solid " + statusColor + "30",
                         alignSelf: "flex-start" }}>
-                        {inv.status}
+                        {inv.status === "In Process" && inv.stage ? inv.stage : inv.status}
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
                     )}
-                    {inv.status === "In Process" && inv.stage && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280",
-                        background: "#F3F4F6", borderRadius: 5, padding: "2px 7px",
-                        border: "1px solid #E5E7EB", alignSelf: "flex-start",
-                        whiteSpace: "nowrap" }}>
-                        {inv.stage}
-                      </span>
-                    )}
                   </div>
- 
+
                   {/* Notes — inline, always visible, click ✎ to edit */}
                   <div style={{ padding: "8px 12px", display: "flex",
                     flexDirection: "column", gap: 5 }}>
