@@ -2975,12 +2975,12 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
+            gridTemplateColumns: "100px 2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
             background: "#F8FAFC", borderBottom: "2px solid " + BORDER }}>
-            {["Investment Title", "Grantee", "Description", "Amount", "Co-Funding Team", "Outstanding", "Status", "Notes"].map((h, i) => (
+            {["Investment ID", "Investment Title", "Grantee", "Description", "Amount", "Co-Funding Team", "Outstanding", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700,
                 color: TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6,
-                borderRight: i < 7 ? "1px solid " + BORDER : "none" }}>
+                borderRight: i < 8 ? "1px solid " + BORDER : "none" }}>
                 {h}
               </div>
             ))}
@@ -3001,8 +3001,16 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
  
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
+                  gridTemplateColumns: "100px 2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg, transition: "background .15s" }}>
+
+                  {/* Investment ID */}
+                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: TEXT_SUB, fontFamily: "monospace" }}>
+                      {inv.id || "—"}
+                    </span>
+                  </div>
 
                   {/* Initiative */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
@@ -3851,12 +3859,12 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
  
           {/* Column headers */}
           <div style={{ display: "grid",
-            gridTemplateColumns: "2fr 2fr 3fr 130px 90px 180px 110px 2fr",
+            gridTemplateColumns: "100px 2fr 2fr 3fr 130px 90px 180px 110px 2fr",
             background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-            {["Investment Title", "Grantee", "Description", "BOW", "Amount", "Co-Funding Team", "Status", "Notes"].map((h, i) => (
+            {["Investment ID", "Investment Title", "Grantee", "Description", "BOW", "Amount", "Co-Funding Team", "Status", "Notes"].map((h, i) => (
               <div key={i} style={{ padding: "9px 12px", fontSize: 10, fontWeight: 700,
                 color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
-                borderRight: i < 7 ? "1px solid " + BORDER : "none" }}>
+                borderRight: i < 8 ? "1px solid " + BORDER : "none" }}>
                 {h}
               </div>
             ))}
@@ -3876,8 +3884,16 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "2fr 2fr 3fr 130px 90px 180px 110px 2fr",
+                  gridTemplateColumns: "100px 2fr 2fr 3fr 130px 90px 180px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
+
+                  {/* Investment ID */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: TEXT_SUB, fontFamily: "monospace" }}>
+                      {inv.id || "—"}
+                    </span>
+                  </div>
 
                   {/* Initiative */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
