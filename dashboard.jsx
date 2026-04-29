@@ -1785,6 +1785,21 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
   const po = portfolio.portfolioOutcomes[activeIdx] || portfolio.portfolioOutcomes[0];
 
+  // Fetch BOW-to-portfolio outcome links from DB
+  const [bowLinks, setBowLinks] = useState({});
+  useEffect(() => {
+    if (!bows || !bows.length) return;
+    Promise.all(bows.map(b => apiFetch(`/api/bow-portfolio-links/${b.id}`).catch(() => [])))
+      .then(results => {
+        const map = {};
+        results.flat().forEach(link => {
+          if (!map[link.portfolio_outcome_id]) map[link.portfolio_outcome_id] = new Set();
+          map[link.portfolio_outcome_id].add(link.bow_outcome_id);
+        });
+        setBowLinks(map);
+      });
+  }, [portId]);
+
   // BOW progress for all BOWs
   const bowProgress = (bows||[]).map(b => {
     const exec = execAutoStatus({
@@ -1879,19 +1894,18 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                 </div>
               </div>
 
-              {/* Contributing BOW Outcomes — per-outcome progress */}
+              {/* Contributing BOW Outcomes — filtered by active portfolio outcome links */}
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:12}}>Contributing BOW Outcomes</div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   {(()=>{
-                    // Cap total contributing outcomes at 4 across all BOWs
-                    const MAX = 4;
-                    let remaining = MAX;
+                    const linkedIds = bowLinks[po.id];
                     return bowProgress.map(b=>{
-                      const visible = b.outcomes.filter(o=>o.title||o.shortTitle);
-                      if(!visible.length||remaining<=0) return null;
-                      const slice = visible.slice(0,remaining);
-                      remaining -= slice.length;
+                      const visible = linkedIds
+                        ? b.outcomes.filter(o => linkedIds.has(o.id))
+                        : b.outcomes.filter(o => o.title || o.shortTitle);
+                      if(!visible.length) return null;
+                      const slice = visible;
                       return {...b, outcomes:slice};
                     }).filter(Boolean);
                   })().map(b=>{
