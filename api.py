@@ -245,6 +245,101 @@ def get_bow_portfolio_links(bow_id):
     return jsonify(rows)
 
 
+@app.route("/api/admin/seed-sfl-links", methods=["POST"])
+def seed_sfl_links():
+    """One-time seed: upserts sfl-po6 into portfolio_outcomes and populates
+    bow_portfolio_outcome_links for all SFL BOW outcomes per the April 2026
+    Portfolio-BOW Outcome Alignment slide."""
+
+    # sfl-po6 row to upsert into portfolio_outcomes
+    po6 = {
+        "outcome_id":  "sfl-po6",
+        "portfolio_id": "sfl",
+        "sort_order":  6,
+        "short_title": "Shared Agreement & Alignment",
+        "activity":    "Build shared agreement and alignment across key stakeholders",
+        "outcome_text": "Shared agreement and alignment across key stakeholders.",
+    }
+
+    # Full mapping: (bow_outcome_id, portfolio_outcome_id, sort_order)
+    links = [
+        # CSGA (sfl-bow3)
+        ("sfl-bow3-o1", "sfl-po2", 1),
+        ("sfl-bow3-o1", "sfl-po4", 2),
+        ("sfl-bow3-o1", "sfl-po6", 3),
+        ("sfl-bow3-o2", "sfl-po2", 1),
+        ("sfl-bow3-o3", "sfl-po1", 1),
+        ("sfl-bow3-o3", "sfl-po3", 2),
+        ("sfl-bow3-o3", "sfl-po5", 3),
+        # EDU-Net (sfl-bow1)
+        ("sfl-bow1-o1", "sfl-po2", 1),
+        ("sfl-bow1-o1", "sfl-po4", 2),
+        ("sfl-bow1-o1", "sfl-po6", 3),
+        ("sfl-bow1-o2", "sfl-po1", 1),
+        ("sfl-bow1-o2", "sfl-po2", 2),
+        ("sfl-bow1-o3", "sfl-po3", 1),
+        ("sfl-bow1-o3", "sfl-po5", 2),
+        # DAIP / Data in Place (sfl-bow2)
+        ("sfl-bow2-o1", "sfl-po1", 1),
+        ("sfl-bow2-o1", "sfl-po2", 2),
+        ("sfl-bow2-o1", "sfl-po3", 3),
+        ("sfl-bow2-o1", "sfl-po6", 4),
+        ("sfl-bow2-o2", "sfl-po4", 1),
+        ("sfl-bow2-o2", "sfl-po5", 2),
+        ("sfl-bow2-o3", "sfl-po5", 1),
+        ("sfl-bow2-o3", "sfl-po6", 2),
+        ("sfl-bow2-o4", "sfl-po1", 1),
+        ("sfl-bow2-o4", "sfl-po2", 2),
+        ("sfl-bow2-o4", "sfl-po5", 3),
+    ]
+
+    try:
+        # Upsert sfl-po6
+        execute(
+            f"""MERGE INTO {SCHEMA}.portfolio_outcomes AS t
+                USING (SELECT
+                  '{po6["outcome_id"]}'  AS outcome_id,
+                  '{po6["portfolio_id"]}' AS portfolio_id,
+                  {po6["sort_order"]}    AS sort_order,
+                  '{po6["short_title"]}' AS short_title,
+                  '{po6["activity"]}'    AS activity,
+                  '{po6["outcome_text"]}' AS outcome_text
+                ) AS s ON t.outcome_id = s.outcome_id
+                WHEN MATCHED THEN UPDATE SET
+                  t.sort_order  = s.sort_order,
+                  t.short_title = s.short_title,
+                  t.activity    = s.activity,
+                  t.outcome_text = s.outcome_text
+                WHEN NOT MATCHED THEN INSERT
+                  (outcome_id, portfolio_id, sort_order, short_title, activity, outcome_text)
+                VALUES (s.outcome_id, s.portfolio_id, s.sort_order, s.short_title, s.activity, s.outcome_text)"""
+        )
+
+        # Replace all SFL bow_portfolio_outcome_links
+        sfl_bow_outcome_ids = [
+            "sfl-bow1-o1","sfl-bow1-o2","sfl-bow1-o3",
+            "sfl-bow2-o1","sfl-bow2-o2","sfl-bow2-o3","sfl-bow2-o4",
+            "sfl-bow3-o1","sfl-bow3-o2","sfl-bow3-o3",
+        ]
+        placeholders = ",".join(["?" for _ in sfl_bow_outcome_ids])
+        execute(
+            f"DELETE FROM {SCHEMA}.bow_portfolio_outcome_links WHERE bow_outcome_id IN ({placeholders})",
+            sfl_bow_outcome_ids
+        )
+
+        for (bow_oid, po_id, sort) in links:
+            execute(
+                f"""INSERT INTO {SCHEMA}.bow_portfolio_outcome_links
+                    (bow_outcome_id, portfolio_outcome_id, contribution_type, sort_order)
+                    VALUES (?, ?, 'direct', ?)""",
+                [bow_oid, po_id, sort]
+            )
+
+        return jsonify({"status": "ok", "links_inserted": len(links)})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # EXECUTION TARGETS & STATUS
 # ═════════════════════════════════════════════════════════════════════════════

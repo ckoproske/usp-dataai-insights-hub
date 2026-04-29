@@ -570,6 +570,13 @@ const DEFAULT_DATA = {
               {id:"sfl-pi11",text:"% of field leaders reporting timely, comprehensive data to measure Amb 45 EW Momentum Points",source:"Field leader survey",baseline:"15",manualStatus:null,targets:{2026:"22",2027:"32",2028:"44",2029:"56",2030:"68"},actuals:{2026:"18",2027:"",2028:"",2029:"",2030:""}},
             ],
           },
+          {
+            id:"sfl-po6", shortTitle:"Shared Agreement & Alignment",
+            activity:"Build shared agreement and alignment across key stakeholders",
+            outcome:"Shared agreement and alignment across key stakeholders.",
+            manualStatus:null,
+            indicators:[],
+          },
         ],
       },
       bows:[
