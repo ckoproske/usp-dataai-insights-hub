@@ -2730,6 +2730,17 @@ const INVEST_STATUS_OPTS = [
   { id:"paused",     label:"Paused",        color:"#3086AB", bg:"#EBF4F9" },
 ];
 
+const STAGE_FILTER_OPTIONS = [
+  { value: "",                   label: "All" },
+  { value: "Active",             label: "Active" },
+  { value: "Start Concept",      label: "Start Concept" },
+  { value: "Request Proposal",   label: "Request Proposal" },
+  { value: "Refine Proposal",    label: "Refine Proposal" },
+  { value: "Create Agreement",   label: "Create Agreement" },
+  { value: "Request Approval",   label: "Request Approval" },
+  { value: "Obtain Signatures",  label: "Obtain Signatures" },
+];
+
 const PLACEHOLDER_INVESTMENTS = {};
 
 function BowInvestmentsView({ bow, portColor, onUpdate }) {
@@ -2742,6 +2753,8 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
   const [editingId, setEditingId]       = useState(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [sortBy, setSortBy]             = useState("grantee");
+  const [sortDir, setSortDir]           = useState("asc");
+  const [openDropdown, setOpenDropdown] = useState(null);
   const [search, setSearch]             = useState("");
   const [savingId, setSavingId]         = useState(null);
  
@@ -2792,14 +2805,25 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
  
   const toNum = (v) => parseFloat(String(v || "0").replace(/[^0-9.]/g, "")) || 0;
  
+  const handleColSort = (field) => {
+    if (sortBy !== field) { setSortBy(field); setSortDir("asc"); }
+    else if (sortDir === "asc") setSortDir("desc");
+    else { setSortBy(""); setSortDir("asc"); }
+  };
+
   const filtered = investments
-    .filter(inv => !filterStatus || inv.status === filterStatus)
+    .filter(inv => {
+      if (!filterStatus) return true;
+      if (filterStatus === "Active") return inv.status === "Active";
+      return inv.stage === filterStatus;
+    })
     .filter(inv => !search || [inv.grantee, inv.initiative, inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => {
-      if (sortBy === "amount") return toNum(b.amount) - toNum(a.amount);
-      if (sortBy === "status") return (a.status || "").localeCompare(b.status || "");
-      return (a[sortBy] || "").localeCompare(b[sortBy] || "");
+      if (!sortBy) return 0;
+      const dir = sortDir === "desc" ? -1 : 1;
+      if (sortBy === "amount") return dir * (toNum(a.amount) - toNum(b.amount));
+      return dir * (a[sortBy] || "").localeCompare(b[sortBy] || "");
     });
  
   const totalAmt   = investments.reduce((s, inv) => s + toNum(inv.amount), 0);
@@ -2955,23 +2979,6 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
           <span style={{ position: "absolute", left: 10, top: "50%",
             transform: "translateY(-50%)", fontSize: 13, opacity: 0.4 }}>&#x2315;</span>
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ border: "1px solid " + BORDER, borderRadius: 8, padding: "7px 10px",
-            fontSize: 13, fontFamily: "inherit", outline: "none", color: TEXT,
-            background: SURFACE, cursor: "pointer" }}>
-          <option value="">All Statuses</option>
-          {INVEST_STATUSES.map(s => (
-            <option key={s.key} value={s.key}>{s.label}</option>
-          ))}
-        </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-          style={{ border: "1px solid " + BORDER, borderRadius: 8, padding: "7px 10px",
-            fontSize: 13, fontFamily: "inherit", outline: "none", color: TEXT,
-            background: SURFACE, cursor: "pointer" }}>
-          <option value="grantee">Sort: Grantee A–Z</option>
-          <option value="amount">Sort: Amount ↓</option>
-          <option value="status">Sort: Status</option>
-        </select>
       </div>
  
       {/* Table */}
@@ -2992,20 +2999,69 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
         </div>
       ) : (
         <div style={{ background: SURFACE, borderRadius: 12, border: "1px solid " + BORDER,
-          overflow: "hidden", boxShadow: "0 1px 6px rgba(10,37,64,0.05)" }}>
- 
+          overflow: "visible", boxShadow: "0 1px 6px rgba(10,37,64,0.05)", position: "relative" }}>
+
           {/* Column headers */}
-          <div style={{ display: "grid",
-            gridTemplateColumns: "100px 2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
-            background: "#F8FAFC", borderBottom: "2px solid " + BORDER }}>
-            {["Investment ID", "Investment Title", "Grantee", "Description", "Amount", "Co-Funding Team", "Outstanding", "Status", "Notes"].map((h, i) => (
-              <div key={i} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700,
-                color: TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6,
-                borderRight: i < 8 ? "1px solid " + BORDER : "none" }}>
-                {h}
+          {(() => {
+            const hStyle = (active) => ({ padding: "10px 14px", fontSize: 11, fontWeight: 700,
+              color: active ? pc.color : TEXT_SUB, textTransform: "uppercase", letterSpacing: 0.6 });
+            const sortArrow = (field) => sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕";
+            const sortCol = (field, label, borderR) => (
+              <div onClick={() => handleColSort(field)}
+                style={{ ...hStyle(sortBy === field), borderRight: borderR ? "1px solid " + BORDER : "none",
+                  cursor: "pointer", userSelect: "none" }}>
+                {label}<span style={{ fontSize: 9, opacity: 0.7 }}>{sortArrow(field)}</span>
               </div>
-            ))}
-          </div>
+            );
+            const plainCol = (label, borderR) => (
+              <div style={{ ...hStyle(false), borderRight: borderR ? "1px solid " + BORDER : "none" }}>{label}</div>
+            );
+            return (
+              <div style={{ display: "grid",
+                gridTemplateColumns: "100px 2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
+                background: "#F8FAFC", borderBottom: "2px solid " + BORDER,
+                borderRadius: "11px 11px 0 0" }}>
+                {plainCol("Investment ID", true)}
+                {sortCol("initiative", "Investment Title", true)}
+                {sortCol("grantee", "Grantee", true)}
+                {plainCol("Description", true)}
+                {sortCol("amount", "Amount", true)}
+                {plainCol("Co-Funding Team", true)}
+                {plainCol("Outstanding", true)}
+                {/* Status — filter dropdown */}
+                <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
+                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                    style={{ ...hStyle(!!filterStatus), padding: "10px 14px", cursor: "pointer",
+                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                    Status{filterStatus ? ` · ${filterStatus}` : ""}
+                    <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
+                  </div>
+                  {openDropdown === "status" && (
+                    <>
+                      <div onClick={() => setOpenDropdown(null)}
+                        style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                      <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
+                        background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                        padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
+                        {STAGE_FILTER_OPTIONS.map(opt => (
+                          <div key={opt.value}
+                            onClick={() => { setFilterStatus(opt.value); setOpenDropdown(null); }}
+                            style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                              background: filterStatus === opt.value ? pc.color + "12" : "transparent",
+                              color: filterStatus === opt.value ? pc.color : TEXT,
+                              fontWeight: filterStatus === opt.value ? 700 : 400 }}>
+                            {opt.label}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {plainCol("Notes", false)}
+              </div>
+            );
+          })()}
+
  
           {filtered.map((inv, idx) => {
             const isEditing = editingId === inv.id;
@@ -3636,7 +3692,9 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [sortBy, setSortBy]             = useState("grantee");
- 
+  const [sortDir, setSortDir]           = useState("asc");
+  const [openDropdown, setOpenDropdown] = useState(null);
+
   // ── Load investments on mount / portId change ─────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -3685,14 +3743,26 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
  
   const bowOptions = [{ id: "all", name: "All BOWs" }, ...bows.map(b => ({ id: b.id, name: b.name }))];
  
+  const handleColSort = (field) => {
+    if (sortBy !== field) { setSortBy(field); setSortDir("asc"); }
+    else if (sortDir === "asc") setSortDir("desc");
+    else { setSortBy(""); setSortDir("asc"); }
+  };
+
   const filtered = investments
     .filter(inv => selectedBow === "all" || (inv.bowIds || []).includes(selectedBow))
-    .filter(inv => !filterStatus || inv.status === filterStatus)
+    .filter(inv => {
+      if (!filterStatus) return true;
+      if (filterStatus === "Active") return inv.status === "Active";
+      return inv.stage === filterStatus;
+    })
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => {
-      if (sortBy === "amount") return toNum(b.amount) - toNum(a.amount);
-      return (a[sortBy] || "").localeCompare(b[sortBy] || "");
+      if (!sortBy) return 0;
+      const dir = sortDir === "desc" ? -1 : 1;
+      if (sortBy === "amount") return dir * (toNum(a.amount) - toNum(b.amount));
+      return dir * (a[sortBy] || "").localeCompare(b[sortBy] || "");
     });
  
   const totalAmt  = filtered.reduce((s, inv) => s + toNum(inv.amount), 0);
@@ -3831,23 +3901,6 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
           <span style={{ position: "absolute", left: 9, top: "50%",
             transform: "translateY(-50%)", fontSize: 12, opacity: 0.4 }}>&#x2315;</span>
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ border: "1px solid " + BORDER, borderRadius: 8, padding: "6px 10px",
-            fontSize: 12, fontFamily: "inherit", outline: "none", color: TEXT,
-            background: SURFACE, cursor: "pointer" }}>
-          <option value="">All Statuses</option>
-          {INVEST_STATUSES.map(s => (
-            <option key={s.key} value={s.key}>{s.label}</option>
-          ))}
-        </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-          style={{ border: "1px solid " + BORDER, borderRadius: 8, padding: "6px 10px",
-            fontSize: 12, fontFamily: "inherit", outline: "none", color: TEXT,
-            background: SURFACE, cursor: "pointer" }}>
-          <option value="grantee">Sort: Grantee</option>
-          <option value="amount">Sort: Amount</option>
-          <option value="status">Sort: Status</option>
-        </select>
       </div>
  
       {/* Table */}
@@ -3868,20 +3921,69 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
         </div>
       ) : (
         <div style={{ background: SURFACE, borderRadius: 12,
-          border: "1px solid " + BORDER, overflow: "hidden" }}>
- 
+          border: "1px solid " + BORDER, overflow: "visible", position: "relative" }}>
+
           {/* Column headers */}
-          <div style={{ display: "grid",
-            gridTemplateColumns: "100px 2fr 2fr 3fr 130px 90px 180px 110px 2fr",
-            background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-            {["Investment ID", "Investment Title", "Grantee", "Description", "BOW", "Amount", "Co-Funding Team", "Status", "Notes"].map((h, i) => (
-              <div key={i} style={{ padding: "9px 12px", fontSize: 10, fontWeight: 700,
-                color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
-                borderRight: i < 8 ? "1px solid " + BORDER : "none" }}>
-                {h}
+          {(() => {
+            const hStyle = (active) => ({ padding: "9px 12px", fontSize: 10, fontWeight: 700,
+              color: active ? pc.color : TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8 });
+            const sortArrow = (field) => sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕";
+            const sortCol = (field, label, borderR) => (
+              <div onClick={() => handleColSort(field)}
+                style={{ ...hStyle(sortBy === field), borderRight: borderR ? "1px solid " + BORDER : "none",
+                  cursor: "pointer", userSelect: "none" }}>
+                {label}<span style={{ fontSize: 8, opacity: 0.7 }}>{sortArrow(field)}</span>
               </div>
-            ))}
-          </div>
+            );
+            const plainCol = (label, borderR) => (
+              <div style={{ ...hStyle(false), borderRight: borderR ? "1px solid " + BORDER : "none" }}>{label}</div>
+            );
+            return (
+              <div style={{ display: "grid",
+                gridTemplateColumns: "100px 2fr 2fr 3fr 130px 90px 180px 110px 2fr",
+                background: SURFACE_2, borderBottom: "2px solid " + BORDER,
+                borderRadius: "11px 11px 0 0" }}>
+                {plainCol("Investment ID", true)}
+                {sortCol("initiative", "Investment Title", true)}
+                {sortCol("grantee", "Grantee", true)}
+                {plainCol("Description", true)}
+                {plainCol("BOW", true)}
+                {sortCol("amount", "Amount", true)}
+                {plainCol("Co-Funding Team", true)}
+                {/* Status — filter dropdown */}
+                <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
+                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                    style={{ ...hStyle(!!filterStatus), padding: "9px 12px", cursor: "pointer",
+                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                    Status{filterStatus ? ` · ${filterStatus}` : ""}
+                    <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                  </div>
+                  {openDropdown === "status" && (
+                    <>
+                      <div onClick={() => setOpenDropdown(null)}
+                        style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                      <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
+                        background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                        padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
+                        {STAGE_FILTER_OPTIONS.map(opt => (
+                          <div key={opt.value}
+                            onClick={() => { setFilterStatus(opt.value); setOpenDropdown(null); }}
+                            style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                              background: filterStatus === opt.value ? pc.color + "12" : "transparent",
+                              color: filterStatus === opt.value ? pc.color : TEXT,
+                              fontWeight: filterStatus === opt.value ? 700 : 400 }}>
+                            {opt.label}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {plainCol("Notes", false)}
+              </div>
+            );
+          })()}
+
  
           {filtered.map((inv, idx) => {
             const isEditing  = editingId === inv.id;
