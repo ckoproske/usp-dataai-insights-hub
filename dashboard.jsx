@@ -3018,13 +3018,14 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
             );
             return (
               <div style={{ display: "grid",
-                gridTemplateColumns: "100px 2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
+                gridTemplateColumns: "100px 2.5fr 2fr 3fr 2fr 110px 180px 130px 110px 2fr",
                 background: "#F8FAFC", borderBottom: "2px solid " + BORDER,
                 borderRadius: "11px 11px 0 0" }}>
                 {plainCol("Investment ID", true)}
                 {sortCol("initiative", "Investment Title", true)}
                 {sortCol("grantee", "Grantee", true)}
                 {plainCol("Description", true)}
+                {sortCol("owner", "Investment Owner", true)}
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
                 {plainCol("Outstanding", true)}
@@ -3078,7 +3079,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
  
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "100px 2.5fr 2fr 3fr 110px 180px 130px 110px 2fr",
+                  gridTemplateColumns: "100px 2.5fr 2fr 3fr 2fr 110px 180px 130px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg, transition: "background .15s" }}>
 
                   {/* Investment ID */}
@@ -3115,18 +3116,21 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                     <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>
                       {inv.grantee || "—"}
                     </div>
-                    {inv.owner && (
-                      <div style={{ fontSize: 11, color: TEXT_SUB, marginTop: 3 }}>
-                        👤 {inv.owner}
-                      </div>
-                    )}
                   </div>
- 
+
                   {/* Description */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>
                       {inv.description || <span style={{ color: TEXT_MUTED }}>—</span>}
                     </div>
+                  </div>
+
+                  {/* Investment Owner */}
+                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: TEXT, lineHeight: 1.4 }}>
+                      {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
+                    </span>
                   </div>
 
                   {/* Amount */}
@@ -3940,13 +3944,14 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
             );
             return (
               <div style={{ display: "grid",
-                gridTemplateColumns: "100px 2fr 2fr 3fr 130px 90px 180px 110px 2fr",
+                gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 180px 110px 2fr",
                 background: SURFACE_2, borderBottom: "2px solid " + BORDER,
                 borderRadius: "11px 11px 0 0" }}>
                 {plainCol("Investment ID", true)}
                 {sortCol("initiative", "Investment Title", true)}
                 {sortCol("grantee", "Grantee", true)}
                 {plainCol("Description", true)}
+                {sortCol("owner", "Investment Owner", true)}
                 {plainCol("BOW", true)}
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
@@ -3999,7 +4004,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "100px 2fr 2fr 3fr 130px 90px 180px 110px 2fr",
+                  gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 180px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
 
                   {/* Investment ID */}
@@ -4035,11 +4040,6 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                     <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
                       {inv.grantee || "—"}
                     </div>
-                    {inv.owner && (
-                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 1 }}>
-                        👤 {inv.owner}
-                      </div>
-                    )}
                   </div>
 
                   {/* Description */}
@@ -4047,6 +4047,14 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                     <div style={{ fontSize: 11, color: TEXT_SUB, lineHeight: 1.5 }}>
                       {inv.description || <span style={{ color: TEXT_MUTED }}>—</span>}
                     </div>
+                  </div>
+
+                  {/* Investment Owner */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: TEXT, lineHeight: 1.4 }}>
+                      {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
+                    </span>
                   </div>
 
                   {/* BOW */}
