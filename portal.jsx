@@ -572,176 +572,46 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                               return (
                                 <div key={ind.indicator_id}
                                   style={{ borderTop: idx > 0 ? `1px solid ${BORDER}` : "none" }}>
-
-                                  {/* Indicator row */}
                                   <div
                                     onClick={() => {
-                                      if (isSelected) {
-                                        setIndicatorId("");
-                                        setValue(""); setPeriod(""); setSource("");
-                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
-                                      } else {
-                                        setIndicatorId(ind.indicator_id);
-                                        setValue(""); setPeriod(""); setSource("");
-                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
-                                      }
+                                      setIndicatorId(isSelected ? "" : ind.indicator_id);
+                                      setValue(""); setPeriod(""); setSource("");
+                                      setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
                                     }}
                                     style={{ padding: "12px 16px", cursor: "pointer",
                                       background: isSelected ? ACCENT_LIGHT : SURFACE,
-                                      transition: "background 0.15s" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between",
+                                      transition: "background 0.15s",
+                                      display: "flex", justifyContent: "space-between",
                                       alignItems: "flex-start" }}>
+                                    <div style={{ flex: 1, marginRight: 12 }}>
                                       <p style={{ fontSize: 14, fontWeight: 600, color: TEXT,
-                                        marginBottom: 4, flex: 1, marginRight: 8, lineHeight: 1.4 }}>
+                                        marginBottom: 4, lineHeight: 1.4 }}>
                                         {ind.text}
                                       </p>
-                                      <span style={{ fontSize: 13, flexShrink: 0,
-                                        color: isSelected ? ACCENT : TEXT_MUTED, fontWeight: 700 }}>
-                                        {isSelected ? "▲" : "▼"}
-                                      </span>
+                                      <div style={{ display: "flex", gap: 10, fontSize: 12,
+                                        color: TEXT_MUTED, flexWrap: "wrap" }}>
+                                        {ind.unit && (
+                                          <span style={{ background: ACCENT_LIGHT, color: ACCENT,
+                                            borderRadius: 4, padding: "1px 7px", fontWeight: 700 }}>
+                                            {ind.unit}
+                                          </span>
+                                        )}
+                                        {ind.data_source && <span>Source: {ind.data_source}</span>}
+                                        {ind.collection_frequency && (
+                                          <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div style={{ display: "flex", gap: 10, fontSize: 12,
-                                      color: TEXT_MUTED, flexWrap: "wrap" }}>
-                                      {ind.unit && (
-                                        <span style={{ background: ACCENT_LIGHT, color: ACCENT,
-                                          borderRadius: 4, padding: "1px 7px", fontWeight: 700 }}>
-                                          {ind.unit}
-                                        </span>
-                                      )}
-                                      {ind.data_source && <span>Source: {ind.data_source}</span>}
-                                      {ind.collection_frequency && (
-                                        <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
-                                      )}
-                                    </div>
+                                    {isSelected ? (
+                                      <div style={{ width: 22, height: 22, borderRadius: "50%",
+                                        background: ACCENT, flexShrink: 0,
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        fontSize: 11, color: SURFACE, fontWeight: 700 }}>✓</div>
+                                    ) : (
+                                      <div style={{ width: 22, height: 22, borderRadius: "50%",
+                                        border: `2px solid ${BORDER}`, flexShrink: 0 }} />
+                                    )}
                                   </div>
-
-                                  {/* Expanded submit panel */}
-                                  {isSelected && (
-                                    <div className="fade-in" style={{ padding: "20px 20px 24px",
-                                      background: "#FAFAF8",
-                                      borderTop: `2px solid ${ACCENT_MID}` }}>
-
-                                      <SectionLabel>
-                                        Targets & baseline{ind.unit ? ` (${ind.unit})` : ""}
-                                      </SectionLabel>
-                                      <div style={{ overflowX: "auto", marginBottom: 14 }}>
-                                        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
-                                          <thead>
-                                            <tr>
-                                              {["Baseline", "2026", "2027", "2028", "2029", "2030"].map(h => (
-                                                <th key={h} style={{ padding: "4px 10px", textAlign: "right",
-                                                  color: TEXT_MUTED, fontWeight: 700, whiteSpace: "nowrap",
-                                                  borderBottom: `1px solid ${BORDER}` }}>{h}</th>
-                                              ))}
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            <tr>
-                                              {[ind.baseline, ind.target_2026, ind.target_2027,
-                                                ind.target_2028, ind.target_2029, ind.target_2030].map((v, vi) => (
-                                                <td key={vi} style={{ padding: "6px 10px", textAlign: "right",
-                                                  color: v != null ? TEXT : TEXT_MUTED,
-                                                  fontWeight: v != null ? 700 : 400 }}>
-                                                  {v != null ? v : "—"}
-                                                </td>
-                                              ))}
-                                            </tr>
-                                          </tbody>
-                                        </table>
-                                      </div>
-
-                                      {indicatorActuals.length > 0 && (
-                                        <>
-                                          <SectionLabel>Actuals on record</SectionLabel>
-                                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-                                            {indicatorActuals.map((a, ai) => (
-                                              <span key={ai} style={{ background: SUCCESS_BG, borderRadius: 6,
-                                                padding: "3px 10px", fontSize: 12,
-                                                color: SUCCESS, fontWeight: 700 }}>
-                                                {a.period ? `${a.period} ` : ""}{a.year}: {a.actual_value}
-                                                {ind.unit ? ` ${ind.unit}` : ""}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </>
-                                      )}
-
-                                      <ContextPill context={indicatorContext} />
-
-                                      <Divider />
-
-                                      <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 18 }}>
-                                        Submit new value
-                                      </p>
-
-                                      {(() => {
-                                        const activeUnit = ind.unit || unitOverride;
-                                        return (
-                                          <>
-                                            {!ind.unit && (
-                                              <Field label="Unit of measurement" required>
-                                                <select value={unitOverride} onChange={e => setUnitOverride(e.target.value)}
-                                                  style={{ ...inputStyle, appearance: "auto" }}>
-                                                  <option value="">Select unit...</option>
-                                                  {UNIT_OPTIONS.map(u => (
-                                                    <option key={u.value} value={u.value}>{u.label}</option>
-                                                  ))}
-                                                </select>
-                                              </Field>
-                                            )}
-                                            <Field label={activeUnit ? `Value (${activeUnit})` : "Value"} required>
-                                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                <input type="number" value={value}
-                                                  onChange={e => setValue(e.target.value)}
-                                                  placeholder="Enter the data value"
-                                                  style={{ ...inputStyle, flex: 1 }} />
-                                                {activeUnit && (
-                                                  <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
-                                                    background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
-                                                    border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
-                                                    {activeUnit}
-                                                  </span>
-                                                )}
-                                              </div>
-                                            </Field>
-                                          </>
-                                        );
-                                      })()}
-
-                                      {periodOptions.length > 0 && (
-                                        <Select label="Reporting period" value={period} onChange={setPeriod}
-                                          options={periodOptions.map(p => ({ value: p, label: p }))} required />
-                                      )}
-
-                                      <Input label="When was this data collected or published?" type="date"
-                                        value={readingDate} onChange={setReadingDate} required
-                                        helper="Use today's date if collected just now, or the date from the source." />
-
-                                      <Input label="Source" value={source} onChange={setSource}
-                                        placeholder="e.g. Q1 2026 partner report, CSGA dashboard, conversation with..."
-                                        required helper="Include enough detail for the reviewer to verify." />
-
-                                      <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
-                                        placeholder="https://..."
-                                        helper="Have a report or deck? Upload to SharePoint first, then paste the link here." />
-
-                                      <Field label="Additional notes">
-                                        <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                                          placeholder="Any caveats, methodology notes, or context the reviewer should know..."
-                                          rows={3} style={{ ...inputStyle, resize: "vertical" }} />
-                                      </Field>
-
-                                      {error && (
-                                        <p style={{ color: DANGER, fontSize: 13, marginBottom: 12 }}>{error}</p>
-                                      )}
-
-                                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                                        <Btn onClick={submit} disabled={!canSubmit || submitting}>
-                                          {submitting ? "Submitting..." : "Submit for review"}
-                                        </Btn>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                               );
                             })}
@@ -760,6 +630,138 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
           </div>
         )}
       </Card>
+
+      {/* ── Detail & submit panel — separate card below the accordion ── */}
+      {step === 2 && indicatorId && selectedIndicator && (
+        <Card className="fade-up" style={{ marginTop: 16 }}>
+          {/* Header */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              {selectedBow && <PortfolioPill portfolioId={selectedBow.portfolio_id} />}
+              {selectedIndicator.outcome_title && (
+                <span style={{ fontSize: 12, color: TEXT_MUTED }}>{selectedIndicator.outcome_title}</span>
+              )}
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: TEXT, lineHeight: 1.4, marginBottom: 8 }}>
+              {selectedIndicator.text}
+            </p>
+            <ContextPill context={indicatorContext} />
+          </div>
+
+          <SectionLabel>
+            Targets & baseline{selectedIndicator.unit ? ` (${selectedIndicator.unit})` : ""}
+          </SectionLabel>
+          <div style={{ overflowX: "auto", marginBottom: 14 }}>
+            <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
+              <thead>
+                <tr>
+                  {["Baseline", "2026", "2027", "2028", "2029", "2030"].map(h => (
+                    <th key={h} style={{ padding: "4px 10px", textAlign: "right",
+                      color: TEXT_MUTED, fontWeight: 700, whiteSpace: "nowrap",
+                      borderBottom: `1px solid ${BORDER}` }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {[selectedIndicator.baseline, selectedIndicator.target_2026,
+                    selectedIndicator.target_2027, selectedIndicator.target_2028,
+                    selectedIndicator.target_2029, selectedIndicator.target_2030].map((v, vi) => (
+                    <td key={vi} style={{ padding: "6px 10px", textAlign: "right",
+                      color: v != null ? TEXT : TEXT_MUTED, fontWeight: v != null ? 700 : 400 }}>
+                      {v != null ? v : "—"}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {indicatorActuals.length > 0 && (
+            <>
+              <SectionLabel>Actuals on record</SectionLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                {indicatorActuals.map((a, ai) => (
+                  <span key={ai} style={{ background: SUCCESS_BG, borderRadius: 6,
+                    padding: "3px 10px", fontSize: 12, color: SUCCESS, fontWeight: 700 }}>
+                    {a.period ? `${a.period} ` : ""}{a.year}: {a.actual_value}
+                    {selectedIndicator.unit ? ` ${selectedIndicator.unit}` : ""}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          <Divider />
+
+          <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 18 }}>
+            Submit new value
+          </p>
+
+          {(() => {
+            const activeUnit = selectedIndicator.unit || unitOverride;
+            return (
+              <>
+                {!selectedIndicator.unit && (
+                  <Field label="Unit of measurement" required>
+                    <select value={unitOverride} onChange={e => setUnitOverride(e.target.value)}
+                      style={{ ...inputStyle, appearance: "auto" }}>
+                      <option value="">Select unit...</option>
+                      {UNIT_OPTIONS.map(u => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
+                <Field label={activeUnit ? `Value (${activeUnit})` : "Value"} required>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="number" value={value} onChange={e => setValue(e.target.value)}
+                      placeholder="Enter the data value" style={{ ...inputStyle, flex: 1 }} />
+                    {activeUnit && (
+                      <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
+                        background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
+                        border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
+                        {activeUnit}
+                      </span>
+                    )}
+                  </div>
+                </Field>
+              </>
+            );
+          })()}
+
+          {periodOptions.length > 0 && (
+            <Select label="Reporting period" value={period} onChange={setPeriod}
+              options={periodOptions.map(p => ({ value: p, label: p }))} required />
+          )}
+
+          <Input label="When was this data collected or published?" type="date"
+            value={readingDate} onChange={setReadingDate} required
+            helper="Use today's date if collected just now, or the date from the source." />
+
+          <Input label="Source" value={source} onChange={setSource}
+            placeholder="e.g. Q1 2026 partner report, CSGA dashboard, conversation with..."
+            required helper="Include enough detail for the reviewer to verify." />
+
+          <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
+            placeholder="https://..."
+            helper="Have a report or deck? Upload to SharePoint first, then paste the link here." />
+
+          <Field label="Additional notes">
+            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="Any caveats, methodology notes, or context the reviewer should know..."
+              rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+          </Field>
+
+          {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Btn onClick={submit} disabled={!canSubmit || submitting}>
+              {submitting ? "Submitting..." : "Submit for review"}
+            </Btn>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
