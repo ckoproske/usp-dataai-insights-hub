@@ -1042,6 +1042,27 @@ function MySubmissions({ submissions, loading, indicators }) {
   );
 }
 
+// Parses source_notes text and turns any URLs into clickable links
+function renderSourceNotes(text) {
+  if (!text) return "—";
+  const urlRegex = /(https?:\/\/\S+)/g;
+  const parts = [];
+  let last = 0, m;
+  while ((m = urlRegex.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const url = m[0].replace(/[.,;)]+$/, ""); // strip trailing punctuation
+    parts.push(
+      <a key={m.index} href={url} target="_blank" rel="noopener noreferrer"
+        style={{ color: ACCENT, wordBreak: "break-all", fontWeight: 600 }}>
+        {url}
+      </a>
+    );
+    last = m.index + url.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length ? parts : text;
+}
+
 // ─── Review Queue ─────────────────────────────────────────────────────────────
 function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
   const indicatorMap = Object.fromEntries((indicators || []).map(i => [i.indicator_id, i]));
@@ -1051,6 +1072,18 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
   const [editId, setEditId]           = useState(null);
   const [editValue, setEditValue]     = useState("");
   const [working, setWorking]         = useState(false);
+  const [expandedId, setExpandedId]   = useState(null);
+  const [actualsCache, setActualsCache] = useState({});
+
+  const toggleExpand = (pendingId, indicatorId) => {
+    if (expandedId === pendingId) { setExpandedId(null); return; }
+    setExpandedId(pendingId);
+    if (indicatorId && actualsCache[indicatorId] === undefined) {
+      api(`/api/indicators/${indicatorId}/actuals`)
+        .then(data => setActualsCache(prev => ({ ...prev, [indicatorId]: data })))
+        .catch(() => setActualsCache(prev => ({ ...prev, [indicatorId]: [] })));
+    }
+  };
 
   const approve = async (id, val) => {
     setWorking(true);
@@ -1114,13 +1147,18 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {queue.map(s => {
-          const ind    = indicatorMap[s.indicator_id];
-          const portId = ind?.portfolio_id || (s.level === "portfolio" ? s.entity_id : null);
-          const bow    = ind?.bow_id ? bowMap[ind.bow_id] : null;
+          const ind      = indicatorMap[s.indicator_id];
+          const portId   = ind?.portfolio_id || (s.level === "portfolio" ? s.entity_id : null);
+          const bow      = ind?.bow_id ? bowMap[ind.bow_id] : null;
+          const isExpanded = expandedId === s.pending_id;
+          const cachedActuals = actualsCache[s.indicator_id];
           return (
             <Card key={s.pending_id} className="fade-in" style={{ padding: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between",
-                alignItems: "flex-start", marginBottom: 14 }}>
+              {/* Clickable header — toggles historical record */}
+              <div
+                onClick={() => toggleExpand(s.pending_id, s.indicator_id)}
+                style={{ display: "flex", justifyContent: "space-between",
+                  alignItems: "flex-start", marginBottom: 14, cursor: "pointer" }}>
                 <div style={{ flex: 1, marginRight: 16 }}>
                   {portId && <PortfolioPill portfolioId={portId} style={{ marginBottom: 6 }} />}
                   {bow && (
@@ -1136,9 +1174,14 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
                     {s.level?.toUpperCase()} · {s.period ? `${s.period} · ` : ""}{s.year}
                   </p>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <p style={{ fontSize: 20, fontWeight: 700, color: ACCENT }}>{s.submitted_value}</p>
-                  <p style={{ fontSize: 11, color: TEXT_MUTED }}>submitted value</p>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexShrink: 0 }}>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: 20, fontWeight: 700, color: ACCENT }}>{s.submitted_value}</p>
+                    <p style={{ fontSize: 11, color: TEXT_MUTED }}>submitted value</p>
+                  </div>
+                  <span style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 4,
+                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s", display: "inline-block", userSelect: "none" }}>▾</span>
                 </div>
               </div>
 
@@ -1154,7 +1197,7 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>Source</p>
-                  <p style={{ fontSize: 13, color: TEXT }}>{s.source_notes || "—"}</p>
+                  <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.5 }}>{renderSourceNotes(s.source_notes)}</p>
                 </div>
                 {s.notes && (
                   <div style={{ gridColumn: "1 / -1" }}>
@@ -1163,6 +1206,68 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
                   </div>
                 )}
               </div>
+
+              {/* Expanded historical record */}
+              {isExpanded && ind && (
+                <div className="fade-in" style={{ marginBottom: 14, padding: "14px 16px",
+                  background: ACCENT_LIGHT, borderRadius: 8, border: `1px solid ${ACCENT_MID}` }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: ACCENT,
+                    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+                    Historical record
+                  </p>
+
+                  {/* Targets & baseline table */}
+                  <p style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, marginBottom: 5 }}>
+                    Targets & baseline{ind.unit ? ` (${ind.unit})` : ""}
+                  </p>
+                  <div style={{ overflowX: "auto", marginBottom: 12 }}>
+                    <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
+                      <thead>
+                        <tr>
+                          {["Baseline", "2026", "2027", "2028", "2029", "2030"].map(h => (
+                            <th key={h} style={{ padding: "3px 10px", textAlign: "right",
+                              color: TEXT_MUTED, fontWeight: 700, whiteSpace: "nowrap",
+                              borderBottom: `1px solid ${ACCENT_MID}` }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          {[ind.baseline, ind.target_2026, ind.target_2027,
+                            ind.target_2028, ind.target_2029, ind.target_2030].map((v, vi) => (
+                            <td key={vi} style={{ padding: "5px 10px", textAlign: "right",
+                              color: v != null ? TEXT : TEXT_MUTED, fontWeight: v != null ? 700 : 400 }}>
+                              {v != null ? v : "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Actuals on record */}
+                  {cachedActuals === undefined ? (
+                    <p style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>Loading actuals...</p>
+                  ) : cachedActuals.length === 0 ? (
+                    <p style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>No actuals on record yet.</p>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, marginBottom: 5 }}>
+                        Actuals on record
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {cachedActuals.map((a, ai) => (
+                          <span key={ai} style={{ background: SUCCESS_BG, borderRadius: 6,
+                            padding: "3px 10px", fontSize: 12, color: SUCCESS, fontWeight: 700 }}>
+                            {a.period ? `${a.period} ` : ""}{a.year}: {a.actual_value}
+                            {ind.unit ? ` ${ind.unit}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {editId === s.pending_id ? (
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
