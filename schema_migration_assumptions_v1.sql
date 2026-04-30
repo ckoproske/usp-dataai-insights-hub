@@ -190,12 +190,45 @@ TBLPROPERTIES ('delta.feature.allowColumnDefaults' = 'supported')
 COMMENT 'Defines external/field signal sources for field-type assumptions. Source readings table to follow once Hub link is defined.';
 
 
+-- -----------------------------------------------------------------------------
+-- 1.9 team_members
+-- Roster of team members with role and portfolio/BOW association.
+-- Email is the join key — matched against current_user() from Databricks token
+-- at submission time to auto-populate name and role without user input.
+-- Also used for decision_maker field on key_decisions and assessed_by on ratings.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.team_members (
+    member_id    STRING    NOT NULL,
+    email        STRING    NOT NULL, -- Databricks login email — join key
+    display_name STRING    NOT NULL,
+    role         STRING,             -- BOW Owner | Portfolio Lead | MLE Team | Program Officer
+    portfolio_id STRING,             -- FK → portfolios.portfolio_id — primary association
+    bow_id       STRING,             -- FK → bows.bow_id — primary association
+    is_active    BOOLEAN   DEFAULT true,
+    last_updated TIMESTAMP,
+    updated_by   STRING
+)
+USING DELTA
+TBLPROPERTIES ('delta.feature.allowColumnDefaults' = 'supported')
+COMMENT 'Team member roster. Email matched against Databricks login token to auto-populate name and role on submissions, decisions, and ratings.';
+
+
 -- =============================================================================
 -- SECTION 2: MODIFICATIONS TO EXISTING TABLES
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 2.1 assumption_confidence — add rating_source and evidence_snapshot
+-- 2.1 pending_actuals — add submitted_role
+-- Stores the submitter's role at time of submission, looked up from team_members.
+-- No DEFAULT needed — will be null for submissions before team_members is populated.
+-- -----------------------------------------------------------------------------
+ALTER TABLE usp_data.usp_strategy.pending_actuals
+ADD COLUMN submitted_role STRING
+COMMENT 'Role at time of submission — looked up from team_members via Databricks login email';
+
+
+-- -----------------------------------------------------------------------------
+-- 2.2 assumption_confidence — add rating_source and evidence_snapshot
 -- rating_source: makes provenance explicit on every row alongside human_override boolean.
 --   human_override boolean is retained so dashboard can quickly flag AI vs human divergence.
 -- evidence_snapshot: JSON record of data points Claude used at assessment time.

@@ -921,18 +921,26 @@ def get_pending_actuals():
 
 @app.route("/api/pending-actuals/submit", methods=["POST"])
 def submit_actual():
-    """Submit a new actual for review. submitted_by from Databricks login."""
+    """Submit a new actual for review. Name and role resolved from Databricks login token."""
     data = request.json
+    current_user = query("SELECT current_user() AS user")
+    email = current_user[0]["user"] if current_user else "unknown"
+    member = query(
+        f"SELECT display_name, role FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    submitted_by   = member[0]["display_name"] if member else email
+    submitted_role = member[0]["role"] if member else None
     execute(
         f"""INSERT INTO {SCHEMA}.pending_actuals
             (pending_id, indicator_id, level, entity_id, year,
-             submitted_value, submitted_by, submitted_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
+             submitted_value, submitted_by, submitted_role, submitted_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
         [new_id(), data.get("indicator_id"), data["level"],
          data["entity_id"], data["year"], data["submitted_value"],
-         data.get("submitted_by", "dashboard")]
+         submitted_by, submitted_role]
     )
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "submitted_by": submitted_by, "submitted_role": submitted_role})
 
 @app.route("/api/pending-actuals/<pending_id>/approve", methods=["POST"])
 def approve_actual(pending_id):
