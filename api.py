@@ -940,28 +940,96 @@ def get_me():
 
 @app.route("/api/indicators/all")
 def get_all_indicators():
-    """Returns all active BOW indicators with BOW, portfolio, and outcome context."""
-    rows = query(
-        f"""SELECT
-              i.indicator_id,
-              i.bow_id,
-              i.outcome_id,
-              i.text,
-              i.unit,
-              i.data_source,
-              i.collection_frequency,
-              i.baseline,
-              i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
-              b.title        AS bow_title,
-              b.portfolio_id,
-              o.title        AS outcome_title
-            FROM {SCHEMA}.bow_indicators i
-            JOIN {SCHEMA}.bows b         ON i.bow_id     = b.bow_id
-            JOIN {SCHEMA}.bow_outcomes o ON i.outcome_id = o.outcome_id
-            WHERE COALESCE(i.is_active, true) = true
-            ORDER BY b.portfolio_id, b.sort_order, i.outcome_id, i.indicator_id"""
-    )
+    """Returns all active BOW indicators with BOW, portfolio, and outcome context.
+    Uses LEFT JOINs so indicators show even if bow_outcomes is sparse.
+    Falls back gracefully if unit/collection_frequency columns don't exist yet."""
+    try:
+        rows = query(
+            f"""SELECT
+                  i.indicator_id,
+                  i.bow_id,
+                  i.outcome_id,
+                  i.text,
+                  i.unit,
+                  i.data_source,
+                  i.collection_frequency,
+                  i.baseline,
+                  i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  b.title        AS bow_title,
+                  b.portfolio_id,
+                  o.title        AS outcome_title
+                FROM {SCHEMA}.bow_indicators i
+                JOIN      {SCHEMA}.bows b         ON i.bow_id     = b.bow_id
+                LEFT JOIN {SCHEMA}.bow_outcomes o ON i.outcome_id = o.outcome_id
+                WHERE COALESCE(i.is_active, true) = true
+                ORDER BY b.portfolio_id, b.sort_order, i.outcome_id, i.indicator_id"""
+        )
+    except Exception:
+        # Fallback: omit unit/collection_frequency if migration hasn't run yet
+        rows = query(
+            f"""SELECT
+                  i.indicator_id,
+                  i.bow_id,
+                  i.outcome_id,
+                  i.text,
+                  NULL          AS unit,
+                  i.data_source,
+                  NULL          AS collection_frequency,
+                  i.baseline,
+                  i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  b.title        AS bow_title,
+                  b.portfolio_id,
+                  o.title        AS outcome_title
+                FROM {SCHEMA}.bow_indicators i
+                JOIN      {SCHEMA}.bows b         ON i.bow_id     = b.bow_id
+                LEFT JOIN {SCHEMA}.bow_outcomes o ON i.outcome_id = o.outcome_id
+                WHERE COALESCE(i.is_active, true) = true
+                ORDER BY b.portfolio_id, b.sort_order, i.outcome_id, i.indicator_id"""
+        )
     return jsonify(rows)
+
+
+@app.route("/api/portal-debug")
+def portal_debug():
+    """Checks all tables the portal depends on — use to diagnose empty dropdowns."""
+    result = {}
+    tables = [
+        ("bows",             f"SELECT COUNT(*) AS n FROM {SCHEMA}.bows"),
+        ("portfolios",       f"SELECT COUNT(*) AS n FROM {SCHEMA}.portfolios"),
+        ("goals",            f"SELECT COUNT(*) AS n FROM {SCHEMA}.strategy_goals"),
+        ("bow_outcomes",     f"SELECT COUNT(*) AS n FROM {SCHEMA}.bow_outcomes"),
+        ("bow_indicators",   f"SELECT COUNT(*) AS n FROM {SCHEMA}.bow_indicators"),
+        ("portfolio_indicators", f"SELECT COUNT(*) AS n FROM {SCHEMA}.portfolio_indicators"),
+    ]
+    for name, sql_str in tables:
+        try:
+            rows = query(sql_str)
+            result[name] = rows[0]["n"] if rows else 0
+        except Exception as e:
+            result[name] = f"ERROR: {str(e)[:200]}"
+
+    # Check whether unit/collection_frequency columns exist on bow_indicators
+    for col in ("unit", "collection_frequency"):
+        try:
+            query(f"SELECT {col} FROM {SCHEMA}.bow_indicators LIMIT 1")
+            result[f"bow_indicators.{col}"] = "exists"
+        except Exception:
+            result[f"bow_indicators.{col}"] = "MISSING — run schema_migration_units_v1.sql"
+
+    # Sample a few indicators to confirm data shape
+    try:
+        sample = query(
+            f"""SELECT i.indicator_id, i.bow_id, i.outcome_id, i.text,
+                       b.portfolio_id, b.title AS bow_title
+                FROM {SCHEMA}.bow_indicators i
+                JOIN {SCHEMA}.bows b ON i.bow_id = b.bow_id
+                LIMIT 5"""
+        )
+        result["sample_indicators"] = sample
+    except Exception as e:
+        result["sample_indicators"] = f"ERROR: {str(e)[:300]}"
+
+    return jsonify(result)
 
 @app.route("/api/pending-actuals/mine")
 def get_my_actuals():
