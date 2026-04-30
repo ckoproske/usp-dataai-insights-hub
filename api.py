@@ -904,6 +904,86 @@ def get_budget_summary(portfolio_id):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# PORTAL ROUTES
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.route("/portal")
+def portal():
+    return send_file(os.path.join(os.path.dirname(__file__), "portal.html"))
+
+@app.route("/portal.jsx")
+def portal_jsx():
+    return send_file(
+        os.path.join(os.path.dirname(__file__), "portal.jsx"),
+        mimetype="text/plain"
+    )
+
+@app.route("/api/me")
+def get_me():
+    """Returns current user's display name and permission level from team_members."""
+    current_user = query("SELECT current_user() AS user")
+    email = current_user[0]["user"] if current_user else None
+    if not email:
+        return jsonify({"email": None, "display_name": "Unknown", "permission_level": "Team", "portfolio_id": None})
+    member = query(
+        f"SELECT display_name, permission_level, portfolio_id FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    if member:
+        return jsonify({
+            "email": email,
+            "display_name": member[0]["display_name"],
+            "permission_level": member[0]["permission_level"],
+            "portfolio_id": member[0]["portfolio_id"]
+        })
+    return jsonify({"email": email, "display_name": email, "permission_level": "Team", "portfolio_id": None})
+
+@app.route("/api/indicators/all")
+def get_all_indicators():
+    """Returns all active BOW indicators with BOW, portfolio, and outcome context."""
+    rows = query(
+        f"""SELECT
+              i.indicator_id,
+              i.bow_id,
+              i.outcome_id,
+              i.text,
+              i.data_source,
+              i.collection_frequency,
+              i.baseline,
+              i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+              b.title        AS bow_title,
+              b.portfolio_id,
+              o.title        AS outcome_title
+            FROM {SCHEMA}.bow_indicators i
+            JOIN {SCHEMA}.bows b        ON i.bow_id     = b.bow_id
+            JOIN {SCHEMA}.bow_outcomes o ON i.outcome_id = o.outcome_id
+            WHERE COALESCE(i.is_active, true) = true
+            ORDER BY b.portfolio_id, b.sort_order, i.outcome_id, i.indicator_id"""
+    )
+    return jsonify(rows)
+
+@app.route("/api/pending-actuals/mine")
+def get_my_actuals():
+    """Returns submissions by the current logged-in user, newest first."""
+    current_user = query("SELECT current_user() AS user")
+    email = current_user[0]["user"] if current_user else None
+    member = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    ) if email else []
+    display_name = member[0]["display_name"] if member else email
+    if not display_name:
+        return jsonify([])
+    rows = query(
+        f"""SELECT * FROM {SCHEMA}.pending_actuals
+            WHERE submitted_by = ?
+            ORDER BY submitted_at DESC""",
+        [display_name]
+    )
+    return jsonify(rows)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # PENDING ACTUALS — submission queue
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -933,11 +1013,13 @@ def submit_actual():
     submitted_permission = member[0]["permission_level"] if member else None
     execute(
         f"""INSERT INTO {SCHEMA}.pending_actuals
-            (pending_id, indicator_id, level, entity_id, year,
-             submitted_value, submitted_by, submitted_permission, submitted_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
+            (pending_id, indicator_id, level, entity_id, year, period,
+             submitted_value, reading_date, source_notes,
+             submitted_by, submitted_permission, submitted_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
         [new_id(), data.get("indicator_id"), data["level"],
-         data["entity_id"], data["year"], data["submitted_value"],
+         data["entity_id"], data["year"], data.get("period"),
+         data["submitted_value"], data.get("reading_date"), data.get("source_notes"),
          submitted_by, submitted_permission]
     )
     return jsonify({"status": "ok", "submitted_by": submitted_by, "submitted_permission": submitted_permission})
@@ -961,20 +1043,22 @@ def approve_actual(pending_id):
     if level == "bow":
         execute(
             f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
-                (actual_id, indicator_id, bow_id, outcome_id, year,
+                (actual_id, indicator_id, bow_id, outcome_id, year, period,
                  actual_value, reading_date, source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
             [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
-             r["year"], reviewed_value, "pending_actuals_review", reviewed_by]
+             r["year"], r.get("period"), reviewed_value,
+             r.get("reading_date"), r.get("source_notes"), reviewed_by]
         )
     elif level == "portfolio":
         execute(
             f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
-                (actual_id, indicator_id, portfolio_id, outcome_id, year,
+                (actual_id, indicator_id, portfolio_id, outcome_id, year, period,
                  actual_value, reading_date, source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
             [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
-             r["year"], reviewed_value, "pending_actuals_review", reviewed_by]
+             r["year"], r.get("period"), reviewed_value,
+             r.get("reading_date"), r.get("source_notes"), reviewed_by]
         )
     elif level == "goal":
         execute(
@@ -985,6 +1069,14 @@ def approve_actual(pending_id):
             [new_id(), r["entity_id"], r["year"], reviewed_value,
              "pending_actuals_review", reviewed_by]
         )
+
+    current_user  = query("SELECT current_user() AS user")
+    email         = current_user[0]["user"] if current_user else None
+    member        = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    ) if email else []
+    reviewed_by = member[0]["display_name"] if member else (email or "reviewer")
 
     execute(
         f"""UPDATE {SCHEMA}.pending_actuals
@@ -1000,14 +1092,21 @@ def approve_actual(pending_id):
 @app.route("/api/pending-actuals/<pending_id>/reject", methods=["POST"])
 def reject_actual(pending_id):
     data = request.json
+    current_user = query("SELECT current_user() AS user")
+    email        = current_user[0]["user"] if current_user else None
+    member       = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    ) if email else []
+    reviewed_by = member[0]["display_name"] if member else (email or "reviewer")
     execute(
         f"""UPDATE {SCHEMA}.pending_actuals
-            SET status      = 'rejected',
-                notes       = ?,
-                reviewed_by = ?,
-                reviewed_at = current_timestamp()
-            WHERE pending_id = ?""",
-        [data.get("notes"), data.get("reviewed_by", "dashboard"), pending_id]
+            SET status         = 'rejected',
+                reviewer_notes = ?,
+                reviewed_by    = ?,
+                reviewed_at    = current_timestamp()
+            WHERE pending_id   = ?""",
+        [data.get("reviewer_notes"), reviewed_by, pending_id]
     )
     return jsonify({"status": "ok"})
 
