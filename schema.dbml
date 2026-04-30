@@ -67,18 +67,19 @@ Table bow_portfolio_outcome_links {
 // =============================================================================
 
 Table bow_indicators {
-  indicator_id  string [pk]
-  bow_id        string [ref: > bows.bow_id]
-  outcome_id    string [ref: > bow_outcomes.outcome_id]
-  text          string
-  data_source   string
-  baseline      float
-  target_2026   float
-  target_2027   float
-  target_2028   float
-  target_2029   float
-  target_2030   float
-  is_active     boolean [default: true]
+  indicator_id         string [pk]
+  bow_id               string [ref: > bows.bow_id]
+  outcome_id           string [ref: > bow_outcomes.outcome_id]
+  text                 string
+  data_source          string
+  baseline             float
+  target_2026          float
+  target_2027          float
+  target_2028          float
+  target_2029          float
+  target_2030          float
+  collection_frequency string [note: 'annual | quarterly | bimonthly | monthly']
+  is_active            boolean [default: true]
 }
 
 Table bow_indicator_actuals {
@@ -87,6 +88,7 @@ Table bow_indicator_actuals {
   bow_id        string [ref: > bows.bow_id]
   outcome_id    string [ref: > bow_outcomes.outcome_id]
   year          int
+  period        string [note: 'Q1 | Q2 | Q3 | Q4 | M01-M12 — null for annual']
   actual_value  float
   reading_date  date
   source_notes  string
@@ -114,6 +116,7 @@ Table portfolio_indicator_actuals {
   portfolio_id  string [ref: > portfolios.portfolio_id]
   outcome_id    string [ref: > portfolio_outcomes.outcome_id]
   year          int
+  period        string [note: 'Q1 | Q2 | Q3 | Q4 | M01-M12 — null for annual']
   actual_value  float
   reading_date  date
   source_notes  string
@@ -421,18 +424,22 @@ Table team_members {
 }
 
 Table pending_actuals {
-  pending_id      string [pk]
-  indicator_id    string
-  level           string [note: 'bow | portfolio | goal']
-  entity_id       string
-  year            int
-  submitted_value float
+  pending_id           string [pk]
+  indicator_id         string
+  level                string [note: 'bow | portfolio | goal']
+  entity_id            string
+  year                 int
+  period               string [note: 'Q1 | Q2 | Q3 | Q4 | M01-M12 — null for annual']
+  submitted_value      float
+  reading_date         date   [note: 'when data was collected or published — may differ from submitted_at']
+  source_notes         string [note: 'where the data came from — required at submission']
   submitted_by         string [note: 'display name — resolved from team_members via Databricks login token']
   submitted_permission string [note: 'MLE | Leadership | Team — permission level at time of submission']
-  submitted_at    timestamp
-  status          string [note: 'pending | approved | rejected']
-  reviewed_value  float
-  reviewed_by     string
-  reviewed_at     timestamp
-  notes           string
+  submitted_at         timestamp
+  status               string [note: 'pending | approved | rejected']
+  reviewed_value       float
+  reviewed_by          string
+  reviewer_notes       string [note: 'reason recorded when rejecting or querying a submission — visible to submitter']
+  reviewed_at          timestamp
+  notes                string
 }
