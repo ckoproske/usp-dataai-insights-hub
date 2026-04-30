@@ -157,10 +157,12 @@ function SubmitForm({ user, bows, goals, portfolios, indicators }) {
   const [indicatorSearch, setIndicatorSearch] = useState("");
   const [indicatorId, setIndicatorId]     = useState("");
   const [indicatorContext, setIndicatorContext] = useState(null);
+  const [indicatorActuals, setIndicatorActuals] = useState([]);
   const [value, setValue]                 = useState("");
   const [period, setPeriod]               = useState("");
   const [readingDate, setReadingDate]     = useState(TODAY);
   const [source, setSource]               = useState("");
+  const [sourceUrl, setSourceUrl]         = useState("");
   const [notes, setNotes]                 = useState("");
   const [submitting, setSubmitting]       = useState(false);
   const [submitted, setSubmitted]         = useState(false);
@@ -169,10 +171,9 @@ function SubmitForm({ user, bows, goals, portfolios, indicators }) {
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
-    if (!indicatorId) { setIndicatorContext(null); return; }
-    api(`/api/indicators/${indicatorId}/context`)
-      .then(setIndicatorContext)
-      .catch(() => null);
+    if (!indicatorId) { setIndicatorContext(null); setIndicatorActuals([]); return; }
+    api(`/api/indicators/${indicatorId}/context`).then(setIndicatorContext).catch(() => null);
+    api(`/api/indicators/${indicatorId}/actuals`).then(setIndicatorActuals).catch(() => []);
   }, [indicatorId]);
 
   const bowOptions = () => {
@@ -211,14 +212,15 @@ function SubmitForm({ user, bows, goals, portfolios, indicators }) {
 
   const reset = () => {
     setStep(1); setLevel(""); setPortfolioFilter(""); setEntityId("");
-    setIndicatorSearch(""); setIndicatorId(""); setIndicatorContext(null);
-    setValue(""); setPeriod(""); setSource(""); setNotes("");
+    setIndicatorSearch(""); setIndicatorId(""); setIndicatorContext(null); setIndicatorActuals([]);
+    setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes("");
     setReadingDate(TODAY); setSubmitted(false); setError(null);
   };
 
   const submit = async () => {
     setSubmitting(true); setError(null);
     try {
+      const sourceText = [source, sourceUrl ? `Link: ${sourceUrl}` : ""].filter(Boolean).join(" — ");
       await api("/api/pending-actuals/submit", {
         method: "POST",
         body: JSON.stringify({
@@ -229,7 +231,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators }) {
           period:          period || null,
           submitted_value: parseFloat(value),
           reading_date:    readingDate,
-          source_notes:    source,
+          source_notes:    sourceText,
           notes,
         }),
       });
@@ -344,50 +346,128 @@ function SubmitForm({ user, bows, goals, portfolios, indicators }) {
               </p>
             ) : (
               <>
-                {filteredIndicators.length > 3 && (
-                  <input
-                    type="text"
-                    value={indicatorSearch}
-                    onChange={e => setIndicatorSearch(e.target.value)}
-                    placeholder="Search indicators..."
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8,
-                      border: `1px solid ${C.border}`, fontSize: 14,
-                      marginBottom: 12, outline: "none", background: C.gray100 }}
-                  />
-                )}
+                <input
+                  type="text"
+                  value={indicatorSearch}
+                  onChange={e => setIndicatorSearch(e.target.value)}
+                  placeholder="Search indicators..."
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8,
+                    border: `1px solid ${C.border}`, fontSize: 14,
+                    marginBottom: 16, outline: "none", background: C.gray100 }}
+                />
                 {visibleIndicators.length === 0 && (
                   <p style={{ color: C.gray400, fontSize: 13, marginBottom: 12 }}>
                     No indicators match your search.
                   </p>
                 )}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                  {visibleIndicators.map(ind => (
-                    <div
-                      key={ind.indicator_id}
-                      onClick={() => setIndicatorId(ind.indicator_id)}
-                      style={{
-                        padding: 14, borderRadius: 8, cursor: "pointer",
-                        border: `2px solid ${indicatorId === ind.indicator_id ? C.primary : C.border}`,
-                        background: indicatorId === ind.indicator_id ? C.primaryLight : C.white,
-                      }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.gray900, marginBottom: 4 }}>
-                        {ind.text}
-                      </p>
-                      <div style={{ display: "flex", gap: 16, fontSize: 12, color: C.gray500 }}>
-                        {ind.data_source && <span>Source: {ind.data_source}</span>}
-                        {ind.collection_frequency && (
-                          <span style={{ textTransform: "capitalize" }}>
-                            {ind.collection_frequency}
-                          </span>
-                        )}
-                        {ind.target_2026 && <span>2026 target: {ind.target_2026}</span>}
-                      </div>
-                      {indicatorId === ind.indicator_id && (
-                        <IndicatorContextPill context={indicatorContext} />
+                {/* Group indicators by outcome */}
+                {(() => {
+                  const groups = [];
+                  const seen = {};
+                  visibleIndicators.forEach(ind => {
+                    const key = ind.outcome_id || "__none";
+                    if (!seen[key]) {
+                      seen[key] = true;
+                      groups.push({ outcome_id: key, outcome_title: ind.outcome_title, indicators: [] });
+                    }
+                    groups[groups.findIndex(g => g.outcome_id === key)].indicators.push(ind);
+                  });
+                  return groups.map(group => (
+                    <div key={group.outcome_id} style={{ marginBottom: 20 }}>
+                      {group.outcome_title && (
+                        <p style={{ fontSize: 11, fontWeight: 700, color: C.gray400,
+                          textTransform: "uppercase", letterSpacing: "0.06em",
+                          marginBottom: 8 }}>
+                          {group.outcome_title}
+                        </p>
                       )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {group.indicators.map(ind => {
+                          const isSelected = indicatorId === ind.indicator_id;
+                          return (
+                            <div key={ind.indicator_id} onClick={() => setIndicatorId(ind.indicator_id)}
+                              style={{ padding: 14, borderRadius: 8, cursor: "pointer",
+                                border: `2px solid ${isSelected ? C.primary : C.border}`,
+                                background: isSelected ? C.primaryLight : C.white }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                <p style={{ fontSize: 14, fontWeight: 600, color: C.gray900,
+                                  marginBottom: 4, flex: 1, marginRight: 8 }}>
+                                  {ind.text}
+                                </p>
+                                {isSelected && (
+                                  <div style={{ width: 20, height: 20, borderRadius: "50%",
+                                    background: C.primary, display: "flex", alignItems: "center",
+                                    justifyContent: "center", flexShrink: 0, fontSize: 11, color: C.white, fontWeight: 700 }}>
+                                    ✓
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ display: "flex", gap: 12, fontSize: 12, color: C.gray500, flexWrap: "wrap" }}>
+                                {ind.data_source && <span>Source: {ind.data_source}</span>}
+                                {ind.collection_frequency && (
+                                  <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
+                                )}
+                                {ind.target_2026 != null && <span>2026 target: {ind.target_2026}</span>}
+                              </div>
+                              {/* Historical data panel — shown when selected */}
+                              {isSelected && (
+                                <div style={{ marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                                  <p style={{ fontSize: 11, fontWeight: 700, color: C.gray400,
+                                    textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                                    Historical data
+                                  </p>
+                                  <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                      <thead>
+                                        <tr>
+                                          {["Baseline", "Target 2026", "Target 2027", "Target 2028", "Target 2029", "Target 2030"].map(h => (
+                                            <th key={h} style={{ padding: "4px 8px", textAlign: "right",
+                                              color: C.gray400, fontWeight: 600, whiteSpace: "nowrap",
+                                              borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr>
+                                          {[ind.baseline, ind.target_2026, ind.target_2027, ind.target_2028, ind.target_2029, ind.target_2030].map((v, i) => (
+                                            <td key={i} style={{ padding: "6px 8px", textAlign: "right",
+                                              color: v != null ? C.gray700 : C.gray400, fontWeight: v != null ? 600 : 400 }}>
+                                              {v != null ? v : "—"}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  {indicatorActuals.length > 0 && (
+                                    <div style={{ marginTop: 10 }}>
+                                      <p style={{ fontSize: 11, fontWeight: 700, color: C.gray400,
+                                        textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+                                        Actuals on record
+                                      </p>
+                                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                        {indicatorActuals.map((a, i) => (
+                                          <div key={i} style={{ background: C.successLight,
+                                            borderRadius: 6, padding: "4px 10px", fontSize: 12 }}>
+                                            <span style={{ color: C.gray500 }}>
+                                              {a.period ? `${a.period} ` : ""}{a.year}:
+                                            </span>{" "}
+                                            <span style={{ fontWeight: 700, color: C.success }}>{a.actual_value}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <IndicatorContextPill context={indicatorContext} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  ));
+                })()}
               </>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
@@ -445,6 +525,13 @@ function SubmitForm({ user, bows, goals, portfolios, indicators }) {
               placeholder="e.g. Q1 2026 partner report, CSGA dashboard, conversation with..."
               required
               helper="Include enough detail for a reviewer to verify this data."
+            />
+            <Input
+              label="Source link (optional)"
+              value={sourceUrl}
+              onChange={setSourceUrl}
+              placeholder="https://..."
+              helper="Have a report, PDF, or deck? Upload it to your team's SharePoint folder, then paste the link here."
             />
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600,

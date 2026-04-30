@@ -1111,6 +1111,18 @@ def reject_actual(pending_id):
     return jsonify({"status": "ok"})
 
 
+@app.route("/api/indicators/<indicator_id>/actuals")
+def get_indicator_actuals(indicator_id):
+    """Returns all actuals on record for a single indicator, ordered by year and period."""
+    rows = query(
+        f"""SELECT year, period, actual_value, reading_date, source_notes
+            FROM {SCHEMA}.bow_indicator_actuals
+            WHERE indicator_id = ?
+            ORDER BY year, period""",
+        [indicator_id]
+    )
+    return jsonify(rows)
+
 @app.route("/api/indicators/<indicator_id>/context")
 def get_indicator_context(indicator_id):
     """Returns count of assumptions and decisions linked to an indicator — shown in portal Step 2."""
