@@ -1064,7 +1064,8 @@ function renderSourceNotes(text) {
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
-function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
+function ReviewQueue({ queue, loading, onRefresh, indicators, bows, user }) {
+  const canAct = user?.permission_level === "MLE";
   const indicatorMap = Object.fromEntries((indicators || []).map(i => [i.indicator_id, i]));
   const bowMap       = Object.fromEntries((bows || []).map(b => [b.bow_id, b]));
   const [rejectId, setRejectId]       = useState(null);
@@ -1269,29 +1270,40 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
                 </div>
               )}
 
-              {editId === s.pending_id ? (
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="number" value={editValue}
-                    onChange={e => setEditValue(e.target.value)}
-                    placeholder={s.submitted_value}
-                    style={{ ...inputStyle, flex: 1 }} />
-                  <Btn variant="success" onClick={() => approve(s.pending_id, editValue)} disabled={working}>
-                    Approve with edit
-                  </Btn>
-                  <Btn variant="secondary" onClick={() => setEditId(null)}>Cancel</Btn>
-                </div>
+              {canAct ? (
+                editId === s.pending_id ? (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input type="number" value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      placeholder={s.submitted_value}
+                      style={{ ...inputStyle, flex: 1 }} />
+                    <Btn variant="success" onClick={() => approve(s.pending_id, editValue)} disabled={working}>
+                      Approve with edit
+                    </Btn>
+                    <Btn variant="secondary" onClick={() => setEditId(null)}>Cancel</Btn>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Btn variant="success" onClick={() => approve(s.pending_id, null)} disabled={working}>
+                      Approve
+                    </Btn>
+                    <Btn variant="secondary"
+                      onClick={() => { setEditId(s.pending_id); setEditValue(s.submitted_value); }}>
+                      Approve with edit
+                    </Btn>
+                    <Btn variant="danger" onClick={() => setRejectId(s.pending_id)} disabled={working}>
+                      Reject
+                    </Btn>
+                  </div>
+                )
               ) : (
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn variant="success" onClick={() => approve(s.pending_id, null)} disabled={working}>
-                    Approve
-                  </Btn>
-                  <Btn variant="secondary"
-                    onClick={() => { setEditId(s.pending_id); setEditValue(s.submitted_value); }}>
-                    Approve with edit
-                  </Btn>
-                  <Btn variant="danger" onClick={() => setRejectId(s.pending_id)} disabled={working}>
-                    Reject
-                  </Btn>
+                <div style={{ display: "flex", alignItems: "center", gap: 8,
+                  padding: "8px 12px", background: BG, borderRadius: 7,
+                  border: `1px solid ${BORDER}` }}>
+                  <span style={{ fontSize: 13, color: TEXT_MUTED }}>🔒</span>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>
+                    Approve / Reject — <strong style={{ color: TEXT_SUB }}>MLE access required</strong>
+                  </span>
                 </div>
               )}
             </Card>
@@ -1455,7 +1467,7 @@ function PortalApp() {
               <Btn variant="secondary" size="sm" onClick={loadQueue}>Refresh</Btn>
             </div>
             <ReviewQueue queue={queue} loading={loadingQueue}
-              onRefresh={loadQueue} indicators={indicators} bows={bows} />
+              onRefresh={loadQueue} indicators={indicators} bows={bows} user={user} />
           </>
         )}
       </div>
