@@ -1131,15 +1131,19 @@ function PortalApp() {
 
   useEffect(() => {
     Promise.all([
-      api("/api/me"),
-      api("/api/bows"),
-      api("/api/goals"),
-      api("/api/portfolios"),
-      api("/api/indicators/all"),
+      api("/api/me").catch(() => null),
+      api("/api/bows").catch(() => []),
+      api("/api/goals").catch(() => []),
+      api("/api/portfolios").catch(() => []),
+      api("/api/indicators/all").catch(() => []),
     ]).then(([u, b, g, p, i]) => {
-      setUser(u); setBows(b); setGoals(g); setPortfolios(p); setIndicators(i);
+      if (u) setUser(u);
+      setBows(Array.isArray(b) ? b : []);
+      setGoals(Array.isArray(g) ? g : []);
+      setPortfolios(Array.isArray(p) ? p : []);
+      setIndicators(Array.isArray(i) ? i : []);
       setLoadingData(false);
-    }).catch(() => setLoadingData(false));
+    });
   }, []);
 
   const loadMine = () => {
