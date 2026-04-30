@@ -251,6 +251,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
   const [portfolioFilter, setPortfolioFilter] = useState("");
   const [entityId, setEntityId]               = useState("");
   const [indicatorSearch, setIndicatorSearch] = useState("");
+  const [openOutcomeId, setOpenOutcomeId]     = useState(null);
   const [indicatorId, setIndicatorId]         = useState("");
   const [indicatorContext, setIndicatorContext] = useState(null);
   const [indicatorActuals, setIndicatorActuals] = useState([]);
@@ -299,12 +300,12 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
   const periodOptions = PERIOD_OPTIONS[freq] || [];
 
   const canAdvance1 = level && entityId && (level !== "bow" || portfolioFilter);
-  const canAdvance2 = level === "goal" || indicatorId;
   const canSubmit   = value && source && readingDate && (periodOptions.length === 0 || period);
 
   const reset = () => {
     setStep(1); setLevel(""); setPortfolioFilter(""); setEntityId("");
-    setIndicatorSearch(""); setIndicatorId(""); setIndicatorContext(null); setIndicatorActuals([]);
+    setIndicatorSearch(""); setOpenOutcomeId(null); setIndicatorId("");
+    setIndicatorContext(null); setIndicatorActuals([]);
     setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes("");
     setReadingDate(TODAY); setSubmitted(false); setError(null);
   };
@@ -370,10 +371,10 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
     </Card>
   );
 
-  const stepLabels = ["What are you reporting on?", "Which indicator?", "Data details"];
+  const stepLabels = ["What are you reporting on?", "Select indicator & submit"];
 
   return (
-    <div style={{ maxWidth: 620, margin: "0 auto" }} className="fade-in">
+    <div style={{ maxWidth: 660, margin: "0 auto" }} className="fade-in">
       <StepBar step={step} labels={stepLabels} />
 
       <Card>
@@ -445,31 +446,73 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
             </div>
 
             {level === "goal" ? (
-              <p style={{ color: TEXT_SUB, fontSize: 14, marginBottom: 20 }}>
-                Goal-level actuals are submitted directly as a value against the goal metric.
-              </p>
-            ) : filteredIndicators.length === 0 ? (
-              <div style={{ padding: "32px 0", textAlign: "center" }}>
-                <p style={{ color: TEXT_MUTED, fontSize: 14 }}>
-                  No indicators found for this {level}. Indicators may not yet be configured.
+              <>
+                <p style={{ color: TEXT_SUB, fontSize: 14, marginBottom: 20 }}>
+                  Goal-level actuals are submitted directly as a value against the goal metric.
                 </p>
-              </div>
+                <Field label="Value" required>
+                  <input type="number" value={value} onChange={e => setValue(e.target.value)}
+                    placeholder="Enter the data value" style={{ ...inputStyle }} />
+                </Field>
+                <Input label="When was this data collected or published?" type="date"
+                  value={readingDate} onChange={setReadingDate} required
+                  helper="Use today's date if you collected it just now. Otherwise use the date from the source." />
+                <Input label="Source" value={source} onChange={setSource}
+                  placeholder="e.g. Q1 2026 partner report, CSGA dashboard..." required
+                  helper="Include enough detail for the reviewer to verify this data." />
+                <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
+                  placeholder="https://..."
+                  helper="Have a report or deck? Upload to SharePoint first, then paste the link here." />
+                <Field label="Additional notes">
+                  <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                    placeholder="Any caveats or context the reviewer should know..."
+                    rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                </Field>
+                {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 12 }}>{error}</p>}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                  <Btn variant="secondary" onClick={() => setStep(1)}>Back</Btn>
+                  <Btn onClick={submit} disabled={!canSubmit || submitting}>
+                    {submitting ? "Submitting..." : "Submit for review"}
+                  </Btn>
+                </div>
+              </>
+            ) : filteredIndicators.length === 0 ? (
+              <>
+                <div style={{ padding: "32px 0", textAlign: "center" }}>
+                  <p style={{ color: TEXT_MUTED, fontSize: 14 }}>
+                    No indicators found for this {level}. Indicators may not yet be configured.
+                  </p>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <Btn variant="secondary" onClick={() => setStep(1)}>Back</Btn>
+                </div>
+              </>
             ) : (
               <>
+                {/* Guidance */}
+                <div style={{ marginBottom: 16, padding: "11px 14px", background: ACCENT_LIGHT,
+                  borderRadius: 7, border: `1px solid ${ACCENT_MID}` }}>
+                  <p style={{ fontSize: 13, color: ACCENT, fontWeight: 600 }}>
+                    Select the outcome associated with the indicator you want to update,
+                    then click the indicator to view targets and submit your value.
+                  </p>
+                </div>
+
                 <input
                   type="text"
                   value={indicatorSearch}
-                  onChange={e => setIndicatorSearch(e.target.value)}
+                  onChange={e => { setIndicatorSearch(e.target.value); setOpenOutcomeId(null); setIndicatorId(""); }}
                   placeholder="Search indicators..."
                   style={{ ...inputStyle, marginBottom: 16, background: BG }}
                 />
+
                 {visibleIndicators.length === 0 && (
                   <p style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>
                     No indicators match your search.
                   </p>
                 )}
 
-                {/* Grouped by outcome */}
+                {/* Outcome accordions */}
                 {(() => {
                   const groups = [];
                   const seen = {};
@@ -481,183 +524,219 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                     }
                     groups[groups.findIndex(g => g.outcome_id === key)].indicators.push(ind);
                   });
-                  return groups.map(group => (
-                    <div key={group.outcome_id} style={{ marginBottom: 24 }}>
-                      {group.outcome_title && (
-                        <SectionLabel>{group.outcome_title}</SectionLabel>
-                      )}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {group.indicators.map(ind => {
-                          const isSelected = indicatorId === ind.indicator_id;
-                          return (
-                            <div key={ind.indicator_id} onClick={() => setIndicatorId(ind.indicator_id)}
-                              style={{ padding: 14, borderRadius: 8, cursor: "pointer",
-                                border: `2px solid ${isSelected ? ACCENT : BORDER}`,
-                                background: isSelected ? ACCENT_LIGHT : SURFACE,
-                                transition: "border-color 0.15s, background 0.15s" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <p style={{ fontSize: 14, fontWeight: 600, color: TEXT,
-                                  marginBottom: 4, flex: 1, marginRight: 8, lineHeight: 1.4 }}>
-                                  {ind.text}
-                                </p>
-                                {isSelected && (
-                                  <div style={{ width: 22, height: 22, borderRadius: "50%",
-                                    background: ACCENT, display: "flex", alignItems: "center",
-                                    justifyContent: "center", flexShrink: 0,
-                                    fontSize: 11, color: SURFACE, fontWeight: 700 }}>
-                                    ✓
-                                  </div>
-                                )}
-                              </div>
-                              <div style={{ display: "flex", gap: 12, fontSize: 12, color: TEXT_MUTED, flexWrap: "wrap" }}>
-                                {ind.unit && (
-                                  <span style={{ background: ACCENT_LIGHT, color: ACCENT,
-                                    borderRadius: 4, padding: "1px 7px", fontWeight: 700 }}>
-                                    {ind.unit}
-                                  </span>
-                                )}
-                                {ind.data_source && <span>Source: {ind.data_source}</span>}
-                                {ind.collection_frequency && (
-                                  <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
-                                )}
-                                {ind.target_2026 != null && (
-                                  <span>2026 target: <strong style={{ color: TEXT_SUB }}>{ind.target_2026}{ind.unit ? ` ${ind.unit}` : ""}</strong></span>
-                                )}
-                              </div>
 
-                              {/* Expanded historical panel */}
-                              {isSelected && (
-                                <div className="fade-in" style={{ marginTop: 14,
-                                  borderTop: `1px solid ${ACCENT_MID}`, paddingTop: 14 }}>
-                                  <SectionLabel>
-                                    Targets & baseline{ind.unit ? ` (${ind.unit})` : ""}
-                                  </SectionLabel>
-                                  <div style={{ overflowX: "auto", marginBottom: 12 }}>
-                                    <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
-                                      <thead>
-                                        <tr>
-                                          {["Baseline", "2026", "2027", "2028", "2029", "2030"].map(h => (
-                                            <th key={h} style={{ padding: "4px 10px", textAlign: "right",
-                                              color: TEXT_MUTED, fontWeight: 700, whiteSpace: "nowrap",
-                                              borderBottom: `1px solid ${BORDER}` }}>{h}</th>
-                                          ))}
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        <tr>
-                                          {[ind.baseline, ind.target_2026, ind.target_2027,
-                                            ind.target_2028, ind.target_2029, ind.target_2030].map((v, idx) => (
-                                            <td key={idx} style={{ padding: "6px 10px", textAlign: "right",
-                                              color: v != null ? TEXT : TEXT_MUTED,
-                                              fontWeight: v != null ? 700 : 400 }}>
-                                              {v != null ? v : "—"}
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      </tbody>
-                                    </table>
+                  return groups.map(group => {
+                    const isOpen = openOutcomeId === group.outcome_id;
+                    return (
+                      <div key={group.outcome_id} style={{ marginBottom: 8 }}>
+                        {/* Accordion header */}
+                        <div
+                          onClick={() => {
+                            setOpenOutcomeId(isOpen ? null : group.outcome_id);
+                            setIndicatorId("");
+                            setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes("");
+                            setReadingDate(TODAY);
+                          }}
+                          style={{ display: "flex", alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "11px 14px",
+                            borderRadius: isOpen ? "8px 8px 0 0" : 8,
+                            background: isOpen ? BRAND : SURFACE,
+                            border: `1px solid ${isOpen ? BRAND : BORDER}`,
+                            cursor: "pointer", userSelect: "none",
+                            transition: "background 0.15s, border-color 0.15s" }}>
+                          <span style={{ fontSize: 13, fontWeight: 700,
+                            color: isOpen ? "#FFFFFF" : TEXT, lineHeight: 1.4, flex: 1, marginRight: 12 }}>
+                            {group.outcome_title || "General indicators"}
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                            <span style={{ fontSize: 12,
+                              color: isOpen ? "rgba(255,255,255,0.65)" : TEXT_MUTED }}>
+                              {group.indicators.length} indicator{group.indicators.length !== 1 ? "s" : ""}
+                            </span>
+                            <span style={{ fontSize: 14,
+                              color: isOpen ? "#FFFFFF" : TEXT_MUTED,
+                              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                              transition: "transform 0.2s", display: "inline-block" }}>▾</span>
+                          </div>
+                        </div>
+
+                        {/* Accordion body */}
+                        {isOpen && (
+                          <div style={{ border: `1px solid ${BRAND}`, borderTop: "none",
+                            borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
+                            {group.indicators.map((ind, idx) => {
+                              const isSelected = indicatorId === ind.indicator_id;
+                              return (
+                                <div key={ind.indicator_id}
+                                  style={{ borderTop: idx > 0 ? `1px solid ${BORDER}` : "none" }}>
+
+                                  {/* Indicator row */}
+                                  <div
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setIndicatorId("");
+                                        setValue(""); setPeriod(""); setSource("");
+                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
+                                      } else {
+                                        setIndicatorId(ind.indicator_id);
+                                        setValue(""); setPeriod(""); setSource("");
+                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
+                                      }
+                                    }}
+                                    style={{ padding: "12px 16px", cursor: "pointer",
+                                      background: isSelected ? ACCENT_LIGHT : SURFACE,
+                                      transition: "background 0.15s" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between",
+                                      alignItems: "flex-start" }}>
+                                      <p style={{ fontSize: 14, fontWeight: 600, color: TEXT,
+                                        marginBottom: 4, flex: 1, marginRight: 8, lineHeight: 1.4 }}>
+                                        {ind.text}
+                                      </p>
+                                      <span style={{ fontSize: 13, flexShrink: 0,
+                                        color: isSelected ? ACCENT : TEXT_MUTED, fontWeight: 700 }}>
+                                        {isSelected ? "▲" : "▼"}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 10, fontSize: 12,
+                                      color: TEXT_MUTED, flexWrap: "wrap" }}>
+                                      {ind.unit && (
+                                        <span style={{ background: ACCENT_LIGHT, color: ACCENT,
+                                          borderRadius: 4, padding: "1px 7px", fontWeight: 700 }}>
+                                          {ind.unit}
+                                        </span>
+                                      )}
+                                      {ind.data_source && <span>Source: {ind.data_source}</span>}
+                                      {ind.collection_frequency && (
+                                        <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
+                                      )}
+                                    </div>
                                   </div>
 
-                                  {indicatorActuals.length > 0 && (
-                                    <>
-                                      <SectionLabel>Actuals on record</SectionLabel>
-                                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                                        {indicatorActuals.map((a, idx) => (
-                                          <span key={idx} style={{ background: SUCCESS_BG, borderRadius: 6,
-                                            padding: "3px 10px", fontSize: 12, color: SUCCESS, fontWeight: 700 }}>
-                                            {a.period ? `${a.period} ` : ""}{a.year}: {a.actual_value}
-                                          </span>
-                                        ))}
+                                  {/* Expanded submit panel */}
+                                  {isSelected && (
+                                    <div className="fade-in" style={{ padding: "20px 20px 24px",
+                                      background: "#FAFAF8",
+                                      borderTop: `2px solid ${ACCENT_MID}` }}>
+
+                                      <SectionLabel>
+                                        Targets & baseline{ind.unit ? ` (${ind.unit})` : ""}
+                                      </SectionLabel>
+                                      <div style={{ overflowX: "auto", marginBottom: 14 }}>
+                                        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
+                                          <thead>
+                                            <tr>
+                                              {["Baseline", "2026", "2027", "2028", "2029", "2030"].map(h => (
+                                                <th key={h} style={{ padding: "4px 10px", textAlign: "right",
+                                                  color: TEXT_MUTED, fontWeight: 700, whiteSpace: "nowrap",
+                                                  borderBottom: `1px solid ${BORDER}` }}>{h}</th>
+                                              ))}
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            <tr>
+                                              {[ind.baseline, ind.target_2026, ind.target_2027,
+                                                ind.target_2028, ind.target_2029, ind.target_2030].map((v, vi) => (
+                                                <td key={vi} style={{ padding: "6px 10px", textAlign: "right",
+                                                  color: v != null ? TEXT : TEXT_MUTED,
+                                                  fontWeight: v != null ? 700 : 400 }}>
+                                                  {v != null ? v : "—"}
+                                                </td>
+                                              ))}
+                                            </tr>
+                                          </tbody>
+                                        </table>
                                       </div>
-                                    </>
-                                  )}
 
-                                  <ContextPill context={indicatorContext} />
+                                      {indicatorActuals.length > 0 && (
+                                        <>
+                                          <SectionLabel>Actuals on record</SectionLabel>
+                                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                                            {indicatorActuals.map((a, ai) => (
+                                              <span key={ai} style={{ background: SUCCESS_BG, borderRadius: 6,
+                                                padding: "3px 10px", fontSize: 12,
+                                                color: SUCCESS, fontWeight: 700 }}>
+                                                {a.period ? `${a.period} ` : ""}{a.year}: {a.actual_value}
+                                                {ind.unit ? ` ${ind.unit}` : ""}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </>
+                                      )}
+
+                                      <ContextPill context={indicatorContext} />
+
+                                      <Divider />
+
+                                      <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 18 }}>
+                                        Submit new value
+                                      </p>
+
+                                      <Field label={ind.unit ? `Value (${ind.unit})` : "Value"} required>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                          <input type="number" value={value}
+                                            onChange={e => setValue(e.target.value)}
+                                            placeholder="Enter the data value"
+                                            style={{ ...inputStyle, flex: 1 }} />
+                                          {ind.unit && (
+                                            <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
+                                              background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
+                                              border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
+                                              {ind.unit}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </Field>
+
+                                      {periodOptions.length > 0 && (
+                                        <Select label="Reporting period" value={period} onChange={setPeriod}
+                                          options={periodOptions.map(p => ({ value: p, label: p }))} required />
+                                      )}
+
+                                      <Input label="When was this data collected or published?" type="date"
+                                        value={readingDate} onChange={setReadingDate} required
+                                        helper="Use today's date if collected just now, or the date from the source." />
+
+                                      <Input label="Source" value={source} onChange={setSource}
+                                        placeholder="e.g. Q1 2026 partner report, CSGA dashboard, conversation with..."
+                                        required helper="Include enough detail for the reviewer to verify." />
+
+                                      <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
+                                        placeholder="https://..."
+                                        helper="Have a report or deck? Upload to SharePoint first, then paste the link here." />
+
+                                      <Field label="Additional notes">
+                                        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                                          placeholder="Any caveats, methodology notes, or context the reviewer should know..."
+                                          rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                                      </Field>
+
+                                      {error && (
+                                        <p style={{ color: DANGER, fontSize: 13, marginBottom: 12 }}>{error}</p>
+                                      )}
+
+                                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                        <Btn onClick={submit} disabled={!canSubmit || submitting}>
+                                          {submitting ? "Submitting..." : "Submit for review"}
+                                        </Btn>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ));
+                    );
+                  });
                 })()}
+
+                <div style={{ marginTop: 16 }}>
+                  <Btn variant="secondary" onClick={() => setStep(1)}>Back</Btn>
+                </div>
               </>
             )}
-
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <Btn variant="secondary" onClick={() => setStep(1)}>Back</Btn>
-              <Btn onClick={() => setStep(3)} disabled={!canAdvance2}>Continue</Btn>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 3 ── */}
-        {step === 3 && (
-          <div className="fade-in">
-            {/* Context breadcrumb */}
-            {selectedIndicator && (
-              <div style={{ padding: "10px 14px", background: BG, borderRadius: 7,
-                border: `1px solid ${BORDER}`, marginBottom: 24 }}>
-                {selectedBow && <PortfolioPill portfolioId={selectedBow.portfolio_id}
-                  style={{ marginBottom: 6, display: "inline-block" }} />}
-                <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.4 }}>
-                  {selectedIndicator.text}
-                </p>
-                {(indicatorContext?.assumption_count > 0 || indicatorContext?.decision_count > 0) && (
-                  <div style={{ marginTop: 6 }}>
-                    <ContextPill context={indicatorContext} />
-                  </div>
-                )}
-              </div>
-            )}
-
-            <Field label={selectedIndicator?.unit ? `Value (${selectedIndicator.unit})` : "Value"} required>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="number" value={value} onChange={e => setValue(e.target.value)}
-                  placeholder="Enter the data value"
-                  style={{ ...inputStyle, flex: 1 }} />
-                {selectedIndicator?.unit && (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
-                    background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
-                    border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
-                    {selectedIndicator.unit}
-                  </span>
-                )}
-              </div>
-            </Field>
-
-            {periodOptions.length > 0 && (
-              <Select label="Reporting period" value={period} onChange={setPeriod}
-                options={periodOptions.map(p => ({ value: p, label: p }))} required />
-            )}
-
-            <Input label="When was this data collected or published?" type="date"
-              value={readingDate} onChange={setReadingDate} required
-              helper="Use today's date if you collected it just now. Otherwise use the date from the source — a report, dashboard export, or partner conversation." />
-
-            <Input label="Source" value={source} onChange={setSource}
-              placeholder="e.g. Q1 2026 partner report, CSGA dashboard, conversation with..."
-              required helper="Include enough detail for the reviewer to verify this data." />
-
-            <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
-              placeholder="https://..."
-              helper="Have a report, PDF, or deck? Upload it to your team's SharePoint folder first, then paste the link here." />
-
-            <Field label="Additional notes">
-              <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                placeholder="Any caveats, methodology notes, or context the reviewer should know..."
-                rows={3} style={{ ...inputStyle, resize: "vertical" }} />
-            </Field>
-
-            {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 12 }}>{error}</p>}
-
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <Btn variant="secondary" onClick={() => setStep(2)}>Back</Btn>
-              <Btn onClick={submit} disabled={!canSubmit || submitting}>
-                {submitting ? "Submitting..." : "Submit for review"}
-              </Btn>
-            </div>
           </div>
         )}
       </Card>
@@ -880,8 +959,9 @@ function MySubmissions({ submissions, loading, indicators }) {
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
-function ReviewQueue({ queue, loading, onRefresh, indicators }) {
+function ReviewQueue({ queue, loading, onRefresh, indicators, bows }) {
   const indicatorMap = Object.fromEntries((indicators || []).map(i => [i.indicator_id, i]));
+  const bowMap       = Object.fromEntries((bows || []).map(b => [b.bow_id, b]));
   const [rejectId, setRejectId]       = useState(null);
   const [rejectNotes, setRejectNotes] = useState("");
   const [editId, setEditId]           = useState(null);
@@ -951,13 +1031,20 @@ function ReviewQueue({ queue, loading, onRefresh, indicators }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {queue.map(s => {
           const ind    = indicatorMap[s.indicator_id];
-          const portId = ind?.portfolio_id;
+          const portId = ind?.portfolio_id || (s.level === "portfolio" ? s.entity_id : null);
+          const bow    = ind?.bow_id ? bowMap[ind.bow_id] : null;
           return (
             <Card key={s.pending_id} className="fade-in" style={{ padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between",
                 alignItems: "flex-start", marginBottom: 14 }}>
                 <div style={{ flex: 1, marginRight: 16 }}>
                   {portId && <PortfolioPill portfolioId={portId} style={{ marginBottom: 6 }} />}
+                  {bow && (
+                    <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                      textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
+                      {bow.title}
+                    </p>
+                  )}
                   <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 3, lineHeight: 1.4 }}>
                     {ind?.text || `${s.level?.toUpperCase()} — ${s.entity_id}`}
                   </p>
@@ -1175,7 +1262,7 @@ function PortalApp() {
               <Btn variant="secondary" size="sm" onClick={loadQueue}>Refresh</Btn>
             </div>
             <ReviewQueue queue={queue} loading={loadingQueue}
-              onRefresh={loadQueue} indicators={indicators} />
+              onRefresh={loadQueue} indicators={indicators} bows={bows} />
           </>
         )}
       </div>
