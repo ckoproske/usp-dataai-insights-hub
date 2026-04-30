@@ -527,10 +527,12 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                     groups[groups.findIndex(g => g.outcome_id === key)].indicators.push(ind);
                   });
 
-                  return groups.map(group => {
+                  return groups.map((group, gi) => {
                     const isOpen = openOutcomeId === group.outcome_id;
+                    const outcomeNum = `O${gi + 1}`;
+                    const hasSelected = group.indicators.some(i => i.indicator_id === indicatorId);
                     return (
-                      <div key={group.outcome_id} style={{ marginBottom: 8 }}>
+                      <div key={group.outcome_id} style={{ marginBottom: 16 }}>
                         {/* Accordion header */}
                         <div
                           onClick={() => {
@@ -539,24 +541,39 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                             setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes("");
                             setReadingDate(TODAY);
                           }}
-                          style={{ display: "flex", alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "11px 14px",
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "13px 16px",
                             borderRadius: isOpen ? "8px 8px 0 0" : 8,
-                            background: isOpen ? BRAND : SURFACE,
+                            background: isOpen ? BRAND : BG,
                             border: `1px solid ${isOpen ? BRAND : BORDER}`,
+                            borderLeft: isOpen ? `4px solid ${ACCENT}` : `4px solid ${BORDER}`,
                             cursor: "pointer", userSelect: "none",
                             transition: "background 0.15s, border-color 0.15s" }}>
-                          <span style={{ fontSize: 13, fontWeight: 700,
-                            color: isOpen ? "#FFFFFF" : TEXT, lineHeight: 1.4, flex: 1, marginRight: 12 }}>
-                            {group.outcome_title || "General indicators"}
-                          </span>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flex: 1, marginRight: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                              color: isOpen ? ACCENT : TEXT_MUTED,
+                              background: isOpen ? "rgba(248,92,2,0.15)" : SURFACE,
+                              borderRadius: 4, padding: "2px 7px", flexShrink: 0, marginTop: 1 }}>
+                              {outcomeNum}
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.45,
+                              color: isOpen ? "#FFFFFF" : TEXT }}>
+                              {group.outcome_title || "General indicators"}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                            {hasSelected && !isOpen && (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: SUCCESS,
+                                background: SUCCESS_BG, borderRadius: 10, padding: "2px 8px" }}>
+                                Selected
+                              </span>
+                            )}
                             <span style={{ fontSize: 12,
-                              color: isOpen ? "rgba(255,255,255,0.65)" : TEXT_MUTED }}>
+                              color: isOpen ? "rgba(255,255,255,0.6)" : TEXT_MUTED }}>
                               {group.indicators.length} indicator{group.indicators.length !== 1 ? "s" : ""}
                             </span>
-                            <span style={{ fontSize: 14,
+                            <span style={{ fontSize: 13,
                               color: isOpen ? "#FFFFFF" : TEXT_MUTED,
                               transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
                               transition: "transform 0.2s", display: "inline-block" }}>▾</span>
@@ -565,8 +582,9 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
 
                         {/* Accordion body */}
                         {isOpen && (
-                          <div style={{ border: `1px solid ${BRAND}`, borderTop: "none",
-                            borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
+                          <div style={{ border: `1px solid ${BRAND}`, borderLeft: `4px solid ${ACCENT}`,
+                            borderTop: "none", borderRadius: "0 0 8px 8px", overflow: "hidden",
+                            background: SURFACE }}>
                             {group.indicators.map((ind, idx) => {
                               const isSelected = indicatorId === ind.indicator_id;
                               return (
@@ -578,37 +596,53 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                       setValue(""); setPeriod(""); setSource("");
                                       setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
                                     }}
-                                    style={{ padding: "12px 16px", cursor: "pointer",
+                                    style={{ padding: "14px 18px", cursor: "pointer",
                                       background: isSelected ? ACCENT_LIGHT : SURFACE,
                                       transition: "background 0.15s",
                                       display: "flex", justifyContent: "space-between",
-                                      alignItems: "flex-start" }}>
-                                    <div style={{ flex: 1, marginRight: 12 }}>
-                                      <p style={{ fontSize: 14, fontWeight: 600, color: TEXT,
-                                        marginBottom: 4, lineHeight: 1.4 }}>
+                                      alignItems: "center" }}>
+                                    <div style={{ flex: 1, marginRight: 16 }}>
+                                      {/* Line 1: indicator text */}
+                                      <p style={{ fontSize: 14, fontWeight: 600, color: isSelected ? BRAND : TEXT,
+                                        marginBottom: 8, lineHeight: 1.4 }}>
                                         {ind.text}
                                       </p>
-                                      <div style={{ display: "flex", gap: 10, fontSize: 12,
-                                        color: TEXT_MUTED, flexWrap: "wrap" }}>
+                                      {/* Line 2: metadata pills */}
+                                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                                         {ind.unit && (
-                                          <span style={{ background: ACCENT_LIGHT, color: ACCENT,
-                                            borderRadius: 4, padding: "1px 7px", fontWeight: 700 }}>
+                                          <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT,
+                                            background: ACCENT_LIGHT, borderRadius: 4, padding: "2px 8px" }}>
                                             {ind.unit}
                                           </span>
                                         )}
-                                        {ind.data_source && <span>Source: {ind.data_source}</span>}
                                         {ind.collection_frequency && (
-                                          <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
+                                          <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SUB,
+                                            background: BG, borderRadius: 4, padding: "2px 8px",
+                                            border: `1px solid ${BORDER}`, textTransform: "capitalize" }}>
+                                            {ind.collection_frequency}
+                                          </span>
+                                        )}
+                                        {ind.target_2026 != null && (
+                                          <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SUB,
+                                            background: BG, borderRadius: 4, padding: "2px 8px",
+                                            border: `1px solid ${BORDER}` }}>
+                                            2026 target: <strong style={{ color: TEXT }}>{ind.target_2026}{ind.unit ? ` ${ind.unit}` : ""}</strong>
+                                          </span>
+                                        )}
+                                        {ind.data_source && (
+                                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                                            {ind.data_source}
+                                          </span>
                                         )}
                                       </div>
                                     </div>
                                     {isSelected ? (
-                                      <div style={{ width: 22, height: 22, borderRadius: "50%",
+                                      <div style={{ width: 24, height: 24, borderRadius: "50%",
                                         background: ACCENT, flexShrink: 0,
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: 11, color: SURFACE, fontWeight: 700 }}>✓</div>
+                                        fontSize: 12, color: SURFACE, fontWeight: 700 }}>✓</div>
                                     ) : (
-                                      <div style={{ width: 22, height: 22, borderRadius: "50%",
+                                      <div style={{ width: 24, height: 24, borderRadius: "50%",
                                         border: `2px solid ${BORDER}`, flexShrink: 0 }} />
                                     )}
                                   </div>
