@@ -828,12 +828,15 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
               value={readingDate} onChange={setReadingDate} required
               helper="Use today's date if collected just now, or the date from the source." />
 
+            <Input label="Source name" value={sourceName} onChange={setSourceName}
+              placeholder="e.g. Q1 2026 Partner Report, CSGA Dashboard, Cohort 3 Baseline Survey..."
+              required helper="Name the specific report, dataset, or document this data comes from." />
             <Select label="Source type" value={sourceType} onChange={setSourceType}
               options={SOURCE_TYPES} required
-              helper="What kind of source is this data from?" />
+              helper="What kind of source is this?" />
             {sourceType === "other" && (
               <Input label="Describe the source" value={sourceOther} onChange={setSourceOther}
-                placeholder="Briefly describe the source..." required />
+                placeholder="Briefly describe the source..." />
             )}
             <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
               placeholder="https://..."
