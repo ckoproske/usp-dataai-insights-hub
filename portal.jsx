@@ -53,7 +53,20 @@ const INSIGHT_TYPES = [
   { value: "general_note",      label: "General note" },
 ];
 
-const TODAY = new Date().toISOString().split("T")[0];
+const TODAY       = new Date().toISOString().split("T")[0];
+const CURRENT_YEAR = new Date().getFullYear();
+
+// Returns the most relevant target for the current period: current year first,
+// then next year, then the nearest year that has a value.
+function getRelevantTarget(ind) {
+  const candidates = [CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR - 1,
+                      CURRENT_YEAR + 2, CURRENT_YEAR - 2];
+  for (const y of candidates) {
+    const val = ind[`target_${y}`];
+    if (val != null) return { year: y, value: val };
+  }
+  return null;
+}
 
 // Inject brand font + animations once
 const STYLE = `
@@ -608,33 +621,46 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                         {ind.text}
                                       </p>
                                       {/* Line 2: metadata pills */}
-                                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                                        {ind.unit && (
-                                          <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT,
-                                            background: ACCENT_LIGHT, borderRadius: 4, padding: "2px 8px" }}>
-                                            {ind.unit}
-                                          </span>
-                                        )}
-                                        {ind.collection_frequency && (
-                                          <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SUB,
-                                            background: BG, borderRadius: 4, padding: "2px 8px",
-                                            border: `1px solid ${BORDER}`, textTransform: "capitalize" }}>
-                                            {ind.collection_frequency}
-                                          </span>
-                                        )}
-                                        {ind.target_2026 != null && (
-                                          <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SUB,
-                                            background: BG, borderRadius: 4, padding: "2px 8px",
-                                            border: `1px solid ${BORDER}` }}>
-                                            2026 target: <strong style={{ color: TEXT }}>{ind.target_2026}{ind.unit ? ` ${ind.unit}` : ""}</strong>
-                                          </span>
-                                        )}
-                                        {ind.data_source && (
-                                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                                            {ind.data_source}
-                                          </span>
-                                        )}
-                                      </div>
+                                      {(() => {
+                                        const target = getRelevantTarget(ind);
+                                        return (
+                                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                                            {ind.unit && (
+                                              <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT,
+                                                background: ACCENT_LIGHT, borderRadius: 4, padding: "2px 8px" }}>
+                                                {ind.unit}
+                                              </span>
+                                            )}
+                                            {ind.collection_frequency && (
+                                              <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SUB,
+                                                background: BG, borderRadius: 4, padding: "2px 8px",
+                                                border: `1px solid ${BORDER}`, textTransform: "capitalize" }}>
+                                                {ind.collection_frequency}
+                                              </span>
+                                            )}
+                                            {target ? (
+                                              <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SUB,
+                                                background: BG, borderRadius: 4, padding: "2px 8px",
+                                                border: `1px solid ${BORDER}` }}>
+                                                {target.year} target:{" "}
+                                                <strong style={{ color: TEXT }}>
+                                                  {target.value}{ind.unit ? ` ${ind.unit}` : ""}
+                                                </strong>
+                                              </span>
+                                            ) : (
+                                              <span style={{ fontSize: 11, color: TEXT_MUTED,
+                                                fontStyle: "italic" }}>
+                                                No target set
+                                              </span>
+                                            )}
+                                            {ind.data_source && (
+                                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                                                {ind.data_source}
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                     {isSelected ? (
                                       <div style={{ width: 24, height: 24, borderRadius: "50%",
