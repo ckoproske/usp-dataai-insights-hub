@@ -295,6 +295,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
   const [value, setValue]                     = useState("");
   const [period, setPeriod]                   = useState("");
   const [readingDate, setReadingDate]         = useState(TODAY);
+  const [sourceName, setSourceName]           = useState("");
   const [sourceType, setSourceType]           = useState("");
   const [sourceOther, setSourceOther]         = useState("");
   const [sourceUrl, setSourceUrl]             = useState("");
@@ -340,25 +341,29 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
 
   const canAdvance1 = level && entityId && (level !== "bow" || portfolioFilter);
   const activeUnit  = selectedIndicator?.unit || unitOverride;
-  const canSubmit   = value && sourceType && readingDate && (periodOptions.length === 0 || period)
+  const canSubmit   = value && sourceName.trim() && sourceType && readingDate
+                      && (periodOptions.length === 0 || period)
                       && (!selectedIndicator || selectedIndicator.unit || unitOverride);
 
   const reset = () => {
     setStep(1); setLevel(""); setPortfolioFilter(""); setEntityId("");
     setIndicatorSearch(""); setOpenOutcomeId(null); setIndicatorId("");
     setIndicatorContext(null); setIndicatorActuals([]);
-    setValue(""); setPeriod(""); setSourceType(""); setSourceOther(""); setSourceUrl("");
-    setNotes(""); setUnitOverride("");
+    setValue(""); setPeriod(""); setSourceName(""); setSourceType(""); setSourceOther("");
+    setSourceUrl(""); setNotes(""); setUnitOverride("");
     setReadingDate(TODAY); setSubmitted(false); setError(null);
   };
 
   const submit = async () => {
     setSubmitting(true); setError(null);
     try {
-      const sourceLabel = sourceType === "other"
+      const typeLabel  = sourceType === "other"
         ? (sourceOther.trim() || "Other")
         : SOURCE_TYPES.find(t => t.value === sourceType)?.label || sourceType;
-      const sourceText = [sourceLabel, sourceUrl ? `Link: ${sourceUrl}` : ""].filter(Boolean).join(" — ");
+      const sourceText = [
+        `${sourceName.trim()} · ${typeLabel}`,
+        sourceUrl ? `Link: ${sourceUrl}` : "",
+      ].filter(Boolean).join(" — ");
       await api("/api/pending-actuals/submit", {
         method: "POST",
         body: JSON.stringify({
@@ -502,12 +507,15 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                 <Input label="When was this data collected or published?" type="date"
                   value={readingDate} onChange={setReadingDate} required
                   helper="Use today's date if you collected it just now. Otherwise use the date from the source." />
+                <Input label="Source name" value={sourceName} onChange={setSourceName}
+                  placeholder="e.g. Q1 2026 Partner Report, CSGA Dashboard, Cohort 3 Baseline Survey..."
+                  required helper="Name the specific report, dataset, or document this data comes from." />
                 <Select label="Source type" value={sourceType} onChange={setSourceType}
                   options={SOURCE_TYPES} required
-                  helper="What kind of source is this data from?" />
+                  helper="What kind of source is this?" />
                 {sourceType === "other" && (
                   <Input label="Describe the source" value={sourceOther} onChange={setSourceOther}
-                    placeholder="Briefly describe the source..." required />
+                    placeholder="Briefly describe the source..." />
                 )}
                 <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
                   placeholder="https://..."
@@ -571,8 +579,8 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                           onClick={() => {
                             setOpenOutcomeId(isOpen ? null : group.outcome_id);
                             setIndicatorId("");
-                            setValue(""); setPeriod(""); setSourceType(""); setSourceOther("");
-                            setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
+                            setValue(""); setPeriod(""); setSourceName(""); setSourceType("");
+                            setSourceOther(""); setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
                           }}
                           style={{
                             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -626,8 +634,9 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                   <div
                                     onClick={() => {
                                       setIndicatorId(isSelected ? "" : ind.indicator_id);
-                                      setValue(""); setPeriod(""); setSourceType(""); setSourceOther("");
-                                      setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
+                                      setValue(""); setPeriod(""); setSourceName(""); setSourceType("");
+                                      setSourceOther(""); setSourceUrl(""); setNotes("");
+                                      setReadingDate(TODAY); setUnitOverride("");
                                     }}
                                     style={{ padding: "14px 18px", cursor: "pointer",
                                       background: isSelected ? ACCENT_LIGHT : SURFACE,
@@ -1065,28 +1074,40 @@ function MySubmissions({ submissions, loading, indicators }) {
   );
 }
 
-// Parses stored source_notes ("Label — Link: https://...") into { label, url }
+// Parses stored source_notes into { name, typeLabel, url }
+// New format: "Source Name · Type Label — Link: https://..."
+// Legacy format (free text or "Type Label — Link: ...") falls back gracefully
 function parseSourceNotes(text) {
-  if (!text) return { label: null, url: null };
+  if (!text) return { name: null, typeLabel: null, url: null };
   const linkMatch = text.match(/ — Link: (https?:\/\/\S+)/);
-  const url   = linkMatch ? linkMatch[1].replace(/[.,;)]+$/, "") : null;
-  const label = url ? text.replace(/ — Link:.*$/, "").trim() : text.trim();
-  return { label: label || null, url };
+  const url  = linkMatch ? linkMatch[1].replace(/[.,;)]+$/, "") : null;
+  const body = (url ? text.replace(/ — Link:.*$/, "") : text).trim();
+  const dotIdx = body.indexOf(" · ");
+  if (dotIdx !== -1) {
+    return { name: body.slice(0, dotIdx).trim(), typeLabel: body.slice(dotIdx + 3).trim(), url };
+  }
+  return { name: body || null, typeLabel: null, url };
 }
 
-// Renders source_notes as a hyperlink (if URL present) or plain text
+// Renders the source name as a hyperlink when a URL is present, with type label below
 function renderSourceNotes(text) {
-  const { label, url } = parseSourceNotes(text);
-  if (!label) return "—";
-  if (url) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer"
-        style={{ color: ACCENT, fontWeight: 600, textDecoration: "underline" }}>
-        {label}
-      </a>
-    );
-  }
-  return label;
+  const { name, typeLabel, url } = parseSourceNotes(text);
+  if (!name) return "—";
+  return (
+    <span>
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          style={{ color: ACCENT, fontWeight: 600, textDecoration: "underline" }}>
+          {name}
+        </a>
+      ) : (
+        <span style={{ fontWeight: 600, color: TEXT }}>{name}</span>
+      )}
+      {typeLabel && (
+        <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>({typeLabel})</span>
+      )}
+    </span>
+  );
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
@@ -1223,8 +1244,25 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows, user }) {
                   <p style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{s.reading_date || "—"}</p>
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>Source</p>
-                  <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.5 }}>{renderSourceNotes(s.source_notes)}</p>
+                  {(() => {
+                    const { name, typeLabel, url } = parseSourceNotes(s.source_notes);
+                    return (
+                      <>
+                        <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>Source</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: typeLabel ? 2 : 0 }}>
+                          {url ? (
+                            <a href={url} target="_blank" rel="noopener noreferrer"
+                              style={{ color: ACCENT, textDecoration: "underline" }}>
+                              {name || "—"}
+                            </a>
+                          ) : (name || "—")}
+                        </p>
+                        {typeLabel && (
+                          <p style={{ fontSize: 11, color: TEXT_MUTED }}>{typeLabel}</p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 {s.notes && (
                   <div style={{ gridColumn: "1 / -1" }}>
