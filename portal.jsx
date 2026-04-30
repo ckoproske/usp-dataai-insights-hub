@@ -1490,7 +1490,7 @@ function PortalApp() {
           <>
             <div style={{ marginBottom: 28 }}>
               <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
-                Submit an indicator actual
+                Submit New Data
               </h1>
               <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
                 Submit a data point for review by the MLE team. Once approved, it will
