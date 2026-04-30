@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 from databricks import sql
-import os, uuid
+import os, uuid, datetime
 
 app = Flask(__name__)
 
@@ -1109,6 +1109,67 @@ def reject_actual(pending_id):
         [data.get("reviewer_notes"), reviewed_by, pending_id]
     )
     return jsonify({"status": "ok"})
+
+
+@app.route("/api/indicators/<indicator_id>/context")
+def get_indicator_context(indicator_id):
+    """Returns count of assumptions and decisions linked to an indicator — shown in portal Step 2."""
+    try:
+        rows = query(
+            f"""SELECT
+                  (SELECT COUNT(*) FROM {SCHEMA}.assumption_indicator_links
+                   WHERE indicator_id = ?) AS assumption_count,
+                  (SELECT COUNT(DISTINCT dal.decision_id)
+                   FROM {SCHEMA}.assumption_indicator_links ail
+                   JOIN {SCHEMA}.decision_assumption_links dal
+                     ON ail.assumption_id = dal.assumption_id
+                   WHERE ail.indicator_id = ?) AS decision_count""",
+            [indicator_id, indicator_id]
+        )
+        return jsonify(rows[0] if rows else {"assumption_count": 0, "decision_count": 0})
+    except Exception:
+        return jsonify({"assumption_count": 0, "decision_count": 0})
+
+@app.route("/api/insights/submit", methods=["POST"])
+def submit_insight():
+    """Submit a qualitative insight directly to bow_notes (no review queue)."""
+    data = request.json
+    current_user_row = query("SELECT current_user() AS user")
+    email = current_user_row[0]["user"] if current_user_row else "unknown"
+    member = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    submitted_by = member[0]["display_name"] if member else (email or "unknown")
+
+    type_labels = {
+        "field_observation": "Field observation",
+        "partner_update":    "Partner update",
+        "market_signal":     "Market signal",
+        "risk_concern":      "Risk / concern",
+        "general_note":      "General note",
+    }
+    label       = type_labels.get(data.get("insight_type", ""), data.get("insight_type", "Insight"))
+    description = data.get("description", "")
+    source      = data.get("source", "")
+    insight_date = data.get("insight_date", "")
+    bow_id      = data["bow_id"]
+    year        = int(data.get("year", datetime.date.today().year))
+
+    note_text = f"[{label}] {description}"
+    if source:
+        note_text += f"\nSource: {source}"
+    if insight_date:
+        note_text += f"\nDate: {insight_date}"
+    note_text += f"\nSubmitted by: {submitted_by}"
+
+    execute(
+        f"""INSERT INTO {SCHEMA}.bow_notes
+            (note_id, bow_id, outcome_id, year, note_text, last_updated, updated_by)
+            VALUES (?, ?, NULL, ?, ?, current_timestamp(), ?)""",
+        [new_id(), bow_id, year, note_text, submitted_by]
+    )
+    return jsonify({"status": "ok", "submitted_by": submitted_by})
 
 
 # ═════════════════════════════════════════════════════════════════════════════
