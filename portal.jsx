@@ -32,6 +32,17 @@ const PERIOD_OPTIONS = {
   monthly:   ["M01","M02","M03","M04","M05","M06","M07","M08","M09","M10","M11","M12"],
 };
 
+const SOURCE_TYPES = [
+  { value: "public_report",        label: "Public Report" },
+  { value: "grantee_deliverable",  label: "Grantee Deliverable" },
+  { value: "administrative_data",  label: "Administrative Data" },
+  { value: "internal_spreadsheet", label: "Internal Spreadsheet / Tracker" },
+  { value: "dashboard_system",     label: "Dashboard / Data System" },
+  { value: "evaluation",           label: "Evaluation" },
+  { value: "methodology_docs",     label: "Methodology / Technical Documentation" },
+  { value: "other",                label: "Other" },
+];
+
 const UNIT_OPTIONS = [
   { value: "#",         label: "# (count)" },
   { value: "%",         label: "% (percent)" },
@@ -284,7 +295,8 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
   const [value, setValue]                     = useState("");
   const [period, setPeriod]                   = useState("");
   const [readingDate, setReadingDate]         = useState(TODAY);
-  const [source, setSource]                   = useState("");
+  const [sourceType, setSourceType]           = useState("");
+  const [sourceOther, setSourceOther]         = useState("");
   const [sourceUrl, setSourceUrl]             = useState("");
   const [notes, setNotes]                     = useState("");
   const [unitOverride, setUnitOverride]       = useState("");
@@ -328,21 +340,25 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
 
   const canAdvance1 = level && entityId && (level !== "bow" || portfolioFilter);
   const activeUnit  = selectedIndicator?.unit || unitOverride;
-  const canSubmit   = value && source && readingDate && (periodOptions.length === 0 || period)
+  const canSubmit   = value && sourceType && readingDate && (periodOptions.length === 0 || period)
                       && (!selectedIndicator || selectedIndicator.unit || unitOverride);
 
   const reset = () => {
     setStep(1); setLevel(""); setPortfolioFilter(""); setEntityId("");
     setIndicatorSearch(""); setOpenOutcomeId(null); setIndicatorId("");
     setIndicatorContext(null); setIndicatorActuals([]);
-    setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes(""); setUnitOverride("");
+    setValue(""); setPeriod(""); setSourceType(""); setSourceOther(""); setSourceUrl("");
+    setNotes(""); setUnitOverride("");
     setReadingDate(TODAY); setSubmitted(false); setError(null);
   };
 
   const submit = async () => {
     setSubmitting(true); setError(null);
     try {
-      const sourceText = [source, sourceUrl ? `Link: ${sourceUrl}` : ""].filter(Boolean).join(" — ");
+      const sourceLabel = sourceType === "other"
+        ? (sourceOther.trim() || "Other")
+        : SOURCE_TYPES.find(t => t.value === sourceType)?.label || sourceType;
+      const sourceText = [sourceLabel, sourceUrl ? `Link: ${sourceUrl}` : ""].filter(Boolean).join(" — ");
       await api("/api/pending-actuals/submit", {
         method: "POST",
         body: JSON.stringify({
@@ -486,9 +502,13 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                 <Input label="When was this data collected or published?" type="date"
                   value={readingDate} onChange={setReadingDate} required
                   helper="Use today's date if you collected it just now. Otherwise use the date from the source." />
-                <Input label="Source" value={source} onChange={setSource}
-                  placeholder="e.g. Q1 2026 partner report, CSGA dashboard..." required
-                  helper="Include enough detail for the reviewer to verify this data." />
+                <Select label="Source type" value={sourceType} onChange={setSourceType}
+                  options={SOURCE_TYPES} required
+                  helper="What kind of source is this data from?" />
+                {sourceType === "other" && (
+                  <Input label="Describe the source" value={sourceOther} onChange={setSourceOther}
+                    placeholder="Briefly describe the source..." required />
+                )}
                 <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
                   placeholder="https://..."
                   helper="Have a report or deck? Upload to SharePoint first, then paste the link here." />
@@ -551,8 +571,8 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                           onClick={() => {
                             setOpenOutcomeId(isOpen ? null : group.outcome_id);
                             setIndicatorId("");
-                            setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes("");
-                            setReadingDate(TODAY);
+                            setValue(""); setPeriod(""); setSourceType(""); setSourceOther("");
+                            setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
                           }}
                           style={{
                             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -606,7 +626,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                   <div
                                     onClick={() => {
                                       setIndicatorId(isSelected ? "" : ind.indicator_id);
-                                      setValue(""); setPeriod(""); setSource("");
+                                      setValue(""); setPeriod(""); setSourceType(""); setSourceOther("");
                                       setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
                                     }}
                                     style={{ padding: "14px 18px", cursor: "pointer",
@@ -799,10 +819,13 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
               value={readingDate} onChange={setReadingDate} required
               helper="Use today's date if collected just now, or the date from the source." />
 
-            <Input label="Source" value={source} onChange={setSource}
-              placeholder="e.g. Q1 2026 partner report, CSGA dashboard, conversation with..."
-              required helper="Include enough detail for the reviewer to verify." />
-
+            <Select label="Source type" value={sourceType} onChange={setSourceType}
+              options={SOURCE_TYPES} required
+              helper="What kind of source is this data from?" />
+            {sourceType === "other" && (
+              <Input label="Describe the source" value={sourceOther} onChange={setSourceOther}
+                placeholder="Briefly describe the source..." required />
+            )}
             <Input label="Source link" value={sourceUrl} onChange={setSourceUrl}
               placeholder="https://..."
               helper="Have a report or deck? Upload to SharePoint first, then paste the link here." />
@@ -1014,7 +1037,7 @@ function MySubmissions({ submissions, loading, indicators }) {
               </div>
               {s.source_notes && (
                 <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 3 }}>
-                  Source: {s.source_notes}
+                  Source: {renderSourceNotes(s.source_notes)}
                 </p>
               )}
               {s.status === "rejected" && s.reviewer_notes && (
@@ -1042,25 +1065,28 @@ function MySubmissions({ submissions, loading, indicators }) {
   );
 }
 
-// Parses source_notes text and turns any URLs into clickable links
+// Parses stored source_notes ("Label — Link: https://...") into { label, url }
+function parseSourceNotes(text) {
+  if (!text) return { label: null, url: null };
+  const linkMatch = text.match(/ — Link: (https?:\/\/\S+)/);
+  const url   = linkMatch ? linkMatch[1].replace(/[.,;)]+$/, "") : null;
+  const label = url ? text.replace(/ — Link:.*$/, "").trim() : text.trim();
+  return { label: label || null, url };
+}
+
+// Renders source_notes as a hyperlink (if URL present) or plain text
 function renderSourceNotes(text) {
-  if (!text) return "—";
-  const urlRegex = /(https?:\/\/\S+)/g;
-  const parts = [];
-  let last = 0, m;
-  while ((m = urlRegex.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    const url = m[0].replace(/[.,;)]+$/, ""); // strip trailing punctuation
-    parts.push(
-      <a key={m.index} href={url} target="_blank" rel="noopener noreferrer"
-        style={{ color: ACCENT, wordBreak: "break-all", fontWeight: 600 }}>
-        {url}
+  const { label, url } = parseSourceNotes(text);
+  if (!label) return "—";
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        style={{ color: ACCENT, fontWeight: 600, textDecoration: "underline" }}>
+        {label}
       </a>
     );
-    last = m.index + url.length;
   }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts.length ? parts : text;
+  return label;
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
