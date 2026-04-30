@@ -947,6 +947,7 @@ def get_all_indicators():
               i.bow_id,
               i.outcome_id,
               i.text,
+              i.unit,
               i.data_source,
               i.collection_frequency,
               i.baseline,
@@ -955,7 +956,7 @@ def get_all_indicators():
               b.portfolio_id,
               o.title        AS outcome_title
             FROM {SCHEMA}.bow_indicators i
-            JOIN {SCHEMA}.bows b        ON i.bow_id     = b.bow_id
+            JOIN {SCHEMA}.bows b         ON i.bow_id     = b.bow_id
             JOIN {SCHEMA}.bow_outcomes o ON i.outcome_id = o.outcome_id
             WHERE COALESCE(i.is_active, true) = true
             ORDER BY b.portfolio_id, b.sort_order, i.outcome_id, i.indicator_id"""

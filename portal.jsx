@@ -358,7 +358,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
             {selectedIndicator.text}
           </p>
           <p style={{ fontSize: 13, color: TEXT_SUB }}>
-            Value: <strong style={{ color: ACCENT }}>{value}</strong>
+            Value: <strong style={{ color: ACCENT }}>{value}{selectedIndicator?.unit ? ` ${selectedIndicator.unit}` : ""}</strong>
             {period && <span> · {period}</span>}
             <span> · {currentYear}</span>
           </p>
@@ -510,12 +510,18 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                 )}
                               </div>
                               <div style={{ display: "flex", gap: 12, fontSize: 12, color: TEXT_MUTED, flexWrap: "wrap" }}>
+                                {ind.unit && (
+                                  <span style={{ background: ACCENT_LIGHT, color: ACCENT,
+                                    borderRadius: 4, padding: "1px 7px", fontWeight: 700 }}>
+                                    {ind.unit}
+                                  </span>
+                                )}
                                 {ind.data_source && <span>Source: {ind.data_source}</span>}
                                 {ind.collection_frequency && (
                                   <span style={{ textTransform: "capitalize" }}>{ind.collection_frequency}</span>
                                 )}
                                 {ind.target_2026 != null && (
-                                  <span>2026 target: <strong style={{ color: TEXT_SUB }}>{ind.target_2026}</strong></span>
+                                  <span>2026 target: <strong style={{ color: TEXT_SUB }}>{ind.target_2026}{ind.unit ? ` ${ind.unit}` : ""}</strong></span>
                                 )}
                               </div>
 
@@ -523,7 +529,9 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                               {isSelected && (
                                 <div className="fade-in" style={{ marginTop: 14,
                                   borderTop: `1px solid ${ACCENT_MID}`, paddingTop: 14 }}>
-                                  <SectionLabel>Targets & baseline</SectionLabel>
+                                  <SectionLabel>
+                                    Targets & baseline{ind.unit ? ` (${ind.unit})` : ""}
+                                  </SectionLabel>
                                   <div style={{ overflowX: "auto", marginBottom: 12 }}>
                                     <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
                                       <thead>
@@ -604,8 +612,20 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
               </div>
             )}
 
-            <Input label="Value" type="number" value={value} onChange={setValue}
-              placeholder="Enter the data value" required />
+            <Field label={selectedIndicator?.unit ? `Value (${selectedIndicator.unit})` : "Value"} required>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="number" value={value} onChange={e => setValue(e.target.value)}
+                  placeholder="Enter the data value"
+                  style={{ ...inputStyle, flex: 1 }} />
+                {selectedIndicator?.unit && (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
+                    background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
+                    border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
+                    {selectedIndicator.unit}
+                  </span>
+                )}
+              </div>
+            </Field>
 
             {periodOptions.length > 0 && (
               <Select label="Reporting period" value={period} onChange={setPeriod}
