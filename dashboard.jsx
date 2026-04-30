@@ -7782,22 +7782,23 @@ function App() {
               {saveStatus==="saved"&&<><span style={{width:5,height:5,borderRadius:"50%",background:"#10B981",display:"inline-block"}}/><span>Saved</span></>}
             </div>
             {/* Submit Data button */}
-            <button
-              title="Open management app to submit actuals or request BOW updates"
+            <a
+              href="/portal"
+              title="Submit actuals or share insights"
               style={{
                 display:"flex",alignItems:"center",gap:6,
                 padding:"7px 16px",
                 background:ACCENT,color:"#fff",
                 border:"none",borderRadius:8,
                 fontSize:12,fontWeight:700,cursor:"pointer",
-                letterSpacing:0.2,
+                letterSpacing:0.2,textDecoration:"none",
                 boxShadow:"0 1px 4px rgba(248,92,2,0.25)",
                 transition:"background .15s,box-shadow .15s",
               }}
               onMouseEnter={e=>{e.currentTarget.style.background="#D94E02";e.currentTarget.style.boxShadow="0 2px 8px rgba(248,92,2,0.35)";}}
               onMouseLeave={e=>{e.currentTarget.style.background=ACCENT;e.currentTarget.style.boxShadow="0 1px 4px rgba(248,92,2,0.25)";}}>
               Submit Data
-            </button>
+            </a>
           </div>
         </div>
 
