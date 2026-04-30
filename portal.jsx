@@ -32,6 +32,19 @@ const PERIOD_OPTIONS = {
   monthly:   ["M01","M02","M03","M04","M05","M06","M07","M08","M09","M10","M11","M12"],
 };
 
+const UNIT_OPTIONS = [
+  { value: "#",         label: "# (count)" },
+  { value: "%",         label: "% (percent)" },
+  { value: "$",         label: "$ (dollars)" },
+  { value: "schools",   label: "schools" },
+  { value: "learners",  label: "learners" },
+  { value: "partners",  label: "partners" },
+  { value: "tools",     label: "tools" },
+  { value: "users",     label: "users" },
+  { value: "countries", label: "countries" },
+  { value: "other",     label: "other (specify in notes)" },
+];
+
 const INSIGHT_TYPES = [
   { value: "field_observation", label: "Field observation" },
   { value: "partner_update",    label: "Partner update" },
@@ -261,6 +274,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
   const [source, setSource]                   = useState("");
   const [sourceUrl, setSourceUrl]             = useState("");
   const [notes, setNotes]                     = useState("");
+  const [unitOverride, setUnitOverride]       = useState("");
   const [submitting, setSubmitting]           = useState(false);
   const [submitted, setSubmitted]             = useState(false);
   const [error, setError]                     = useState(null);
@@ -300,13 +314,15 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
   const periodOptions = PERIOD_OPTIONS[freq] || [];
 
   const canAdvance1 = level && entityId && (level !== "bow" || portfolioFilter);
-  const canSubmit   = value && source && readingDate && (periodOptions.length === 0 || period);
+  const activeUnit  = selectedIndicator?.unit || unitOverride;
+  const canSubmit   = value && source && readingDate && (periodOptions.length === 0 || period)
+                      && (!selectedIndicator || selectedIndicator.unit || unitOverride);
 
   const reset = () => {
     setStep(1); setLevel(""); setPortfolioFilter(""); setEntityId("");
     setIndicatorSearch(""); setOpenOutcomeId(null); setIndicatorId("");
     setIndicatorContext(null); setIndicatorActuals([]);
-    setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes("");
+    setValue(""); setPeriod(""); setSource(""); setSourceUrl(""); setNotes(""); setUnitOverride("");
     setReadingDate(TODAY); setSubmitted(false); setError(null);
   };
 
@@ -563,11 +579,11 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                       if (isSelected) {
                                         setIndicatorId("");
                                         setValue(""); setPeriod(""); setSource("");
-                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
+                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
                                       } else {
                                         setIndicatorId(ind.indicator_id);
                                         setValue(""); setPeriod(""); setSource("");
-                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY);
+                                        setSourceUrl(""); setNotes(""); setReadingDate(TODAY); setUnitOverride("");
                                       }
                                     }}
                                     style={{ padding: "12px 16px", cursor: "pointer",
@@ -658,21 +674,39 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                                         Submit new value
                                       </p>
 
-                                      <Field label={ind.unit ? `Value (${ind.unit})` : "Value"} required>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                          <input type="number" value={value}
-                                            onChange={e => setValue(e.target.value)}
-                                            placeholder="Enter the data value"
-                                            style={{ ...inputStyle, flex: 1 }} />
-                                          {ind.unit && (
-                                            <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
-                                              background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
-                                              border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
-                                              {ind.unit}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </Field>
+                                      {(() => {
+                                        const activeUnit = ind.unit || unitOverride;
+                                        return (
+                                          <>
+                                            {!ind.unit && (
+                                              <Field label="Unit of measurement" required>
+                                                <select value={unitOverride} onChange={e => setUnitOverride(e.target.value)}
+                                                  style={{ ...inputStyle, appearance: "auto" }}>
+                                                  <option value="">Select unit...</option>
+                                                  {UNIT_OPTIONS.map(u => (
+                                                    <option key={u.value} value={u.value}>{u.label}</option>
+                                                  ))}
+                                                </select>
+                                              </Field>
+                                            )}
+                                            <Field label={activeUnit ? `Value (${activeUnit})` : "Value"} required>
+                                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <input type="number" value={value}
+                                                  onChange={e => setValue(e.target.value)}
+                                                  placeholder="Enter the data value"
+                                                  style={{ ...inputStyle, flex: 1 }} />
+                                                {activeUnit && (
+                                                  <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT,
+                                                    background: ACCENT_LIGHT, padding: "9px 14px", borderRadius: 7,
+                                                    border: `1px solid ${ACCENT_MID}`, whiteSpace: "nowrap" }}>
+                                                    {activeUnit}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </Field>
+                                          </>
+                                        );
+                                      })()}
 
                                       {periodOptions.length > 0 && (
                                         <Select label="Reporting period" value={period} onChange={setPeriod}
