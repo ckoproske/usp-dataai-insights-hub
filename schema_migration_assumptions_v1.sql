@@ -198,19 +198,18 @@ COMMENT 'Defines external/field signal sources for field-type assumptions. Sourc
 -- Also used for decision_maker field on key_decisions and assessed_by on ratings.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.team_members (
-    member_id    STRING    NOT NULL,
-    email        STRING    NOT NULL, -- Databricks login email — join key
-    display_name STRING    NOT NULL,
-    role         STRING,             -- BOW Owner | Portfolio Lead | MLE Team | Program Officer
-    portfolio_id STRING,             -- FK → portfolios.portfolio_id — primary association
-    bow_id       STRING,             -- FK → bows.bow_id — primary association
-    is_active    BOOLEAN   DEFAULT true,
-    last_updated TIMESTAMP,
-    updated_by   STRING
+    member_id        STRING    NOT NULL,
+    email            STRING    NOT NULL, -- Databricks login email — join key
+    display_name     STRING    NOT NULL,
+    permission_level STRING,             -- MLE | Leadership | Team
+    portfolio_id     STRING,             -- FK → portfolios.portfolio_id — primary portfolio association
+    is_active        BOOLEAN   DEFAULT true,
+    last_updated     TIMESTAMP,
+    updated_by       STRING
 )
 USING DELTA
 TBLPROPERTIES ('delta.feature.allowColumnDefaults' = 'supported')
-COMMENT 'Team member roster. Email matched against Databricks login token to auto-populate name and role on submissions, decisions, and ratings.';
+COMMENT 'Team member roster. Email matched against Databricks login token to auto-populate name and permission level on submissions, decisions, and ratings. MLE = full access; Leadership = near-full access; Team = submit only.';
 
 
 -- =============================================================================
@@ -223,8 +222,8 @@ COMMENT 'Team member roster. Email matched against Databricks login token to aut
 -- No DEFAULT needed — will be null for submissions before team_members is populated.
 -- -----------------------------------------------------------------------------
 ALTER TABLE usp_data.usp_strategy.pending_actuals
-ADD COLUMN submitted_role STRING
-COMMENT 'Role at time of submission — looked up from team_members via Databricks login email';
+ADD COLUMN submitted_permission STRING
+COMMENT 'Permission level at time of submission — MLE | Leadership | Team — looked up from team_members via Databricks login email';
 
 
 -- -----------------------------------------------------------------------------

@@ -926,21 +926,21 @@ def submit_actual():
     current_user = query("SELECT current_user() AS user")
     email = current_user[0]["user"] if current_user else "unknown"
     member = query(
-        f"SELECT display_name, role FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
     )
-    submitted_by   = member[0]["display_name"] if member else email
-    submitted_role = member[0]["role"] if member else None
+    submitted_by         = member[0]["display_name"] if member else email
+    submitted_permission = member[0]["permission_level"] if member else None
     execute(
         f"""INSERT INTO {SCHEMA}.pending_actuals
             (pending_id, indicator_id, level, entity_id, year,
-             submitted_value, submitted_by, submitted_role, submitted_at, status)
+             submitted_value, submitted_by, submitted_permission, submitted_at, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
         [new_id(), data.get("indicator_id"), data["level"],
          data["entity_id"], data["year"], data["submitted_value"],
-         submitted_by, submitted_role]
+         submitted_by, submitted_permission]
     )
-    return jsonify({"status": "ok", "submitted_by": submitted_by, "submitted_role": submitted_role})
+    return jsonify({"status": "ok", "submitted_by": submitted_by, "submitted_permission": submitted_permission})
 
 @app.route("/api/pending-actuals/<pending_id>/approve", methods=["POST"])
 def approve_actual(pending_id):

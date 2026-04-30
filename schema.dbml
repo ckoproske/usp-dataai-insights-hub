@@ -410,15 +410,14 @@ Table portfolio_tracking {
 }
 
 Table team_members {
-  member_id    string [pk]
-  email        string [unique, note: 'Databricks login email — join key for token-based lookup']
-  display_name string
-  role         string [note: 'e.g. BOW Owner | Portfolio Lead | MLE Team | Program Officer']
-  portfolio_id string [ref: > portfolios.portfolio_id, note: 'nullable — primary portfolio association']
-  bow_id       string [ref: > bows.bow_id, note: 'nullable — primary BOW association']
-  is_active    boolean [default: true]
-  last_updated timestamp
-  updated_by   string
+  member_id        string [pk]
+  email            string [unique, note: 'Databricks login email — join key for token-based lookup']
+  display_name     string
+  permission_level string [note: 'MLE | Leadership | Team']
+  portfolio_id     string [ref: > portfolios.portfolio_id, note: 'nullable — primary portfolio association']
+  is_active        boolean [default: true]
+  last_updated     timestamp
+  updated_by       string
 }
 
 Table pending_actuals {
@@ -428,8 +427,8 @@ Table pending_actuals {
   entity_id       string
   year            int
   submitted_value float
-  submitted_by    string [note: 'email — resolved from Databricks login token']
-  submitted_role  string [note: 'role at time of submission — looked up from team_members']
+  submitted_by         string [note: 'display name — resolved from team_members via Databricks login token']
+  submitted_permission string [note: 'MLE | Leadership | Team — permission level at time of submission']
   submitted_at    timestamp
   status          string [note: 'pending | approved | rejected']
   reviewed_value  float
