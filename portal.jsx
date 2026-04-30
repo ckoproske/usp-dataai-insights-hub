@@ -498,25 +498,11 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                   </p>
                 </div>
 
-                <input
-                  type="text"
-                  value={indicatorSearch}
-                  onChange={e => { setIndicatorSearch(e.target.value); setOpenOutcomeId(null); setIndicatorId(""); }}
-                  placeholder="Search indicators..."
-                  style={{ ...inputStyle, marginBottom: 16, background: BG }}
-                />
-
-                {visibleIndicators.length === 0 && (
-                  <p style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>
-                    No indicators match your search.
-                  </p>
-                )}
-
                 {/* Outcome accordions */}
                 {(() => {
                   const groups = [];
                   const seen = {};
-                  visibleIndicators.forEach(ind => {
+                  filteredIndicators.forEach(ind => {
                     const key = ind.outcome_id || "__none";
                     if (!seen[key]) {
                       seen[key] = true;
