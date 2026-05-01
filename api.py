@@ -989,6 +989,50 @@ def get_all_indicators():
     return jsonify(rows)
 
 
+@app.route("/api/portfolio-indicators/all")
+def get_all_portfolio_indicators():
+    """Returns all portfolio indicators with portfolio and outcome context."""
+    try:
+        rows = query(
+            f"""SELECT
+                  i.indicator_id,
+                  i.portfolio_id,
+                  i.outcome_id,
+                  i.text,
+                  i.unit,
+                  i.data_source,
+                  NULL           AS collection_frequency,
+                  i.baseline,
+                  i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  NULL           AS bow_id,
+                  NULL           AS bow_title,
+                  po.short_title AS outcome_title
+                FROM {SCHEMA}.portfolio_indicators i
+                LEFT JOIN {SCHEMA}.portfolio_outcomes po ON i.outcome_id = po.outcome_id
+                ORDER BY i.portfolio_id, po.sort_order, i.indicator_id"""
+        )
+    except Exception:
+        rows = query(
+            f"""SELECT
+                  i.indicator_id,
+                  i.portfolio_id,
+                  i.outcome_id,
+                  i.text,
+                  NULL           AS unit,
+                  i.data_source,
+                  NULL           AS collection_frequency,
+                  i.baseline,
+                  i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  NULL           AS bow_id,
+                  NULL           AS bow_title,
+                  po.short_title AS outcome_title
+                FROM {SCHEMA}.portfolio_indicators i
+                LEFT JOIN {SCHEMA}.portfolio_outcomes po ON i.outcome_id = po.outcome_id
+                ORDER BY i.portfolio_id, po.sort_order, i.indicator_id"""
+        )
+    return jsonify(rows)
+
+
 @app.route("/api/portal-debug")
 def portal_debug():
     """Checks all tables the portal depends on — use to diagnose empty dropdowns."""

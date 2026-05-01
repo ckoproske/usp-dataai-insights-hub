@@ -282,7 +282,7 @@ function Skeleton({ height = 40, style = {} }) {
 }
 
 // ─── Submit Form ──────────────────────────────────────────────────────────────
-function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
+function SubmitForm({ user, bows, goals, portfolios, indicators, portfolioIndicators, loading }) {
   const [step, setStep]                       = useState(1);
   const [level, setLevel]                     = useState("");
   const [portfolioFilter, setPortfolioFilter] = useState("");
@@ -324,7 +324,8 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
     return [];
   };
 
-  const filteredIndicators = indicators.filter(i => {
+  const sourceIndicators   = level === "portfolio" ? portfolioIndicators : indicators;
+  const filteredIndicators = sourceIndicators.filter(i => {
     if (level === "bow")       return i.bow_id === entityId;
     if (level === "portfolio") return i.portfolio_id === entityId;
     return false;
@@ -559,7 +560,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
                 {/* Outcome accordions */}
                 <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
                   textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
-                  BOW Outcomes
+                  {level === "portfolio" ? "Portfolio Outcomes" : "BOW Outcomes"}
                 </p>
                 {(() => {
                   const groups = [];
@@ -1395,12 +1396,13 @@ function PortalApp() {
   const [bows, setBows]                   = useState([]);
   const [goals, setGoals]                 = useState([]);
   const [portfolios, setPortfolios]       = useState([]);
-  const [indicators, setIndicators]       = useState([]);
-  const [mySubmissions, setMySubmissions] = useState([]);
-  const [queue, setQueue]                 = useState([]);
-  const [loadingData, setLoadingData]     = useState(true);
-  const [loadingMine, setLoadingMine]     = useState(false);
-  const [loadingQueue, setLoadingQueue]   = useState(false);
+  const [indicators, setIndicators]                   = useState([]);
+  const [portfolioIndicators, setPortfolioIndicators] = useState([]);
+  const [mySubmissions, setMySubmissions]             = useState([]);
+  const [queue, setQueue]                             = useState([]);
+  const [loadingData, setLoadingData]                 = useState(true);
+  const [loadingMine, setLoadingMine]                 = useState(false);
+  const [loadingQueue, setLoadingQueue]               = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -1409,12 +1411,14 @@ function PortalApp() {
       api("/api/goals").catch(() => []),
       api("/api/portfolios").catch(() => []),
       api("/api/indicators/all").catch(() => []),
-    ]).then(([u, b, g, p, i]) => {
+      api("/api/portfolio-indicators/all").catch(() => []),
+    ]).then(([u, b, g, p, i, pi]) => {
       if (u) setUser(u);
       setBows(Array.isArray(b) ? b : []);
       setGoals(Array.isArray(g) ? g : []);
       setPortfolios(Array.isArray(p) ? p : []);
       setIndicators(Array.isArray(i) ? i : []);
+      setPortfolioIndicators(Array.isArray(pi) ? pi : []);
       setLoadingData(false);
     });
   }, []);
@@ -1503,7 +1507,8 @@ function PortalApp() {
               </p>
             </div>
             <SubmitForm user={user} bows={bows} goals={goals}
-              portfolios={portfolios} indicators={indicators} loading={loadingData} />
+              portfolios={portfolios} indicators={indicators}
+              portfolioIndicators={portfolioIndicators} loading={loadingData} />
           </>
         )}
 
