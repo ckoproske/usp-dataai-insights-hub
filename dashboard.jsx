@@ -5205,7 +5205,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 {bows.map((bow,i)=>{
                   const bc = BOW_COLORS_MAP[i]||BOW_COLORS_MAP[0];
                   return (
-                    <div key={bow.id} onClick={()=>{setActiveTab("bow");setActiveBow(bow.id);setBowTab(null);setBowView("progress");setActiveBowOutcomeIdx(-1);}}
+                    <div key={bow.id} onClick={()=>{setActiveTab("bow");setActiveBow(bow.id);setBowTab(null);setBowView("progress");setActiveBowOutcomeIdx(0);}}
                       onMouseEnter={()=>setHoveredBow(i)} onMouseLeave={()=>setHoveredBow(null)}
                       style={{position:"relative",display:"flex",alignItems:"center",gap:8,borderRadius:8,padding:"10px 14px",background:SURFACE,border:"1px solid "+bc.tagColor+"44",borderLeft:"3px solid "+bc.tagColor,cursor:"pointer",minHeight:52,boxSizing:"border-box",transition:"box-shadow .15s",boxShadow:hoveredBow===i?"0 2px 10px rgba(0,0,0,0.08)":"none"}}>
                       <span style={{fontSize:13,fontWeight:700,color:TEXT,flex:1,lineHeight:1.3}}>{bow.name}</span>
@@ -5298,7 +5298,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               const active=activeTab==="bow"&&activeBow===b.id;
               return <div key={b.id} style={{display:"flex",flexDirection:"column"}}>
                 <div style={{height:14}}/>
-                <button onClick={()=>{setActiveTab("bow");setActiveBow(b.id);setBowView("progress");setActiveBowOutcomeIdx(-1);}}
+                <button onClick={()=>{setActiveTab("bow");setActiveBow(b.id);setBowView("progress");setActiveBowOutcomeIdx(0);}}
                   style={{padding:"6px 16px 8px",fontWeight:active?600:400,fontSize:13,cursor:"pointer",
                     background:"transparent",border:"none",
                     borderBottom:active?"2px solid "+pc.color:"2px solid transparent",
