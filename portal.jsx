@@ -547,10 +547,14 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, loading }) {
             ) : (
               <>
                 {/* Guidance */}
-                <p style={{ fontSize: 13, color: TEXT_SUB, marginBottom: 20, lineHeight: 1.6 }}>
-                  Select the outcome associated with the indicator you want to update,
-                  then click the indicator to view targets and submit your value.
-                </p>
+                <div style={{ marginBottom: 20, padding: "11px 14px", background: SURFACE,
+                  borderRadius: 7, border: `1px solid ${BORDER}`,
+                  borderLeft: `4px solid ${BRAND}` }}>
+                  <p style={{ fontSize: 13, color: TEXT, fontWeight: 600, lineHeight: 1.6 }}>
+                    Select the outcome associated with the indicator you want to update,
+                    then click the indicator to view targets and submit your value.
+                  </p>
+                </div>
 
                 {/* Outcome accordions */}
                 <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
