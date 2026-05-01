@@ -7392,14 +7392,17 @@ function AllInvestmentsView() {
                   <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
                     {inv.bowTitles && inv.bowTitles.length > 0
-                      ? inv.bowTitles.map((title, i) => (
-                          <span key={i} style={{ fontSize: 10, fontWeight: 600,
-                            color: rowPc.color, background: rowPc.color + "15",
-                            borderRadius: 4, padding: "2px 6px",
-                            wordBreak: "break-word", alignSelf: "flex-start" }}>
-                            {title}
-                          </span>
-                        ))
+                      ? inv.bowTitles.map((title, i) => {
+                          const bowPc = PORT_COLORS[inv.portfolio_id] || rowPc;
+                          return (
+                            <span key={i} style={{ fontSize: 10, fontWeight: 600,
+                              color: bowPc.color, background: bowPc.color + "15",
+                              borderRadius: 4, padding: "2px 6px",
+                              wordBreak: "break-word", alignSelf: "flex-start" }}>
+                              {title}
+                            </span>
+                          );
+                        })
                       : <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
                     }
                   </div>
