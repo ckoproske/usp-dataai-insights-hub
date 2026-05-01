@@ -762,6 +762,7 @@ COFUND_SUBQUERY = f"""
   )
     AND d.BoW_Managing_Strategy IS NOT NULL
     AND d.BoW_Managing_Strategy != ''
+    AND d.BoW_Managing_Strategy != 'USP Data'
   GROUP BY a.Investment_ID
 """
 
