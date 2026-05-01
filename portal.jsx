@@ -1506,9 +1506,13 @@ function PortalApp() {
               <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
                 Submit New Data
               </h1>
-              <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
-                Submit a data point for review by the MLE team. Once approved, it will
-                appear in the dashboard and update assumption confidence ratings.
+              <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.7 }}>
+                Welcome to the USP Data & AI Strategy submission portal. This is the place
+                to share updated actuals for our impact indicators and strategy goals — everything
+                submitted here is linked directly to the indicators, outcomes, and assumptions that
+                drive our strategy. Once you submit, the MLE team will review your data and, once
+                approved, it will automatically populate in the main dashboard and be reflected in
+                our ratings and forecasts.
               </p>
             </div>
             <SubmitForm user={user} bows={bows} goals={goals}
