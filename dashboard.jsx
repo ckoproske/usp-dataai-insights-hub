@@ -1199,6 +1199,7 @@ async function loadBowInvestments(bowId) {
       supportingTeam: cleanTeam(inv.Supporting_Team || ""),
       // Internal overlay fields
       internal_notes: inv.internal_notes       || "",
+      approver:       inv.approver             || "",
       overlay_id:     inv.overlay_id           || null,
     }));
   } catch (err) {
@@ -1246,6 +1247,7 @@ async function loadAllInvestments(filters = {}) {
       managingTeam:   cleanTeam(inv.Managing_Team   || ""),
       supportingTeam: cleanTeam(inv.Supporting_Team || ""),
       internal_notes: inv.internal_notes         || "",
+      approver:       inv.approver               || "",
       overlay_id:     inv.overlay_id             || null,
     }));
     // Deduplicate by Investment_ID — collect all BOW associations into arrays
@@ -2741,6 +2743,8 @@ const STAGE_FILTER_OPTIONS = [
   { value: "Obtain Signatures",  label: "Obtain Signatures" },
 ];
 
+const APPROVERS = ["Matt Gee", "Natasha Fedo", "Nicole Ifill", "Allan Golston", "Other"];
+
 const PLACEHOLDER_INVESTMENTS = {};
 
 function BowInvestmentsView({ bow, portColor, onUpdate }) {
@@ -2780,10 +2784,11 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
   // ── Save internal notes overlay ────────────────────────────────────────────
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: "dashboard" }),
       });
       setInvestments(prev => prev.map(inv =>
         inv.id === invId ? { ...inv, internal_notes: notes } : inv
@@ -2794,7 +2799,25 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
       setSavingId(null);
     }
   };
- 
+
+  const saveApprover = async (invId, approver) => {
+    setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
+    try {
+      await apiFetch(`/api/investments/${invId}/overlay`, {
+        method: "POST",
+        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, updated_by: "dashboard" }),
+      });
+      setInvestments(prev => prev.map(inv =>
+        inv.id === invId ? { ...inv, approver: approver || "" } : inv
+      ));
+    } catch (err) {
+      console.warn("Failed to save approver:", err);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const fmtM = (n) => {
     const num = parseFloat(n) || 0;
@@ -2802,9 +2825,9 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
     if (num >= 1000)    return `$${(num/1000).toFixed(0)}K`;
     return `$${num}`;
   };
- 
+
   const toNum = (v) => parseFloat(String(v || "0").replace(/[^0-9.]/g, "")) || 0;
- 
+
   const handleColSort = (field) => {
     if (sortBy !== field) { setSortBy(field); setSortDir("asc"); }
     else if (sortDir === "asc") setSortDir("desc");
@@ -3024,13 +3047,21 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
                 {plainCol("Outstanding", true)}
-                {/* Status — filter dropdown */}
+                {/* Status — filter dropdown + approver sort */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(filterStatuses.length > 0), padding: "10px 14px", cursor: "pointer",
-                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                    <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
+                  <div style={{ display: "flex", alignItems: "stretch" }}>
+                    <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                      style={{ ...hStyle(filterStatuses.length > 0), flex: 1, padding: "10px 14px", cursor: "pointer",
+                        userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                      {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                      <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
+                    </div>
+                    <div onClick={() => handleColSort("approver")}
+                      style={{ ...hStyle(sortBy === "approver"), padding: "0 10px", cursor: "pointer",
+                        borderLeft: "1px solid " + BORDER + "80", display: "flex", alignItems: "center",
+                        gap: 2, userSelect: "none", whiteSpace: "nowrap" }}>
+                      Approver<span style={{ fontSize: 9, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
+                    </div>
                   </div>
                   {openDropdown === "status" && (
                     <>
@@ -3208,6 +3239,45 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                       </span>
                     ) : (
                       <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
+                    )}
+                    {inv.status === "In Process" && (
+                      <div style={{ position: "relative" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
+                          style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
+                            display: "flex", alignItems: "center", gap: 3,
+                            color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
+                          <span>👤</span>
+                          {inv.approver || "Set approver…"}
+                          <span style={{ fontSize: 8, opacity: 0.6 }}>▼</span>
+                        </div>
+                        {openDropdown === `appr-${inv.id}` && (
+                          <>
+                            <div onClick={() => setOpenDropdown(null)}
+                              style={{ position: "fixed", inset: 0, zIndex: 199 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 200,
+                              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
+                              {APPROVERS.map(name => (
+                                <div key={name}
+                                  onClick={() => { saveApprover(inv.id, name); setOpenDropdown(null); }}
+                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                    background: inv.approver === name ? pc.color + "12" : "transparent",
+                                    color: inv.approver === name ? pc.color : TEXT,
+                                    fontWeight: inv.approver === name ? 700 : 400 }}>
+                                  {name}
+                                </div>
+                              ))}
+                              {inv.approver && (
+                                <div onClick={() => { saveApprover(inv.id, null); setOpenDropdown(null); }}
+                                  style={{ padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                                    color: TEXT_MUTED, borderTop: "1px solid " + BORDER }}>
+                                  Clear
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -3740,10 +3810,11 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   // ── Save internal notes overlay ───────────────────────────────────────────
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: "dashboard" }),
       });
       setInvestments(prev => prev.map(inv =>
         inv.id === invId ? { ...inv, internal_notes: notes } : inv
@@ -3754,7 +3825,25 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
       setSavingId(null);
     }
   };
- 
+
+  const saveApprover = async (invId, approver) => {
+    setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
+    try {
+      await apiFetch(`/api/investments/${invId}/overlay`, {
+        method: "POST",
+        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, updated_by: "dashboard" }),
+      });
+      setInvestments(prev => prev.map(inv =>
+        inv.id === invId ? { ...inv, approver: approver || "" } : inv
+      ));
+    } catch (err) {
+      console.warn("Failed to save approver:", err);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const fmtM = (n) => {
     const num = parseFloat(n) || 0;
@@ -3763,7 +3852,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
     return `$${num}`;
   };
   const toNum = (v) => parseFloat(String(v || "0").replace(/[^0-9.]/g, "")) || 0;
- 
+
   const bowOptions = [{ id: "all", name: "All BOWs" }, ...bows.map(b => ({ id: b.id, name: b.name }))];
  
   const handleColSort = (field) => {
@@ -3969,13 +4058,21 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                 {plainCol("BOW", true)}
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
-                {/* Status — filter dropdown */}
+                {/* Status — filter dropdown + approver sort */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(filterStatuses.length > 0), padding: "9px 12px", cursor: "pointer",
-                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                    <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                  <div style={{ display: "flex", alignItems: "stretch" }}>
+                    <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                      style={{ ...hStyle(filterStatuses.length > 0), flex: 1, padding: "9px 12px", cursor: "pointer",
+                        userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                      {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                      <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                    </div>
+                    <div onClick={() => handleColSort("approver")}
+                      style={{ ...hStyle(sortBy === "approver"), padding: "0 10px", cursor: "pointer",
+                        borderLeft: "1px solid " + BORDER + "80", display: "flex", alignItems: "center",
+                        gap: 2, userSelect: "none", whiteSpace: "nowrap" }}>
+                      Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
+                    </div>
                   </div>
                   {openDropdown === "status" && (
                     <>
@@ -4159,6 +4256,45 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                    )}
+                    {inv.status === "In Process" && (
+                      <div style={{ position: "relative" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
+                          style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
+                            display: "flex", alignItems: "center", gap: 3,
+                            color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
+                          <span>👤</span>
+                          {inv.approver || "Set approver…"}
+                          <span style={{ fontSize: 8, opacity: 0.6 }}>▼</span>
+                        </div>
+                        {openDropdown === `appr-${inv.id}` && (
+                          <>
+                            <div onClick={() => setOpenDropdown(null)}
+                              style={{ position: "fixed", inset: 0, zIndex: 199 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 200,
+                              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
+                              {APPROVERS.map(name => (
+                                <div key={name}
+                                  onClick={() => { saveApprover(inv.id, name); setOpenDropdown(null); }}
+                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                    background: inv.approver === name ? pc.color + "12" : "transparent",
+                                    color: inv.approver === name ? pc.color : TEXT,
+                                    fontWeight: inv.approver === name ? 700 : 400 }}>
+                                  {name}
+                                </div>
+                              ))}
+                              {inv.approver && (
+                                <div onClick={() => { saveApprover(inv.id, null); setOpenDropdown(null); }}
+                                  style={{ padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                                    color: TEXT_MUTED, borderTop: "1px solid " + BORDER }}>
+                                  Clear
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -7067,16 +7203,35 @@ function AllInvestmentsView() {
 
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: "dashboard" }),
       });
       setInvestments(prev => prev.map(inv =>
         inv.id === invId ? { ...inv, internal_notes: notes } : inv
       ));
     } catch (err) {
       console.warn("Failed to save overlay:", err);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const saveApprover = async (invId, approver) => {
+    setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
+    try {
+      await apiFetch(`/api/investments/${invId}/overlay`, {
+        method: "POST",
+        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, updated_by: "dashboard" }),
+      });
+      setInvestments(prev => prev.map(inv =>
+        inv.id === invId ? { ...inv, approver: approver || "" } : inv
+      ));
+    } catch (err) {
+      console.warn("Failed to save approver:", err);
     } finally {
       setSavingId(null);
     }
@@ -7284,11 +7439,19 @@ function AllInvestmentsView() {
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(filterStatuses.length > 0), padding: "9px 12px", cursor: "pointer",
-                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                    <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                  <div style={{ display: "flex", alignItems: "stretch" }}>
+                    <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                      style={{ ...hStyle(filterStatuses.length > 0), flex: 1, padding: "9px 12px", cursor: "pointer",
+                        userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                      {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                      <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                    </div>
+                    <div onClick={() => handleColSort("approver")}
+                      style={{ ...hStyle(sortBy === "approver"), padding: "0 10px", cursor: "pointer",
+                        borderLeft: "1px solid " + BORDER + "80", display: "flex", alignItems: "center",
+                        gap: 2, userSelect: "none", whiteSpace: "nowrap" }}>
+                      Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
+                    </div>
                   </div>
                   {openDropdown === "status" && (
                     <>
@@ -7473,6 +7636,45 @@ function AllInvestmentsView() {
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                    )}
+                    {inv.status === "In Process" && (
+                      <div style={{ position: "relative" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
+                          style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
+                            display: "flex", alignItems: "center", gap: 3,
+                            color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
+                          <span>👤</span>
+                          {inv.approver || "Set approver…"}
+                          <span style={{ fontSize: 8, opacity: 0.6 }}>▼</span>
+                        </div>
+                        {openDropdown === `appr-${inv.id}` && (
+                          <>
+                            <div onClick={() => setOpenDropdown(null)}
+                              style={{ position: "fixed", inset: 0, zIndex: 199 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 200,
+                              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
+                              {APPROVERS.map(name => (
+                                <div key={name}
+                                  onClick={() => { saveApprover(inv.id, name); setOpenDropdown(null); }}
+                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                    background: inv.approver === name ? pc.color + "12" : "transparent",
+                                    color: inv.approver === name ? pc.color : TEXT,
+                                    fontWeight: inv.approver === name ? 700 : 400 }}>
+                                  {name}
+                                </div>
+                              ))}
+                              {inv.approver && (
+                                <div onClick={() => { saveApprover(inv.id, null); setOpenDropdown(null); }}
+                                  style={{ padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                                    color: TEXT_MUTED, borderTop: "1px solid " + BORDER }}>
+                                  Clear
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
 
