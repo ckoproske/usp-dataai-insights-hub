@@ -490,9 +490,14 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, portfolioIndica
             {/* Context breadcrumb */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20,
               padding: "10px 14px", background: BG, borderRadius: 7, border: `1px solid ${BORDER}` }}>
-              {selectedBow && <PortfolioPill portfolioId={selectedBow.portfolio_id} />}
+              {(selectedBow || level === "portfolio") && (
+                <PortfolioPill portfolioId={selectedBow ? selectedBow.portfolio_id : entityId} />
+              )}
               <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>
-                {selectedBow?.title || entityId}
+                {selectedBow?.title
+                  || (level === "portfolio"
+                      ? (PORT_COLORS[entityId]?.label || portfolios.find(p => p.portfolio_id === entityId)?.title || entityId)
+                      : entityId)}
               </span>
             </div>
 
