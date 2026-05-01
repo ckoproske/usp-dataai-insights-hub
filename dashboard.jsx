@@ -2981,19 +2981,15 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
       </div>
  
       {/* Table */}
-      {filtered.length === 0 ? (
+      {investments.length === 0 ? (
         <div style={{ background: SURFACE, border: "1px solid " + BORDER,
           borderRadius: 12, padding: 40, textAlign: "center" }}>
           <div style={{ fontSize: 24, marginBottom: 10 }}>💼</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
-            {investments.length === 0
-              ? "No investments linked in INVEST"
-              : "No results match your filters"}
+            No investments linked in INVEST
           </div>
           <div style={{ fontSize: 13, color: TEXT_SUB }}>
-            {investments.length === 0
-              ? "Investments will appear here once they are linked to this BOW in INVEST."
-              : "Try adjusting your search or status filter."}
+            Investments will appear here once they are linked to this BOW in INVEST.
           </div>
         </div>
       ) : (
@@ -3081,6 +3077,12 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
           })()}
 
  
+          {filtered.length === 0
+            ? <div style={{ padding: "32px 24px", textAlign: "center",
+                color: TEXT_SUB, fontSize: 13 }}>
+                No investments match the selected filters. Try adjusting the status filter.
+              </div>
+            : null}
           {filtered.map((inv, idx) => {
             const isEditing = editingId === inv.id;
             const isSaving  = savingId === inv.id;
@@ -3924,19 +3926,15 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
       </div>
  
       {/* Table */}
-      {filtered.length === 0 ? (
+      {investments.length === 0 ? (
         <div style={{ background: SURFACE, border: "1px solid " + BORDER,
           borderRadius: 12, padding: 40, textAlign: "center" }}>
           <div style={{ fontSize: 22, marginBottom: 10 }}>💼</div>
           <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 5 }}>
-            {investments.length === 0
-              ? "No investments linked in INVEST"
-              : "No results match your filters"}
+            No investments linked in INVEST
           </div>
           <div style={{ fontSize: 12, color: TEXT_MUTED }}>
-            {investments.length === 0
-              ? "Investments will appear here once they are linked to BOWs in INVEST."
-              : "Try adjusting your search or filters."}
+            Investments will appear here once they are linked to BOWs in INVEST.
           </div>
         </div>
       ) : (
@@ -4024,6 +4022,12 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
           })()}
 
  
+          {filtered.length === 0
+            ? <div style={{ padding: "32px 24px", textAlign: "center",
+                color: TEXT_SUB, fontSize: 13 }}>
+                No investments match the selected filters. Try adjusting the status filter.
+              </div>
+            : null}
           {filtered.map((inv, idx) => {
             const isEditing  = editingId === inv.id;
             const isSaving   = savingId === inv.id;
@@ -4033,7 +4037,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               : inv.status === "Closed"     ? "#9CA3AF"
               : inv.status === "Cancelled"  ? "#F87171"
               : TEXT_MUTED;
- 
+
             return (
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
@@ -7330,6 +7334,12 @@ function AllInvestmentsView() {
             );
           })()}
 
+          {filtered.length === 0
+            ? <div style={{ padding: "32px 24px", textAlign: "center",
+                color: TEXT_SUB, fontSize: 13 }}>
+                No investments match the selected filters. Try adjusting the status filter.
+              </div>
+            : null}
           {filtered.map((inv, idx) => {
             const isEditing  = editingId === inv.id;
             const isSaving   = savingId === inv.id;
