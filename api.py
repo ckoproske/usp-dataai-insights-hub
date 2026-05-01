@@ -746,6 +746,25 @@ def update_decision(decision_id):
 # All column names use INVEST PascalCase convention
 # ═════════════════════════════════════════════════════════════════════════════
 
+# Subquery: for each investment, collect BoW_Managing_Strategy from co-funding
+# BOWs — i.e. BOWs in invest_bow_allocation that are NOT in our own bows table.
+COFUND_SUBQUERY = f"""
+  SELECT
+    a.Investment_ID,
+    array_join(array_sort(collect_set(d.BoW_Managing_Strategy)), ', ') AS co_funding_teams
+  FROM usp_data.usp_strategy.invest_bow_allocation a
+  JOIN usp_data.usp_strategy.invest_bow_details d
+    ON a.BoW_ID = d.BoW_ID
+  WHERE a.BoW_ID NOT IN (
+    SELECT invest_bow_id
+    FROM usp_data.usp_strategy.bows
+    WHERE invest_bow_id IS NOT NULL
+  )
+    AND d.BoW_Managing_Strategy IS NOT NULL
+    AND d.BoW_Managing_Strategy != ''
+  GROUP BY a.Investment_ID
+"""
+
 @app.route("/api/investments/all")
 def get_all_investments():
     """All investments with optional filters: ?portfolio_id=ai-infra&status=Active&year=2026"""
@@ -770,7 +789,8 @@ def get_all_investments():
               b.portfolio_id,
               b.title AS bow_title,
               o.internal_notes,
-              o.overlay_id
+              o.overlay_id,
+              COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.invest_investments i
             JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
               ON i.Investment_ID = a.Investment_ID
@@ -778,6 +798,8 @@ def get_all_investments():
               ON a.BoW_ID = b.invest_bow_id
             LEFT JOIN {SCHEMA}.investment_overlays o
               ON i.Investment_ID = o.investment_id
+            LEFT JOIN ({COFUND_SUBQUERY}) cf
+              ON i.Investment_ID = cf.Investment_ID
             WHERE {' AND '.join(where)}
             ORDER BY b.portfolio_id, b.sort_order, i.Investment_Name""",
         params
@@ -791,7 +813,8 @@ def get_investments_by_bow(bow_id):
         f"""SELECT
               i.*,
               o.internal_notes,
-              o.overlay_id
+              o.overlay_id,
+              COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.bows b
             JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
               ON b.invest_bow_id = a.BoW_ID
@@ -799,6 +822,8 @@ def get_investments_by_bow(bow_id):
               ON a.Investment_ID = i.Investment_ID
             LEFT JOIN {SCHEMA}.investment_overlays o
               ON i.Investment_ID = o.investment_id
+            LEFT JOIN ({COFUND_SUBQUERY}) cf
+              ON i.Investment_ID = cf.Investment_ID
             WHERE b.bow_id = ?
               AND i.Status IN ('Active', 'In Process')
             ORDER BY i.Status, i.Investment_Name""",
@@ -815,7 +840,8 @@ def get_investments_by_portfolio(portfolio_id):
               b.bow_id,
               b.title AS bow_title,
               o.internal_notes,
-              o.overlay_id
+              o.overlay_id,
+              COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.bows b
             JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
               ON b.invest_bow_id = a.BoW_ID
@@ -823,6 +849,8 @@ def get_investments_by_portfolio(portfolio_id):
               ON a.Investment_ID = i.Investment_ID
             LEFT JOIN {SCHEMA}.investment_overlays o
               ON i.Investment_ID = o.investment_id
+            LEFT JOIN ({COFUND_SUBQUERY}) cf
+              ON i.Investment_ID = cf.Investment_ID
             WHERE b.portfolio_id = ?
               AND i.Status IN ('Active', 'In Process')
             ORDER BY b.sort_order, i.Status, i.Investment_Name""",

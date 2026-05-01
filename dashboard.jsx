@@ -1195,8 +1195,7 @@ async function loadBowInvestments(bowId) {
       description:    inv.Public_Description    || "",
       strategicFit:   inv.Strategic_Fit        || "",
       projectOverview: inv.Project_Overview    || "",
-      managingTeam:   cleanTeam(inv.Managing_Team   || ""),
-      supportingTeam: cleanTeam(inv.Supporting_Team || ""),
+      coFundingTeams: inv.co_funding_teams || "",
       // Internal overlay fields
       internal_notes: inv.internal_notes       || "",
       overlay_id:     inv.overlay_id           || null,
@@ -3158,28 +3157,24 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                     </div>
                   </div>
 
-                  {/* Teams */}
+                  {/* Co-Funding Teams */}
                   {(() => {
-                    const managing   = inv.managingTeam   !== "USP Data" ? inv.managingTeam   : "";
-                    const supporting = inv.supportingTeam !== "USP Data" ? inv.supportingTeam : "";
+                    const teams = inv.coFundingTeams
+                      ? inv.coFundingTeams.split(", ").filter(Boolean)
+                      : [];
                     return (
                       <div style={{ padding: "10px 14px", borderRight: "1px solid " + BORDER,
                         display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
-                        {managing && (() => { const c = teamColor(managing); return (
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
-                            borderRadius: 20, background: c.bg, color: c.color,
-                            wordBreak: "break-word", alignSelf: "flex-start" }}>
-                            {managing}
-                          </span>
-                        ); })()}
-                        {supporting && (() => { const c = teamColor(supporting); return (
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
-                            borderRadius: 20, background: c.bg, color: c.color,
-                            wordBreak: "break-word", alignSelf: "flex-start", opacity: 0.8 }}>
-                            {supporting}
-                          </span>
-                        ); })()}
-                        {!managing && !supporting && (
+                        {teams.length > 0 ? teams.map((t, ti) => {
+                          const c = teamColor(t);
+                          return (
+                            <span key={ti} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px",
+                              borderRadius: 20, background: c.bg, color: c.color,
+                              wordBreak: "break-word", alignSelf: "flex-start" }}>
+                              {t}
+                            </span>
+                          );
+                        }) : (
                           <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
                         )}
                       </div>
