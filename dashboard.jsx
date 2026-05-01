@@ -3063,19 +3063,17 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 {plainCol("Outstanding", true)}
                 {/* Status — filter dropdown + approver sort */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div style={{ display: "flex", alignItems: "stretch" }}>
-                    <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                      style={{ ...hStyle(filterStatuses.length > 0), flex: 1, padding: "10px 14px", cursor: "pointer",
-                        userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                      {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                      <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
-                    </div>
-                    <div onClick={() => handleColSort("approver")}
-                      style={{ ...hStyle(sortBy === "approver"), padding: "0 10px", cursor: "pointer",
-                        borderLeft: "1px solid " + BORDER + "80", display: "flex", alignItems: "center",
-                        gap: 2, userSelect: "none", whiteSpace: "nowrap" }}>
-                      Approver<span style={{ fontSize: 9, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
-                    </div>
+                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                    style={{ ...hStyle(filterStatuses.length > 0), padding: "8px 14px", cursor: "pointer",
+                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                    <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
+                  </div>
+                  <div onClick={() => handleColSort("approver")}
+                    style={{ ...hStyle(sortBy === "approver"), padding: "5px 14px", cursor: "pointer",
+                      borderTop: "1px solid " + BORDER + "60", userSelect: "none",
+                      display: "flex", alignItems: "center", gap: 2 }}>
+                    Approver<span style={{ fontSize: 9, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
                   </div>
                   {openDropdown === "status" && (
                     <>
@@ -4089,19 +4087,17 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                 {plainCol("Co-Funding Team", true)}
                 {/* Status — filter dropdown + approver sort */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div style={{ display: "flex", alignItems: "stretch" }}>
-                    <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                      style={{ ...hStyle(filterStatuses.length > 0), flex: 1, padding: "9px 12px", cursor: "pointer",
-                        userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                      {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                      <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
-                    </div>
-                    <div onClick={() => handleColSort("approver")}
-                      style={{ ...hStyle(sortBy === "approver"), padding: "0 10px", cursor: "pointer",
-                        borderLeft: "1px solid " + BORDER + "80", display: "flex", alignItems: "center",
-                        gap: 2, userSelect: "none", whiteSpace: "nowrap" }}>
-                      Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
-                    </div>
+                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                    style={{ ...hStyle(filterStatuses.length > 0), padding: "7px 12px", cursor: "pointer",
+                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                    <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                  </div>
+                  <div onClick={() => handleColSort("approver")}
+                    style={{ ...hStyle(sortBy === "approver"), padding: "4px 12px", cursor: "pointer",
+                      borderTop: "1px solid " + BORDER + "60", userSelect: "none",
+                      display: "flex", alignItems: "center", gap: 2 }}>
+                    Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
                   </div>
                   {openDropdown === "status" && (
                     <>
@@ -7483,19 +7479,17 @@ function AllInvestmentsView() {
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div style={{ display: "flex", alignItems: "stretch" }}>
-                    <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                      style={{ ...hStyle(filterStatuses.length > 0), flex: 1, padding: "9px 12px", cursor: "pointer",
-                        userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                      {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                      <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
-                    </div>
-                    <div onClick={() => handleColSort("approver")}
-                      style={{ ...hStyle(sortBy === "approver"), padding: "0 10px", cursor: "pointer",
-                        borderLeft: "1px solid " + BORDER + "80", display: "flex", alignItems: "center",
-                        gap: 2, userSelect: "none", whiteSpace: "nowrap" }}>
-                      Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
-                    </div>
+                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                    style={{ ...hStyle(filterStatuses.length > 0), padding: "7px 12px", cursor: "pointer",
+                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                    <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                  </div>
+                  <div onClick={() => handleColSort("approver")}
+                    style={{ ...hStyle(sortBy === "approver"), padding: "4px 12px", cursor: "pointer",
+                      borderTop: "1px solid " + BORDER + "60", userSelect: "none",
+                      display: "flex", alignItems: "center", gap: 2 }}>
+                    Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
                   </div>
                   {openDropdown === "status" && (
                     <>
