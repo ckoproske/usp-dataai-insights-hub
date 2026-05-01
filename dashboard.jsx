@@ -1187,8 +1187,9 @@ async function loadBowInvestments(bowId) {
       stage:          inv.Workflow_Step        || "",
       status:         inv.Status               || "",
       type:           inv.Type                 || "",
-      owner:          inv.Investment_Owner     || "",
-      coordinator:    inv.Investment_Coordinator || "",
+      owner:          inv.Investment_Owner          || "",
+      secondaryOwner: inv.Secondary_Investment_Owner || "",
+      coordinator:    inv.Investment_Coordinator     || "",
       startDate:      inv.Start_Date           || "",
       endDate:        inv.End_Date             || "",
       investmentUrl:  inv.Investment_URL         || "",
@@ -1238,8 +1239,9 @@ async function loadAllInvestments(filters = {}) {
       stage:          inv.Workflow_Step          || "",
       status:         inv.Status                 || "",
       type:           inv.Type                   || "",
-      owner:          inv.Investment_Owner       || "",
-      bow_id:         inv.bow_id                 || "",
+      owner:          inv.Investment_Owner            || "",
+      secondaryOwner: inv.Secondary_Investment_Owner  || "",
+      bow_id:         inv.bow_id                      || "",
       bow_title:      inv.bow_title              || "",
       portfolio_id:   inv.portfolio_id           || "",
       investmentUrl:  inv.Investment_URL         || "",
@@ -2756,6 +2758,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
   const [error, setError]               = useState(null);
   const [editingId, setEditingId]       = useState(null);
   const [filterStatuses, setFilterStatuses] = useState([]);
+  const [ownerSearch, setOwnerSearch]   = useState("");
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -2839,6 +2842,8 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
       if (!filterStatuses.length) return true;
       return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
+    .filter(inv => !ownerSearch || [inv.owner, inv.secondaryOwner]
+      .some(s => s && s.toLowerCase().includes(ownerSearch.toLowerCase())))
     .filter(inv => !search || [inv.grantee, inv.initiative, inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => {
@@ -3043,7 +3048,18 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 {sortCol("initiative", "Investment Title", true)}
                 {sortCol("grantee", "Grantee", true)}
                 {plainCol("Description", true)}
-                {sortCol("owner", "Investment Owner", true)}
+                <div style={{ borderRight: "1px solid " + BORDER, padding: "6px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: ownerSearch ? pc.color : TEXT_SUB,
+                    textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
+                    Investment Owner
+                  </div>
+                  <input value={ownerSearch} onChange={e => setOwnerSearch(e.target.value)}
+                    placeholder="Filter by name…"
+                    style={{ width: "100%", border: "1px solid " + (ownerSearch ? pc.color + "60" : BORDER),
+                      borderRadius: 4, padding: "3px 6px", fontSize: 11, fontFamily: "inherit",
+                      outline: "none", color: TEXT, background: ownerSearch ? pc.color + "08" : BG,
+                      boxSizing: "border-box" }} />
+                </div>
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
                 {plainCol("Outstanding", true)}
@@ -3176,11 +3192,16 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                   </div>
 
                   {/* Investment Owner */}
-                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
+                  <div style={{ padding: "10px 14px", borderRight: "1px solid " + BORDER,
+                    display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
                     <span style={{ fontSize: 12, color: TEXT, lineHeight: 1.4 }}>
                       {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
                     </span>
+                    {inv.secondaryOwner && (
+                      <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.4 }}>
+                        {inv.secondaryOwner}
+                      </span>
+                    )}
                   </div>
 
                   {/* Amount */}
@@ -3783,6 +3804,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   const [editingId, setEditingId]       = useState(null);
   const [savingId, setSavingId]         = useState(null);
   const [search, setSearch]             = useState("");
+  const [ownerSearch, setOwnerSearch]   = useState("");
   const [filterStatuses, setFilterStatuses] = useState([]);
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
@@ -3867,6 +3889,8 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
       if (!filterStatuses.length) return true;
       return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
+    .filter(inv => !ownerSearch || [inv.owner, inv.secondaryOwner]
+      .some(s => s && s.toLowerCase().includes(ownerSearch.toLowerCase())))
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => {
@@ -4054,7 +4078,18 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                 {sortCol("initiative", "Investment Title", true)}
                 {sortCol("grantee", "Grantee", true)}
                 {plainCol("Description", true)}
-                {sortCol("owner", "Investment Owner", true)}
+                <div style={{ borderRight: "1px solid " + BORDER, padding: "5px 12px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ownerSearch ? pc.color : TEXT_SUB,
+                    textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
+                    Investment Owner
+                  </div>
+                  <input value={ownerSearch} onChange={e => setOwnerSearch(e.target.value)}
+                    placeholder="Filter by name…"
+                    style={{ width: "100%", border: "1px solid " + (ownerSearch ? pc.color + "60" : BORDER),
+                      borderRadius: 4, padding: "2px 6px", fontSize: 10, fontFamily: "inherit",
+                      outline: "none", color: TEXT, background: ownerSearch ? pc.color + "08" : BG,
+                      boxSizing: "border-box" }} />
+                </div>
                 {plainCol("BOW", true)}
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
@@ -4185,11 +4220,16 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                   </div>
 
                   {/* Investment Owner */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
+                  <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
                     <span style={{ fontSize: 11, color: TEXT, lineHeight: 1.4 }}>
                       {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
                     </span>
+                    {inv.secondaryOwner && (
+                      <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.4 }}>
+                        {inv.secondaryOwner}
+                      </span>
+                    )}
                   </div>
 
                   {/* BOW */}
@@ -7175,6 +7215,7 @@ function AllInvestmentsView() {
   const [editingId, setEditingId]       = useState(null);
   const [savingId, setSavingId]         = useState(null);
   const [search, setSearch]             = useState("");
+  const [ownerSearch, setOwnerSearch]   = useState("");
   const [filterStatuses, setFilterStatuses] = useState([]);
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
@@ -7257,6 +7298,8 @@ function AllInvestmentsView() {
       if (!filterStatuses.length) return true;
       return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
+    .filter(inv => !ownerSearch || [inv.owner, inv.secondaryOwner]
+      .some(s => s && s.toLowerCase().includes(ownerSearch.toLowerCase())))
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
       .some(s => s.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => {
@@ -7434,7 +7477,18 @@ function AllInvestmentsView() {
                 {sortCol("initiative", "Investment Title", true)}
                 {sortCol("grantee", "Grantee", true)}
                 {plainCol("Description", true)}
-                {sortCol("owner", "Investment Owner", true)}
+                <div style={{ borderRight: "1px solid " + BORDER, padding: "5px 12px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ownerSearch ? pc.color : TEXT_SUB,
+                    textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
+                    Investment Owner
+                  </div>
+                  <input value={ownerSearch} onChange={e => setOwnerSearch(e.target.value)}
+                    placeholder="Filter by name…"
+                    style={{ width: "100%", border: "1px solid " + (ownerSearch ? pc.color + "60" : BORDER),
+                      borderRadius: 4, padding: "2px 6px", fontSize: 10, fontFamily: "inherit",
+                      outline: "none", color: TEXT, background: ownerSearch ? pc.color + "08" : BG,
+                      boxSizing: "border-box" }} />
+                </div>
                 {plainCol("BOW", true)}
                 {sortCol("amount", "Amount", true)}
                 {plainCol("Co-Funding Team", true)}
@@ -7564,11 +7618,16 @@ function AllInvestmentsView() {
                   </div>
 
                   {/* Investment Owner */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
+                  <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
                     <span style={{ fontSize: 11, color: TEXT, lineHeight: 1.4 }}>
                       {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
                     </span>
+                    {inv.secondaryOwner && (
+                      <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.4 }}>
+                        {inv.secondaryOwner}
+                      </span>
+                    )}
                   </div>
 
                   {/* BOW */}
