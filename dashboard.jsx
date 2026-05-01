@@ -5467,7 +5467,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             </div>
             {/* View toggle */}
             <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid "+BORDER}}>
-              {[["progress","Progress"],["reporting","Reporting"],...(currentBow.decisions?.length>0?[["decisions","Decisions"]]:[])].map(([v,label])=>(
+              {[["progress","Progress"]].map(([v,label])=>(
                 <button key={v} onClick={()=>setBowView(v)}
                   style={{padding:"10px 18px",fontSize:13,fontWeight:bowView===v?600:400,border:"none",background:"none",cursor:"pointer",
                     borderBottom:bowView===v?"2px solid "+pc.color:"2px solid transparent",
@@ -5520,9 +5520,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 {currentBow.outcomes.length===0&&<div style={{color:TEXT_SUB,fontSize:15,textAlign:"center",padding:48}}>No outcomes defined yet.</div>}
               </div>
             )}
-            {bowView==="reporting"&&<BowReportingView bow={currentBow} portColor={pc}/>}
-            {bowView==="decisions"&&currentBow.decisions?.length>0&&<BowDecisionsView bow={currentBow} portColor={pc}
-              onUpdate={updated=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...updated}))}/>}
           </div>
         )}
       </div>
