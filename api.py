@@ -790,6 +790,7 @@ def get_all_investments():
               b.portfolio_id,
               b.title AS bow_title,
               o.internal_notes,
+              o.approver,
               o.overlay_id,
               COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.invest_investments i
@@ -814,6 +815,7 @@ def get_investments_by_bow(bow_id):
         f"""SELECT
               i.*,
               o.internal_notes,
+              o.approver,
               o.overlay_id,
               COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.bows b
@@ -841,6 +843,7 @@ def get_investments_by_portfolio(portfolio_id):
               b.bow_id,
               b.title AS bow_title,
               o.internal_notes,
+              o.approver,
               o.overlay_id,
               COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.bows b
@@ -889,19 +892,20 @@ def update_investment_overlay(investment_id):
         execute(
             f"""UPDATE {SCHEMA}.investment_overlays
                 SET internal_notes = ?,
+                    approver       = ?,
                     last_updated   = current_timestamp(),
                     updated_by     = ?
                 WHERE investment_id = ?""",
-            [data.get("internal_notes"), data.get("updated_by", "dashboard"),
-             investment_id]
+            [data.get("internal_notes"), data.get("approver"),
+             data.get("updated_by", "dashboard"), investment_id]
         )
     else:
         execute(
             f"""INSERT INTO {SCHEMA}.investment_overlays
-                (overlay_id, investment_id, internal_notes, last_updated, updated_by)
-                VALUES (?, ?, ?, current_timestamp(), ?)""",
+                (overlay_id, investment_id, internal_notes, approver, last_updated, updated_by)
+                VALUES (?, ?, ?, ?, current_timestamp(), ?)""",
             [new_id(), investment_id, data.get("internal_notes"),
-             data.get("updated_by", "dashboard")]
+             data.get("approver"), data.get("updated_by", "dashboard")]
         )
     return jsonify({"status": "ok"})
 

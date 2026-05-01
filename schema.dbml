@@ -364,11 +364,13 @@ Table invest_investments {
 }
 
 Table invest_bow_allocation {
-  Investment_ID                     string [ref: > invest_investments.Investment_ID]
-  BoW_ID                            string
-  Investment_Payment_Allocation_Amount float
-  Investment_Payment_Status         string
-  Investment_Payment_Year           int
+  Investment_ID                        string [ref: > invest_investments.Investment_ID]
+  BoW_ID                               string
+  "Investment_Payment_Allocation Amount" float  [note: 'column name has a space — quote in SQL']
+  Investment_Payment_Allocation_Type   string
+  Investment_Payment_Status            string
+  Investment_Payment_Year              int
+  Investment_Payment_Date              date
 }
 
 Table invest_bow_details {
@@ -383,6 +385,7 @@ Table investment_overlays {
   overlay_id      string [pk]
   investment_id   string [ref: > invest_investments.Investment_ID]
   internal_notes  string
+  approver        string [note: 'Matt Gee | Natasha Fedo | Nicole Ifill | Allan Golston | Other — nullable, set manually for In Process investments']
   last_updated    timestamp
   updated_by      string
 }
