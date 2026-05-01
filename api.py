@@ -885,10 +885,10 @@ def get_budget_summary(portfolio_id):
               b.title AS bow_title,
               a.Investment_Payment_Year,
               SUM(CASE WHEN a.Investment_Payment_Status = 'Paid'
-                  THEN a.Investment_Payment_Allocation_Amount ELSE 0 END) AS paid,
+                  THEN a.`Investment_Payment_Allocation Amount` ELSE 0 END) AS paid,
               SUM(CASE WHEN a.Investment_Payment_Status != 'Paid'
-                  THEN a.Investment_Payment_Allocation_Amount ELSE 0 END) AS unpaid,
-              SUM(a.Investment_Payment_Allocation_Amount) AS total
+                  THEN a.`Investment_Payment_Allocation Amount` ELSE 0 END) AS unpaid,
+              SUM(a.`Investment_Payment_Allocation Amount`) AS total
             FROM {SCHEMA}.bows b
             JOIN {SCHEMA}.invest_bow_allocation a
               ON b.invest_bow_id = a.BoW_ID
