@@ -941,23 +941,33 @@ async function loadFromAPI() {
         const bow = portData.bows.find(b => b.id === bowId);
         if (!bow) return;
  
-        // Merge BOW outcomes from Tier 1 (read-only — title and shortTitle only)
+        // Merge BOW outcomes — build a positional map from DB outcome_id → hardcoded
+        // outcome object, since DB UUIDs don't match hardcoded IDs ("o1", "o2" etc).
+        // We sort DB outcomes by sort_order and pair them with hardcoded outcomes by position.
+        const dbOutcomeToHardcoded = {};
         if (bowOutcomes.length > 0) {
-          bowOutcomes.forEach(o => {
-            const existing = bow.outcomes.find(ex => ex.id === o.outcome_id);
-            if (existing) {
-              if (o.title) existing.title = o.title;
-              if (o.short_title) existing.shortTitle = o.short_title;
+          const sorted = [...bowOutcomes].sort(
+            (a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)
+          );
+          sorted.forEach((o, i) => {
+            if (bow.outcomes[i]) {
+              dbOutcomeToHardcoded[o.outcome_id] = bow.outcomes[i];
+              if (o.title)       bow.outcomes[i].title      = o.title;
+              if (o.short_title) bow.outcomes[i].shortTitle = o.short_title;
             }
           });
         }
- 
-        // Merge execution targets + status
-        // API now returns targets joined with execution_target_status
+
+        // Merge execution targets + status.
+        // Use dbOutcomeToHardcoded to translate DB outcome_id → hardcoded outcome id
+        // so the key lookup against bow.outcomes succeeds.
         if (targets.length > 0) {
           const grouped = {};
           targets.forEach(t => {
-            const key = `${t.outcome_id}|${t.year}`;
+            const hardcoded = dbOutcomeToHardcoded[t.outcome_id];
+            // Fall back to raw outcome_id if no mapping (e.g. newly added outcomes)
+            const oid = hardcoded ? hardcoded.id : (t.outcome_id || "__none");
+            const key = `${oid}|${t.year}`;
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push({
               target_id:  t.target_id,
