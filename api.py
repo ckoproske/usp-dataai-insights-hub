@@ -1663,7 +1663,7 @@ def delete_bow_outcome(outcome_id):
     rows = query(f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
     if rows:
         o = rows[0]
-        user = request.json.get("edited_by", "unknown") if request.json else "unknown"
+        user = (request.get_json(silent=True) or {}).get("edited_by", "unknown")
         _log_edit("bow_outcome", outcome_id, o.get("bow_id"), None,
                   {"title": {"old": o.get("title"), "new": None}}, "Outcome removed", None, user)
     execute(f"DELETE FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
@@ -1737,7 +1737,7 @@ def delete_bow_indicator(indicator_id):
     rows = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
     if rows:
         ind = rows[0]
-        user = request.json.get("edited_by", "unknown") if request.json else "unknown"
+        user = (request.get_json(silent=True) or {}).get("edited_by", "unknown")
         _log_edit("bow_indicator", indicator_id, ind.get("bow_id"), None,
                   {"text": {"old": ind.get("text"), "new": None}}, "Indicator removed", None, user)
     execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE indicator_id = ?", [indicator_id])
@@ -1801,7 +1801,7 @@ def delete_execution_target(target_id):
     rows = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
     if rows:
         t = rows[0]
-        user = request.json.get("edited_by", "unknown") if request.json else "unknown"
+        user = (request.get_json(silent=True) or {}).get("edited_by", "unknown")
         _log_edit("execution_target", target_id, t.get("bow_id"), None,
                   {"text": {"old": t.get("text"), "new": None}},
                   "Target removed", None, user)
