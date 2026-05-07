@@ -1641,6 +1641,7 @@ def add_bow_outcome():
     data    = request.json
     bow_id  = data.get("bow_id")
     title   = (data.get("title") or "").strip()
+    user    = data.get("edited_by", "unknown")
     if not bow_id or not title:
         return jsonify({"error": "bow_id and title required"}), 400
     max_sort = query(f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.bow_outcomes WHERE bow_id = ?", [bow_id])
@@ -1652,11 +1653,19 @@ def add_bow_outcome():
             VALUES (?, ?, ?, ?, ?, ?)""",
         [oid, bow_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
     )
+    _log_edit("bow_outcome", oid, bow_id, None,
+              {"title": {"old": None, "new": title}}, "New outcome added", None, user)
     return jsonify({"status": "ok", "outcome_id": oid})
 
 
 @app.route("/api/bow-outcomes/<outcome_id>", methods=["DELETE"])
 def delete_bow_outcome(outcome_id):
+    rows = query(f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
+    if rows:
+        o = rows[0]
+        user = request.json.get("edited_by", "unknown") if request.json else "unknown"
+        _log_edit("bow_outcome", outcome_id, o.get("bow_id"), None,
+                  {"title": {"old": o.get("title"), "new": None}}, "Outcome removed", None, user)
     execute(f"DELETE FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
     execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE outcome_id = ?", [outcome_id])
     return jsonify({"status": "ok"})
@@ -1702,6 +1711,7 @@ def add_bow_indicator():
     bow_id      = data.get("bow_id")
     outcome_id  = data.get("outcome_id")
     text        = (data.get("text") or "").strip()
+    user        = data.get("edited_by", "unknown")
     if not bow_id or not text:
         return jsonify({"error": "bow_id and text required"}), 400
     iid = new_id()
@@ -1717,11 +1727,19 @@ def add_bow_indicator():
          data.get("target_2028") or None, data.get("target_2029") or None,
          data.get("target_2030") or None]
     )
+    _log_edit("bow_indicator", iid, bow_id, None,
+              {"text": {"old": None, "new": text}}, "New indicator added", None, user)
     return jsonify({"status": "ok", "indicator_id": iid})
 
 
 @app.route("/api/bow-indicators/<indicator_id>", methods=["DELETE"])
 def delete_bow_indicator(indicator_id):
+    rows = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
+    if rows:
+        ind = rows[0]
+        user = request.json.get("edited_by", "unknown") if request.json else "unknown"
+        _log_edit("bow_indicator", indicator_id, ind.get("bow_id"), None,
+                  {"text": {"old": ind.get("text"), "new": None}}, "Indicator removed", None, user)
     execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE indicator_id = ?", [indicator_id])
     return jsonify({"status": "ok"})
 
@@ -1757,6 +1775,7 @@ def add_execution_target():
     outcome_id = data.get("outcome_id")
     year       = data.get("year")
     text       = (data.get("text") or "").strip()
+    user       = data.get("edited_by", "unknown")
     if not bow_id or not year or not text:
         return jsonify({"error": "bow_id, year, and text required"}), 400
     max_sort = query(
@@ -1771,11 +1790,21 @@ def add_execution_target():
             VALUES (?, ?, ?, ?, ?, ?)""",
         [tid, bow_id, outcome_id or None, year, text, sort_order]
     )
+    _log_edit("execution_target", tid, bow_id, None,
+              {"text": {"old": None, "new": text}, "year": {"old": None, "new": year}},
+              f"New target added for {year}", None, user)
     return jsonify({"status": "ok", "target_id": tid})
 
 
 @app.route("/api/execution-targets/<target_id>", methods=["DELETE"])
 def delete_execution_target(target_id):
+    rows = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
+    if rows:
+        t = rows[0]
+        user = request.json.get("edited_by", "unknown") if request.json else "unknown"
+        _log_edit("execution_target", target_id, t.get("bow_id"), None,
+                  {"text": {"old": t.get("text"), "new": None}},
+                  "Target removed", None, user)
     execute(f"DELETE FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
     execute(f"DELETE FROM {SCHEMA}.execution_target_status WHERE target_id = ?", [target_id])
     return jsonify({"status": "ok"})
