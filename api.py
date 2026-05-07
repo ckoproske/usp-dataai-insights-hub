@@ -1504,22 +1504,31 @@ def get_bow_full(bow_id):
         [bow_id]
     )
 
-    indicators = query(
-        f"""SELECT i.*,
-                   (SELECT bia.actual_value
-                    FROM {SCHEMA}.bow_indicator_actuals bia
-                    WHERE bia.indicator_id = i.indicator_id
-                    ORDER BY bia.year DESC, bia.submitted_at DESC LIMIT 1) AS latest_actual,
-                   (SELECT bia.year
-                    FROM {SCHEMA}.bow_indicator_actuals bia
-                    WHERE bia.indicator_id = i.indicator_id
-                    ORDER BY bia.year DESC, bia.submitted_at DESC LIMIT 1) AS latest_actual_year
-            FROM {SCHEMA}.bow_indicators i
-            WHERE i.bow_id = ?
-              AND COALESCE(i.is_active, true) = true
-            ORDER BY i.outcome_id, i.indicator_id""",
-        [bow_id]
-    )
+    try:
+        indicators = query(
+            f"""SELECT i.*,
+                       a.actual_value AS latest_actual,
+                       a.year         AS latest_actual_year
+                FROM {SCHEMA}.bow_indicators i
+                LEFT JOIN (
+                    SELECT indicator_id, actual_value, year,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
+                           ) AS rn
+                    FROM {SCHEMA}.bow_indicator_actuals
+                ) a ON i.indicator_id = a.indicator_id AND a.rn = 1
+                WHERE i.bow_id = ?
+                  AND COALESCE(i.is_active, true) = true
+                ORDER BY i.outcome_id, i.indicator_id""",
+            [bow_id]
+        )
+    except Exception:
+        indicators = query(
+            f"""SELECT * FROM {SCHEMA}.bow_indicators
+                WHERE bow_id = ? AND COALESCE(is_active, true) = true
+                ORDER BY outcome_id, indicator_id""",
+            [bow_id]
+        )
 
     execution_targets = query(
         f"""SELECT t.*, s.completion, s.notes AS status_notes, s.last_updated, s.updated_by
@@ -1560,21 +1569,30 @@ def get_portfolio_full(portfolio_id):
         [portfolio_id]
     )
 
-    indicators = query(
-        f"""SELECT i.*,
-                   (SELECT pia.actual_value
-                    FROM {SCHEMA}.portfolio_indicator_actuals pia
-                    WHERE pia.indicator_id = i.indicator_id
-                    ORDER BY pia.year DESC, pia.submitted_at DESC LIMIT 1) AS latest_actual,
-                   (SELECT pia.year
-                    FROM {SCHEMA}.portfolio_indicator_actuals pia
-                    WHERE pia.indicator_id = i.indicator_id
-                    ORDER BY pia.year DESC, pia.submitted_at DESC LIMIT 1) AS latest_actual_year
-            FROM {SCHEMA}.portfolio_indicators i
-            WHERE i.portfolio_id = ?
-            ORDER BY i.outcome_id, i.indicator_id""",
-        [portfolio_id]
-    )
+    try:
+        indicators = query(
+            f"""SELECT i.*,
+                       a.actual_value AS latest_actual,
+                       a.year         AS latest_actual_year
+                FROM {SCHEMA}.portfolio_indicators i
+                LEFT JOIN (
+                    SELECT indicator_id, actual_value, year,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
+                           ) AS rn
+                    FROM {SCHEMA}.portfolio_indicator_actuals
+                ) a ON i.indicator_id = a.indicator_id AND a.rn = 1
+                WHERE i.portfolio_id = ?
+                ORDER BY i.outcome_id, i.indicator_id""",
+            [portfolio_id]
+        )
+    except Exception:
+        indicators = query(
+            f"""SELECT * FROM {SCHEMA}.portfolio_indicators
+                WHERE portfolio_id = ?
+                ORDER BY outcome_id, indicator_id""",
+            [portfolio_id]
+        )
 
     ind_by_outcome = {}
     for ind in indicators:
