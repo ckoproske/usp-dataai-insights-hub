@@ -957,9 +957,9 @@ async function loadFromAPI() {
           const sorted = [...bowOutcomes].sort(
             (a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)
           );
-          bow.outcomes = sorted.map(o => ({
+          bow.outcomes = sorted.map((o, i) => ({
             id:              o.outcome_id,          // DB UUID — used as truth key
-            number:          o.sort_order || 1,
+            number:          i + 1,                 // sequential 1,2,3 regardless of sort_order gaps
             shortTitle:      o.short_title || o.title || "",
             title:           o.title || "",
             notes:           "",
