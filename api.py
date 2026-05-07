@@ -1996,6 +1996,7 @@ def get_activity_feed():
             edits = []
 
     if type_filter != "edit":
+      try:
         subs = query(
             f"""SELECT
                   'submission'           AS type,
@@ -2023,6 +2024,8 @@ def get_activity_feed():
                 LIMIT {limit}""",
             params_sub or None
         )
+      except Exception:
+        subs = []
 
     combined = sorted(edits + subs, key=lambda r: r.get("ts") or "", reverse=True)[:limit]
     return jsonify(combined)
