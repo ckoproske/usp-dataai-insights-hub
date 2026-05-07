@@ -843,7 +843,14 @@ async function isAPIReady() {
 async function loadFromAPI() {
   const base = JSON.parse(JSON.stringify(DEFAULT_DATA));
   let anyRealData = false;
- 
+
+  // Clear all hardcoded content so DB is always the source of truth.
+  // BOWs/portfolios with no DB rows will show empty rather than fake placeholder data.
+  Object.values(base.portfolios).forEach(portData => {
+    portData.bows.forEach(bow => { bow.outcomes = []; });
+    portData.portfolio.portfolioOutcomes = [];
+  });
+
   try {
     // ── Step 1: Core strategy structure ────────────────────────────────────
     const [goals, portfolios, bows, goalActuals, goalRatings] = await Promise.all([
