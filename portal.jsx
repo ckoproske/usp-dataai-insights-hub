@@ -1120,7 +1120,18 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
     tByOY[oid][t.year].push(t);
   });
 
-  const cellTargets = (oid, year) => (tByOY[oid || "__"] || {})[year] || [];
+  // Return targets for this outcome+year cell.
+  // Also include targets with no outcome_id (stored under "__") so they're
+  // never invisible just because they weren't linked to a specific outcome.
+  const cellTargets = (oid, year) => {
+    const specific = (tByOY[oid] || {})[year] || [];
+    const unlinked = oid ? ((tByOY["__"] || {})[year] || []) : [];
+    const seen = new Set();
+    return [...specific, ...unlinked].filter(t => {
+      if (seen.has(t.target_id)) return false;
+      seen.add(t.target_id); return true;
+    });
+  };
 
   const thStyle = { padding: "8px 12px", textAlign: "left", fontSize: 12,
     fontWeight: 700, color: TEXT_MUTED, background: BG,
@@ -1706,8 +1717,10 @@ function BowPanel({ bow, user, onBack }) {
   const activeOutcome = outcomes.find(o => o.outcome_id === activeOId) || outcomes[0] || null;
   // Pass only the active outcome to the content table so it renders one at a time
   const visibleOutcomes  = activeOutcome ? [activeOutcome] : [];
+  // Include targets that belong to the active outcome OR have no outcome_id set
+  // (targets without outcome_id are shown in every tab so they're never hidden)
   const visibleTargets   = (data?.execution_targets || []).filter(
-    t => !activeOutcome || t.outcome_id === activeOutcome.outcome_id
+    t => !activeOutcome || !t.outcome_id || t.outcome_id === activeOutcome.outcome_id
   );
 
   const tabBase = {
