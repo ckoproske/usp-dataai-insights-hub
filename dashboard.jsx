@@ -940,34 +940,34 @@ async function loadFromAPI() {
       Object.values(base.portfolios).forEach(portData => {
         const bow = portData.bows.find(b => b.id === bowId);
         if (!bow) return;
- 
-        // Merge BOW outcomes — build a positional map from DB outcome_id → hardcoded
-        // outcome object, since DB UUIDs don't match hardcoded IDs ("o1", "o2" etc).
-        // We sort DB outcomes by sort_order and pair them with hardcoded outcomes by position.
-        const dbOutcomeToHardcoded = {};
+
+        // ── Rebuild bow.outcomes from DB when DB has data ───────────────────
+        // The DB is the source of truth for outcome count, IDs, titles.
+        // Using DB IDs as o.id means Steps 3 (indicators) and targets both
+        // resolve correctly without any positional mapping.
+        // Falls back to DEFAULT_DATA outcomes if DB has none for this BOW.
         if (bowOutcomes.length > 0) {
           const sorted = [...bowOutcomes].sort(
             (a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)
           );
-          sorted.forEach((o, i) => {
-            if (bow.outcomes[i]) {
-              dbOutcomeToHardcoded[o.outcome_id] = bow.outcomes[i];
-              if (o.title)       bow.outcomes[i].title      = o.title;
-              if (o.short_title) bow.outcomes[i].shortTitle = o.short_title;
-            }
-          });
+          bow.outcomes = sorted.map(o => ({
+            id:              o.outcome_id,          // DB UUID — used as truth key
+            number:          o.sort_order || 1,
+            shortTitle:      o.short_title || o.title || "",
+            title:           o.title || "",
+            notes:           "",
+            manualStatus:    null,
+            executionTargets: YEARS.reduce((a, y) => ({ ...a, [y]: [] }), {}),
+            impactIndicators: [],
+          }));
         }
 
-        // Merge execution targets + status.
-        // Use dbOutcomeToHardcoded to translate DB outcome_id → hardcoded outcome id
-        // so the key lookup against bow.outcomes succeeds.
+        // ── Merge execution targets ─────────────────────────────────────────
+        // Now that o.id === DB outcome_id, direct key match works.
         if (targets.length > 0) {
           const grouped = {};
           targets.forEach(t => {
-            const hardcoded = dbOutcomeToHardcoded[t.outcome_id];
-            // Fall back to raw outcome_id if no mapping (e.g. newly added outcomes)
-            const oid = hardcoded ? hardcoded.id : (t.outcome_id || "__none");
-            const key = `${oid}|${t.year}`;
+            const key = `${t.outcome_id || "__none"}|${t.year}`;
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push({
               target_id:  t.target_id,
@@ -1027,12 +1027,14 @@ async function loadFromAPI() {
           if (!byOutcome[ind.outcome_id]) byOutcome[ind.outcome_id] = {};
           if (!byOutcome[ind.outcome_id][ind.indicator_id]) {
             // First row for this indicator — set definition fields
+            // DB is the source of truth: id, text, targets, baseline, frequency
             byOutcome[ind.outcome_id][ind.indicator_id] = {
-              id:         ind.indicator_id,
-              text:       ind.text || "",
-              source:     ind.data_source || "",
-              baseline:   ind.baseline !== null ? String(ind.baseline) : "",
-              // Wide-format targets: target_2026 through target_2030
+              id:          ind.indicator_id,
+              text:        ind.text || "",
+              source:      ind.data_source || "",
+              baseline:    ind.baseline !== null ? String(ind.baseline) : "",
+              updateFreq:  ind.collection_frequency || "",
+              lastUpdated: ind.last_updated || "",
               targets: {
                 2026: ind.target_2026 !== null ? String(ind.target_2026) : "",
                 2027: ind.target_2027 !== null ? String(ind.target_2027) : "",
