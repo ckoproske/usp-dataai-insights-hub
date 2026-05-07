@@ -1674,14 +1674,21 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
 
 // ─── BOW Panel ─────────────────────────────────────────────────────────────────
 function BowPanel({ bow, user, onBack }) {
-  const [data, setData]         = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [outcomes, setOutcomes] = useState([]);
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [outcomes, setOutcomes]   = useState([]);
+  const [activeOId, setActiveOId] = useState(null);
 
   const load = () => {
     setLoading(true);
     api(`/api/bow/${bow.bow_id}/full`)
-      .then(d => { setData(d); setOutcomes(d.outcomes || []); })
+      .then(d => {
+        const outs = d.outcomes || [];
+        setData(d);
+        setOutcomes(outs);
+        // Set first tab on initial load only
+        setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
+      })
       .finally(() => setLoading(false));
   };
 
@@ -1695,9 +1702,35 @@ function BowPanel({ bow, user, onBack }) {
     </div>
   );
 
+  // Resolve active outcome (fall back to first)
+  const activeOutcome = outcomes.find(o => o.outcome_id === activeOId) || outcomes[0] || null;
+  // Pass only the active outcome to the content table so it renders one at a time
+  const visibleOutcomes  = activeOutcome ? [activeOutcome] : [];
+  const visibleTargets   = (data?.execution_targets || []).filter(
+    t => !activeOutcome || t.outcome_id === activeOutcome.outcome_id
+  );
+
+  const tabBase = {
+    padding: "9px 18px",
+    fontSize: 13,
+    border: "none",
+    cursor: "pointer",
+    borderRadius: "6px 6px 0 0",
+    marginBottom: -2,
+    transition: "color 0.12s, background 0.12s",
+    maxWidth: 220,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  };
+
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
         <button onClick={onBack}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
@@ -1710,9 +1743,51 @@ function BowPanel({ bow, user, onBack }) {
         </div>
       </div>
 
+      {/* ── Outcome tabs ── */}
+      {outcomes.length > 0 && (
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 2,
+          borderBottom: `2px solid ${BORDER}`, marginBottom: 24, flexWrap: "wrap" }}>
+          {outcomes.map((out, i) => {
+            const isActive = out.outcome_id === (activeOutcome?.outcome_id);
+            return (
+              <button key={out.outcome_id}
+                onClick={() => setActiveOId(out.outcome_id)}
+                style={{
+                  ...tabBase,
+                  fontWeight: isActive ? 700 : 500,
+                  color:      isActive ? (p?.dark || ACCENT) : TEXT_MUTED,
+                  background: isActive ? (p?.light || ACCENT_LIGHT) : "transparent",
+                  borderBottom: isActive
+                    ? `2px solid ${p?.color || ACCENT}`
+                    : "2px solid transparent",
+                }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, flexShrink: 0,
+                  background: isActive ? (p?.color || ACCENT) : BORDER,
+                  color: isActive ? "#fff" : TEXT_MUTED,
+                  borderRadius: 3, padding: "1px 5px",
+                }}>
+                  O{i + 1}
+                </span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {out.short_title || out.title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {outcomes.length === 0 && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 24 }}>
+          No outcomes yet. Use the button below to add one.
+        </p>
+      )}
+
+      {/* ── Content for active outcome ── */}
       <BowContentTable
-        outcomes={outcomes}
-        executionTargets={data?.execution_targets || []}
+        outcomes={visibleOutcomes}
+        executionTargets={visibleTargets}
         bow={bow} user={user}
         onRefresh={load}
       />
