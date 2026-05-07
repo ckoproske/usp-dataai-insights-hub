@@ -281,7 +281,1176 @@ function Skeleton({ height = 40, style = {} }) {
   );
 }
 
-// ─── Submit Form ──────────────────────────────────────────────────────────────
+const REVISION_REASONS = [
+  { value: "corrected_error",  label: "Corrected error" },
+  { value: "updated_data",     label: "Updated data / better information" },
+  { value: "revised_ambition", label: "Revised ambition" },
+  { value: "scope_change",     label: "Scope change" },
+];
+
+const TARGET_YEARS = [2026, 2027, 2028, 2029, 2030];
+
+// ─── Inline Submit Form ────────────────────────────────────────────────────────
+function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
+  const freq = indicator.collection_frequency || "annual";
+  const periodOptions = PERIOD_OPTIONS[freq] || [];
+
+  const [value, setValue]          = useState("");
+  const [period, setPeriod]        = useState("");
+  const [readingDate, setDate]     = useState(TODAY);
+  const [sourceName, setSrcName]   = useState("");
+  const [sourceType, setSrcType]   = useState("");
+  const [sourceOther, setSrcOther] = useState("");
+  const [sourceUrl, setSrcUrl]     = useState("");
+  const [notes, setNotes]          = useState("");
+  const [submitting, setSubmitting]= useState(false);
+  const [error, setError]          = useState(null);
+
+  const canSubmit = value && sourceName.trim() && sourceType && readingDate
+    && (periodOptions.length === 0 || period);
+
+  const submit = async () => {
+    setSubmitting(true); setError(null);
+    try {
+      const typeLabel  = sourceType === "other"
+        ? (sourceOther.trim() || "Other")
+        : SOURCE_TYPES.find(t => t.value === sourceType)?.label || sourceType;
+      const sourceText = [
+        `${sourceName.trim()} · ${typeLabel}`,
+        sourceUrl ? `Link: ${sourceUrl}` : "",
+      ].filter(Boolean).join(" — ");
+      await api("/api/pending-actuals/submit", {
+        method: "POST",
+        body: JSON.stringify({
+          indicator_id: indicator.indicator_id,
+          level: bow.portfolio_id ? "bow" : "portfolio",
+          entity_id: bow.bow_id || bow.portfolio_id,
+          year: CURRENT_YEAR, period: period || null,
+          submitted_value: parseFloat(value),
+          reading_date: readingDate, source_notes: sourceText, notes,
+        }),
+      });
+      onSubmitted();
+    } catch (e) {
+      setError("Submission failed — please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fade-in" style={{ marginTop: 10, padding: "18px 20px", background: ACCENT_LIGHT,
+      borderRadius: 8, border: `1px solid ${ACCENT_MID}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: BRAND }}>Submit actual — {indicator.text}</p>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer",
+          fontSize: 18, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: periodOptions.length ? "1fr 1fr" : "1fr", gap: 12, marginBottom: 4 }}>
+        <Field label={`Value${indicator.unit ? ` (${indicator.unit})` : ""}`} required>
+          <input type="number" value={value} onChange={e => setValue(e.target.value)}
+            placeholder="Enter value..." style={inputStyle} />
+        </Field>
+        {periodOptions.length > 0 && (
+          <Field label="Period" required>
+            <select value={period} onChange={e => setPeriod(e.target.value)}
+              style={{ ...inputStyle, appearance: "auto" }}>
+              <option value="">Select period...</option>
+              {periodOptions.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </Field>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
+        <Field label="Data date" required helper="When was this data collected or published?">
+          <input type="date" value={readingDate} onChange={e => setDate(e.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Source type" required>
+          <select value={sourceType} onChange={e => setSrcType(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select...</option>
+            {SOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Source name" required helper="Report, dataset, or document this came from.">
+        <input type="text" value={sourceName} onChange={e => setSrcName(e.target.value)}
+          placeholder="e.g. Q1 2026 Partner Report..." style={inputStyle} />
+      </Field>
+      {sourceType === "other" && (
+        <Field label="Describe the source">
+          <input type="text" value={sourceOther} onChange={e => setSrcOther(e.target.value)}
+            placeholder="Briefly describe..." style={inputStyle} />
+        </Field>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Field label="Source link">
+          <input type="url" value={sourceUrl} onChange={e => setSrcUrl(e.target.value)}
+            placeholder="https://..." style={inputStyle} />
+        </Field>
+        <Field label="Notes">
+          <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Any caveats for the reviewer..." style={inputStyle} />
+        </Field>
+      </div>
+
+      {error && <p style={{ color: DANGER, fontSize: 13, marginTop: 6, marginBottom: 4 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+        <Btn variant="secondary" size="sm" onClick={onClose}>Cancel</Btn>
+        <Btn size="sm" onClick={submit} disabled={!canSubmit || submitting}>
+          {submitting ? "Submitting..." : "Submit for review"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline Edit Outcome ───────────────────────────────────────────────────────
+function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
+  const [title, setTitle]         = useState(outcome.title || "");
+  const [shortTitle, setShort]    = useState(outcome.short_title || "");
+  const [text, setText]           = useState(outcome.text || "");
+  const [rationale, setRationale] = useState("");
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState(null);
+
+  const titleChanged   = title !== (outcome.title || "");
+  const textChanged    = text  !== (outcome.text  || "");
+  const needsRationale = titleChanged || textChanged;
+  const canSave        = title.trim() && (!needsRationale || rationale.trim());
+
+  const save = async () => {
+    setSaving(true); setError(null);
+    const endpoint = isPortfolio
+      ? `/api/portfolio-outcomes/${outcome.outcome_id}`
+      : `/api/bow-outcomes/${outcome.outcome_id}`;
+    try {
+      const res = await api(endpoint, {
+        method: "PATCH",
+        body: JSON.stringify({ title, short_title: shortTitle, text,
+          rationale: rationale || undefined, edited_by: user?.email }),
+      });
+      if (res.error) { setError(res.error); return; }
+      onSave({ ...outcome, title, short_title: shortTitle, text });
+    } catch (e) {
+      setError("Save failed — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fade-in">
+      <Field label="Outcome title" required>
+        <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
+      </Field>
+      <Field label="Short title" helper="Abbreviated label used in compact views.">
+        <input type="text" value={shortTitle} onChange={e => setShort(e.target.value)} style={inputStyle} />
+      </Field>
+      <Field label="Description / narrative">
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          rows={4} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      {needsRationale && (
+        <Field label="Rationale for change" required
+          helper="Required when editing title or description — explain why this text is changing.">
+          <textarea value={rationale} onChange={e => setRationale(e.target.value)}
+            placeholder="e.g. Clarified scope after Q1 strategy review..."
+            rows={2} style={{ ...inputStyle, resize: "vertical", borderColor: ACCENT }} />
+        </Field>
+      )}
+      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        <Btn size="sm" onClick={save} disabled={!canSave || saving}>
+          {saving ? "Saving..." : "Save outcome"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline Edit Indicator ─────────────────────────────────────────────────────
+function InlineEditIndicator({ indicator, onSave, onCancel, user, isPortfolio }) {
+  const [itext, setItext]     = useState(indicator.text || "");
+  const [unit, setUnit]       = useState(indicator.unit || "");
+  const [freq, setFreq]       = useState(indicator.collection_frequency || "");
+  const [baseline, setBase]   = useState(String(indicator.baseline ?? ""));
+  const [targets, setTargets] = useState(
+    TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: String(indicator[`target_${y}`] ?? "") }), {})
+  );
+  const [rationale, setRationale]   = useState("");
+  const [revReason, setRevReason]   = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState(null);
+
+  const textChanged    = itext !== (indicator.text || "");
+  const targetsChanged = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
+  const canSave = itext.trim()
+    && (!textChanged    || rationale.trim())
+    && (!targetsChanged || revReason);
+
+  const save = async () => {
+    setSaving(true); setError(null);
+    const endpoint = isPortfolio
+      ? `/api/portfolio-indicators/${indicator.indicator_id}`
+      : `/api/bow-indicators/${indicator.indicator_id}`;
+    const body = {
+      text: itext, unit, collection_frequency: freq, baseline: baseline || null,
+      ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
+      rationale: rationale || undefined,
+      revision_reason: revReason || undefined,
+      edited_by: user?.email,
+    };
+    try {
+      const res = await api(endpoint, { method: "PATCH", body: JSON.stringify(body) });
+      if (res.error) { setError(res.error); return; }
+      onSave({ ...indicator, ...body });
+    } catch (e) {
+      setError("Save failed — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
+      border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
+      <Field label="Indicator" required>
+        <textarea value={itext} onChange={e => setItext(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <Field label="Unit">
+          <select value={unit} onChange={e => setUnit(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">None</option>
+            {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Collection frequency">
+          <select value={freq} onChange={e => setFreq(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select...</option>
+            {Object.keys(PERIOD_OPTIONS).map(f =>
+              <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>Baseline & Targets</p>
+      <div style={{ display: "grid",
+        gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 16 }}>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, display: "block", marginBottom: 3 }}>
+            Baseline
+          </label>
+          <input type="number" value={baseline} onChange={e => setBase(e.target.value)}
+            style={{ ...inputStyle, textAlign: "right" }} />
+        </div>
+        {TARGET_YEARS.map(y => (
+          <div key={y}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, display: "block", marginBottom: 3 }}>
+              {y}
+            </label>
+            <input type="number" value={targets[y]}
+              onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
+              style={{ ...inputStyle, textAlign: "right" }} />
+          </div>
+        ))}
+      </div>
+
+      {textChanged && (
+        <Field label="Rationale for indicator text change" required>
+          <textarea value={rationale} onChange={e => setRationale(e.target.value)}
+            placeholder="Why is the indicator wording changing?"
+            rows={2} style={{ ...inputStyle, resize: "vertical", borderColor: ACCENT }} />
+        </Field>
+      )}
+      {targetsChanged && (
+        <Field label="Reason for target revision" required>
+          <select value={revReason} onChange={e => setRevReason(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto", borderColor: ACCENT }}>
+            <option value="">Select reason...</option>
+            {REVISION_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+        </Field>
+      )}
+
+      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        <Btn size="sm" onClick={save} disabled={!canSave || saving}>
+          {saving ? "Saving..." : "Save indicator"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+// ─── Indicator Row ─────────────────────────────────────────────────────────────
+function IndicatorRow({ indicator, bow, user, isPortfolio, onDeleted, onUpdated }) {
+  const [mode, setMode]             = useState("view"); // view | submit | edit
+  const [submitted, setSubmitted]   = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
+
+  const target = getRelevantTarget(indicator);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const ep = isPortfolio
+      ? `/api/portfolio-indicators/${indicator.indicator_id}`
+      : `/api/bow-indicators/${indicator.indicator_id}`;
+    await api(ep, { method: "DELETE" });
+    onDeleted(indicator.indicator_id);
+  };
+
+  if (submitted) return (
+    <div className="fade-in" style={{ padding: "10px 14px", background: SUCCESS_BG,
+      borderRadius: 7, border: `1px solid ${SUCCESS}`, display: "flex",
+      alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
+      <p style={{ fontSize: 13, color: SUCCESS, fontWeight: 700 }}>
+        ✓ Submitted for review
+      </p>
+      <Btn variant="ghost" size="sm" onClick={() => { setSubmitted(false); setMode("view"); }}>
+        Submit another
+      </Btn>
+    </div>
+  );
+
+  return (
+    <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12, marginTop: 12 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.4, marginBottom: 6 }}>
+            {indicator.text}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {indicator.unit && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: ACCENT_LIGHT,
+                color: ACCENT, borderRadius: 4, padding: "2px 7px" }}>
+                {indicator.unit}
+              </span>
+            )}
+            {indicator.collection_frequency && (
+              <span style={{ fontSize: 11, fontWeight: 600, background: BG, color: TEXT_SUB,
+                borderRadius: 4, padding: "2px 7px", border: `1px solid ${BORDER}`,
+                textTransform: "capitalize" }}>
+                {indicator.collection_frequency}
+              </span>
+            )}
+            {target && (
+              <span style={{ fontSize: 11, fontWeight: 600, background: BG, color: TEXT_SUB,
+                borderRadius: 4, padding: "2px 7px", border: `1px solid ${BORDER}` }}>
+                Target {target.year}: {target.value}{indicator.unit ? ` ${indicator.unit}` : ""}
+              </span>
+            )}
+            {indicator.latest_actual != null && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: SUCCESS_BG,
+                color: SUCCESS, borderRadius: 4, padding: "2px 7px" }}>
+                Actual {indicator.latest_actual_year}: {indicator.latest_actual}
+                {indicator.unit ? ` ${indicator.unit}` : ""}
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+          {mode === "view" && !confirmDel && (
+            <>
+              <Btn size="sm" onClick={() => setMode("submit")}>Submit</Btn>
+              <Btn variant="secondary" size="sm" onClick={() => setMode("edit")}>Edit</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => setConfirmDel(true)}
+                style={{ color: DANGER, fontSize: 12 }}>Remove</Btn>
+            </>
+          )}
+          {confirmDel && (
+            <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: DANGER, fontWeight: 600 }}>Remove?</span>
+              <Btn variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>Yes</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => setConfirmDel(false)}>No</Btn>
+            </span>
+          )}
+          {mode !== "view" && !confirmDel && (
+            <Btn variant="ghost" size="sm" onClick={() => setMode("view")}
+              style={{ color: TEXT_MUTED }}>Cancel</Btn>
+          )}
+        </div>
+      </div>
+
+      {mode === "submit" && (
+        <InlineSubmitForm
+          indicator={indicator} bow={bow}
+          onClose={() => setMode("view")}
+          onSubmitted={() => { setMode("view"); setSubmitted(true); }}
+        />
+      )}
+      {mode === "edit" && (
+        <InlineEditIndicator
+          indicator={indicator} user={user} isPortfolio={isPortfolio}
+          onSave={updated => { onUpdated(updated); setMode("view"); }}
+          onCancel={() => setMode("view")}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Outcome Card (BOW) ────────────────────────────────────────────────────────
+function OutcomeCard({ outcome: initOutcome, index, bow, user, onDeleted }) {
+  const [outcome, setOutcome]       = useState(initOutcome);
+  const [indicators, setIndicators] = useState(initOutcome.indicators || []);
+  const [editing, setEditing]       = useState(false);
+  const [addingInd, setAddingInd]   = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
+  const [newIndText, setNewIndText] = useState("");
+  const [newUnit, setNewUnit]       = useState("");
+  const [newFreq, setNewFreq]       = useState("");
+  const [savingInd, setSavingInd]   = useState(false);
+
+  const p = PORT_COLORS[bow.portfolio_id];
+
+  const handleDeleteOutcome = async () => {
+    setDeleting(true);
+    await api(`/api/bow-outcomes/${outcome.outcome_id}`, { method: "DELETE" });
+    onDeleted(outcome.outcome_id);
+  };
+
+  const handleAddIndicator = async () => {
+    if (!newIndText.trim()) return;
+    setSavingInd(true);
+    const res = await api("/api/bow-indicators", {
+      method: "POST",
+      body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcome.outcome_id,
+        text: newIndText, unit: newUnit || null, collection_frequency: newFreq || null }),
+    });
+    if (!res.error) {
+      const fresh = await api(`/api/bow/${bow.bow_id}/full`);
+      const updOut = fresh.outcomes?.find(o => o.outcome_id === outcome.outcome_id);
+      if (updOut) setIndicators(updOut.indicators || []);
+      setAddingInd(false); setNewIndText(""); setNewUnit(""); setNewFreq("");
+    }
+    setSavingInd(false);
+  };
+
+  return (
+    <Card style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
+      {/* Header */}
+      <div style={{ padding: "14px 20px", background: BG,
+        borderBottom: `1px solid ${BORDER}`,
+        display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+          background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
+          borderRadius: 4, padding: "3px 8px", flexShrink: 0, marginTop: 1 }}>
+          O{index + 1}
+        </span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4,
+            marginBottom: outcome.short_title ? 2 : 0 }}>
+            {outcome.title || "Untitled outcome"}
+          </p>
+          {outcome.short_title && (
+            <p style={{ fontSize: 12, color: TEXT_MUTED }}>{outcome.short_title}</p>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+          {!editing && !confirmDel && (
+            <>
+              <Btn variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => setConfirmDel(true)}
+                style={{ color: DANGER, fontSize: 12 }}>Remove</Btn>
+            </>
+          )}
+          {confirmDel && (
+            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: DANGER, fontWeight: 600 }}>
+                Remove outcome + all indicators?
+              </span>
+              <Btn variant="danger" size="sm" onClick={handleDeleteOutcome} disabled={deleting}>
+                Yes, remove
+              </Btn>
+              <Btn variant="ghost" size="sm" onClick={() => setConfirmDel(false)}>Cancel</Btn>
+            </span>
+          )}
+          {editing && (
+            <Btn variant="ghost" size="sm" onClick={() => setEditing(false)}>Cancel</Btn>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: "16px 20px" }}>
+        {editing ? (
+          <InlineEditOutcome
+            outcome={outcome} user={user}
+            onSave={updated => { setOutcome(updated); setEditing(false); }}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <>
+            {outcome.text && (
+              <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.6, marginBottom: 16 }}>
+                {outcome.text}
+              </p>
+            )}
+
+            {indicators.length === 0 && !addingInd && (
+              <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 12 }}>
+                No indicators added yet.
+              </p>
+            )}
+
+            {indicators.map(ind => (
+              <IndicatorRow key={ind.indicator_id}
+                indicator={ind} bow={bow} user={user}
+                onDeleted={id => setIndicators(prev => prev.filter(i => i.indicator_id !== id))}
+                onUpdated={upd => setIndicators(prev =>
+                  prev.map(i => i.indicator_id === upd.indicator_id ? { ...i, ...upd } : i)
+                )}
+              />
+            ))}
+
+            {addingInd ? (
+              <div className="fade-in" style={{ marginTop: 14, padding: "14px 16px", background: BG,
+                border: `1px dashed ${BORDER}`, borderRadius: 8 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 10 }}>
+                  New indicator
+                </p>
+                <Field label="Indicator" required>
+                  <textarea value={newIndText} onChange={e => setNewIndText(e.target.value)}
+                    placeholder="Describe what this indicator measures..."
+                    rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+                </Field>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <Field label="Unit">
+                    <select value={newUnit} onChange={e => setNewUnit(e.target.value)}
+                      style={{ ...inputStyle, appearance: "auto" }}>
+                      <option value="">None</option>
+                      {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Collection frequency">
+                    <select value={newFreq} onChange={e => setNewFreq(e.target.value)}
+                      style={{ ...inputStyle, appearance: "auto" }}>
+                      <option value="">Select...</option>
+                      {Object.keys(PERIOD_OPTIONS).map(f =>
+                        <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+                    </select>
+                  </Field>
+                </div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+                  <Btn variant="secondary" size="sm"
+                    onClick={() => { setAddingInd(false); setNewIndText(""); }}>Cancel</Btn>
+                  <Btn size="sm" onClick={handleAddIndicator}
+                    disabled={!newIndText.trim() || savingInd}>
+                    {savingInd ? "Adding..." : "Add indicator"}
+                  </Btn>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 14 }}>
+                <Btn variant="ghost" size="sm" onClick={() => setAddingInd(true)}
+                  style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+                  + Add indicator
+                </Btn>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Add Outcome Form ──────────────────────────────────────────────────────────
+function AddOutcomeForm({ bow, onSaved, onCancel }) {
+  const [title, setTitle]   = useState("");
+  const [short, setShort]   = useState("");
+  const [text, setText]     = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState(null);
+
+  const save = async () => {
+    setSaving(true); setError(null);
+    try {
+      const res = await api("/api/bow-outcomes", {
+        method: "POST",
+        body: JSON.stringify({ bow_id: bow.bow_id, title, short_title: short, text }),
+      });
+      if (res.error) { setError(res.error); return; }
+      onSaved();
+    } catch (e) {
+      setError("Failed to add outcome.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="fade-in" style={{ border: `1px dashed ${BORDER}`, marginBottom: 16 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: TEXT_MUTED, marginBottom: 14 }}>
+        New outcome
+      </p>
+      <Field label="Outcome title" required>
+        <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+          placeholder="e.g. Improved data infrastructure adoption..." style={inputStyle} />
+      </Field>
+      <Field label="Short title" helper="Used in compact views.">
+        <input type="text" value={short} onChange={e => setShort(e.target.value)}
+          placeholder="Abbreviated label..." style={inputStyle} />
+      </Field>
+      <Field label="Description">
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          placeholder="Narrative description of this outcome..."
+          rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        <Btn size="sm" onClick={save} disabled={!title.trim() || saving}>
+          {saving ? "Adding..." : "Add outcome"}
+        </Btn>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Execution Targets Section ─────────────────────────────────────────────────
+function ExecutionTargetsSection({ targets: initTargets, bow, outcomes, user }) {
+  const [targets, setTargets]       = useState(initTargets);
+  const [editId, setEditId]         = useState(null);
+  const [editText, setEditText]     = useState("");
+  const [rationale, setRationale]   = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [adding, setAdding]         = useState(false);
+  const [newYear, setNewYear]       = useState(String(CURRENT_YEAR));
+  const [newText, setNewText]       = useState("");
+  const [newOutcome, setNewOutcome] = useState("");
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const years = [...new Set(targets.map(t => t.year))].sort();
+
+  const saveEdit = async (target_id) => {
+    if (!rationale.trim()) return;
+    setSaving(true);
+    const res = await api(`/api/execution-targets/${target_id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ text: editText, rationale, edited_by: user?.email }),
+    });
+    if (!res.error) {
+      setTargets(prev => prev.map(t => t.target_id === target_id ? { ...t, text: editText } : t));
+      setEditId(null); setEditText(""); setRationale("");
+    }
+    setSaving(false);
+  };
+
+  const addTarget = async () => {
+    setSaving(true);
+    const res = await api("/api/execution-targets", {
+      method: "POST",
+      body: JSON.stringify({ bow_id: bow.bow_id, year: newYear,
+        outcome_id: newOutcome || null, text: newText }),
+    });
+    if (!res.error) {
+      const fresh = await api(`/api/bow/${bow.bow_id}/full`);
+      setTargets(fresh.execution_targets || []);
+      setAdding(false); setNewText(""); setNewYear(String(CURRENT_YEAR)); setNewOutcome("");
+    }
+    setSaving(false);
+  };
+
+  const deleteTarget = async (target_id) => {
+    await api(`/api/execution-targets/${target_id}`, { method: "DELETE" });
+    setTargets(prev => prev.filter(t => t.target_id !== target_id));
+    setConfirmDel(null);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "center", marginBottom: 14 }}>
+        <SectionLabel>Execution Targets (Theory of Action)</SectionLabel>
+        {!adding && (
+          <Btn variant="ghost" size="sm" onClick={() => setAdding(true)}
+            style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+            + Add target
+          </Btn>
+        )}
+      </div>
+
+      {targets.length === 0 && !adding && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 12 }}>
+          No execution targets added yet.
+        </p>
+      )}
+
+      {years.map(year => (
+        <div key={year} style={{ marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>{year}</p>
+          {targets.filter(t => t.year === year).map(t => (
+            <div key={t.target_id} style={{ marginBottom: 8 }}>
+              {editId === t.target_id ? (
+                <div style={{ padding: "14px 16px", background: SURFACE,
+                  border: `1px solid ${ACCENT_MID}`, borderRadius: 8 }}>
+                  <Field label="Target text" required>
+                    <textarea value={editText} onChange={e => setEditText(e.target.value)}
+                      rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                  </Field>
+                  <Field label="Rationale for change" required>
+                    <textarea value={rationale} onChange={e => setRationale(e.target.value)}
+                      placeholder="Why is this target wording changing?"
+                      rows={2} style={{ ...inputStyle, resize: "vertical", borderColor: ACCENT }} />
+                  </Field>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <Btn variant="secondary" size="sm"
+                      onClick={() => { setEditId(null); setRationale(""); }}>Cancel</Btn>
+                    <Btn size="sm" onClick={() => saveEdit(t.target_id)}
+                      disabled={!editText.trim() || !rationale.trim() || saving}>
+                      {saving ? "Saving..." : "Save"}
+                    </Btn>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: "10px 14px", background: BG, borderRadius: 7,
+                  border: `1px solid ${BORDER}`,
+                  display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.5 }}>{t.text}</p>
+                    {t.completion && (
+                      <span style={{ fontSize: 11, fontWeight: 700, marginTop: 5,
+                        display: "inline-block",
+                        background: t.completion === "complete" ? SUCCESS_BG : WARNING_BG,
+                        color: t.completion === "complete" ? SUCCESS : WARNING,
+                        borderRadius: 4, padding: "2px 7px" }}>
+                        {t.completion}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                    <Btn variant="ghost" size="sm"
+                      onClick={() => { setEditId(t.target_id); setEditText(t.text); }}>
+                      Edit
+                    </Btn>
+                    {confirmDel === t.target_id ? (
+                      <>
+                        <Btn variant="danger" size="sm" onClick={() => deleteTarget(t.target_id)}>
+                          Confirm
+                        </Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => setConfirmDel(null)}>No</Btn>
+                      </>
+                    ) : (
+                      <Btn variant="ghost" size="sm" onClick={() => setConfirmDel(t.target_id)}
+                        style={{ color: DANGER, fontSize: 12 }}>Remove</Btn>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {adding && (
+        <div className="fade-in" style={{ padding: "16px 18px", background: BG,
+          border: `1px dashed ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 12 }}>
+            New execution target
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+            <Field label="Year" required>
+              <select value={newYear} onChange={e => setNewYear(e.target.value)}
+                style={{ ...inputStyle, appearance: "auto" }}>
+                {TARGET_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </Field>
+            <Field label="Linked outcome">
+              <select value={newOutcome} onChange={e => setNewOutcome(e.target.value)}
+                style={{ ...inputStyle, appearance: "auto" }}>
+                <option value="">None</option>
+                {outcomes.map(o => (
+                  <option key={o.outcome_id} value={o.outcome_id}>{o.title}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="Target text" required>
+            <textarea value={newText} onChange={e => setNewText(e.target.value)}
+              placeholder="Describe the execution target or milestone..."
+              rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+          </Field>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Btn variant="secondary" size="sm"
+              onClick={() => { setAdding(false); setNewText(""); }}>Cancel</Btn>
+            <Btn size="sm" onClick={addTarget} disabled={!newText.trim() || saving}>
+              {saving ? "Adding..." : "Add target"}
+            </Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── BOW Panel ─────────────────────────────────────────────────────────────────
+function BowPanel({ bow, user, onBack }) {
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [outcomes, setOutcomes]   = useState([]);
+  const [addingOut, setAddingOut] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    api(`/api/bow/${bow.bow_id}/full`)
+      .then(d => { setData(d); setOutcomes(d.outcomes || []); })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [bow.bow_id]);
+
+  const p = PORT_COLORS[bow.portfolio_id];
+
+  if (loading) return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "24px 0" }}>
+      <Skeleton height={40} /><Skeleton height={220} /><Skeleton height={220} />
+    </div>
+  );
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+        <button onClick={onBack}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
+            textDecoration: "underline" }}>
+          ← All BOWs
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>{bow.title}</h2>
+          {p && <PortfolioPill portfolioId={bow.portfolio_id} />}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 14 }}>
+          <SectionLabel>Outcomes & Indicators</SectionLabel>
+          {!addingOut && (
+            <Btn variant="ghost" size="sm" onClick={() => setAddingOut(true)}
+              style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+              + Add outcome
+            </Btn>
+          )}
+        </div>
+
+        {outcomes.length === 0 && !addingOut && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 16 }}>
+            No outcomes added yet.
+          </p>
+        )}
+
+        {addingOut && (
+          <AddOutcomeForm
+            bow={bow}
+            onSaved={() => { setAddingOut(false); load(); }}
+            onCancel={() => setAddingOut(false)}
+          />
+        )}
+
+        {outcomes.map((out, i) => (
+          <OutcomeCard key={out.outcome_id}
+            outcome={out} index={i} bow={bow} user={user}
+            onDeleted={id => setOutcomes(prev => prev.filter(o => o.outcome_id !== id))}
+          />
+        ))}
+      </div>
+
+      <Card style={{ marginBottom: 8 }}>
+        <ExecutionTargetsSection
+          targets={data?.execution_targets || []}
+          bow={bow} outcomes={outcomes} user={user}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ─── Portfolio Panel ────────────────────────────────────────────────────────────
+function PortfolioPanel({ portfolio, user, onBack }) {
+  const [data, setData]             = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [outcomes, setOutcomes]     = useState([]);
+  const [addingOut, setAddingOut]   = useState(false);
+  const [editOutId, setEditOutId]   = useState(null);
+  const [newOutTitle, setNewOutTitle] = useState("");
+  const [saving, setSaving]         = useState(false);
+
+  const p = PORT_COLORS[portfolio.portfolio_id];
+
+  const load = () => {
+    setLoading(true);
+    api(`/api/portfolio/${portfolio.portfolio_id}/full`)
+      .then(d => { setData(d); setOutcomes(d.outcomes || []); })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [portfolio.portfolio_id]);
+
+  const addOutcome = async () => {
+    if (!newOutTitle.trim()) return;
+    setSaving(true);
+    const res = await api("/api/portfolio-outcomes", {
+      method: "POST",
+      body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, title: newOutTitle }),
+    });
+    if (!res.error) { load(); setAddingOut(false); setNewOutTitle(""); }
+    setSaving(false);
+  };
+
+  if (loading) return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "24px 0" }}>
+      <Skeleton height={40} /><Skeleton height={220} /><Skeleton height={220} />
+    </div>
+  );
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+        <button onClick={onBack}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
+            textDecoration: "underline" }}>
+          ← All portfolios
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>
+            {p?.label || portfolio.title}
+          </h2>
+          {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
+            background: p.color, display: "inline-block" }} />}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 14 }}>
+          <SectionLabel>Portfolio Outcomes & Indicators</SectionLabel>
+          {!addingOut && (
+            <Btn variant="ghost" size="sm" onClick={() => setAddingOut(true)}
+              style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+              + Add outcome
+            </Btn>
+          )}
+        </div>
+
+        {addingOut && (
+          <Card className="fade-in" style={{ border: `1px dashed ${BORDER}`, marginBottom: 16 }}>
+            <Field label="Outcome title" required>
+              <input type="text" value={newOutTitle} onChange={e => setNewOutTitle(e.target.value)}
+                placeholder="e.g. Improved data system access..." style={inputStyle} />
+            </Field>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <Btn variant="secondary" size="sm"
+                onClick={() => { setAddingOut(false); setNewOutTitle(""); }}>Cancel</Btn>
+              <Btn size="sm" onClick={addOutcome} disabled={!newOutTitle.trim() || saving}>
+                {saving ? "Adding..." : "Add outcome"}
+              </Btn>
+            </div>
+          </Card>
+        )}
+
+        {outcomes.length === 0 && !addingOut && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+            No outcomes added yet.
+          </p>
+        )}
+
+        {outcomes.map((out, i) => {
+          const indicators = out.indicators || [];
+          return (
+            <Card key={out.outcome_id} style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
+              <div style={{ padding: "12px 18px", background: BG,
+                borderBottom: `1px solid ${BORDER}`,
+                display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 800,
+                  background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
+                  borderRadius: 4, padding: "2px 7px" }}>
+                  PO{i + 1}
+                </span>
+                <p style={{ flex: 1, fontSize: 14, fontWeight: 700, color: TEXT }}>
+                  {out.title}
+                </p>
+                <Btn variant="secondary" size="sm"
+                  onClick={() => setEditOutId(editOutId === out.outcome_id ? null : out.outcome_id)}>
+                  {editOutId === out.outcome_id ? "Cancel" : "Edit"}
+                </Btn>
+                <Btn variant="ghost" size="sm"
+                  onClick={async () => {
+                    await api(`/api/portfolio-outcomes/${out.outcome_id}`, { method: "DELETE" });
+                    setOutcomes(prev => prev.filter(o => o.outcome_id !== out.outcome_id));
+                  }}
+                  style={{ color: DANGER, fontSize: 12 }}>Remove</Btn>
+              </div>
+
+              {editOutId === out.outcome_id && (
+                <div style={{ padding: 18 }}>
+                  <InlineEditOutcome
+                    outcome={out} user={user} isPortfolio
+                    onSave={updated => {
+                      setOutcomes(prev => prev.map(o =>
+                        o.outcome_id === out.outcome_id ? { ...o, ...updated } : o));
+                      setEditOutId(null);
+                    }}
+                    onCancel={() => setEditOutId(null)}
+                  />
+                </div>
+              )}
+
+              <div style={{ padding: "12px 18px" }}>
+                {indicators.length === 0 && (
+                  <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 10 }}>
+                    No indicators yet.
+                  </p>
+                )}
+                {indicators.map(ind => (
+                  <IndicatorRow key={ind.indicator_id}
+                    indicator={{ ...ind, portfolio_id: portfolio.portfolio_id }}
+                    bow={{ bow_id: portfolio.portfolio_id, portfolio_id: null }}
+                    user={user} isPortfolio
+                    onDeleted={id => setOutcomes(prev => prev.map(o =>
+                      o.outcome_id === out.outcome_id
+                        ? { ...o, indicators: o.indicators.filter(i => i.indicator_id !== id) }
+                        : o
+                    ))}
+                    onUpdated={upd => setOutcomes(prev => prev.map(o =>
+                      o.outcome_id === out.outcome_id
+                        ? { ...o, indicators: o.indicators.map(i =>
+                            i.indicator_id === upd.indicator_id ? { ...i, ...upd } : i) }
+                        : o
+                    ))}
+                  />
+                ))}
+                <div style={{ marginTop: 10 }}>
+                  <Btn variant="ghost" size="sm"
+                    onClick={async () => {
+                      const text = window.prompt("New indicator:");
+                      if (!text?.trim()) return;
+                      await api("/api/portfolio-indicators", {
+                        method: "POST",
+                        body: JSON.stringify({ portfolio_id: portfolio.portfolio_id,
+                          outcome_id: out.outcome_id, text: text.trim() }),
+                      });
+                      load();
+                    }}
+                    style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+                    + Add indicator
+                  </Btn>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── BOW + Portfolio List ──────────────────────────────────────────────────────
+function BowPortfolioList({ bows, portfolios, onSelectBow, onSelectPortfolio }) {
+  const [view, setView] = useState("bows");
+
+  const bowsByPortfolio = portfolios.map(p => ({
+    portfolio: p,
+    bows: bows.filter(b => b.portfolio_id === p.portfolio_id),
+  }));
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {[{ id: "bows", label: "Bodies of Work" },
+          { id: "portfolios", label: "Portfolios" }].map(v => (
+          <button key={v.id} onClick={() => setView(v.id)}
+            style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600,
+              cursor: "pointer", border: `1px solid ${view === v.id ? ACCENT : BORDER}`,
+              background: view === v.id ? ACCENT_LIGHT : SURFACE,
+              color: view === v.id ? ACCENT : TEXT_SUB }}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "bows" && bowsByPortfolio.map(({ portfolio, bows: pbows }) => {
+        const p = PORT_COLORS[portfolio.portfolio_id];
+        return (
+          <div key={portfolio.portfolio_id} style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
+                background: p.color, display: "inline-block" }} />}
+              <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED,
+                textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                {p?.label || portfolio.portfolio_id}
+              </p>
+            </div>
+            {pbows.length === 0 && (
+              <p style={{ fontSize: 13, color: TEXT_MUTED, paddingLeft: 14 }}>
+                No BOWs in this portfolio.
+              </p>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pbows.map(bow => (
+                <div key={bow.bow_id} onClick={() => onSelectBow(bow)}
+                  style={{ display: "flex", alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "14px 18px", background: SURFACE, borderRadius: 9,
+                    border: `1px solid ${BORDER}`, cursor: "pointer",
+                    borderLeft: `4px solid ${p?.color || BRAND}`,
+                    transition: "box-shadow 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{bow.title}</p>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>Open →</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {view === "portfolios" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {portfolios.map(portfolio => {
+            const p = PORT_COLORS[portfolio.portfolio_id];
+            return (
+              <div key={portfolio.portfolio_id}
+                onClick={() => onSelectPortfolio(portfolio)}
+                style={{ display: "flex", alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px 20px", background: SURFACE, borderRadius: 9,
+                  border: `1px solid ${BORDER}`, cursor: "pointer",
+                  borderLeft: `4px solid ${p?.color || BRAND}`,
+                  transition: "box-shadow 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {p && <span style={{ width: 12, height: 12, borderRadius: "50%",
+                    background: p.color, display: "inline-block" }} />}
+                  <p style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
+                    {p?.label || portfolio.title}
+                  </p>
+                </div>
+                <span style={{ fontSize: 12, color: TEXT_MUTED }}>Open →</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Placeholder for old SubmitForm (now unused — kept to avoid ref errors) ───
 function SubmitForm({ user, bows, goals, portfolios, indicators, portfolioIndicators, loading }) {
   const [step, setStep]                       = useState(1);
   const [level, setLevel]                     = useState("");
@@ -1392,67 +2561,232 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows, user }) {
   );
 }
 
+// ─── Activity Feed ─────────────────────────────────────────────────────────────
+function ActivityFeed({ bows, portfolios }) {
+  const [feed, setFeed]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [bowFilter, setBowFilter]   = useState("");
+
+  const load = () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (typeFilter !== "all") params.set("type", typeFilter);
+    if (bowFilter) params.set("bow_id", bowFilter);
+    api(`/api/activity-feed?${params}`)
+      .then(d => setFeed(Array.isArray(d) ? d : []))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [typeFilter, bowFilter]);
+
+  const fmtDate = ts => {
+    if (!ts) return "—";
+    try { return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+    catch { return ts.slice(0, 10); }
+  };
+
+  const fmtActor = actor => actor?.split("@")[0] || actor || "Unknown";
+
+  const entityLabel = type => ({
+    bow_outcome:           "BOW Outcome",
+    bow_indicator:         "BOW Indicator",
+    execution_target:      "Execution Target",
+    portfolio_outcome:     "Portfolio Outcome",
+    portfolio_indicator:   "Portfolio Indicator",
+  }[type] || type);
+
+  return (
+    <div>
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 4 }}>
+          {[{ id: "all", label: "All activity" },
+            { id: "edit", label: "Content edits" },
+            { id: "submission", label: "Submissions" }].map(f => (
+            <button key={f.id} onClick={() => setTypeFilter(f.id)}
+              style={{ padding: "5px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600,
+                cursor: "pointer", border: `1px solid ${typeFilter === f.id ? ACCENT : BORDER}`,
+                background: typeFilter === f.id ? ACCENT_LIGHT : SURFACE,
+                color: typeFilter === f.id ? ACCENT : TEXT_SUB }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <select value={bowFilter} onChange={e => setBowFilter(e.target.value)}
+          style={{ ...inputStyle, width: "auto", fontSize: 13, padding: "5px 10px" }}>
+          <option value="">All BOWs</option>
+          {bows.map(b => <option key={b.bow_id} value={b.bow_id}>{b.title}</option>)}
+        </select>
+        <Btn variant="secondary" size="sm" onClick={load}>Refresh</Btn>
+      </div>
+
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Skeleton height={80} /><Skeleton height={80} /><Skeleton height={80} />
+        </div>
+      ) : feed.length === 0 ? (
+        <Card style={{ textAlign: "center", padding: 48 }}>
+          <p style={{ color: TEXT_MUTED, fontSize: 14 }}>No activity yet.</p>
+        </Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {feed.map(item => {
+            const isEdit = item.type === "edit";
+            const borderColor = isEdit ? ACCENT : BRAND;
+            const changes = (() => {
+              try { return typeof item.changes === "string" ? JSON.parse(item.changes) : (item.changes || {}); }
+              catch { return {}; }
+            })();
+            const changedFields = Object.keys(changes);
+
+            return (
+              <Card key={item.id} className="fade-in"
+                style={{ padding: "14px 18px", borderLeft: `4px solid ${borderColor}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between",
+                  alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Type tag + entity + BOW */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 4,
+                        padding: "2px 7px",
+                        background: isEdit ? ACCENT_LIGHT : BG,
+                        color: isEdit ? ACCENT : TEXT_MUTED }}>
+                        {isEdit ? entityLabel(item.entity_type) : "Submission"}
+                      </span>
+                      {item.bow_title && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED }}>
+                          {item.bow_title}
+                        </span>
+                      )}
+                      {!isEdit && item.status && (
+                        <Badge status={item.status} />
+                      )}
+                    </div>
+
+                    {/* Main content */}
+                    {isEdit ? (
+                      <div>
+                        {changedFields.length > 0 ? changedFields.map(f => (
+                          <div key={f} style={{ marginBottom: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                              textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                              {f.replace(/_/g, " ")}
+                            </span>
+                            {changes[f].new && (
+                              <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.4, marginTop: 2 }}>
+                                {String(changes[f].new).length > 120
+                                  ? String(changes[f].new).slice(0, 120) + "…"
+                                  : changes[f].new}
+                              </p>
+                            )}
+                          </div>
+                        )) : (
+                          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+                            Content updated
+                          </p>
+                        )}
+                        {item.rationale && (
+                          <p style={{ fontSize: 12, color: TEXT_SUB, marginTop: 6,
+                            fontStyle: "italic" }}>
+                            Rationale: {item.rationale}
+                          </p>
+                        )}
+                        {item.revision_reason && (
+                          <p style={{ fontSize: 12, color: TEXT_SUB, marginTop: 4 }}>
+                            Reason: {REVISION_REASONS.find(r => r.value === item.revision_reason)?.label
+                              || item.revision_reason}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.4 }}>
+                          {item.indicator_text || `${item.entity_id}`}
+                        </p>
+                        <p style={{ fontSize: 13, color: TEXT_SUB, marginTop: 3 }}>
+                          Value:{" "}
+                          <strong style={{ color: ACCENT }}>{item.submitted_value}</strong>
+                          {item.period && <span> · {item.period}</span>}
+                          {item.year  && <span> · {item.year}</span>}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>
+                      {fmtActor(item.actor)}
+                    </p>
+                    <p style={{ fontSize: 11, color: TEXT_MUTED }}>{fmtDate(item.ts)}</p>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── App shell ────────────────────────────────────────────────────────────────
 function PortalApp() {
   injectStyle();
 
-  const [user, setUser]                   = useState(null);
-  const [tab, setTab]                     = useState("submit");
-  const [bows, setBows]                   = useState([]);
-  const [goals, setGoals]                 = useState([]);
-  const [portfolios, setPortfolios]       = useState([]);
-  const [indicators, setIndicators]                   = useState([]);
-  const [portfolioIndicators, setPortfolioIndicators] = useState([]);
-  const [mySubmissions, setMySubmissions]             = useState([]);
-  const [queue, setQueue]                             = useState([]);
-  const [loadingData, setLoadingData]                 = useState(true);
-  const [loadingMine, setLoadingMine]                 = useState(false);
-  const [loadingQueue, setLoadingQueue]               = useState(false);
+  const [user, setUser]             = useState(null);
+  const [tab, setTab]               = useState("content");
+  const [bows, setBows]             = useState([]);
+  const [portfolios, setPortfolios] = useState([]);
+  const [indicators, setIndicators] = useState([]);
+  const [queue, setQueue]           = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [loadingQueue, setLoadingQueue] = useState(false);
+  const [selectedBow, setSelectedBow]           = useState(null);
+  const [selectedPortfolio, setSelectedPortfolio] = useState(null);
 
   useEffect(() => {
     Promise.all([
       api("/api/me").catch(() => null),
       api("/api/bows").catch(() => []),
-      api("/api/goals").catch(() => []),
       api("/api/portfolios").catch(() => []),
       api("/api/indicators/all").catch(() => []),
-      api("/api/portfolio-indicators/all").catch(() => []),
-    ]).then(([u, b, g, p, i, pi]) => {
+    ]).then(([u, b, p, i]) => {
       if (u) setUser(u);
       setBows(Array.isArray(b) ? b : []);
-      setGoals(Array.isArray(g) ? g : []);
       setPortfolios(Array.isArray(p) ? p : []);
       setIndicators(Array.isArray(i) ? i : []);
-      setPortfolioIndicators(Array.isArray(pi) ? pi : []);
       setLoadingData(false);
     });
   }, []);
-
-  const loadMine = () => {
-    setLoadingMine(true);
-    api("/api/pending-actuals/mine").then(setMySubmissions).finally(() => setLoadingMine(false));
-  };
 
   const loadQueue = () => {
     setLoadingQueue(true);
     api("/api/pending-actuals?status=pending").then(setQueue).finally(() => setLoadingQueue(false));
   };
 
-  useEffect(() => { if (tab === "mine")  loadMine();  }, [tab]);
   useEffect(() => { if (tab === "queue") loadQueue(); }, [tab]);
 
   const canReview = user?.permission_level === "MLE" || user?.permission_level === "Leadership";
 
   const tabs = [
-    { id: "submit",  label: "Submit Data" },
-    { id: "mine",    label: "My Submissions" },
+    { id: "content", label: "BOWs & Portfolios" },
     { id: "insight", label: "Share an Insight" },
+    { id: "activity", label: "Activity" },
     ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
   ];
 
+  const handleSelectBow = bow => {
+    setSelectedBow(bow);
+    setSelectedPortfolio(null);
+  };
+  const handleSelectPortfolio = portfolio => {
+    setSelectedPortfolio(portfolio);
+    setSelectedBow(null);
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: BG }}>
-      {/* Header — dark slate, matches dashboard weight */}
+      {/* Header */}
       <div style={{ background: BRAND, padding: "0 32px", display: "flex",
         alignItems: "center", justifyContent: "space-between", height: 56 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -1461,7 +2795,7 @@ function PortalApp() {
               Measurement & Insights
             </span>
             <span style={{ fontSize: 13, color: ACCENT, marginLeft: 10, fontWeight: 600 }}>
-              Submit Portal
+              Data Hub
             </span>
           </div>
           <a href="/" style={{ fontSize: 12, color: "#FFFFFF", textDecoration: "none",
@@ -1483,7 +2817,7 @@ function PortalApp() {
         )}
       </div>
 
-      {/* Tab nav — sits below header on cream */}
+      {/* Tab nav */}
       <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`,
         padding: "0 32px", display: "flex", gap: 2 }}>
         {tabs.map(t => (
@@ -1498,35 +2832,45 @@ function PortalApp() {
         ))}
       </div>
 
-      {/* Page content */}
-      <div style={{ padding: "36px 32px", maxWidth: 760, margin: "0 auto" }}>
-        {tab === "submit" && (
-          <>
-            <div style={{ marginBottom: 28 }}>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
-                Submit New Data
-              </h1>
-              <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.7 }}>
-                Welcome to the USP Data & AI Strategy submission portal. This is the place
-                to share updated actuals for our impact indicators and strategy goals — everything
-                submitted here is linked directly to the indicators, outcomes, and assumptions that
-                drive our strategy. Once you submit, the MLE team will review your data and, once
-                approved, it will automatically populate in the main dashboard and be reflected in
-                our ratings and forecasts.
-              </p>
-            </div>
-            <SubmitForm user={user} bows={bows} goals={goals}
-              portfolios={portfolios} indicators={indicators}
-              portfolioIndicators={portfolioIndicators} loading={loadingData} />
-          </>
-        )}
+      {/* Page content — wider for BOW panels */}
+      <div style={{ padding: "36px 32px", maxWidth: 980, margin: "0 auto" }}>
 
-        {tab === "mine" && (
+        {tab === "content" && (
           <>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 24 }}>
-              My submissions
-            </h1>
-            <MySubmissions submissions={mySubmissions} loading={loadingMine} indicators={indicators} />
+            {!selectedBow && !selectedPortfolio && (
+              <>
+                <div style={{ marginBottom: 24 }}>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
+                    BOWs & Portfolios
+                  </h1>
+                  <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
+                    Select a Body of Work or Portfolio to view its outcomes, indicators, and
+                    execution targets — submit data or edit content directly from here.
+                  </p>
+                </div>
+                {loadingData ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Skeleton height={52} /><Skeleton height={52} /><Skeleton height={52} />
+                  </div>
+                ) : (
+                  <BowPortfolioList
+                    bows={bows} portfolios={portfolios}
+                    onSelectBow={handleSelectBow}
+                    onSelectPortfolio={handleSelectPortfolio}
+                  />
+                )}
+              </>
+            )}
+
+            {selectedBow && (
+              <BowPanel bow={selectedBow} user={user}
+                onBack={() => setSelectedBow(null)} />
+            )}
+
+            {selectedPortfolio && (
+              <PortfolioPanel portfolio={selectedPortfolio} user={user}
+                onBack={() => setSelectedPortfolio(null)} />
+            )}
           </>
         )}
 
@@ -1542,6 +2886,15 @@ function PortalApp() {
               </p>
             </div>
             <InsightForm bows={bows} portfolios={portfolios} loading={loadingData} />
+          </>
+        )}
+
+        {tab === "activity" && (
+          <>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 24 }}>
+              Activity
+            </h1>
+            <ActivityFeed bows={bows} portfolios={portfolios} />
           </>
         )}
 

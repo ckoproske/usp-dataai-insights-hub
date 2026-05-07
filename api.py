@@ -1459,6 +1459,528 @@ def upsert_portfolio_notes(portfolio_id):
     return jsonify({"status": "ok"})
 
 
+# =============================================================================
+# Portal v2 — Content editing, CRUD, and activity feed
+# =============================================================================
+
+import json as _json
+
+MAJOR_TEXT_FIELDS = {"title", "text"}
+TARGET_FIELDS     = {"target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
+
+def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, rationale, revision_reason, edited_by):
+    execute(
+        f"""INSERT INTO {SCHEMA}.content_edit_log
+            (log_id, entity_type, entity_id, bow_id, portfolio_id,
+             changes, rationale, revision_reason, edited_by, edited_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+        [new_id(), entity_type, entity_id, bow_id, portfolio_id,
+         _json.dumps(changes_dict), rationale or None, revision_reason or None, edited_by]
+    )
+
+def _build_changes(old_row, new_data, allowed_fields):
+    """Returns dict of {field: {old, new}} for fields that actually changed."""
+    changes = {}
+    for f in allowed_fields:
+        if f not in new_data:
+            continue
+        old_v = str(old_row.get(f, "") or "")
+        new_v = str(new_data[f] or "")
+        if old_v != new_v:
+            changes[f] = {"old": old_v, "new": new_v}
+    return changes
+
+# ── BOW full detail ────────────────────────────────────────────────────────────
+
+@app.route("/api/bow/<bow_id>/full")
+def get_bow_full(bow_id):
+    bow_rows = query(f"SELECT * FROM {SCHEMA}.bows WHERE bow_id = ?", [bow_id])
+    if not bow_rows:
+        return jsonify({"error": "not found"}), 404
+    bow = bow_rows[0]
+
+    outcomes = query(
+        f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
+        [bow_id]
+    )
+
+    indicators = query(
+        f"""SELECT i.*,
+                   (SELECT bia.actual_value
+                    FROM {SCHEMA}.bow_indicator_actuals bia
+                    WHERE bia.indicator_id = i.indicator_id
+                    ORDER BY bia.year DESC, bia.submitted_at DESC LIMIT 1) AS latest_actual,
+                   (SELECT bia.year
+                    FROM {SCHEMA}.bow_indicator_actuals bia
+                    WHERE bia.indicator_id = i.indicator_id
+                    ORDER BY bia.year DESC, bia.submitted_at DESC LIMIT 1) AS latest_actual_year
+            FROM {SCHEMA}.bow_indicators i
+            WHERE i.bow_id = ?
+              AND COALESCE(i.is_active, true) = true
+            ORDER BY i.outcome_id, i.indicator_id""",
+        [bow_id]
+    )
+
+    execution_targets = query(
+        f"""SELECT t.*, s.completion, s.notes AS status_notes, s.last_updated, s.updated_by
+            FROM {SCHEMA}.execution_targets t
+            LEFT JOIN {SCHEMA}.execution_target_status s
+              ON t.target_id = s.target_id AND t.year = s.year
+            WHERE t.bow_id = ?
+            ORDER BY t.year, t.sort_order""",
+        [bow_id]
+    )
+
+    ind_by_outcome = {}
+    for ind in indicators:
+        key = ind.get("outcome_id") or "__none"
+        ind_by_outcome.setdefault(key, []).append(ind)
+
+    for out in outcomes:
+        out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
+
+    return jsonify({
+        "bow": bow,
+        "outcomes": outcomes,
+        "execution_targets": execution_targets,
+    })
+
+
+# ── Portfolio full detail ───────────────────────────────────────────────────────
+
+@app.route("/api/portfolio/<portfolio_id>/full")
+def get_portfolio_full(portfolio_id):
+    port_rows = query(f"SELECT * FROM {SCHEMA}.portfolios WHERE portfolio_id = ?", [portfolio_id])
+    if not port_rows:
+        return jsonify({"error": "not found"}), 404
+    portfolio = port_rows[0]
+
+    outcomes = query(
+        f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
+        [portfolio_id]
+    )
+
+    indicators = query(
+        f"""SELECT i.*,
+                   (SELECT pia.actual_value
+                    FROM {SCHEMA}.portfolio_indicator_actuals pia
+                    WHERE pia.indicator_id = i.indicator_id
+                    ORDER BY pia.year DESC, pia.submitted_at DESC LIMIT 1) AS latest_actual,
+                   (SELECT pia.year
+                    FROM {SCHEMA}.portfolio_indicator_actuals pia
+                    WHERE pia.indicator_id = i.indicator_id
+                    ORDER BY pia.year DESC, pia.submitted_at DESC LIMIT 1) AS latest_actual_year
+            FROM {SCHEMA}.portfolio_indicators i
+            WHERE i.portfolio_id = ?
+            ORDER BY i.outcome_id, i.indicator_id""",
+        [portfolio_id]
+    )
+
+    ind_by_outcome = {}
+    for ind in indicators:
+        key = ind.get("outcome_id") or "__none"
+        ind_by_outcome.setdefault(key, []).append(ind)
+
+    for out in outcomes:
+        out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
+
+    return jsonify({
+        "portfolio": portfolio,
+        "outcomes": outcomes,
+    })
+
+
+# ── BOW outcomes CRUD ──────────────────────────────────────────────────────────
+
+BOW_OUTCOME_EDITABLE = {"title", "short_title", "text"}
+
+@app.route("/api/bow-outcomes/<outcome_id>", methods=["PATCH"])
+def update_bow_outcome(outcome_id):
+    data    = request.json
+    user    = data.get("edited_by", "unknown")
+    rows    = query(f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    old     = rows[0]
+    changes = _build_changes(old, data, BOW_OUTCOME_EDITABLE)
+    if not changes:
+        return jsonify({"status": "no_change"})
+
+    has_major = any(f in MAJOR_TEXT_FIELDS for f in changes)
+    rationale = data.get("rationale", "").strip() if has_major else None
+    if has_major and not rationale:
+        return jsonify({"error": "rationale required for text field changes"}), 400
+
+    sets   = ", ".join(f"{f} = ?" for f in changes)
+    vals   = [changes[f]["new"] for f in changes] + [outcome_id]
+    execute(f"UPDATE {SCHEMA}.bow_outcomes SET {sets} WHERE outcome_id = ?", vals)
+    _log_edit("bow_outcome", outcome_id, old["bow_id"], None, changes, rationale, None, user)
+    return jsonify({"status": "ok", "changes": changes})
+
+
+@app.route("/api/bow-outcomes", methods=["POST"])
+def add_bow_outcome():
+    data    = request.json
+    bow_id  = data.get("bow_id")
+    title   = (data.get("title") or "").strip()
+    if not bow_id or not title:
+        return jsonify({"error": "bow_id and title required"}), 400
+    max_sort = query(f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.bow_outcomes WHERE bow_id = ?", [bow_id])
+    sort_order = (max_sort[0]["m"] or 0) + 1
+    oid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.bow_outcomes
+            (outcome_id, bow_id, title, short_title, text, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+        [oid, bow_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
+    )
+    return jsonify({"status": "ok", "outcome_id": oid})
+
+
+@app.route("/api/bow-outcomes/<outcome_id>", methods=["DELETE"])
+def delete_bow_outcome(outcome_id):
+    execute(f"DELETE FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
+    execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE outcome_id = ?", [outcome_id])
+    return jsonify({"status": "ok"})
+
+
+# ── BOW indicators CRUD ────────────────────────────────────────────────────────
+
+BOW_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline",
+                    "target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
+
+@app.route("/api/bow-indicators/<indicator_id>", methods=["PATCH"])
+def update_bow_indicator(indicator_id):
+    data    = request.json
+    user    = data.get("edited_by", "unknown")
+    rows    = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    old     = rows[0]
+    changes = _build_changes(old, data, BOW_IND_EDITABLE)
+    if not changes:
+        return jsonify({"status": "no_change"})
+
+    has_major  = any(f in MAJOR_TEXT_FIELDS for f in changes)
+    has_target = any(f in TARGET_FIELDS for f in changes)
+    rationale       = data.get("rationale", "").strip() if has_major else None
+    revision_reason = data.get("revision_reason", "").strip() if has_target else None
+
+    if has_major and not rationale:
+        return jsonify({"error": "rationale required for indicator text changes"}), 400
+    if has_target and not revision_reason:
+        return jsonify({"error": "revision_reason required for target changes"}), 400
+
+    sets = ", ".join(f"{f} = ?" for f in changes)
+    vals = [changes[f]["new"] for f in changes] + [indicator_id]
+    execute(f"UPDATE {SCHEMA}.bow_indicators SET {sets} WHERE indicator_id = ?", vals)
+    _log_edit("bow_indicator", indicator_id, old["bow_id"], None, changes, rationale, revision_reason, user)
+    return jsonify({"status": "ok", "changes": changes})
+
+
+@app.route("/api/bow-indicators", methods=["POST"])
+def add_bow_indicator():
+    data        = request.json
+    bow_id      = data.get("bow_id")
+    outcome_id  = data.get("outcome_id")
+    text        = (data.get("text") or "").strip()
+    if not bow_id or not text:
+        return jsonify({"error": "bow_id and text required"}), 400
+    iid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.bow_indicators
+            (indicator_id, bow_id, outcome_id, text, unit, collection_frequency,
+             baseline, target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)""",
+        [iid, bow_id, outcome_id or None, text,
+         data.get("unit") or None, data.get("collection_frequency") or None,
+         data.get("baseline") or None,
+         data.get("target_2026") or None, data.get("target_2027") or None,
+         data.get("target_2028") or None, data.get("target_2029") or None,
+         data.get("target_2030") or None]
+    )
+    return jsonify({"status": "ok", "indicator_id": iid})
+
+
+@app.route("/api/bow-indicators/<indicator_id>", methods=["DELETE"])
+def delete_bow_indicator(indicator_id):
+    execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE indicator_id = ?", [indicator_id])
+    return jsonify({"status": "ok"})
+
+
+# ── Execution targets CRUD ─────────────────────────────────────────────────────
+
+@app.route("/api/execution-targets/<target_id>", methods=["PATCH"])
+def update_execution_target(target_id):
+    data    = request.json
+    user    = data.get("edited_by", "unknown")
+    rows    = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    old     = rows[0]
+    changes = _build_changes(old, data, {"text"})
+    if not changes:
+        return jsonify({"status": "no_change"})
+
+    rationale = data.get("rationale", "").strip()
+    if not rationale:
+        return jsonify({"error": "rationale required for execution target text changes"}), 400
+
+    execute(f"UPDATE {SCHEMA}.execution_targets SET text = ? WHERE target_id = ?",
+            [changes["text"]["new"], target_id])
+    _log_edit("execution_target", target_id, old["bow_id"], None, changes, rationale, None, user)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/execution-targets", methods=["POST"])
+def add_execution_target():
+    data       = request.json
+    bow_id     = data.get("bow_id")
+    outcome_id = data.get("outcome_id")
+    year       = data.get("year")
+    text       = (data.get("text") or "").strip()
+    if not bow_id or not year or not text:
+        return jsonify({"error": "bow_id, year, and text required"}), 400
+    max_sort = query(
+        f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.execution_targets WHERE bow_id = ? AND year = ?",
+        [bow_id, year]
+    )
+    sort_order = (max_sort[0]["m"] or 0) + 1
+    tid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.execution_targets
+            (target_id, bow_id, outcome_id, year, text, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+        [tid, bow_id, outcome_id or None, year, text, sort_order]
+    )
+    return jsonify({"status": "ok", "target_id": tid})
+
+
+@app.route("/api/execution-targets/<target_id>", methods=["DELETE"])
+def delete_execution_target(target_id):
+    execute(f"DELETE FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
+    execute(f"DELETE FROM {SCHEMA}.execution_target_status WHERE target_id = ?", [target_id])
+    return jsonify({"status": "ok"})
+
+
+# ── Portfolio outcomes CRUD ────────────────────────────────────────────────────
+
+PORT_OUTCOME_EDITABLE = {"title", "short_title", "text"}
+
+@app.route("/api/portfolio-outcomes/<outcome_id>", methods=["PATCH"])
+def update_portfolio_outcome(outcome_id):
+    data    = request.json
+    user    = data.get("edited_by", "unknown")
+    rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE outcome_id = ?", [outcome_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    old     = rows[0]
+    changes = _build_changes(old, data, PORT_OUTCOME_EDITABLE)
+    if not changes:
+        return jsonify({"status": "no_change"})
+
+    has_major = any(f in MAJOR_TEXT_FIELDS for f in changes)
+    rationale = data.get("rationale", "").strip() if has_major else None
+    if has_major and not rationale:
+        return jsonify({"error": "rationale required for text field changes"}), 400
+
+    sets = ", ".join(f"{f} = ?" for f in changes)
+    vals = [changes[f]["new"] for f in changes] + [outcome_id]
+    execute(f"UPDATE {SCHEMA}.portfolio_outcomes SET {sets} WHERE outcome_id = ?", vals)
+    _log_edit("portfolio_outcome", outcome_id, None, old["portfolio_id"], changes, rationale, None, user)
+    return jsonify({"status": "ok", "changes": changes})
+
+
+@app.route("/api/portfolio-outcomes", methods=["POST"])
+def add_portfolio_outcome():
+    data         = request.json
+    portfolio_id = data.get("portfolio_id")
+    title        = (data.get("title") or "").strip()
+    if not portfolio_id or not title:
+        return jsonify({"error": "portfolio_id and title required"}), 400
+    max_sort = query(
+        f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ?",
+        [portfolio_id]
+    )
+    sort_order = (max_sort[0]["m"] or 0) + 1
+    oid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.portfolio_outcomes
+            (outcome_id, portfolio_id, title, short_title, text, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+        [oid, portfolio_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
+    )
+    return jsonify({"status": "ok", "outcome_id": oid})
+
+
+@app.route("/api/portfolio-outcomes/<outcome_id>", methods=["DELETE"])
+def delete_portfolio_outcome(outcome_id):
+    execute(f"DELETE FROM {SCHEMA}.portfolio_outcomes WHERE outcome_id = ?", [outcome_id])
+    execute(
+        f"UPDATE {SCHEMA}.portfolio_indicators SET is_active = false WHERE outcome_id = ?",
+        [outcome_id]
+    )
+    return jsonify({"status": "ok"})
+
+
+# ── Portfolio indicators CRUD ──────────────────────────────────────────────────
+
+PORT_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline",
+                     "target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
+
+@app.route("/api/portfolio-indicators/<indicator_id>", methods=["PATCH"])
+def update_portfolio_indicator(indicator_id):
+    data    = request.json
+    user    = data.get("edited_by", "unknown")
+    rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?", [indicator_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    old     = rows[0]
+    changes = _build_changes(old, data, PORT_IND_EDITABLE)
+    if not changes:
+        return jsonify({"status": "no_change"})
+
+    has_major  = any(f in MAJOR_TEXT_FIELDS for f in changes)
+    has_target = any(f in TARGET_FIELDS for f in changes)
+    rationale       = data.get("rationale", "").strip() if has_major else None
+    revision_reason = data.get("revision_reason", "").strip() if has_target else None
+
+    if has_major and not rationale:
+        return jsonify({"error": "rationale required for indicator text changes"}), 400
+    if has_target and not revision_reason:
+        return jsonify({"error": "revision_reason required for target changes"}), 400
+
+    sets = ", ".join(f"{f} = ?" for f in changes)
+    vals = [changes[f]["new"] for f in changes] + [indicator_id]
+    execute(f"UPDATE {SCHEMA}.portfolio_indicators SET {sets} WHERE indicator_id = ?", vals)
+    _log_edit("portfolio_indicator", indicator_id, None, old["portfolio_id"], changes, rationale, revision_reason, user)
+    return jsonify({"status": "ok", "changes": changes})
+
+
+@app.route("/api/portfolio-indicators", methods=["POST"])
+def add_portfolio_indicator():
+    data         = request.json
+    portfolio_id = data.get("portfolio_id")
+    outcome_id   = data.get("outcome_id")
+    text         = (data.get("text") or "").strip()
+    if not portfolio_id or not text:
+        return jsonify({"error": "portfolio_id and text required"}), 400
+    iid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.portfolio_indicators
+            (indicator_id, portfolio_id, outcome_id, text, unit, collection_frequency,
+             baseline, target_2026, target_2027, target_2028, target_2029, target_2030)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [iid, portfolio_id, outcome_id or None, text,
+         data.get("unit") or None, data.get("collection_frequency") or None,
+         data.get("baseline") or None,
+         data.get("target_2026") or None, data.get("target_2027") or None,
+         data.get("target_2028") or None, data.get("target_2029") or None,
+         data.get("target_2030") or None]
+    )
+    return jsonify({"status": "ok", "indicator_id": iid})
+
+
+@app.route("/api/portfolio-indicators/<indicator_id>", methods=["DELETE"])
+def delete_portfolio_indicator(indicator_id):
+    execute(
+        f"UPDATE {SCHEMA}.portfolio_indicators SET is_active = false WHERE indicator_id = ?",
+        [indicator_id]
+    )
+    return jsonify({"status": "ok"})
+
+
+# ── Activity feed ──────────────────────────────────────────────────────────────
+
+@app.route("/api/activity-feed")
+def get_activity_feed():
+    bow_filter       = request.args.get("bow_id")
+    portfolio_filter = request.args.get("portfolio_id")
+    type_filter      = request.args.get("type")       # 'edit' | 'submission'
+    actor_filter     = request.args.get("actor")
+    limit            = min(int(request.args.get("limit", 100)), 200)
+
+    where_edit = "1=1"
+    where_sub  = "1=1"
+    params_edit, params_sub = [], []
+
+    if bow_filter:
+        where_edit += " AND l.bow_id = ?"
+        params_edit.append(bow_filter)
+        where_sub  += " AND i.bow_id = ?"
+        params_sub.append(bow_filter)
+    if portfolio_filter:
+        where_edit += " AND l.portfolio_id = ?"
+        params_edit.append(portfolio_filter)
+        where_sub  += " AND i.portfolio_id = ?"
+        params_sub.append(portfolio_filter)
+    if actor_filter:
+        where_edit += " AND l.edited_by = ?"
+        params_edit.append(actor_filter)
+        where_sub  += " AND p.submitted_by = ?"
+        params_sub.append(actor_filter)
+
+    edits, subs = [], []
+
+    if type_filter != "submission":
+        try:
+            edits = query(
+                f"""SELECT
+                      'edit'              AS type,
+                      l.log_id            AS id,
+                      l.entity_type,
+                      l.entity_id,
+                      l.bow_id,
+                      l.portfolio_id,
+                      l.changes,
+                      l.rationale,
+                      l.revision_reason,
+                      l.edited_by         AS actor,
+                      CAST(l.edited_at AS STRING) AS ts,
+                      b.title             AS bow_title
+                    FROM {SCHEMA}.content_edit_log l
+                    LEFT JOIN {SCHEMA}.bows b ON l.bow_id = b.bow_id
+                    WHERE {where_edit}
+                    ORDER BY l.edited_at DESC
+                    LIMIT {limit}""",
+                params_edit or None
+            )
+        except Exception:
+            edits = []
+
+    if type_filter != "edit":
+        subs = query(
+            f"""SELECT
+                  'submission'           AS type,
+                  p.pending_id           AS id,
+                  NULL                   AS entity_type,
+                  p.indicator_id         AS entity_id,
+                  i.bow_id,
+                  i.portfolio_id,
+                  NULL                   AS changes,
+                  NULL                   AS rationale,
+                  NULL                   AS revision_reason,
+                  p.submitted_by         AS actor,
+                  CAST(p.submitted_at AS STRING) AS ts,
+                  b.title                AS bow_title,
+                  i.text                 AS indicator_text,
+                  p.submitted_value,
+                  p.status,
+                  p.period,
+                  p.year
+                FROM {SCHEMA}.pending_actuals p
+                LEFT JOIN {SCHEMA}.bow_indicators i  ON p.indicator_id  = i.indicator_id
+                LEFT JOIN {SCHEMA}.bows b            ON i.bow_id        = b.bow_id
+                WHERE {where_sub}
+                ORDER BY p.submitted_at DESC
+                LIMIT {limit}""",
+            params_sub or None
+        )
+
+    combined = sorted(edits + subs, key=lambda r: r.get("ts") or "", reverse=True)[:limit]
+    return jsonify(combined)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
