@@ -1287,7 +1287,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                             ))}
                             {isAddingHere ? (
                               <AddTargetInline
-                                bow={bow} outcomeId={out.outcome_id} year={year}
+                                bow={bow} outcomeId={out.outcome_id} year={year} user={user}
                                 onSaved={() => { setAddingTargetFor(null); onRefresh(); }}
                                 onCancel={() => setAddingTargetFor(null)} />
                             ) : (
@@ -1601,7 +1601,7 @@ function EditTargetInline({ target, user, onSave, onCancel }) {
   );
 }
 
-function AddTargetInline({ bow, outcomeId, year, onSaved, onCancel }) {
+function AddTargetInline({ bow, outcomeId, year, user, onSaved, onCancel }) {
   const [text, setText]     = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -1610,7 +1610,8 @@ function AddTargetInline({ bow, outcomeId, year, onSaved, onCancel }) {
     setSaving(true);
     const res = await api("/api/execution-targets", {
       method: "POST",
-      body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId, year, text }),
+      body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId, year, text,
+        edited_by: user?.email }),
     });
     if (!res.error) onSaved();
     setSaving(false);
@@ -1643,7 +1644,8 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
     const res = await api("/api/bow-indicators", {
       method: "POST",
       body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId,
-        text, unit: unit || null, collection_frequency: freq || null }),
+        text, unit: unit || null, collection_frequency: freq || null,
+        edited_by: user?.email }),
     });
     if (!res.error) onSaved();
     setSaving(false);
