@@ -1094,12 +1094,589 @@ function ExecutionTargetsSection({ targets: initTargets, bow, outcomes, user }) 
   );
 }
 
+// ─── BOW Content Table ────────────────────────────────────────────────────────
+// Mirrors the slide layout: outcome rows × year columns for execution targets,
+// then indicators as rows × year columns for targets & actuals.
+function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
+  const p = PORT_COLORS[bow.portfolio_id];
+
+  // Editing state
+  const [editOutId, setEditOutId]       = useState(null);
+  const [editTargetId, setEditTargetId] = useState(null);
+  const [editIndId, setEditIndId]       = useState(null);
+  const [submitIndId, setSubmitIndId]   = useState(null);
+  const [addingOutcome, setAddingOutcome] = useState(false);
+  const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
+  const [addingTargetFor, setAddingTargetFor] = useState(null); // {outcome_id, year}
+  const [confirmDelOut, setConfirmDelOut]   = useState(null);
+  const [confirmDelInd, setConfirmDelInd]   = useState(null);
+
+  // Group execution targets by outcome_id → year → [targets]
+  const tByOY = {};
+  executionTargets.forEach(t => {
+    const oid = t.outcome_id || "__";
+    if (!tByOY[oid]) tByOY[oid] = {};
+    if (!tByOY[oid][t.year]) tByOY[oid][t.year] = [];
+    tByOY[oid][t.year].push(t);
+  });
+
+  const cellTargets = (oid, year) => (tByOY[oid || "__"] || {})[year] || [];
+
+  const thStyle = { padding: "8px 12px", textAlign: "left", fontSize: 12,
+    fontWeight: 700, color: TEXT_MUTED, background: BG,
+    borderBottom: `2px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`,
+    whiteSpace: "nowrap" };
+  const tdStyle = { padding: "12px 14px", verticalAlign: "top", fontSize: 13,
+    borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` };
+  const yearColW = `${Math.floor(78 / TARGET_YEARS.length)}%`;
+
+  // ── Outcome + Execution Targets table ───────────────────────────────────────
+  const renderExecutionTable = () => (
+    <div style={{ marginBottom: 36 }}>
+      <div style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "center", marginBottom: 10 }}>
+        <SectionLabel>Outcomes & Execution Targets</SectionLabel>
+        <Btn variant="ghost" size="sm" onClick={() => setAddingOutcome(true)}
+          style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+          + Add outcome
+        </Btn>
+      </div>
+
+      {addingOutcome && (
+        <AddOutcomeForm bow={bow}
+          onSaved={() => { setAddingOutcome(false); onRefresh(); }}
+          onCancel={() => setAddingOutcome(false)} />
+      )}
+
+      {outcomes.length === 0 && !addingOutcome && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+          No outcomes added yet.
+        </p>
+      )}
+
+      {outcomes.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse",
+            tableLayout: "fixed", border: `1px solid ${BORDER}` }}>
+            <colgroup>
+              <col style={{ width: "22%" }} />
+              {TARGET_YEARS.map(y => <col key={y} style={{ width: yearColW }} />)}
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={thStyle}>Outcome</th>
+                {TARGET_YEARS.map(y => (
+                  <th key={y} style={{ ...thStyle, textAlign: "center" }}>{y}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {outcomes.map((out, i) => {
+                const isEditingOut = editOutId === out.outcome_id;
+                return (
+                  <React.Fragment key={out.outcome_id}>
+                    {/* Outcome row */}
+                    <tr>
+                      {/* Left cell — outcome description */}
+                      <td style={{ ...tdStyle, background: BG, verticalAlign: "top",
+                        borderRight: `2px solid ${BORDER}` }}>
+                        {isEditingOut ? (
+                          <InlineEditOutcome outcome={out} user={user}
+                            onSave={() => { setEditOutId(null); onRefresh(); }}
+                            onCancel={() => setEditOutId(null)} />
+                        ) : (
+                          <>
+                            <div style={{ display: "flex", alignItems: "flex-start",
+                              justifyContent: "space-between", gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 800,
+                                background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
+                                borderRadius: 3, padding: "2px 6px", flexShrink: 0 }}>
+                                O{i + 1}
+                              </span>
+                              <div style={{ display: "flex", gap: 3 }}>
+                                <button onClick={() => setEditOutId(out.outcome_id)}
+                                  style={{ background: "none", border: "none", cursor: "pointer",
+                                    fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
+                                  title="Edit outcome">✎</button>
+                                {confirmDelOut === out.outcome_id ? (
+                                  <>
+                                    <button onClick={async () => {
+                                      await api(`/api/bow-outcomes/${out.outcome_id}`, { method: "DELETE" });
+                                      setConfirmDelOut(null); onRefresh();
+                                    }} style={{ background: "none", border: "none", cursor: "pointer",
+                                      fontSize: 11, color: DANGER, padding: "2px 4px", fontWeight: 700 }}>
+                                      ✓ Remove
+                                    </button>
+                                    <button onClick={() => setConfirmDelOut(null)}
+                                      style={{ background: "none", border: "none", cursor: "pointer",
+                                        fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}>✕</button>
+                                  </>
+                                ) : (
+                                  <button onClick={() => setConfirmDelOut(out.outcome_id)}
+                                    style={{ background: "none", border: "none", cursor: "pointer",
+                                      fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
+                                    title="Remove outcome">✕</button>
+                                )}
+                              </div>
+                            </div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: TEXT,
+                              lineHeight: 1.4, marginBottom: out.text ? 6 : 0 }}>
+                              {out.title}
+                            </p>
+                            {out.text && (
+                              <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>
+                                {out.text}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </td>
+
+                      {/* Year cells — execution targets */}
+                      {TARGET_YEARS.map(year => {
+                        const targets = cellTargets(out.outcome_id, year);
+                        const isAddingHere = addingTargetFor?.outcome_id === out.outcome_id
+                          && addingTargetFor?.year === year;
+                        return (
+                          <td key={year} style={{ ...tdStyle, background: SURFACE }}>
+                            {targets.map(t => (
+                              <div key={t.target_id} style={{ marginBottom: 8 }}>
+                                {editTargetId === t.target_id ? (
+                                  <EditTargetInline target={t} user={user}
+                                    onSave={() => { setEditTargetId(null); onRefresh(); }}
+                                    onCancel={() => setEditTargetId(null)} />
+                                ) : (
+                                  <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                                    <span style={{ color: p?.color || ACCENT, fontWeight: 700,
+                                      fontSize: 14, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
+                                      •
+                                    </span>
+                                    <span style={{ fontSize: 12, color: TEXT, lineHeight: 1.5,
+                                      flex: 1 }}>
+                                      {t.text}
+                                    </span>
+                                    <div style={{ display: "flex", gap: 0, flexShrink: 0 }}>
+                                      <button onClick={() => setEditTargetId(t.target_id)}
+                                        style={{ background: "none", border: "none",
+                                          cursor: "pointer", fontSize: 10,
+                                          color: TEXT_MUTED, padding: "0 3px" }}
+                                        title="Edit">✎</button>
+                                      <button onClick={async () => {
+                                        await api(`/api/execution-targets/${t.target_id}`,
+                                          { method: "DELETE" });
+                                        onRefresh();
+                                      }} style={{ background: "none", border: "none",
+                                        cursor: "pointer", fontSize: 10,
+                                        color: TEXT_MUTED, padding: "0 3px" }}
+                                        title="Remove">✕</button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {isAddingHere ? (
+                              <AddTargetInline
+                                bow={bow} outcomeId={out.outcome_id} year={year}
+                                onSaved={() => { setAddingTargetFor(null); onRefresh(); }}
+                                onCancel={() => setAddingTargetFor(null)} />
+                            ) : (
+                              <button
+                                onClick={() => setAddingTargetFor({
+                                  outcome_id: out.outcome_id, year })}
+                                style={{ background: "none", border: "none", cursor: "pointer",
+                                  fontSize: 11, color: TEXT_MUTED, padding: "2px 0",
+                                  display: "block" }}>
+                                + add
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Impact Indicators table ──────────────────────────────────────────────────
+  const renderIndicatorsTable = () => {
+    const allIndicators = outcomes.flatMap(o =>
+      (o.indicators || []).map(i => ({ ...i, outcome_title: o.short_title || o.title,
+        outcome_id: o.outcome_id }))
+    );
+    const hasIndicators = allIndicators.length > 0;
+
+    return (
+      <div>
+        <SectionLabel style={{ marginBottom: 10 }}>Impact Indicators</SectionLabel>
+
+        {!hasIndicators && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 8 }}>
+            No indicators added yet.
+          </p>
+        )}
+
+        {hasIndicators && (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse",
+              tableLayout: "fixed", border: `1px solid ${BORDER}` }}>
+              <colgroup>
+                <col style={{ width: "22%" }} />
+                {TARGET_YEARS.map(y => <col key={y} style={{ width: yearColW }} />)}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Impact Indicators</th>
+                  {TARGET_YEARS.map(y => (
+                    <th key={y} style={{ ...thStyle, textAlign: "center" }}>
+                      {y}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {outcomes.map(out => {
+                  const inds = out.indicators || [];
+                  if (inds.length === 0 && addingIndFor !== out.outcome_id) return null;
+                  return (
+                    <React.Fragment key={out.outcome_id}>
+                      {/* Outcome sub-header */}
+                      <tr>
+                        <td colSpan={TARGET_YEARS.length + 1}
+                          style={{ ...tdStyle, background: BG, padding: "6px 14px",
+                            borderRight: "none" }}>
+                          <div style={{ display: "flex", alignItems: "center",
+                            justifyContent: "space-between" }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                              textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                              {out.short_title || out.title}
+                            </span>
+                            <button
+                              onClick={() => setAddingIndFor(
+                                addingIndFor === out.outcome_id ? null : out.outcome_id)}
+                              style={{ background: "none", border: "none", cursor: "pointer",
+                                fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
+                              + Add indicator
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Indicator rows */}
+                      {inds.map(ind => {
+                        const isEditing  = editIndId  === ind.indicator_id;
+                        const isSubmitting = submitIndId === ind.indicator_id;
+                        return (
+                          <React.Fragment key={ind.indicator_id}>
+                            <tr>
+                              {/* Left cell — indicator name */}
+                              <td style={{ ...tdStyle,
+                                background: p?.light || ACCENT_LIGHT,
+                                borderRight: `2px solid ${BORDER}` }}>
+                                <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND,
+                                  lineHeight: 1.4, marginBottom: 5 }}>
+                                  {ind.text}
+                                </p>
+                                {ind.unit && (
+                                  <span style={{ fontSize: 11, fontWeight: 700,
+                                    background: SURFACE, color: ACCENT,
+                                    borderRadius: 3, padding: "1px 5px",
+                                    display: "inline-block", marginBottom: 4 }}>
+                                    {ind.unit}
+                                  </span>
+                                )}
+                                {ind.baseline != null && (
+                                  <p style={{ fontSize: 11, color: TEXT_MUTED }}>
+                                    Baseline: {ind.baseline}
+                                    {ind.unit ? ` ${ind.unit}` : ""}
+                                  </p>
+                                )}
+                                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                                  <button
+                                    onClick={() => setSubmitIndId(
+                                      submitIndId === ind.indicator_id ? null : ind.indicator_id)}
+                                    style={{ fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                      background: ACCENT, color: SURFACE, border: "none",
+                                      borderRadius: 4, padding: "3px 8px" }}>
+                                    Submit
+                                  </button>
+                                  <button
+                                    onClick={() => setEditIndId(
+                                      editIndId === ind.indicator_id ? null : ind.indicator_id)}
+                                    style={{ fontSize: 11, fontWeight: 600, cursor: "pointer",
+                                      background: SURFACE, color: TEXT_SUB,
+                                      border: `1px solid ${BORDER}`,
+                                      borderRadius: 4, padding: "3px 8px" }}>
+                                    Edit
+                                  </button>
+                                  {confirmDelInd === ind.indicator_id ? (
+                                    <>
+                                      <button onClick={async () => {
+                                        await api(`/api/bow-indicators/${ind.indicator_id}`,
+                                          { method: "DELETE" });
+                                        setConfirmDelInd(null); onRefresh();
+                                      }} style={{ fontSize: 11, fontWeight: 700,
+                                        cursor: "pointer", background: "none",
+                                        border: "none", color: DANGER, padding: "3px 4px" }}>
+                                        ✓ Remove
+                                      </button>
+                                      <button onClick={() => setConfirmDelInd(null)}
+                                        style={{ fontSize: 11, cursor: "pointer",
+                                          background: "none", border: "none",
+                                          color: TEXT_MUTED, padding: "3px 4px" }}>✕</button>
+                                    </>
+                                  ) : (
+                                    <button onClick={() => setConfirmDelInd(ind.indicator_id)}
+                                      style={{ fontSize: 11, cursor: "pointer",
+                                        background: "none", border: "none",
+                                        color: TEXT_MUTED, padding: "3px 4px" }}
+                                      title="Remove">✕</button>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Year cells — T: target, A: actual */}
+                              {TARGET_YEARS.map(year => {
+                                const tval = ind[`target_${year}`];
+                                const aval = ind.latest_actual_year === year
+                                  ? ind.latest_actual : null;
+                                return (
+                                  <td key={year} style={{ ...tdStyle, textAlign: "center",
+                                    background: SURFACE }}>
+                                    {tval != null ? (
+                                      <div style={{ marginBottom: aval != null ? 4 : 0 }}>
+                                        <span style={{ fontSize: 10, fontWeight: 700,
+                                          color: TEXT_MUTED }}>T: </span>
+                                        <span style={{ fontSize: 13, fontWeight: 700,
+                                          color: TEXT }}>
+                                          {tval}{ind.unit ? ` ${ind.unit}` : ""}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                                    )}
+                                    {aval != null && (
+                                      <div>
+                                        <span style={{ fontSize: 10, fontWeight: 700,
+                                          color: SUCCESS }}>A: </span>
+                                        <span style={{ fontSize: 13, fontWeight: 700,
+                                          color: SUCCESS }}>
+                                          {aval}{ind.unit ? ` ${ind.unit}` : ""}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+
+                            {/* Expanded submit row */}
+                            {isSubmitting && (
+                              <tr>
+                                <td colSpan={TARGET_YEARS.length + 1}
+                                  style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
+                                  <div style={{ padding: "16px 20px", background: ACCENT_LIGHT }}>
+                                    <InlineSubmitForm
+                                      indicator={ind} bow={bow}
+                                      onClose={() => setSubmitIndId(null)}
+                                      onSubmitted={() => setSubmitIndId(null)}
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+
+                            {/* Expanded edit row */}
+                            {isEditing && (
+                              <tr>
+                                <td colSpan={TARGET_YEARS.length + 1}
+                                  style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
+                                  <div style={{ padding: "16px 20px", background: BG }}>
+                                    <InlineEditIndicator
+                                      indicator={ind} user={user}
+                                      onSave={() => { setEditIndId(null); onRefresh(); }}
+                                      onCancel={() => setEditIndId(null)}
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+
+                      {/* Add indicator row */}
+                      {addingIndFor === out.outcome_id && (
+                        <tr>
+                          <td colSpan={TARGET_YEARS.length + 1}
+                            style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
+                            <div style={{ padding: "14px 20px", background: BG }}>
+                              <AddIndicatorInline
+                                bow={bow} outcomeId={out.outcome_id} user={user}
+                                onSaved={() => { setAddingIndFor(null); onRefresh(); }}
+                                onCancel={() => setAddingIndFor(null)} />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Add indicator for outcomes with no indicators yet */}
+        {outcomes.filter(o => (o.indicators || []).length === 0 &&
+          addingIndFor !== o.outcome_id).map(o => (
+          <div key={o.outcome_id} style={{ marginTop: 8 }}>
+            <Btn variant="ghost" size="sm"
+              onClick={() => setAddingIndFor(o.outcome_id)}
+              style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+              + Add indicator to {o.short_title || o.title}
+            </Btn>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {renderExecutionTable()}
+      {renderIndicatorsTable()}
+    </div>
+  );
+}
+
+// ─── Small inline helpers for table editing ───────────────────────────────────
+function EditTargetInline({ target, user, onSave, onCancel }) {
+  const [text, setText]           = useState(target.text || "");
+  const [rationale, setRationale] = useState("");
+  const [saving, setSaving]       = useState(false);
+
+  const save = async () => {
+    if (!rationale.trim()) return;
+    setSaving(true);
+    const res = await api(`/api/execution-targets/${target.target_id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ text, rationale, edited_by: user?.email }),
+    });
+    if (!res.error) onSave();
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ fontSize: 12 }}>
+      <textarea value={text} onChange={e => setText(e.target.value)}
+        rows={3} style={{ ...inputStyle, fontSize: 12, marginBottom: 6, resize: "vertical" }} />
+      <textarea value={rationale} onChange={e => setRationale(e.target.value)}
+        placeholder="Rationale for change (required)..."
+        rows={2} style={{ ...inputStyle, fontSize: 12, marginBottom: 6,
+          borderColor: ACCENT, resize: "vertical" }} />
+      <div style={{ display: "flex", gap: 4 }}>
+        <Btn size="sm" onClick={save} disabled={!text.trim() || !rationale.trim() || saving}>
+          {saving ? "…" : "Save"}
+        </Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function AddTargetInline({ bow, outcomeId, year, onSaved, onCancel }) {
+  const [text, setText]     = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!text.trim()) return;
+    setSaving(true);
+    const res = await api("/api/execution-targets", {
+      method: "POST",
+      body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId, year, text }),
+    });
+    if (!res.error) onSaved();
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ fontSize: 12 }}>
+      <textarea value={text} onChange={e => setText(e.target.value)}
+        placeholder="Target text..."
+        rows={3} style={{ ...inputStyle, fontSize: 12, marginBottom: 6, resize: "vertical" }} />
+      <div style={{ display: "flex", gap: 4 }}>
+        <Btn size="sm" onClick={save} disabled={!text.trim() || saving}>
+          {saving ? "…" : "Add"}
+        </Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
+  const [text, setText]   = useState("");
+  const [unit, setUnit]   = useState("");
+  const [freq, setFreq]   = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!text.trim()) return;
+    setSaving(true);
+    const res = await api("/api/bow-indicators", {
+      method: "POST",
+      body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId,
+        text, unit: unit || null, collection_frequency: freq || null }),
+    });
+    if (!res.error) onSaved();
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
+        <Field label="Indicator" required>
+          <textarea value={text} onChange={e => setText(e.target.value)}
+            placeholder="Describe what this indicator measures..."
+            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+        <Field label="Unit">
+          <select value={unit} onChange={e => setUnit(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">None</option>
+            {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Frequency">
+          <select value={freq} onChange={e => setFreq(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select...</option>
+            {Object.keys(PERIOD_OPTIONS).map(f =>
+              <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" onClick={save} disabled={!text.trim() || saving}>
+          {saving ? "Adding..." : "Add indicator"}
+        </Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
 // ─── BOW Panel ─────────────────────────────────────────────────────────────────
 function BowPanel({ bow, user, onBack }) {
-  const [data, setData]           = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [outcomes, setOutcomes]   = useState([]);
-  const [addingOut, setAddingOut] = useState(false);
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [outcomes, setOutcomes] = useState([]);
 
   const load = () => {
     setLoading(true);
@@ -1114,13 +1691,13 @@ function BowPanel({ bow, user, onBack }) {
 
   if (loading) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "24px 0" }}>
-      <Skeleton height={40} /><Skeleton height={220} /><Skeleton height={220} />
+      <Skeleton height={40} /><Skeleton height={300} /><Skeleton height={300} />
     </div>
   );
 
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
         <button onClick={onBack}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
@@ -1128,51 +1705,17 @@ function BowPanel({ bow, user, onBack }) {
           ← All BOWs
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>{bow.title}</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{bow.title}</h2>
           {p && <PortfolioPill portfolioId={bow.portfolio_id} />}
         </div>
       </div>
 
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: "flex", justifyContent: "space-between",
-          alignItems: "center", marginBottom: 14 }}>
-          <SectionLabel>Outcomes & Indicators</SectionLabel>
-          {!addingOut && (
-            <Btn variant="ghost" size="sm" onClick={() => setAddingOut(true)}
-              style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
-              + Add outcome
-            </Btn>
-          )}
-        </div>
-
-        {outcomes.length === 0 && !addingOut && (
-          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 16 }}>
-            No outcomes added yet.
-          </p>
-        )}
-
-        {addingOut && (
-          <AddOutcomeForm
-            bow={bow}
-            onSaved={() => { setAddingOut(false); load(); }}
-            onCancel={() => setAddingOut(false)}
-          />
-        )}
-
-        {outcomes.map((out, i) => (
-          <OutcomeCard key={out.outcome_id}
-            outcome={out} index={i} bow={bow} user={user}
-            onDeleted={id => setOutcomes(prev => prev.filter(o => o.outcome_id !== id))}
-          />
-        ))}
-      </div>
-
-      <Card style={{ marginBottom: 8 }}>
-        <ExecutionTargetsSection
-          targets={data?.execution_targets || []}
-          bow={bow} outcomes={outcomes} user={user}
-        />
-      </Card>
+      <BowContentTable
+        outcomes={outcomes}
+        executionTargets={data?.execution_targets || []}
+        bow={bow} user={user}
+        onRefresh={load}
+      />
     </div>
   );
 }
