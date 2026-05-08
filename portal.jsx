@@ -1936,6 +1936,489 @@ function BowPanel({ bow, user, onBack }) {
   );
 }
 
+// ─── Theory of Action — shared color tokens ───────────────────────────────────
+const TC = {
+  bg:"#ffffff", off:"#f5f7fb",
+  navy:"#17243d", teal:"#0b7575", tealBd:"#9acece", tealPale:"#e2f3f3",
+  gold:"#a05000", goldMid:"#cc7000", goldBd:"#e0b050", goldPale:"#fdf0dc",
+  slate:"#455878", slatePale:"#e8edf5", slateBd:"#b8c8de",
+  text:"#17243d", textMid:"#364870", textSub:"#556088", textDim:"#8898b8",
+  bd:"#cdd8ec",
+};
+
+// ─── Theory of Action — shared UI helpers ─────────────────────────────────────
+function ToaStageHead({ num, label, sub, color }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+      <div style={{ width:26, height:26, borderRadius:"50%", background:color||TC.navy, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#fff", boxShadow:`0 2px 6px ${color||TC.navy}40` }}>{num}</div>
+      <div style={{ fontSize:11, fontWeight:800, color:color||TC.navy, letterSpacing:"0.06em", textTransform:"uppercase", textAlign:"center", lineHeight:1.2 }}>{label}</div>
+      {sub && <div style={{ fontSize:10, color:TC.textDim, fontStyle:"italic", textAlign:"center" }}>{sub}</div>}
+    </div>
+  );
+}
+function ToaConnector() {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:4 }}>
+      <div style={{ width:2, height:40, background:`linear-gradient(to bottom, ${TC.bd}, ${TC.gold})` }} />
+      <svg width="18" height="18" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="13" fill={`${TC.gold}25`} stroke={TC.gold} strokeWidth="2"/><path d="M10 13 L15 18 L20 13" stroke={TC.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+    </div>
+  );
+}
+function ToaImpactPanel({ children }) {
+  return (
+    <div style={{ background:TC.goldPale, border:`1.5px solid ${TC.goldBd}`, borderLeft:`4px solid ${TC.gold}`, borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:12, minWidth:0 }}>
+      {children}
+    </div>
+  );
+}
+function ToaBiDivider() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      <div style={{ flex:1, height:1, background:TC.goldBd }} />
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M13 7l3 3-3 3M7 7l-3 3 3 3" stroke={TC.goldMid} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <div style={{ flex:1, height:1, background:TC.goldBd }} />
+    </div>
+  );
+}
+function ToaAmb45Buckets({ buckets }) {
+  const [expanded, setExpanded] = useState(null);
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      {buckets.map(bucket => {
+        const isOpen = expanded === bucket.label;
+        const bc = bucket.color || TC.slate;
+        return (
+          <div key={bucket.label}>
+            <button onClick={() => setExpanded(isOpen ? null : bucket.label)}
+              style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", background:`${bc}12`, border:`1px solid ${bc}40`, borderLeft:`3px solid ${bc}`, borderRadius:isOpen?"6px 6px 0 0":6, padding:"7px 10px", cursor:"pointer", fontFamily:"inherit" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:bc }}>{bucket.label}</div>
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:isOpen?"rotate(-90deg)":"rotate(0deg)", transition:"transform 0.18s", flexShrink:0 }}><path d="M3 5 L7 9 L11 5" stroke={bc} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            {isOpen && (
+              <div style={{ background:"#fff", border:`1px solid ${bc}30`, borderTop:"none", borderRadius:"0 0 6px 6px", padding:"10px 12px", display:"flex", flexDirection:"column", gap:8 }}>
+                {bucket.contribution && <div style={{ fontSize:12, color:TC.textSub, lineHeight:1.5, fontStyle:"italic" }}>{bucket.contribution}</div>}
+                {(bucket.priorities||[]).map(p => (
+                  <div key={p.n} style={{ display:"flex", gap:8, alignItems:"flex-start", paddingBottom:6, borderBottom:`1px solid ${TC.bd}` }}>
+                    <div style={{ fontSize:10, fontWeight:800, color:bc, background:`${bc}15`, borderRadius:4, padding:"2px 6px", flexShrink:0 }}>{p.n}</div>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, color:TC.navy }}>{p.title}</div>
+                      {p.t1 && <div style={{ fontSize:11, color:TC.textDim }}>{p.t1}{p.t2?` · ${p.t2}`:""}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function ToaEditField({ value, onChange, multiline, placeholder, style={} }) {
+  const base = { width:"100%", border:`1.5px solid ${TC.tealBd}`, borderRadius:6, padding:"5px 8px", fontSize:12, fontFamily:"inherit", color:TC.text, background:"#fff", outline:"none", resize:multiline?"vertical":"none", minHeight:multiline?52:"auto", lineHeight:1.5, ...style };
+  return multiline
+    ? <textarea value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={base}/>
+    : <input value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{...base,height:28}}/>;
+}
+function ToaEditList({ items, onChange, accent }) {
+  const ac = accent || TC.teal;
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+      {items.map((item,i) => (
+        <div key={i} style={{ display:"flex", gap:4, alignItems:"flex-start" }}>
+          <textarea value={item} rows={2} onChange={e=>{ const n=[...items]; n[i]=e.target.value; onChange(n); }}
+            style={{ flex:1, border:`1px solid ${TC.bd}`, borderRadius:5, padding:"4px 7px", fontSize:11, fontFamily:"inherit", color:TC.text, background:"#fff", resize:"vertical", outline:"none", lineHeight:1.45 }} />
+          <button onClick={()=>onChange(items.filter((_,j)=>j!==i))}
+            style={{ flexShrink:0, background:"none", border:"1px solid #f8a0a0", borderRadius:5, width:24, height:24, cursor:"pointer", color:"#c04040", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", marginTop:2 }}>✕</button>
+        </div>
+      ))}
+      <button onClick={()=>onChange([...items,""])}
+        style={{ alignSelf:"flex-start", background:"none", border:`1px solid ${ac}50`, borderRadius:5, padding:"3px 10px", fontSize:11, color:ac, cursor:"pointer", fontFamily:"inherit" }}>+ Add</button>
+    </div>
+  );
+}
+
+// ─── Theory of Action — portal edit view ──────────────────────────────────────
+function PortalToaView({ portfolioId, portColor }) {
+  const [toaData, setToaData]       = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [editMode, setEditMode]     = useState(false);
+  const [editState, setEditState]   = useState(null);
+  const [saving, setSaving]         = useState(false);
+  const [saveError, setSaveError]   = useState(null);
+  const [activeLane, setActiveLane] = useState(null);
+  const [expandedInds, setExpandedInds] = useState({});
+
+  const accent = portColor?.color || TC.teal;
+
+  const fetchToa = () => {
+    setLoading(true);
+    return api(`/api/toa/${portfolioId}`)
+      .then(d => { setToaData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
+  useEffect(() => { setEditMode(false); setEditState(null); fetchToa(); }, [portfolioId]);
+
+  const enterEdit = () => {
+    if (!toaData) return;
+    const { toa, lanes } = toaData;
+    setEditState({
+      toa: { ...toa },
+      crossInds: toa.cross_indicators_json ? JSON.parse(toa.cross_indicators_json) : [],
+      lanes: lanes.map(l => ({ ...l, activities: (l.activities||[]).map(a=>({...a})), indicators: (l.indicators||[]).map(i=>({...i})) }))
+    });
+    setEditMode(true); setSaveError(null);
+  };
+  const cancelEdit = () => { setEditMode(false); setEditState(null); setSaveError(null); };
+  const setToaField = (f,v) => setEditState(s=>({...s, toa:{...s.toa,[f]:v}}));
+  const setCrossInds = inds => setEditState(s=>({...s, crossInds:inds}));
+  const setLaneField = (lid,f,v) => setEditState(s=>({...s, lanes:s.lanes.map(l=>l.lane_id===lid?{...l,[f]:v}:l)}));
+  const setLaneActivities = (lid,acts) => setEditState(s=>({...s, lanes:s.lanes.map(l=>l.lane_id===lid?{...l,activities:acts}:l)}));
+  const setLaneIndicators = (lid,inds) => setEditState(s=>({...s, lanes:s.lanes.map(l=>l.lane_id===lid?{...l,indicators:inds}:l)}));
+
+  const saveAll = async () => {
+    setSaving(true); setSaveError(null);
+    const orig = toaData;
+    try {
+      const promises = [];
+      const toaChanged = {};
+      ["problem_statement","col1_label","col2_label","cross_indicators_label","amb45_intro_text","amb45_label","amb45_full_text","amb45_buckets_json"].forEach(f => {
+        if (editState.toa[f] !== orig.toa[f]) toaChanged[f] = editState.toa[f];
+      });
+      const newCrossJson = JSON.stringify(editState.crossInds);
+      if (newCrossJson !== orig.toa.cross_indicators_json) toaChanged.cross_indicators_json = newCrossJson;
+      if (Object.keys(toaChanged).length)
+        promises.push(api(`/api/toa/${portfolioId}`, { method:"PATCH", body:JSON.stringify(toaChanged) }));
+
+      editState.lanes.forEach((lane, li) => {
+        const origLane = orig.lanes[li] || {};
+        const laneChanged = {};
+        ["label","outcome_text","icon","color"].forEach(f => { if (lane[f] !== origLane[f]) laneChanged[f] = lane[f]; });
+        if (Object.keys(laneChanged).length)
+          promises.push(api(`/api/toa/lanes/${lane.lane_id}`, { method:"PATCH", body:JSON.stringify(laneChanged) }));
+
+        const origActIds = new Set((origLane.activities||[]).map(a=>a.activity_id));
+        const editActIds = new Set(lane.activities.filter(a=>!a._isNew).map(a=>a.activity_id));
+        (origLane.activities||[]).forEach(a => { if (!editActIds.has(a.activity_id)) promises.push(api(`/api/toa/activities/${a.activity_id}`, { method:"DELETE" })); });
+        lane.activities.filter(a=>a._isNew && a.activity_text?.trim()).forEach((a,ai) => promises.push(api("/api/toa/activities", { method:"POST", body:JSON.stringify({ lane_id:lane.lane_id, portfolio_id:portfolioId, activity_text:a.activity_text.trim(), sort_order:100+ai }) })));
+        lane.activities.filter(a=>!a._isNew && origActIds.has(a.activity_id)).forEach(a => {
+          const origA = (origLane.activities||[]).find(oa=>oa.activity_id===a.activity_id);
+          if (origA && a.activity_text !== origA.activity_text) promises.push(api(`/api/toa/activities/${a.activity_id}`, { method:"PATCH", body:JSON.stringify({ activity_text:a.activity_text }) }));
+        });
+
+        const origIndIds = new Set((origLane.indicators||[]).map(i=>i.indicator_id));
+        const editIndIds = new Set(lane.indicators.filter(i=>!i._isNew).map(i=>i.indicator_id));
+        (origLane.indicators||[]).forEach(i => { if (!editIndIds.has(i.indicator_id)) promises.push(api(`/api/toa/lane-indicators/${i.indicator_id}`, { method:"DELETE" })); });
+        lane.indicators.filter(i=>i._isNew && i.indicator_text?.trim()).forEach((i,ii) => promises.push(api("/api/toa/lane-indicators", { method:"POST", body:JSON.stringify({ lane_id:lane.lane_id, portfolio_id:portfolioId, indicator_text:i.indicator_text.trim(), sort_order:100+ii }) })));
+        lane.indicators.filter(i=>!i._isNew && origIndIds.has(i.indicator_id)).forEach(i => {
+          const origI = (origLane.indicators||[]).find(oi=>oi.indicator_id===i.indicator_id);
+          if (origI && i.indicator_text !== origI.indicator_text) promises.push(api(`/api/toa/lane-indicators/${i.indicator_id}`, { method:"PATCH", body:JSON.stringify({ indicator_text:i.indicator_text }) }));
+        });
+      });
+
+      await Promise.all(promises);
+      await fetchToa();
+      setEditMode(false); setEditState(null);
+    } catch(e) {
+      setSaveError("Save failed — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div style={{ padding:32, textAlign:"center", color:TEXT_MUTED, fontSize:14 }}>Loading…</div>;
+  if (!toaData?.toa) return <div style={{ padding:32, textAlign:"center", color:TEXT_MUTED, fontSize:14 }}>No Theory of Action data found for this portfolio.</div>;
+
+  const { toa, lanes } = toaData;
+  const col1Label = toa.col1_label || "Service Lines";
+  const col2Label = toa.col2_label || "Core Activities";
+  const crossLabel = toa.cross_indicators_label || "2030 Impact Goals";
+  const crossIndicators = toa.cross_indicators_json ? JSON.parse(toa.cross_indicators_json) : [];
+  const amb45Buckets = toa.amb45_buckets_json ? JSON.parse(toa.amb45_buckets_json) : null;
+  const toggleLane = id => setActiveLane(p=>p===id?null:id);
+  const toggleInd = (id,e) => { e.stopPropagation(); setExpandedInds(p=>({...p,[id]:!p[id]})); };
+
+  // ── Edit mode ───────────────────────────────────────────────────────────────
+  if (editMode && editState) {
+    const es = editState;
+    const eCol1 = es.toa.col1_label || "Service Lines";
+    const eCol2 = es.toa.col2_label || "Core Activities";
+    return (
+      <div style={{ background:TC.bg, color:TC.text }}>
+        {/* Edit bar */}
+        <div style={{ padding:"10px 0 10px", borderBottom:`1px solid ${BORDER}`, background:`${accent}0a`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ width:8, height:8, borderRadius:"50%", background:ACCENT }} />
+            <span style={{ fontSize:13, fontWeight:700, color:TEXT }}>Editing Theory of Action</span>
+            <span style={{ fontSize:11, color:TEXT_MUTED }}>— changes save when you click Save</span>
+          </div>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            {saveError && <span style={{ fontSize:12, color:DANGER }}>{saveError}</span>}
+            <Btn variant="secondary" size="sm" onClick={cancelEdit}>Cancel</Btn>
+            <Btn size="sm" onClick={saveAll} disabled={saving}>{saving?"Saving…":"Save Changes"}</Btn>
+          </div>
+        </div>
+
+        {/* Problem statement */}
+        <div style={{ marginBottom:14 }}>
+          <label style={{ fontSize:11, fontWeight:700, color:TEXT_SUB, textTransform:"uppercase", letterSpacing:"0.07em", display:"block", marginBottom:5 }}>Problem / Gap Statement</label>
+          <ToaEditField value={es.toa.problem_statement} onChange={v=>setToaField("problem_statement",v)} multiline placeholder="Describe the problem or gap this portfolio addresses…" />
+        </div>
+
+        {/* Col label editors */}
+        <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap", alignItems:"center", padding:"8px 12px", background:TC.slatePale, borderRadius:8, border:`1px solid ${TC.slateBd}` }}>
+          <span style={{ fontSize:11, fontWeight:700, color:TC.textDim }}>Column labels:</span>
+          {[["col1_label",TC.slate,"Col 1","e.g. Service Lines"],["col2_label",TC.teal,"Col 2","e.g. Core Activities"],["cross_indicators_label",TC.gold,"Impact Label","e.g. 2030 Impact Goals"]].map(([f,c,lbl,ph])=>(
+            <div key={f} style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <span style={{ fontSize:11, color:c, fontWeight:700 }}>{lbl}</span>
+              <input value={es.toa[f]||""} onChange={e=>setToaField(f,e.target.value)} placeholder={ph}
+                style={{ border:`1px solid ${c}50`, borderRadius:5, padding:"3px 8px", fontSize:11, fontFamily:"inherit", width:160, outline:"none", color:TC.text }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Grid header */}
+        <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr 32px 380px", gap:6, alignItems:"end", marginBottom:4 }}>
+          <ToaStageHead num="1" label={eCol1} color={TC.slate} />
+          <ToaStageHead num="2" label={eCol2} color={TC.teal} />
+          <ToaStageHead num="3" label="Enabling Outcomes" sub="What changes as a result?" color={TC.teal} />
+          <div/>
+          <ToaStageHead num="4" label="Impact Achieved" sub="What does this make possible?" color={TC.gold} />
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr 32px 380px", gap:6, alignItems:"center", marginBottom:10 }}>
+          <div style={{ height:2, background:`linear-gradient(90deg,${TC.slate}60,${TC.teal})`, borderRadius:2 }}/>
+          <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:TC.teal }}/><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={TC.teal}/></svg></div>
+          <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg,${TC.teal},${TC.slate})` }}/><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={TC.slate}/></svg></div>
+          <div/>
+          <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg,${TC.slate},${TC.gold})`, borderRadius:2 }}/><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={TC.gold}/></svg></div>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 32px 380px", gap:0, alignItems:"start" }}>
+          {/* Lanes edit grid */}
+          <div style={{ borderRight:`2px solid ${TC.bd}`, paddingRight:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr", gap:4, alignItems:"stretch" }}>
+              {es.lanes.map((lane,li) => {
+                const lc = lane.color || TC.teal;
+                return (
+                  <div key={lane.lane_id} style={{ display:"contents" }}>
+                    {/* Col 1 — label */}
+                    <div style={{ borderRadius:8, background:`${lc}10`, border:`1px solid ${lc}35`, borderLeft:`4px solid ${lc}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:6, gridRow:li+1 }}>
+                      <input value={lane.label||""} onChange={e=>setLaneField(lane.lane_id,"label",e.target.value)}
+                        style={{ border:`1px solid ${lc}60`, borderRadius:5, padding:"4px 7px", fontSize:12, fontWeight:700, fontFamily:"inherit", color:lc, background:`${lc}08`, outline:"none", width:"100%" }}/>
+                      {lane.is_tbd && <span style={{ fontSize:9, background:`${lc}20`, border:`1px solid ${lc}40`, borderRadius:3, padding:"1px 6px", color:lc, fontWeight:700, width:"fit-content" }}>TBD</span>}
+                      {lane.is_multiplier && <span style={{ background:`${lc}30`, border:`1px solid ${lc}60`, borderRadius:4, padding:"2px 6px", fontSize:9, color:lc, fontWeight:800, textAlign:"center", letterSpacing:"0.08em", textTransform:"uppercase" }}>× Multiplier</span>}
+                    </div>
+                    {/* Col 2 — activities */}
+                    <div style={{ borderRadius:8, background:`${lc}04`, border:`1.5px solid ${TC.bd}`, padding:"9px 10px", gridRow:li+1 }}>
+                      <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:6 }}>{eCol2}</div>
+                      <ToaEditList accent={lc}
+                        items={lane.activities.map(a=>a.activity_text)}
+                        onChange={newTexts => setLaneActivities(lane.lane_id, newTexts.map((t,i) => {
+                          const ex = lane.activities[i];
+                          return ex ? {...ex, activity_text:t} : {activity_id:null, activity_text:t, _isNew:true};
+                        }).concat(lane.activities.slice(newTexts.length).map(a=>({...a,_deleted:true}))))}
+                      />
+                    </div>
+                    {/* Col 3 — outcome + indicators */}
+                    <div style={{ borderRadius:8, background:`${TC.teal}06`, border:`1.5px solid ${TC.teal}30`, padding:"9px 12px", gridRow:li+1, display:"flex", flexDirection:"column", gap:8 }}>
+                      <div>
+                        <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:4 }}>Outcome {li+1}</div>
+                        <ToaEditField value={lane.outcome_text} onChange={v=>setLaneField(lane.lane_id,"outcome_text",v)} multiline placeholder="Describe the enabling outcome…" style={{ fontSize:12, minHeight:64 }}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:4 }}>Leading Indicators</div>
+                        <ToaEditList accent={lc}
+                          items={lane.indicators.map(i=>i.indicator_text)}
+                          onChange={newTexts => setLaneIndicators(lane.lane_id, newTexts.map((t,i) => {
+                            const ex = lane.indicators[i];
+                            return ex ? {...ex, indicator_text:t} : {indicator_id:null, indicator_text:t, _isNew:true};
+                          }).concat(lane.indicators.slice(newTexts.length).map(i=>({...i,_deleted:true}))))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <ToaConnector/>
+          {/* Impact panel edit */}
+          <ToaImpactPanel>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:TC.gold, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:6 }}>{es.toa.cross_indicators_label || "2030 Impact Goals"}</div>
+              <ToaEditList items={es.crossInds} accent={TC.gold} onChange={setCrossInds}/>
+            </div>
+            <div style={{ height:1, background:TC.goldBd }}/>
+            <div>
+              <div style={{ fontSize:10, fontWeight:800, color:TC.goldMid, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:8 }}>Impact Enabled · Ambition 2045</div>
+              {amb45Buckets ? (
+                <div>
+                  <div style={{ fontSize:11, color:TC.textDim, marginBottom:6 }}>This portfolio uses structured bucket data. Edit the JSON below:</div>
+                  <textarea value={es.toa.amb45_buckets_json||""} onChange={e=>setToaField("amb45_buckets_json",e.target.value)}
+                    style={{ width:"100%", minHeight:160, border:`1.5px solid ${TC.goldBd}`, borderRadius:6, padding:"6px 8px", fontSize:11, fontFamily:"monospace", color:TC.text, background:"#fff", outline:"none", resize:"vertical" }}/>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {[["amb45_intro_text","Intro text (italic)","Optional intro paragraph…",true],["amb45_label","Box label","e.g. Division Enablement",false],["amb45_full_text","Box body text","Describe how this portfolio enables Ambition 2045…",true]].map(([f,lbl,ph,ml])=>(
+                    <div key={f}>
+                      <div style={{ fontSize:10, color:TC.textDim, marginBottom:3 }}>{lbl}</div>
+                      <ToaEditField value={es.toa[f]} onChange={v=>setToaField(f,v)} multiline={ml} placeholder={ph} style={{ fontSize:11, minHeight:ml?70:"auto" }}/>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ToaImpactPanel>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Read mode ───────────────────────────────────────────────────────────────
+  return (
+    <div style={{ background:TC.bg, color:TC.text }}>
+      {/* Edit button */}
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+        <Btn variant="secondary" size="sm" onClick={enterEdit}>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight:5 }}><path d="M11.5 1.5a1.41 1.41 0 012 2L5 12H3v-2L11.5 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          Edit Theory of Action
+        </Btn>
+      </div>
+
+      {toa.problem_statement && (
+        <div style={{ background:TC.slatePale, border:`1px solid ${TC.slateBd}`, borderLeft:`4px solid ${accent}`, borderRadius:8, padding:"12px 16px", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+            <div style={{ flexShrink:0, background:TC.navy, color:"#fff", fontSize:9, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", padding:"3px 8px", borderRadius:4, marginTop:1 }}>Problem / Gap</div>
+            <div style={{ fontSize:12, color:TC.textSub, lineHeight:1.65, fontStyle:"italic" }}>{toa.problem_statement}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Grid header */}
+      <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr 32px 380px", gap:6, alignItems:"end", marginBottom:4 }}>
+        <ToaStageHead num="1" label={col1Label} color={TC.slate}/>
+        <ToaStageHead num="2" label={col2Label} color={TC.teal}/>
+        <ToaStageHead num="3" label="Enabling Outcomes" sub="What changes as a result?" color={TC.teal}/>
+        <div/>
+        <ToaStageHead num="4" label="Impact Achieved" sub="What does this make possible?" color={TC.gold}/>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr 32px 380px", gap:6, alignItems:"center", marginBottom:8 }}>
+        <div style={{ height:2, background:`linear-gradient(90deg,${TC.slate}60,${TC.teal})`, borderRadius:2 }}/>
+        <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:TC.teal }}/><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={TC.teal}/></svg></div>
+        <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg,${TC.teal},${TC.slate})` }}/><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={TC.slate}/></svg></div>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+          <div style={{ flex:"0 0 20px", width:2, background:`linear-gradient(to bottom,${TC.bd},${TC.gold})`, borderRadius:1 }}/>
+          <svg width="18" height="18" viewBox="0 0 30 30" fill="none"><circle cx="15" cy="15" r="13" fill={`${TC.gold}25`} stroke={TC.gold} strokeWidth="2"/><path d="M10 13 L15 18 L20 13" stroke={TC.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
+        </div>
+        <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg,${TC.slate},${TC.gold})`, borderRadius:2 }}/><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={TC.gold}/></svg></div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 32px 380px", gap:0, alignItems:"start" }}>
+        <div style={{ borderRight:`2px solid ${TC.bd}`, paddingRight:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr", gap:4, alignItems:"stretch" }}>
+            {lanes.map((lane,li) => {
+              const isActive = activeLane===lane.lane_id;
+              const isDimmed = activeLane && !isActive;
+              const lc = lane.color || TC.teal;
+              const hasInds = (lane.indicators||[]).length>0;
+              return (
+                <div key={lane.lane_id} style={{ display:"contents" }}>
+                  <div onClick={()=>toggleLane(lane.lane_id)} style={{ borderRadius:8, background:isActive?`${lc}18`:`${lc}10`, border:`1px solid ${isActive?lc:`${lc}35`}`, borderLeft:`4px solid ${lc}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:4, justifyContent:"center", cursor:"pointer", opacity:isDimmed?0.4:1, transition:"all 0.15s", boxShadow:isActive?`0 2px 16px ${lc}30`:"0 1px 3px rgba(0,0,0,0.08)", gridRow:li+1 }}>
+                    {lane.icon && <div style={{ fontSize:18, color:lc, lineHeight:1 }}>{lane.icon}</div>}
+                    <div style={{ fontSize:13, fontWeight:800, color:lc, lineHeight:1.3 }}>{lane.label}</div>
+                    {lane.is_tbd && <div style={{ fontSize:9, background:`${lc}20`, border:`1px solid ${lc}40`, borderRadius:3, padding:"1px 6px", color:lc, fontWeight:700, width:"fit-content" }}>TBD</div>}
+                    {lane.is_multiplier && <div style={{ background:`${lc}30`, border:`1px solid ${lc}60`, borderRadius:4, padding:"2px 6px", fontSize:9, color:lc, fontWeight:800, textAlign:"center", letterSpacing:"0.08em", textTransform:"uppercase" }}>× Multiplier</div>}
+                  </div>
+                  <div style={{ borderRadius:8, background:`${lc}04`, border:`1.5px solid ${isActive?lc:TC.bd}`, padding:"9px 10px", opacity:isDimmed?0.4:1, transition:"all 0.15s", gridRow:li+1 }}>
+                    <div style={{ fontSize:11, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:5 }}>{col2Label}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {(lane.activities||[]).map((act,i) => (
+                        <div key={i} style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
+                          <div style={{ width:4, height:4, borderRadius:"50%", background:lc, marginTop:6, flexShrink:0, opacity:0.7 }}/>
+                          <div style={{ fontSize:12, color:TC.textMid, lineHeight:1.5 }}>{act.activity_text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ gridRow:li+1, display:"flex", gap:0, opacity:isDimmed?0.4:1, transition:"all 0.15s" }}>
+                    <div onClick={()=>toggleLane(lane.lane_id)} style={{ flex:1, borderRadius:expandedInds[lane.lane_id]?"8px 0 0 8px":8, background:isActive?`${lc}10`:`${TC.teal}06`, border:`1.5px solid ${isActive?lc:`${TC.teal}30`}`, borderRight:expandedInds[lane.lane_id]?`1.5px solid ${lc}30`:undefined, padding:"9px 12px", cursor:"pointer", transition:"all 0.15s", display:"flex", flexDirection:"column", gap:6 }}>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <div style={{ width:18, height:18, borderRadius:"50%", background:lc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:"#fff", flexShrink:0 }}>{li+1}</div>
+                          <div style={{ fontSize:11, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase" }}>Outcome {li+1}</div>
+                        </div>
+                        {hasInds && (
+                          <button onClick={e=>toggleInd(lane.lane_id,e)} style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0, background:"none", border:`1px solid ${lc}40`, borderRadius:5, padding:"3px 7px", cursor:"pointer", fontFamily:"inherit" }}>
+                            <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase" }}>Indicators</div>
+                            <div style={{ background:`${lc}15`, borderRadius:8, padding:"1px 5px", fontSize:10, fontWeight:700, color:lc }}>{lane.indicators.length}</div>
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ transform:expandedInds[lane.lane_id]?"rotate(-90deg)":"rotate(0deg)", transition:"transform 0.2s", flexShrink:0 }}><path d="M3 5 L7 9 L11 5" stroke={lc} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color:TC.navy, lineHeight:1.5, paddingRight:expandedInds[lane.lane_id]?0:100 }}>{lane.outcome_text}</div>
+                    </div>
+                    {expandedInds[lane.lane_id] && (
+                      <div style={{ width:200, flexShrink:0, borderRadius:"0 8px 8px 0", background:`${lc}07`, border:`1.5px solid ${lc}40`, borderLeft:"none", padding:"9px 10px", display:"flex", flexDirection:"column", gap:5 }}>
+                        <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Indicators</div>
+                        {(lane.indicators||[]).map((ind,i) => (
+                          <div key={i} style={{ display:"flex", gap:5, alignItems:"flex-start", paddingBottom:4, borderBottom:i<lane.indicators.length-1?`1px solid ${lc}15`:"none" }}>
+                            <div style={{ width:4, height:4, borderRadius:"50%", background:lc, marginTop:5, flexShrink:0, opacity:0.6 }}/>
+                            <div style={{ fontSize:12, color:TC.textMid, lineHeight:1.45 }}>{ind.indicator_text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {activeLane && <div style={{ textAlign:"center", marginTop:6 }}><button onClick={()=>setActiveLane(null)} style={{ background:"none", border:`1px solid ${TC.bd}`, borderRadius:5, padding:"4px 14px", fontSize:12, color:TC.textDim, cursor:"pointer" }}>Clear filter ✕</button></div>}
+        </div>
+        <ToaConnector/>
+        <ToaImpactPanel>
+          {crossIndicators.length>0 && (
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:TC.gold, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>{crossLabel}</div>
+              <div style={{ fontSize:10, color:TC.textDim, fontStyle:"italic", marginBottom:8 }}>Portfolio-level impact signals</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {crossIndicators.map((ind,i) => (
+                  <div key={i} style={{ background:TC.off, border:`1px solid ${TC.goldBd}60`, borderLeft:`3px solid ${TC.gold}`, borderRadius:"0 7px 7px 0", padding:"8px 12px" }}>
+                    <div style={{ fontSize:12, color:TC.textMid, lineHeight:1.55 }}>{ind}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {crossIndicators.length>0 && (toa.amb45_full_text||amb45Buckets) && <div style={{ height:1, background:TC.bd }}/>}
+          {toa.amb45_intro_text && <div style={{ fontSize:12, color:TC.textMid, lineHeight:1.6, fontStyle:"italic" }}>{toa.amb45_intro_text}</div>}
+          {(toa.amb45_full_text||amb45Buckets) && <ToaBiDivider/>}
+          {(toa.amb45_full_text||amb45Buckets) && (
+            <div>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:6, marginBottom:8 }}>
+                <div style={{ width:3, borderRadius:2, background:TC.goldMid, alignSelf:"stretch", minHeight:24, flexShrink:0 }}/>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:TC.goldMid, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:1 }}>Impact Enabled</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:TC.navy, lineHeight:1.2 }}>Ambition 2045</div>
+                </div>
+              </div>
+              {amb45Buckets ? (
+                <ToaAmb45Buckets buckets={amb45Buckets}/>
+              ) : (
+                <div style={{ background:`${TC.teal}06`, border:`1px solid ${TC.tealBd}`, borderLeft:`3px solid ${TC.teal}`, borderRadius:"0 7px 7px 0", padding:"10px 12px" }}>
+                  {toa.amb45_label && <div style={{ fontSize:10, fontWeight:800, color:TC.teal, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>{toa.amb45_label}</div>}
+                  <div style={{ fontSize:12, color:TC.textMid, lineHeight:1.6 }}>{toa.amb45_full_text}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </ToaImpactPanel>
+      </div>
+    </div>
+  );
+}
+
 // ─── Portfolio Panel ────────────────────────────────────────────────────────────
 function PortfolioPanel({ portfolio, user, onBack }) {
   const [data, setData]             = useState(null);
@@ -1945,6 +2428,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [editOutId, setEditOutId]   = useState(null);
   const [newOutTitle, setNewOutTitle] = useState("");
   const [saving, setSaving]         = useState(false);
+  const [portTab, setPortTab]       = useState("outcomes");
 
   const p = PORT_COLORS[portfolio.portfolio_id];
 
@@ -1992,7 +2476,23 @@ function PortfolioPanel({ portfolio, user, onBack }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 32 }}>
+      {/* Tab bar */}
+      <div style={{ display:"flex", gap:4, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
+        {[{id:"outcomes",label:"Outcomes & Indicators"},{id:"toa",label:"Theory of Action"}].map(t => (
+          <button key={t.id} onClick={()=>setPortTab(t.id)}
+            style={{ background:"none", border:"none", borderBottom:`2px solid ${portTab===t.id?ACCENT:"transparent"}`, padding:"8px 14px", fontSize:13, fontWeight:portTab===t.id?700:500, color:portTab===t.id?ACCENT:TEXT_SUB, cursor:"pointer", fontFamily:"inherit", marginBottom:-1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {portTab==="toa" && (
+        <div style={{ overflowX:"auto" }}>
+          <PortalToaView portfolioId={portfolio.portfolio_id} portColor={p}/>
+        </div>
+      )}
+
+      {portTab==="outcomes" && <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", justifyContent: "space-between",
           alignItems: "center", marginBottom: 14 }}>
           <SectionLabel>Portfolio Outcomes & Indicators</SectionLabel>
@@ -2112,6 +2612,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
           );
         })}
       </div>
+      </div>}
     </div>
   );
 }

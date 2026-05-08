@@ -5077,15 +5077,8 @@ function PortfolioToaView({ portfolioId, portColor }) {
   // ── Read mode render ────────────────────────────────────────────────────────
   return (
     <div style={{ background:C.bg, color:C.text }}>
-      {/* Edit button */}
-      <div style={{ padding:"8px 18px 0", display:"flex", justifyContent:"flex-end" }}>
-        <button onClick={enterEdit} style={{ background:"none", border:`1px solid ${C.bd}`, borderRadius:6, padding:"4px 14px", fontSize:12, color:C.textSub, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:5 }}>
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5a1.41 1.41 0 012 2L5 12H3v-2L11.5 1.5z" stroke={C.textSub} strokeWidth="1.5" strokeLinejoin="round"/></svg>
-          Edit
-        </button>
-      </div>
       {toa.problem_statement && (
-        <div style={{ padding:"8px 18px 0" }}>
+        <div style={{ padding:"16px 18px 0" }}>
           <div style={{ background:C.slatePale, border:`1px solid ${C.slateBd}`, borderLeft:`4px solid ${accent}`, borderRadius:8, padding:"12px 16px", marginBottom:10 }}>
             <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
               <div style={{ flexShrink:0, background:C.navy, color:"#fff", fontSize:9, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", padding:"3px 8px", borderRadius:4, marginTop:1 }}>Problem / Gap</div>
