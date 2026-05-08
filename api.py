@@ -1787,6 +1787,45 @@ def get_bow_full(bow_id):
     })
 
 
+# ── Theory of Action ───────────────────────────────────────────────────────────
+
+@app.route("/api/toa/<portfolio_id>")
+def get_portfolio_toa(portfolio_id):
+    toa_rows = query(
+        f"SELECT * FROM {SCHEMA}.portfolio_toa WHERE portfolio_id = ?",
+        [portfolio_id]
+    )
+    if not toa_rows:
+        return jsonify({"toa": None, "lanes": []})
+
+    toa = toa_rows[0]
+
+    lanes = query(
+        f"""SELECT * FROM {SCHEMA}.portfolio_toa_lanes
+            WHERE portfolio_id = ? AND COALESCE(is_active, true) = true
+            ORDER BY sort_order""",
+        [portfolio_id]
+    )
+
+    for lane in lanes:
+        lid = lane["lane_id"]
+        acts = query(
+            f"""SELECT activity_text FROM {SCHEMA}.portfolio_toa_activities
+                WHERE lane_id = ? ORDER BY sort_order""",
+            [lid]
+        )
+        lane["activities"] = [a["activity_text"] for a in acts]
+
+        inds = query(
+            f"""SELECT indicator_text FROM {SCHEMA}.portfolio_toa_lane_indicators
+                WHERE lane_id = ? ORDER BY sort_order""",
+            [lid]
+        )
+        lane["indicators"] = [i["indicator_text"] for i in inds]
+
+    return jsonify({"toa": toa, "lanes": lanes})
+
+
 # ── Portfolio full detail ───────────────────────────────────────────────────────
 
 @app.route("/api/portfolio/<portfolio_id>/full")
