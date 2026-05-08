@@ -1241,108 +1241,115 @@ def submit_actual():
 @app.route("/api/pending-actuals/<pending_id>/approve", methods=["POST"])
 def approve_actual(pending_id):
     """Approve a pending actual. Moves to appropriate actuals table based on level."""
-    data = request.json
-    row = query(
-        f"SELECT * FROM {SCHEMA}.pending_actuals WHERE pending_id = ?",
-        [pending_id]
-    )
-    if not row:
-        return jsonify({"error": "Not found"}), 404
+    import traceback
+    try:
+        data = request.json or {}
+        row = query(
+            f"SELECT * FROM {SCHEMA}.pending_actuals WHERE pending_id = ?",
+            [pending_id]
+        )
+        if not row:
+            return jsonify({"error": "Not found"}), 404
 
-    r = row[0]
-    level    = r["level"]
-    reviewed_value = data.get("reviewed_value", r["submitted_value"])
-    reviewed_by    = data.get("reviewed_by", "dashboard")
+        r = row[0]
+        level    = r["level"]
+        reviewed_value = data.get("reviewed_value", r["submitted_value"])
+        reviewed_by    = data.get("reviewed_by", "dashboard")
 
-    if level == "bow":
+        if level == "bow":
+            execute(
+                f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
+                    (actual_id, indicator_id, bow_id, outcome_id, year, period,
+                     actual_value, reading_date, source_notes, loaded_by, loaded_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
+                [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
+                 r["year"], r.get("period"), reviewed_value,
+                 r.get("reading_date"), r.get("source_notes"), reviewed_by]
+            )
+        elif level == "portfolio":
+            execute(
+                f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
+                    (actual_id, indicator_id, portfolio_id, outcome_id, year, period,
+                     actual_value, reading_date, source_notes, loaded_by, loaded_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
+                [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
+                 r["year"], r.get("period"), reviewed_value,
+                 r.get("reading_date"), r.get("source_notes"), reviewed_by]
+            )
+        elif level == "goal":
+            execute(
+                f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
+                    (actual_id, goal_id, year, actual_value, reading_date,
+                     source_notes, loaded_by, loaded_at)
+                    VALUES (?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
+                [new_id(), r["entity_id"], r["year"], reviewed_value,
+                 "pending_actuals_review", reviewed_by]
+            )
+
+        reviewer_email = _actor()
+        reviewer_member = query(
+            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [reviewer_email]
+        ) if reviewer_email != "unknown" else []
+        reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
+
+        was_edited = (reviewed_value != r["submitted_value"])
+        decision   = "approved with edit" if was_edited else "approved"
+
         execute(
-            f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
-                (actual_id, indicator_id, bow_id, outcome_id, year, period,
-                 actual_value, reading_date, source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
-            [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
-             r["year"], r.get("period"), reviewed_value,
-             r.get("reading_date"), r.get("source_notes"), reviewed_by]
-        )
-    elif level == "portfolio":
-        execute(
-            f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
-                (actual_id, indicator_id, portfolio_id, outcome_id, year, period,
-                 actual_value, reading_date, source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
-            [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
-             r["year"], r.get("period"), reviewed_value,
-             r.get("reading_date"), r.get("source_notes"), reviewed_by]
-        )
-    elif level == "goal":
-        execute(
-            f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
-                (actual_id, goal_id, year, actual_value, reading_date,
-                 source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
-            [new_id(), r["entity_id"], r["year"], reviewed_value,
-             "pending_actuals_review", reviewed_by]
+            f"""UPDATE {SCHEMA}.pending_actuals
+                SET status         = 'approved',
+                    reviewed_value = ?,
+                    reviewed_by    = ?,
+                    reviewed_at    = current_timestamp()
+                WHERE pending_id   = ?""",
+            [reviewed_value, reviewed_by, pending_id]
         )
 
-    reviewer_email = _actor()
-    reviewer_member = query(
-        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
-        [reviewer_email]
-    ) if reviewer_email != "unknown" else []
-    reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
-
-    was_edited = (reviewed_value != r["submitted_value"])
-    decision   = "approved with edit" if was_edited else "approved"
-
-    execute(
-        f"""UPDATE {SCHEMA}.pending_actuals
-            SET status         = 'approved',
-                reviewed_value = ?,
-                reviewed_by    = ?,
-                reviewed_at    = current_timestamp()
-            WHERE pending_id   = ?""",
-        [reviewed_value, reviewed_by, pending_id]
-    )
-
-    # Look up indicator label for the email body
-    ind_rows = query(
-        f"SELECT text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
-        f"SELECT text FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
-        [r["indicator_id"], r["indicator_id"]]
-    )
-    ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
-
-    # Send email to submitter (look up email by display name)
-    submitter_rows = query(
-        f"SELECT email FROM {SCHEMA}.team_members WHERE display_name = ? AND is_active = true",
-        [r["submitted_by"]]
-    )
-    if submitter_rows:
-        submitter_email = submitter_rows[0]["email"]
-        val_note = (f"\n\nThe reviewer adjusted your submitted value "
-                    f"from {r['submitted_value']} to {reviewed_value}.") if was_edited else ""
-        body = textwrap.dedent(f"""\
-            Hi {r['submitted_by']},
-
-            Your data submission has been {decision}.
-
-            Indicator: {ind_label}
-            Year / period: {r['year']}{' · ' + r['period'] if r.get('period') else ''}
-            Submitted value: {r['submitted_value']}{val_note}
-
-            Reviewed by: {reviewed_by}
-
-            You can view your submission history in the Data Hub portal under "My Submissions".
-
-            — Measurement & Insights Data Hub
-        """)
-        _send_notification_email(
-            submitter_email,
-            f"Data submission {decision}: {ind_label} ({r['year']})",
-            body
+        # Look up indicator label for the email body
+        ind_rows = query(
+            f"SELECT text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
+            f"SELECT text FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+            [r["indicator_id"], r["indicator_id"]]
         )
+        ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
 
-    return jsonify({"status": "ok", "decision": decision})
+        # Send email to submitter (look up email by display name)
+        submitter_rows = query(
+            f"SELECT email FROM {SCHEMA}.team_members WHERE display_name = ? AND is_active = true",
+            [r["submitted_by"]]
+        )
+        if submitter_rows:
+            submitter_email = submitter_rows[0]["email"]
+            val_note = (f"\n\nThe reviewer adjusted your submitted value "
+                        f"from {r['submitted_value']} to {reviewed_value}.") if was_edited else ""
+            body = textwrap.dedent(f"""\
+                Hi {r['submitted_by']},
+
+                Your data submission has been {decision}.
+
+                Indicator: {ind_label}
+                Year / period: {r['year']}{' · ' + r['period'] if r.get('period') else ''}
+                Submitted value: {r['submitted_value']}{val_note}
+
+                Reviewed by: {reviewed_by}
+
+                You can view your submission history in the Data Hub portal under "My Submissions".
+
+                — Measurement & Insights Data Hub
+            """)
+            _send_notification_email(
+                submitter_email,
+                f"Data submission {decision}: {ind_label} ({r['year']})",
+                body
+            )
+
+        return jsonify({"status": "ok", "decision": decision})
+
+    except Exception as e:
+        msg = str(e)
+        print(f"[approve_actual] ERROR for {pending_id}:\n{traceback.format_exc()}")
+        return jsonify({"error": msg}), 500
 
 @app.route("/api/pending-actuals/<pending_id>/reject", methods=["POST"])
 def reject_actual(pending_id):

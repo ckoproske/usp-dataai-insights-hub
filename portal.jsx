@@ -105,7 +105,11 @@ function api(path, opts = {}) {
   return fetch(path, {
     headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
     ...opts,
-  }).then(r => r.json());
+  }).then(async r => {
+    const text = await r.text();
+    try { return JSON.parse(text); }
+    catch { return { error: `Server error ${r.status}: ${text.slice(0, 200)}` }; }
+  });
 }
 
 function PortfolioPill({ portfolioId, style = {} }) {
