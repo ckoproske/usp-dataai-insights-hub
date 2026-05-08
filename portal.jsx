@@ -1355,7 +1355,14 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
 
     return (
       <div>
-        <SectionLabel style={{ marginBottom: 10 }}>Impact Indicators</SectionLabel>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
+          <SectionLabel>Impact Indicators</SectionLabel>
+          <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>
+            Grid shows the latest approved value per year. For indicators with multiple
+            entries per year (quarterly / bimonthly), all values are visible in the
+            main dashboard.
+          </span>
+        </div>
 
         {!hasIndicators && (
           <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 8 }}>
