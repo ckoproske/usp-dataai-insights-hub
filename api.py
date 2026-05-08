@@ -461,7 +461,8 @@ def update_target_status(target_id):
 
 @app.route("/api/indicators/<bow_id>")
 def get_indicators(bow_id):
-    """Returns BOW indicators with most recent actual per year."""
+    """Returns BOW indicators with most recent actual per year.
+    One row per (indicator × year) — dashboard accumulates actuals across rows."""
     rows = query(
         f"""SELECT
               i.indicator_id,
@@ -470,6 +471,9 @@ def get_indicators(bow_id):
               i.text,
               i.data_source,
               i.baseline,
+              i.collection_frequency,
+              i.last_updated,
+              i.unit,
               i.target_2026,
               i.target_2027,
               i.target_2028,
@@ -481,16 +485,19 @@ def get_indicators(bow_id):
               a.source_notes
             FROM {SCHEMA}.bow_indicators i
             LEFT JOIN (
-              SELECT a1.*
+              SELECT a1.indicator_id, a1.year, a1.actual_value,
+                     a1.reading_date, a1.source_notes
               FROM {SCHEMA}.bow_indicator_actuals a1
-              WHERE a1.loaded_at = (
-                SELECT MAX(a2.loaded_at)
-                FROM {SCHEMA}.bow_indicator_actuals a2
-                WHERE a2.indicator_id = a1.indicator_id
-                  AND a2.year         = a1.year
-              )
+              INNER JOIN (
+                SELECT indicator_id, year, MAX(loaded_at) AS max_loaded
+                FROM {SCHEMA}.bow_indicator_actuals
+                GROUP BY indicator_id, year
+              ) a2 ON a1.indicator_id = a2.indicator_id
+                   AND a1.year        = a2.year
+                   AND a1.loaded_at   = a2.max_loaded
             ) a ON i.indicator_id = a.indicator_id
             WHERE i.bow_id = ?
+              AND COALESCE(i.is_active, true) = true
             ORDER BY i.outcome_id, i.indicator_id, a.year""",
         [bow_id]
     )
@@ -1213,12 +1220,13 @@ def submit_actual():
     execute(
         f"""INSERT INTO {SCHEMA}.pending_actuals
             (pending_id, indicator_id, level, entity_id, year, period,
-             submitted_value, reading_date, source_notes,
+             submitted_value, reading_date, source_notes, notes,
              submitted_by, submitted_permission, submitted_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
         [new_id(), data.get("indicator_id"), data["level"],
          data["entity_id"], data["year"], data.get("period"),
          data["submitted_value"], data.get("reading_date"), data.get("source_notes"),
+         data.get("notes"),
          submitted_by, submitted_permission]
     )
     return jsonify({"status": "ok", "submitted_by": submitted_by, "submitted_permission": submitted_permission})

@@ -296,6 +296,7 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
   const periodOptions = PERIOD_OPTIONS[freq] || [];
 
   const [value, setValue]          = useState("");
+  const [year, setYear]            = useState(String(CURRENT_YEAR));
   const [period, setPeriod]        = useState("");
   const [readingDate, setDate]     = useState(TODAY);
   const [sourceName, setSrcName]   = useState("");
@@ -306,7 +307,7 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
   const [submitting, setSubmitting]= useState(false);
   const [error, setError]          = useState(null);
 
-  const canSubmit = value && sourceName.trim() && sourceType && readingDate
+  const canSubmit = value && year && sourceName.trim() && sourceType && readingDate
     && (periodOptions.length === 0 || period);
 
   const submit = async () => {
@@ -325,7 +326,7 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
           indicator_id: indicator.indicator_id,
           level: bow.portfolio_id ? "bow" : "portfolio",
           entity_id: bow.bow_id || bow.portfolio_id,
-          year: CURRENT_YEAR, period: period || null,
+          year: parseInt(year, 10), period: period || null,
           submitted_value: parseFloat(value),
           reading_date: readingDate, source_notes: sourceText, notes,
         }),
@@ -347,10 +348,16 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
           fontSize: 18, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: periodOptions.length ? "1fr 1fr" : "1fr", gap: 12, marginBottom: 4 }}>
-        <Field label={`Value${indicator.unit ? ` (${indicator.unit})` : ""}`} required>
-          <input type="number" value={value} onChange={e => setValue(e.target.value)}
-            placeholder="Enter value..." style={inputStyle} />
+      {/* Reporting year + period + value on one row */}
+      <div style={{ display: "grid",
+        gridTemplateColumns: periodOptions.length ? "1fr 1fr 1fr" : "1fr 1fr",
+        gap: 12, marginBottom: 4 }}>
+        <Field label="Reporting year" required
+          helper="Which strategy year does this data count toward?">
+          <select value={year} onChange={e => setYear(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            {TARGET_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </Field>
         {periodOptions.length > 0 && (
           <Field label="Period" required>
@@ -361,6 +368,10 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
             </select>
           </Field>
         )}
+        <Field label={`Value${indicator.unit ? ` (${indicator.unit})` : ""}`} required>
+          <input type="number" value={value} onChange={e => setValue(e.target.value)}
+            placeholder="Enter value..." style={inputStyle} />
+        </Field>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
