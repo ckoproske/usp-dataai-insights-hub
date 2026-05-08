@@ -7824,6 +7824,114 @@ function AllInvestmentsView() {
   );
 }
 
+// ── DataModelDiagram (ERD) ────────────────────────────────────────────────────
+const DM_BOX_W = 180, DM_BOX_H = 30;
+const DM_TABLE_POS = {
+  strategy_goals:              {x:20,  y:42},  portfolios:                  {x:20,  y:80},
+  portfolio_goal_links:        {x:20,  y:118}, bows:                        {x:20,  y:156},
+  portfolio_outcomes:          {x:20,  y:194}, bow_outcomes:                {x:20,  y:232},
+  bow_portfolio_outcome_links: {x:20,  y:270},
+  bow_indicators:              {x:240, y:42},  bow_indicator_actuals:       {x:240, y:80},
+  portfolio_indicators:        {x:240, y:118}, portfolio_indicator_actuals: {x:240, y:156},
+  strategy_goal_actuals:       {x:240, y:194},
+  execution_targets:           {x:460, y:42},  execution_target_status:     {x:460, y:80},
+  bow_ratings:                 {x:460, y:160}, portfolio_outcome_ratings:   {x:460, y:198},
+  goal_ratings:                {x:460, y:236},
+  assumptions:                 {x:680, y:42},  assumption_confidence:       {x:680, y:80},
+  assumption_indicator_links:  {x:680, y:118}, assumption_target_links:     {x:680, y:156},
+  assumption_rating_criteria:  {x:680, y:194}, assumption_data_gaps:        {x:680, y:232},
+  assumption_reassessment_log: {x:680, y:270}, field_signal_sources:        {x:680, y:308},
+  key_decisions:               {x:680, y:378}, decision_assumption_links:   {x:680, y:416},
+  invest_investments:          {x:900, y:42},  invest_bow_allocation:       {x:900, y:80},
+  invest_bow_details:          {x:900, y:118}, investment_overlays:         {x:900, y:156},
+  bow_notes:                   {x:900, y:216}, portfolio_tracking:          {x:900, y:254},
+  team_members:                {x:900, y:292}, pending_actuals:             {x:900, y:330},
+};
+const DM_GROUP_RECTS = [
+  {id:"structure",   x:10,  y:4,   w:200, h:308, label:"Strategy Structure"},
+  {id:"indicators",  x:230, y:4,   w:200, h:232, label:"Indicators & Actuals"},
+  {id:"execution",   x:450, y:4,   w:200, h:116, label:"Execution"},
+  {id:"ratings",     x:450, y:130, w:200, h:148, label:"Ratings"},
+  {id:"assumptions", x:670, y:4,   w:200, h:346, label:"Assumptions"},
+  {id:"decisions",   x:670, y:360, w:200, h:108, label:"Key Decisions"},
+  {id:"investments", x:890, y:4,   w:200, h:194, label:"Investments"},
+  {id:"tracking",    x:890, y:208, w:200, h:174, label:"Notes & Tracking"},
+];
+const DM_EDGES = [];
+(()=>{ Object.entries(DM_TABLES).forEach(([tName,tDef])=>(tDef.refs||[]).forEach(ref=>{ if(DM_TABLE_POS[tName]&&DM_TABLE_POS[ref]) DM_EDGES.push({from:tName,to:ref}); })); })();
+function dmEdgePath(from, to) {
+  const fp=DM_TABLE_POS[from], tp=DM_TABLE_POS[to];
+  if(!fp||!tp) return null;
+  const fmy=fp.y+DM_BOX_H/2, tmy=tp.y+DM_BOX_H/2;
+  if(fp.x===tp.x){ const lx=fp.x-18; return `M ${fp.x},${fmy} H ${lx} V ${tmy} H ${tp.x}`; }
+  if(fp.x<tp.x){ const fx=fp.x+DM_BOX_W,tx=tp.x,cx=(fx+tx)/2; return `M ${fx},${fmy} C ${cx},${fmy} ${cx},${tmy} ${tx},${tmy}`; }
+  const fx=fp.x,tx=tp.x+DM_BOX_W,cx=(fx+tx)/2; return `M ${fx},${fmy} C ${cx},${fmy} ${cx},${tmy} ${tx},${tmy}`;
+}
+
+function DataModelDiagram({ onSelectTable }) {
+  const [zoom,setZoom] = useState(0.9);
+  const [pan,setPan]   = useState({x:20,y:20});
+  const [hl,setHl]     = useState(null);
+  const [dragging,setDragging] = useState(false);
+  const [lastMouse,setLastMouse] = useState(null);
+
+  const hlEdgeKeys  = hl ? new Set(DM_EDGES.filter(e=>e.from===hl||e.to===hl).map(e=>e.from+">"+e.to)) : null;
+  const hlConnected = hl ? new Set(DM_EDGES.filter(e=>e.from===hl||e.to===hl).flatMap(e=>[e.from,e.to])) : null;
+
+  const onWheel = e => { e.preventDefault(); setZoom(z=>Math.min(2.5,Math.max(0.25,z*(e.deltaY>0?0.9:1.1)))); };
+  const onDown  = e => { if(e.button!==0) return; setDragging(true); setLastMouse({x:e.clientX,y:e.clientY}); };
+  const onMove  = e => { if(!dragging) return; setPan(p=>({x:p.x+(e.clientX-lastMouse.x),y:p.y+(e.clientY-lastMouse.y)})); setLastMouse({x:e.clientX,y:e.clientY}); };
+  const onUp    = () => setDragging(false);
+
+  return (
+    <div style={{flex:1,overflow:"hidden",position:"relative",cursor:dragging?"grabbing":"grab",background:"#F1F5F9",userSelect:"none"}}
+      onWheel={onWheel} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
+      <div style={{position:"absolute",top:10,right:14,display:"flex",gap:6,zIndex:10,alignItems:"center"}}>
+        <button onClick={()=>setZoom(z=>Math.min(2.5,z*1.2))} style={{padding:"3px 9px",borderRadius:5,border:"1px solid "+BORDER,background:SURFACE,fontSize:13,cursor:"pointer"}}>+</button>
+        <button onClick={()=>setZoom(z=>Math.max(0.25,z*0.8))} style={{padding:"3px 9px",borderRadius:5,border:"1px solid "+BORDER,background:SURFACE,fontSize:13,cursor:"pointer"}}>−</button>
+        <button onClick={()=>{setZoom(0.9);setPan({x:20,y:20});}} style={{padding:"3px 9px",borderRadius:5,border:"1px solid "+BORDER,background:SURFACE,fontSize:11,cursor:"pointer"}}>Reset</button>
+        <span style={{fontSize:11,color:TEXT_MUTED}}>{Math.round(zoom*100)}%</span>
+      </div>
+      <svg width="100%" height="100%" style={{display:"block"}}>
+        <defs>
+          <marker id="dm-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#94A3B8"/></marker>
+          {DM_GROUPS.map(g=><marker key={g.id} id={"dm-arrow-"+g.id} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill={g.color}/></marker>)}
+        </defs>
+        <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`} onClick={()=>setHl(null)}>
+          {/* Group backgrounds */}
+          {DM_GROUP_RECTS.map(gr=>{ const g=DM_GROUPS.find(x=>x.id===gr.id); return (
+            <g key={gr.id}>
+              <rect x={gr.x} y={gr.y} width={gr.w} height={gr.h} rx={8} fill={g?.color+"0C"} stroke={g?.color+"55"} strokeWidth={1}/>
+              <text x={gr.x+gr.w/2} y={gr.y+14} textAnchor="middle" fontSize={8} fontWeight={700} fill={g?.color} letterSpacing={1}>{gr.label.toUpperCase()}</text>
+            </g>
+          );})}
+          {/* Edges */}
+          {DM_EDGES.map((e,i)=>{ const p=dmEdgePath(e.from,e.to); if(!p) return null;
+            const key=e.from+">"+e.to, isHl=hlEdgeKeys?hlEdgeKeys.has(key):false, fg=groupOfTable(e.from);
+            return <path key={i} d={p} fill="none" stroke={isHl?fg?.color||"#64748B":"#94A3B8"} strokeWidth={isHl?1.8:0.7} opacity={hl&&!isHl?0.12:isHl?1:0.55} markerEnd={isHl?"url(#dm-arrow-"+(fg?.id||"structure")+")":"url(#dm-arrow)"}/>;
+          })}
+          {/* Table boxes */}
+          {Object.entries(DM_TABLE_POS).map(([tName,pos])=>{
+            const g=groupOfTable(tName), isSel=hl===tName, isConn=hlConnected?hlConnected.has(tName):false, dimmed=hl&&!isSel&&!isConn;
+            return (
+              <g key={tName} style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setHl(hl===tName?null:tName);}} onDoubleClick={e=>{e.stopPropagation();onSelectTable&&onSelectTable(tName);}}>
+                <rect x={pos.x} y={pos.y} width={DM_BOX_W} height={DM_BOX_H} rx={4}
+                  fill={isSel?g?.color||"#888":isConn?g?.color+"22":"#fff"}
+                  stroke={isSel||isConn?g?.color||BORDER:"#CBD5E1"} strokeWidth={isSel?2:isConn?1.5:0.75} opacity={dimmed?0.18:1}/>
+                <text x={pos.x+8} y={pos.y+DM_BOX_H/2} fontSize={10} fontFamily="monospace" dominantBaseline="middle"
+                  fill={isSel?"#fff":g?.color||TEXT} fontWeight={isSel||isConn?700:400} opacity={dimmed?0.25:1}>{tName}</text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+      <div style={{position:"absolute",bottom:12,left:"50%",transform:"translateX(-50%)",fontSize:11,color:TEXT_MUTED,background:SURFACE+"EE",padding:"4px 14px",borderRadius:12,border:"1px solid "+BORDER,pointerEvents:"none",whiteSpace:"nowrap"}}>
+        Click to highlight · Double-click to browse · Scroll to zoom · Drag to pan
+      </div>
+    </div>
+  );
+}
+
 // ── DataModelExplorer ─────────────────────────────────────────────────────────
 const DM_GROUPS = [
   {id:"structure",   label:"Strategy Structure",        color:"#2563EB", tables:["strategy_goals","portfolios","portfolio_goal_links","bows","portfolio_outcomes","bow_outcomes","bow_portfolio_outcome_links"]},
@@ -7883,141 +7991,158 @@ Object.keys(DM_TABLES).forEach(tName => {
 function groupOfTable(tName) { return DM_GROUPS.find(g => g.tables.includes(tName)); }
 
 function DataModelExplorer() {
-  const [selected, setSelected] = useState(null);
-  const [search, setSearch] = useState("");
+  const [dmView, setDmView]       = useState("browse"); // "browse" | "diagram"
+  const [selected, setSelected]   = useState(null);
+  const [search, setSearch]       = useState("");
   const [expandedGroups, setExpandedGroups] = useState(()=>Object.fromEntries(DM_GROUPS.map(g=>[g.id,true])));
 
   const q = search.trim().toLowerCase();
   const matchesSearch = tName => !q || tName.toLowerCase().includes(q) ||
     (DM_TABLES[tName]?.cols||[]).some(c => c.n.toLowerCase().includes(q));
 
-  const tbl = selected ? DM_TABLES[selected] : null;
-  const tblGroup = selected ? groupOfTable(selected) : null;
+  const tbl        = selected ? DM_TABLES[selected] : null;
+  const tblGroup   = selected ? groupOfTable(selected) : null;
   const referencedBy = selected ? (DM_REFERENCED_BY[selected]||[]) : [];
-
   const TYPE_COLOR = {string:"#0891B2", float:"#059669", int:"#7C3AED", boolean:"#D97706", date:"#DB2777", timestamp:"#64748B"};
 
+  const jumpTo = tName => { setSelected(tName); setDmView("browse"); const g=groupOfTable(tName); if(g) setExpandedGroups(prev=>({...prev,[g.id]:true})); };
+
   return (
-    <div style={{display:"flex",height:"100%",minHeight:0,gap:0}}>
-      {/* Left panel — table browser */}
-      <div style={{width:240,flexShrink:0,borderRight:"1px solid "+BORDER,overflowY:"auto",background:SURFACE,display:"flex",flexDirection:"column"}}>
-        <div style={{padding:"14px 12px 10px",borderBottom:"1px solid "+BORDER,flexShrink:0}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tables or columns…"
-            style={{width:"100%",boxSizing:"border-box",padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:12,color:TEXT,background:BG,outline:"none"}}/>
-        </div>
-        <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
-          {DM_GROUPS.map(g => {
-            const visibleTables = g.tables.filter(matchesSearch);
-            if (q && visibleTables.length===0) return null;
-            const open = expandedGroups[g.id];
-            return (
-              <div key={g.id}>
-                <button onClick={()=>setExpandedGroups(prev=>({...prev,[g.id]:!prev[g.id]}))}
-                  style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"5px 12px",border:"none",background:"none",cursor:"pointer",textAlign:"left"}}>
-                  <span style={{fontSize:9,color:g.color,fontWeight:700,letterSpacing:0.5,transform:open?"rotate(90deg)":"rotate(0deg)",transition:"transform .15s",display:"inline-block"}}>▶</span>
-                  <span style={{fontSize:10,fontWeight:700,color:g.color,textTransform:"uppercase",letterSpacing:1.2,flex:1}}>{g.label}</span>
-                  <span style={{fontSize:10,color:TEXT_MUTED}}>{g.tables.length}</span>
-                </button>
-                {open && visibleTables.map(tName => (
-                  <button key={tName} onClick={()=>setSelected(tName)}
-                    style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"5px 12px 5px 26px",border:"none",cursor:"pointer",textAlign:"left",
-                      background:selected===tName?g.color+"18":"transparent",
-                      borderLeft:selected===tName?"3px solid "+g.color:"3px solid transparent",
-                      transition:"background .1s"}}>
-                    <span style={{fontSize:13,color:selected===tName?g.color:TEXT,fontWeight:selected===tName?600:400,fontFamily:"monospace"}}>{tName}</span>
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+    <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
+      {/* View toggle */}
+      <div style={{display:"flex",gap:6,padding:"10px 16px",borderBottom:"1px solid "+BORDER,background:SURFACE,flexShrink:0,alignItems:"center"}}>
+        <button onClick={()=>setDmView("browse")} style={{padding:"5px 14px",borderRadius:6,border:"1px solid "+(dmView==="browse"?ACCENT:BORDER),background:dmView==="browse"?ACCENT+"12":"none",color:dmView==="browse"?ACCENT:TEXT_MUTED,fontSize:12,fontWeight:dmView==="browse"?600:400,cursor:"pointer"}}>Browse</button>
+        <button onClick={()=>setDmView("diagram")} style={{padding:"5px 14px",borderRadius:6,border:"1px solid "+(dmView==="diagram"?ACCENT:BORDER),background:dmView==="diagram"?ACCENT+"12":"none",color:dmView==="diagram"?ACCENT:TEXT_MUTED,fontSize:12,fontWeight:dmView==="diagram"?600:400,cursor:"pointer"}}>Diagram</button>
       </div>
 
-      {/* Right panel — detail or welcome */}
-      <div style={{flex:1,overflowY:"auto",padding:"28px 36px"}}>
-        {!selected ? (
-          <div>
-            <div style={{fontSize:22,fontWeight:800,color:TEXT,marginBottom:6}}>Data Model</div>
-            <div style={{fontSize:14,color:TEXT_SUB,marginBottom:28,lineHeight:1.7}}>
-              {Object.keys(DM_TABLES).length} tables across {DM_GROUPS.length} domain groups · <span style={{fontFamily:"monospace",fontSize:12}}>usp_data.usp_strategy</span>
+      {dmView==="diagram" ? (
+        <DataModelDiagram onSelectTable={jumpTo}/>
+      ) : (
+        <div style={{display:"flex",flex:1,minHeight:0}}>
+          {/* Left panel */}
+          <div style={{width:240,flexShrink:0,borderRight:"1px solid "+BORDER,overflowY:"auto",background:SURFACE,display:"flex",flexDirection:"column"}}>
+            <div style={{padding:"14px 12px 10px",borderBottom:"1px solid "+BORDER,flexShrink:0}}>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tables or columns…"
+                style={{width:"100%",boxSizing:"border-box",padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:12,color:TEXT,background:BG,outline:"none"}}/>
             </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
-              {DM_GROUPS.map(g=>(
-                <div key={g.id} style={{flex:"1 1 260px",minWidth:220,border:"1px solid "+BORDER,borderLeft:"4px solid "+g.color,borderRadius:10,padding:"16px 18px",background:SURFACE,cursor:"pointer"}}
-                  onClick={()=>{ setSelected(g.tables[0]); setExpandedGroups(prev=>({...prev,[g.id]:true})); }}>
-                  <div style={{fontSize:11,fontWeight:700,color:g.color,textTransform:"uppercase",letterSpacing:1.2,marginBottom:6}}>{g.label}</div>
-                  <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.7}}>
-                    {g.tables.map((t,i)=><span key={t} style={{fontFamily:"monospace",fontSize:11}}>{t}{i<g.tables.length-1?", ":""}</span>)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div>
-            {/* Header */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-              <span style={{fontSize:10,fontWeight:700,color:tblGroup?.color,textTransform:"uppercase",letterSpacing:1.2,background:tblGroup?.color+"18",padding:"3px 8px",borderRadius:4}}>{tblGroup?.label}</span>
-            </div>
-            <div style={{fontSize:22,fontWeight:800,color:TEXT,fontFamily:"monospace",marginBottom:4}}>{selected}</div>
-            <div style={{fontSize:12,color:TEXT_MUTED,fontFamily:"monospace",marginBottom:24}}>usp_data.usp_strategy.{selected} · {tbl.cols.length} columns</div>
-
-            {/* Relationship pills */}
-            {tbl.refs.length>0 && (
-              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:24}}>
-                {tbl.refs.map(r=>{const rg=groupOfTable(r);return(
-                  <button key={r} onClick={()=>setSelected(r)}
-                    style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:"1px solid "+(rg?.color||BORDER)+"55",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,color:rg?.color||TEXT_SUB,fontFamily:"monospace"}}>
-                    <span style={{fontSize:10,opacity:0.7}}>→</span> {r}
-                  </button>
-                );})}
-              </div>
-            )}
-
-            {/* Columns table */}
-            <div style={{border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 3fr",background:BG,borderBottom:"1px solid "+BORDER,padding:"8px 14px"}}>
-                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Column</span>
-                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Type</span>
-                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Notes</span>
-              </div>
-              {tbl.cols.map((c,i)=>{
-                const isHL = q && c.n.toLowerCase().includes(q);
+            <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
+              {DM_GROUPS.map(g => {
+                const visibleTables = g.tables.filter(matchesSearch);
+                if (q && visibleTables.length===0) return null;
+                const open = expandedGroups[g.id];
                 return (
-                  <div key={c.n} style={{display:"grid",gridTemplateColumns:"2fr 1fr 3fr",padding:"9px 14px",borderBottom:i<tbl.cols.length-1?"1px solid "+BORDER:"none",background:isHL?"#FFFBEB":i%2===0?SURFACE:BG+"88",alignItems:"center"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {c.pk&&<span style={{fontSize:9,fontWeight:700,color:"#D97706",background:"#FEF3C7",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 4px"}}>PK</span>}
-                      {c.fk&&<span style={{fontSize:9,fontWeight:700,color:"#2563EB",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:3,padding:"1px 4px",cursor:"pointer"}} onClick={()=>setSelected(c.fk)} title={"→ "+c.fk}>FK</span>}
-                      <span style={{fontSize:13,fontFamily:"monospace",color:TEXT,fontWeight:c.pk?700:400}}>{c.n}</span>
-                    </div>
-                    <span style={{fontSize:12,fontFamily:"monospace",color:TYPE_COLOR[c.t]||TEXT_SUB,fontWeight:500}}>{c.t}</span>
-                    <span style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
-                      {c.fk&&<span style={{cursor:"pointer",color:"#2563EB",textDecoration:"underline",marginRight:4}} onClick={()=>setSelected(c.fk)}>→ {c.fk}</span>}
-                      {c.note||c.default&&("default: "+c.default)||""}
-                    </span>
+                  <div key={g.id}>
+                    <button onClick={()=>setExpandedGroups(prev=>({...prev,[g.id]:!prev[g.id]}))}
+                      style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"5px 12px",border:"none",background:"none",cursor:"pointer",textAlign:"left"}}>
+                      <span style={{fontSize:9,color:g.color,fontWeight:700,transform:open?"rotate(90deg)":"rotate(0deg)",transition:"transform .15s",display:"inline-block"}}>▶</span>
+                      <span style={{fontSize:10,fontWeight:700,color:g.color,textTransform:"uppercase",letterSpacing:1.2,flex:1}}>{g.label}</span>
+                      <span style={{fontSize:10,color:TEXT_MUTED}}>{g.tables.length}</span>
+                    </button>
+                    {open && visibleTables.map(tName => (
+                      <button key={tName} onClick={()=>setSelected(tName)}
+                        style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"5px 12px 5px 26px",border:"none",cursor:"pointer",textAlign:"left",
+                          background:selected===tName?g.color+"18":"transparent",
+                          borderLeft:selected===tName?"3px solid "+g.color:"3px solid transparent",
+                          transition:"background .1s"}}>
+                        <span style={{fontSize:13,color:selected===tName?g.color:TEXT,fontWeight:selected===tName?600:400,fontFamily:"monospace"}}>{tName}</span>
+                      </button>
+                    ))}
                   </div>
                 );
               })}
             </div>
+          </div>
 
-            {/* Referenced by section */}
-            {referencedBy.length>0&&(
-              <div style={{marginTop:24}}>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Referenced by ({referencedBy.length})</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {referencedBy.map(r=>{const rg=groupOfTable(r);return(
-                    <button key={r} onClick={()=>setSelected(r)}
-                      style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,border:"1px solid "+(rg?.color||BORDER)+"44",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,fontFamily:"monospace",color:rg?.color||TEXT_SUB,fontWeight:500}}>
-                      <span style={{width:6,height:6,borderRadius:"50%",background:rg?.color||TEXT_MUTED,display:"inline-block",flexShrink:0}}/>
-                      {r}
-                    </button>
-                  );})}
+          {/* Right panel */}
+          <div style={{flex:1,overflowY:"auto",padding:"28px 36px"}}>
+            {!selected ? (
+              <div>
+                <div style={{fontSize:22,fontWeight:800,color:TEXT,marginBottom:6}}>Data Model</div>
+                <div style={{fontSize:14,color:TEXT_SUB,marginBottom:28,lineHeight:1.7}}>
+                  {Object.keys(DM_TABLES).length} tables across {DM_GROUPS.length} domain groups · <span style={{fontFamily:"monospace",fontSize:12}}>usp_data.usp_strategy</span>
                 </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+                  {DM_GROUPS.map(g=>(
+                    <div key={g.id} style={{flex:"1 1 260px",minWidth:220,border:"1px solid "+BORDER,borderLeft:"4px solid "+g.color,borderRadius:10,padding:"16px 18px",background:SURFACE,cursor:"pointer"}}
+                      onClick={()=>{ setSelected(g.tables[0]); setExpandedGroups(prev=>({...prev,[g.id]:true})); }}>
+                      <div style={{fontSize:11,fontWeight:700,color:g.color,textTransform:"uppercase",letterSpacing:1.2,marginBottom:6}}>{g.label}</div>
+                      <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.7}}>
+                        {g.tables.map((t,i)=><span key={t} style={{fontFamily:"monospace",fontSize:11}}>{t}{i<g.tables.length-1?", ":""}</span>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                  <span style={{fontSize:10,fontWeight:700,color:tblGroup?.color,textTransform:"uppercase",letterSpacing:1.2,background:tblGroup?.color+"18",padding:"3px 8px",borderRadius:4}}>{tblGroup?.label}</span>
+                </div>
+                <div style={{fontSize:22,fontWeight:800,color:TEXT,fontFamily:"monospace",marginBottom:4}}>{selected}</div>
+                <div style={{fontSize:12,color:TEXT_MUTED,fontFamily:"monospace",marginBottom:24}}>usp_data.usp_strategy.{selected} · {tbl.cols.length} columns</div>
+
+                {/* Columns table */}
+                <div style={{border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden",marginBottom:24}}>
+                  <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 3fr",background:BG,borderBottom:"1px solid "+BORDER,padding:"8px 14px"}}>
+                    <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Column</span>
+                    <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Type</span>
+                    <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Notes</span>
+                  </div>
+                  {tbl.cols.map((c,i)=>{
+                    const isHL = q && c.n.toLowerCase().includes(q);
+                    return (
+                      <div key={c.n} style={{display:"grid",gridTemplateColumns:"2fr 1fr 3fr",padding:"9px 14px",borderBottom:i<tbl.cols.length-1?"1px solid "+BORDER:"none",background:isHL?"#FFFBEB":i%2===0?SURFACE:BG+"88",alignItems:"center"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          {c.pk&&<span style={{fontSize:9,fontWeight:700,color:"#D97706",background:"#FEF3C7",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 4px"}}>PK</span>}
+                          {c.fk&&<span style={{fontSize:9,fontWeight:700,color:"#2563EB",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:3,padding:"1px 4px",cursor:"pointer"}} onClick={()=>setSelected(c.fk)} title={"→ "+c.fk}>FK</span>}
+                          <span style={{fontSize:13,fontFamily:"monospace",color:TEXT,fontWeight:c.pk?700:400}}>{c.n}</span>
+                        </div>
+                        <span style={{fontSize:12,fontFamily:"monospace",color:TYPE_COLOR[c.t]||TEXT_SUB,fontWeight:500}}>{c.t}</span>
+                        <span style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
+                          {c.fk&&<span style={{cursor:"pointer",color:"#2563EB",textDecoration:"underline",marginRight:4}} onClick={()=>setSelected(c.fk)}>→ {c.fk}</span>}
+                          {c.note||c.default&&("default: "+c.default)||""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Outgoing references */}
+                {tbl.refs.length>0&&(
+                  <div style={{marginBottom:24}}>
+                    <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>References → ({tbl.refs.length})</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                      {tbl.refs.map(r=>{const rg=groupOfTable(r);return(
+                        <button key={r} onClick={()=>setSelected(r)}
+                          style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,border:"1px solid "+(rg?.color||BORDER)+"44",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,fontFamily:"monospace",color:rg?.color||TEXT_SUB,fontWeight:500}}>
+                          <span style={{width:6,height:6,borderRadius:"50%",background:rg?.color||TEXT_MUTED,display:"inline-block",flexShrink:0}}/>
+                          {r}
+                        </button>
+                      );})}
+                    </div>
+                  </div>
+                )}
+
+                {/* Referenced by */}
+                {referencedBy.length>0&&(
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Referenced by ← ({referencedBy.length})</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                      {referencedBy.map(r=>{const rg=groupOfTable(r);return(
+                        <button key={r} onClick={()=>setSelected(r)}
+                          style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,border:"1px solid "+(rg?.color||BORDER)+"44",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,fontFamily:"monospace",color:rg?.color||TEXT_SUB,fontWeight:500}}>
+                          <span style={{width:6,height:6,borderRadius:"50%",background:rg?.color||TEXT_MUTED,display:"inline-block",flexShrink:0}}/>
+                          {r}
+                        </button>
+                      );})}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
