@@ -7963,18 +7963,12 @@ function DataModelExplorer() {
             <div style={{fontSize:12,color:TEXT_MUTED,fontFamily:"monospace",marginBottom:24}}>usp_data.usp_strategy.{selected} · {tbl.cols.length} columns</div>
 
             {/* Relationship pills */}
-            {(tbl.refs.length>0 || referencedBy.length>0) && (
+            {tbl.refs.length>0 && (
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:24}}>
                 {tbl.refs.map(r=>{const rg=groupOfTable(r);return(
                   <button key={r} onClick={()=>setSelected(r)}
                     style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:"1px solid "+(rg?.color||BORDER)+"55",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,color:rg?.color||TEXT_SUB,fontFamily:"monospace"}}>
                     <span style={{fontSize:10,opacity:0.7}}>→</span> {r}
-                  </button>
-                );})}
-                {referencedBy.map(r=>{const rg=groupOfTable(r);return(
-                  <button key={r} onClick={()=>setSelected(r)}
-                    style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:"1px solid "+(rg?.color||BORDER)+"55",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,color:rg?.color||TEXT_SUB,fontFamily:"monospace"}}>
-                    <span style={{fontSize:10,opacity:0.7}}>←</span> {r}
                   </button>
                 );})}
               </div>
