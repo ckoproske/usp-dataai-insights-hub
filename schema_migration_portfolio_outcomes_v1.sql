@@ -40,14 +40,16 @@ USING (
     l.lane_id          AS outcome_id,
     l.portfolio_id,
     l.label            AS short_title,
-    first(a.activity_text ORDER BY a.sort_order) AS activity,
+    a.activity_text    AS activity,
     l.outcome_text     AS outcome,
     l.sort_order
   FROM usp_data.usp_strategy.portfolio_toa_lanes l
-  LEFT JOIN usp_data.usp_strategy.portfolio_toa_activities a
-    ON a.lane_id = l.lane_id
+  LEFT JOIN (
+    SELECT lane_id, activity_text,
+           ROW_NUMBER() OVER (PARTITION BY lane_id ORDER BY sort_order) AS rn
+    FROM usp_data.usp_strategy.portfolio_toa_activities
+  ) a ON a.lane_id = l.lane_id AND a.rn = 1
   WHERE COALESCE(l.is_active, true) = true
-  GROUP BY l.lane_id, l.portfolio_id, l.label, l.outcome_text, l.sort_order
 ) AS s ON t.outcome_id = s.outcome_id
 WHEN MATCHED THEN UPDATE SET
   short_title = s.short_title,
