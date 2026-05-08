@@ -1321,13 +1321,21 @@ function getIndData(ind) {
 }
 function autoSuggestStatus(ind) {
   const { actuals, targets } = getIndData(ind);
-  const lastActual = actuals.filter(v=>v!==null).slice(-1)[0];
-  const lastTarget = targets.filter(v=>v!==null).slice(-1)[0];
-  if (lastActual===null||lastActual===undefined||!lastTarget) return "No Data";
-  const r = lastActual/lastTarget;
-  if (r>1.0) return "Exceeds Expectations";
-  if (r>=0.9) return "Meets Expectations";
-  if (r>=0.7) return "Slightly Below Expectations";
+  // Find the most recent year that has an actual value
+  let latestIdx = -1;
+  for (let j = actuals.length - 1; j >= 0; j--) {
+    if (actuals[j] !== null && actuals[j] !== undefined) { latestIdx = j; break; }
+  }
+  if (latestIdx === -1) return "No Data";
+  const latestActual = actuals[latestIdx];
+  // Compare against the target for that same year — avoids comparing a 2026
+  // actual against a 2030 target which would almost always look "behind"
+  const correspondingTarget = targets[latestIdx];
+  if (correspondingTarget === null || correspondingTarget === undefined) return "No Data";
+  const r = latestActual / correspondingTarget;
+  if (r > 1.0)  return "Exceeds Expectations";
+  if (r >= 0.9) return "Meets Expectations";
+  if (r >= 0.7) return "Slightly Below Expectations";
   return "Below Expectations";
 }
 function outcomeRollupStatus(indicators) {
