@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.portfolio_toa (
   amb45_label           STRING,   -- box subtitle, e.g. "Division Enablement"
   amb45_full_text       STRING,   -- box body text (simple portfolios)
   amb45_buckets_json    STRING,   -- JSON array for expandable bucket panels (complex portfolios)
-  is_active             BOOLEAN DEFAULT true
+  is_active             BOOLEAN
 ) USING DELTA;
 
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.portfolio_toa_lanes (
@@ -39,10 +39,10 @@ CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.portfolio_toa_lanes (
   icon           STRING,
   color          STRING,
   outcome_text   STRING,
-  is_tbd         BOOLEAN DEFAULT false,
-  is_multiplier  BOOLEAN DEFAULT false,
+  is_tbd         BOOLEAN,
+  is_multiplier  BOOLEAN,
   sort_order     INT,
-  is_active      BOOLEAN DEFAULT true
+  is_active      BOOLEAN
 ) USING DELTA;
 
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.portfolio_toa_activities (
