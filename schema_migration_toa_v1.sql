@@ -19,17 +19,17 @@
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.portfolio_toa (
-  portfolio_id          STRING NOT NULL,
-  col1_label            STRING,   -- column 1 header, e.g. "Service Lines"
-  col2_label            STRING,   -- column 2 header, e.g. "Core Activities" / "Investments & Inputs"
-  problem_statement     STRING,
-  cross_indicators_json STRING,   -- JSON array of strings; shown as "2030 Impact/Scale/Strategy Goals"
-  cross_indicators_label STRING,  -- e.g. "2030 Impact Goals"
-  amb45_intro_text      STRING,   -- italic paragraph above BidirectionalDivider (simple portfolios)
-  amb45_label           STRING,   -- box subtitle, e.g. "Division Enablement"
-  amb45_full_text       STRING,   -- box body text (simple portfolios)
-  amb45_buckets_json    STRING,   -- JSON array for expandable bucket panels (complex portfolios)
-  is_active             BOOLEAN
+  portfolio_id           STRING NOT NULL,
+  col1_label             STRING,
+  col2_label             STRING,
+  problem_statement      STRING,
+  cross_indicators_json  STRING,
+  cross_indicators_label STRING,
+  amb45_intro_text       STRING,
+  amb45_label            STRING,
+  amb45_full_text        STRING,
+  amb45_buckets_json     STRING,
+  is_active              BOOLEAN
 ) USING DELTA;
 
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.portfolio_toa_lanes (
