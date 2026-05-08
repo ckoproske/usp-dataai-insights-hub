@@ -7992,10 +7992,10 @@ Object.keys(DM_TABLES).forEach(tName => {
 function groupOfTable(tName) { return DM_GROUPS.find(g => g.tables.includes(tName)); }
 
 function DataModelExplorer() {
-  const [dmView, setDmView]       = useState("browse"); // "browse" | "diagram"
+  const [dmView, setDmView]       = useState("diagram"); // "browse" | "diagram"
   const [selected, setSelected]   = useState(null);
   const [search, setSearch]       = useState("");
-  const [expandedGroups, setExpandedGroups] = useState(()=>Object.fromEntries(DM_GROUPS.map(g=>[g.id,true])));
+  const [expandedGroups, setExpandedGroups] = useState(()=>Object.fromEntries(DM_GROUPS.map(g=>[g.id,false])));
 
   const q = search.trim().toLowerCase();
   const matchesSearch = tName => !q || tName.toLowerCase().includes(q) ||
