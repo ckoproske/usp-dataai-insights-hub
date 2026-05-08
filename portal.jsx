@@ -1203,7 +1203,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                               <span style={{ fontSize: 11, fontWeight: 800,
                                 background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
                                 borderRadius: 3, padding: "2px 6px", flexShrink: 0 }}>
-                                O{i + 1}
+                                O{out.displayNumber ?? (i + 1)}
                               </span>
                               <div style={{ display: "flex", gap: 3 }}>
                                 <button onClick={() => setEditOutId(out.outcome_id)}
@@ -1736,8 +1736,12 @@ function BowPanel({ bow, user, onBack }) {
 
   // Resolve active outcome (fall back to first)
   const activeOutcome = outcomes.find(o => o.outcome_id === activeOId) || outcomes[0] || null;
-  // Pass only the active outcome to the content table so it renders one at a time
-  const visibleOutcomes  = activeOutcome ? [activeOutcome] : [];
+  // Pass only the active outcome to the content table so it renders one at a time.
+  // Attach displayNumber so BowContentTable can show the correct O-badge (not always O1).
+  const activeIdx = activeOutcome ? outcomes.findIndex(o => o.outcome_id === activeOutcome.outcome_id) : -1;
+  const visibleOutcomes = activeOutcome
+    ? [{ ...activeOutcome, displayNumber: activeIdx + 1 }]
+    : [];
   // Include targets that belong to the active outcome OR have no outcome_id set
   // (targets without outcome_id are shown in every tab so they're never hidden)
   const visibleTargets   = (data?.execution_targets || []).filter(
