@@ -25,6 +25,11 @@ HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/0c
 CATALOG = "usp_data"
 SCHEMA  = f"{CATALOG}.usp_strategy"
 
+# ── Activity log toggle ───────────────────────────────────────────────────────
+# Set to False to suspend activity logging during bulk edit sessions.
+# Flip back to True when done.
+LOGGING_ENABLED = True
+
 def get_connection():
     token = request.headers.get("X-Forwarded-Access-Token")
     if not token:
@@ -1500,6 +1505,8 @@ def _actor(body=None):
     return (body.get("edited_by") or "").strip() or "unknown"
 
 def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, rationale, revision_reason, edited_by):
+    if not LOGGING_ENABLED:
+        return
     execute(
         f"""INSERT INTO {SCHEMA}.content_edit_log
             (log_id, entity_type, entity_id, bow_id, portfolio_id,
