@@ -1108,8 +1108,9 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
   const [addingOutcome, setAddingOutcome] = useState(false);
   const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
   const [addingTargetFor, setAddingTargetFor] = useState(null); // {outcome_id, year}
-  const [confirmDelOut, setConfirmDelOut]   = useState(null);
-  const [confirmDelInd, setConfirmDelInd]   = useState(null);
+  const [confirmDelOut, setConfirmDelOut]     = useState(null);
+  const [confirmDelInd, setConfirmDelInd]     = useState(null);
+  const [confirmDelTarget, setConfirmDelTarget] = useState(null);
 
   // Group execution targets by outcome_id → year → [targets]
   const tByOY = {};
@@ -1272,14 +1273,29 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                           cursor: "pointer", fontSize: 10,
                                           color: TEXT_MUTED, padding: "0 3px" }}
                                         title="Edit">✎</button>
-                                      <button onClick={async () => {
-                                        await api(`/api/execution-targets/${t.target_id}`,
-                                          { method: "DELETE" });
-                                        onRefresh();
-                                      }} style={{ background: "none", border: "none",
-                                        cursor: "pointer", fontSize: 10,
-                                        color: TEXT_MUTED, padding: "0 3px" }}
-                                        title="Remove">✕</button>
+                                      {confirmDelTarget === t.target_id ? (
+                                        <>
+                                          <button onClick={async () => {
+                                            await api(`/api/execution-targets/${t.target_id}`,
+                                              { method: "DELETE" });
+                                            setConfirmDelTarget(null); onRefresh();
+                                          }} style={{ background: "none", border: "none",
+                                            cursor: "pointer", fontSize: 10,
+                                            color: DANGER, fontWeight: 700, padding: "0 3px" }}>
+                                            ✓
+                                          </button>
+                                          <button onClick={() => setConfirmDelTarget(null)}
+                                            style={{ background: "none", border: "none",
+                                              cursor: "pointer", fontSize: 10,
+                                              color: TEXT_MUTED, padding: "0 3px" }}>✕</button>
+                                        </>
+                                      ) : (
+                                        <button onClick={() => setConfirmDelTarget(t.target_id)}
+                                          style={{ background: "none", border: "none",
+                                            cursor: "pointer", fontSize: 10,
+                                            color: TEXT_MUTED, padding: "0 3px" }}
+                                          title="Remove">✕</button>
+                                      )}
                                     </div>
                                   </div>
                                 )}
