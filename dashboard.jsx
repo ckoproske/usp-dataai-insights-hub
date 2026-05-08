@@ -1612,11 +1612,7 @@ function IndicatorTile({ ind, iIdx, activeYear }) {
         </div>
         <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:"1px solid "+BORDER}}>
-        <div style={{padding:"10px 12px",borderRight:"1px solid "+BORDER,textAlign:"center"}}>
-          <div style={{fontSize:12,color:TEXT_SUB,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>Baseline</div>
-          <div style={{fontSize:19,fontWeight:800,color:"#94A3B8"}}>{baselineVal!==null?baselineVal:"—"}</div>
-        </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:"1px solid "+BORDER}}>
         <div style={{padding:"10px 12px",borderRight:"1px solid "+BORDER,textAlign:"center",background:sc.bg}}>
           <div style={{fontSize:12,color:TEXT_SUB,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{activeYear} Target</div>
           <div style={{fontSize:19,fontWeight:800,color:sc.color}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</div>
