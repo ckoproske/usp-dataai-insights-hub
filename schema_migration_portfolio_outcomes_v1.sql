@@ -6,8 +6,7 @@
 -- (or had stale hardcoded content), causing the dashboard portfolio progress
 -- pages to fall back to DEFAULT_DATA rather than showing slide-accurate content.
 -- The ToA tables were seeded correctly in schema_migration_toa_v1.sql;
--- this migration keeps portfolio_outcomes and portfolio_indicators in sync
--- with that source of truth.
+-- this migration populates portfolio_outcomes and portfolio_indicators to match.
 --
 -- Mapping:
 --   portfolio_toa_lanes       → portfolio_outcomes
@@ -22,10 +21,9 @@
 --     portfolio_id            → portfolio_id
 --     lane_id                 → outcome_id  (FK to portfolio_outcomes)
 --     indicator_text          → text
---     (targets left NULL — set separately via the portal or actuals workflow)
+--     (targets left NULL — set separately via portal or actuals workflow)
 --
--- Safe to re-run: MERGE ON NOT MATCHED inserts missing rows;
---                 WHEN MATCHED UPDATE keeps text in sync with ToA edits.
+-- Safe to re-run: MERGE ON NOT MATCHED inserts missing rows only.
 -- Run in: Databricks SQL Editor (usp_data catalog, usp_strategy schema)
 -- =============================================================================
 
@@ -37,11 +35,11 @@
 MERGE INTO usp_data.usp_strategy.portfolio_outcomes AS t
 USING (
   SELECT
-    l.lane_id          AS outcome_id,
+    l.lane_id       AS outcome_id,
     l.portfolio_id,
-    l.label            AS short_title,
-    a.activity_text    AS activity,
-    l.outcome_text     AS outcome,
+    l.label         AS short_title,
+    a.activity_text AS activity,
+    l.outcome_text  AS outcome,
     l.sort_order
   FROM usp_data.usp_strategy.portfolio_toa_lanes l
   LEFT JOIN (
@@ -51,11 +49,6 @@ USING (
   ) a ON a.lane_id = l.lane_id AND a.rn = 1
   WHERE COALESCE(l.is_active, true) = true
 ) AS s ON t.outcome_id = s.outcome_id
-WHEN MATCHED THEN UPDATE SET
-  short_title = s.short_title,
-  activity    = s.activity,
-  outcome     = s.outcome,
-  sort_order  = s.sort_order
 WHEN NOT MATCHED THEN INSERT (
   outcome_id, portfolio_id, short_title, activity, outcome, sort_order
 ) VALUES (
@@ -72,8 +65,8 @@ USING (
   SELECT
     i.indicator_id,
     i.portfolio_id,
-    i.lane_id          AS outcome_id,
-    i.indicator_text   AS text,
+    i.lane_id        AS outcome_id,
+    i.indicator_text AS text,
     CAST(NULL AS STRING) AS data_source,
     CAST(NULL AS DOUBLE) AS baseline,
     CAST(NULL AS DOUBLE) AS target_2026,
@@ -83,9 +76,6 @@ USING (
     CAST(NULL AS DOUBLE) AS target_2030
   FROM usp_data.usp_strategy.portfolio_toa_lane_indicators i
 ) AS s ON t.indicator_id = s.indicator_id
-WHEN MATCHED THEN UPDATE SET
-  text       = s.text,
-  outcome_id = s.outcome_id
 WHEN NOT MATCHED THEN INSERT (
   indicator_id, portfolio_id, outcome_id, text,
   data_source, baseline,
@@ -116,9 +106,8 @@ SELECT outcome_id, portfolio_id, short_title, LEFT(outcome, 80) AS outcome_previ
 FROM usp_data.usp_strategy.portfolio_outcomes
 ORDER BY portfolio_id, sort_order;
 
--- 4. Confirm indicators link back to valid outcomes
+-- 4. Confirm indicators link back to valid outcomes (expect 0 rows)
 SELECT i.indicator_id, i.portfolio_id, i.outcome_id, LEFT(i.text, 60) AS indicator_preview
 FROM usp_data.usp_strategy.portfolio_indicators i
 LEFT JOIN usp_data.usp_strategy.portfolio_outcomes o ON o.outcome_id = i.outcome_id
 WHERE o.outcome_id IS NULL;
--- Expected: 0 rows (no orphans)
