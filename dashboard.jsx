@@ -1741,7 +1741,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
                 const isDone=t.completion==="Complete";
                 return (
                   <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
-                    <span style={{width:7,height:7,borderRadius:"50%",background:TEXT_SUB,flexShrink:0,marginTop:5,display:"inline-block"}}/>
+                    <span style={{width:7,height:7,borderRadius:"50%",background:c.color,flexShrink:0,marginTop:5,display:"inline-block"}}/>
                     <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
                       <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
                     </div>
@@ -2478,7 +2478,7 @@ function YearlyPlanView({ bow, onUpdate }) {
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
                 <Chip label={rs.label} color={rs.color} bg={rs.pill}/>
-                {pct!==null&&<div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:80,height:3,background:BORDER,borderRadius:3,overflow:"hidden"}}><div style={{width:pct+"%",height:"100%",background:rs.color,borderRadius:3}}/></div><span style={{fontSize:14,color:TEXT_SUB}}>{pct}%</span></div>}
+                {raw.length>0&&<div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",justifyContent:"flex-end",maxWidth:160}}>{raw.map((t,ti)=>{const c2=COMPLETION[migrateCompletion(t.completion)]||COMPLETION["Not Started"];return <span key={ti} title={(t.text||"Target "+(ti+1))+"\n"+c2.label} style={{width:9,height:9,borderRadius:"50%",background:c2.color,display:"inline-block",flexShrink:0,cursor:"default"}}/>;})}</div>}
               </div>
             </div>
             <div style={{padding:"16px 20px",background:SURFACE}}>
