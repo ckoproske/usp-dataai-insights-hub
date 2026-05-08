@@ -2612,7 +2612,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
           );
         })}
       </div>
-      </div>}
+    </div>}
     </div>
   );
 }
