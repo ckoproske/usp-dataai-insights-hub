@@ -2611,8 +2611,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
             </Card>
           );
         })}
-      </div>
-    </div>}
+      </div>}
     </div>
   );
 }
