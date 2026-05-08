@@ -1050,15 +1050,20 @@ async function loadFromAPI() {
                 2030: ind.target_2030 !== null ? String(ind.target_2030) : "",
               },
               actuals: {},
+              actualsList: [],   // all (year, period, value) entries for the trend chart
               manualStatus: null,
             };
           }
-          // Actuals: one row per (year, period). Annual → one row/year. Bimonthly/quarterly
-          // → multiple rows/year ordered by period. Each row overwrites actuals[year] so the
-          // last (latest) period value for the year becomes the displayed chart point.
+          // Actuals: one row per (year, period). Accumulate every entry so the chart
+          // can plot individual period dots, and also keep actuals[year] for status calcs.
           if (ind.year && ind.actual_value !== null && ind.actual_value !== undefined) {
             byOutcome[ind.outcome_id][ind.indicator_id].actuals[ind.year] =
               String(ind.actual_value);
+            byOutcome[ind.outcome_id][ind.indicator_id].actualsList.push({
+              year:   ind.year,
+              period: ind.period || null,
+              value:  Number(ind.actual_value),
+            });
           }
         });
 
@@ -1546,8 +1551,59 @@ function DataMeta({ source, lastUpdated, updateFreq, style }) {
 function IndicatorTile({ ind, iIdx, activeYear }) {
   const { baseline:baselineVal, actuals:actualVals, targets:targetVals } = getIndData(ind);
   const sc = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
-  const lineData = YEARS.map((yr,j)=>({year:String(yr),Actual:actualVals[j],Target:targetVals[j]}));
   const yrIdx = YEARS.indexOf(activeYear);
+
+  // Detect multi-period indicators (bimonthly / quarterly)
+  const rawList = (ind.actualsList || []).slice().sort((a,b)=>
+    a.year!==b.year ? a.year-b.year : (a.period||"").localeCompare(b.period||""));
+  const isMultiPeriod = rawList.some(a => a.period);
+
+  // Build chart series
+  // For multi-period: one dot per (year, period) entry, then annual target-only points
+  // for future years that have no actuals yet.
+  // Label: "Jan '26" for period entries, "'27" for annual target-only points.
+  const periodLabel = (year, period) => {
+    if (!period) return "'" + String(year).slice(2);
+    // Take first 3 chars of period (e.g. "Jan–Feb" → "Jan", "Q1" → "Q1")
+    const abbr = period.length > 3 ? period.slice(0, 3) : period;
+    return abbr + " '" + String(year).slice(2);
+  };
+
+  let chartPoints;
+  if (isMultiPeriod) {
+    const targetByYear = {};
+    YEARS.forEach((yr,j)=>{ if(targetVals[j]!==null) targetByYear[yr]=targetVals[j]; });
+    const yearsWithActuals = new Set(rawList.map(a=>a.year));
+
+    // Period actual points
+    chartPoints = rawList.map(a => ({
+      label:    periodLabel(a.year, a.period),
+      year:     a.year,
+      isTarget: false,
+      Actual:   a.year <= activeYear ? a.value : null,
+      Target:   targetByYear[a.year] || null,
+    }));
+    // Add annual target-only points for years with no actuals
+    YEARS.forEach((yr,j) => {
+      if(!yearsWithActuals.has(yr) && targetVals[j]!==null) {
+        chartPoints.push({ label:periodLabel(yr,null), year:yr, isTarget:true, Actual:null, Target:targetVals[j] });
+      }
+    });
+    chartPoints.sort((a,b)=>a.year!==b.year?a.year-b.year:(a.label).localeCompare(b.label));
+  } else {
+    chartPoints = YEARS.map((yr,j)=>({
+      label: String(yr), year:yr, isTarget:false,
+      Actual: actualVals[j], Target: targetVals[j],
+    }));
+  }
+
+  const allChartData = [{label:"Base",year:null,Actual:baselineVal,Target:null}, ...chartPoints];
+
+  // "activeYear Actual" big number — for multi-period use the latest period in that year
+  const activeActual = isMultiPeriod
+    ? (rawList.filter(a=>a.year===activeYear).slice(-1)[0]?.value ?? null)
+    : actualVals[yrIdx];
+
   return (
     <div style={{flexShrink:0,width:ind._fluid?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE}}>
       <div style={{padding:"14px 16px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
@@ -1567,26 +1623,31 @@ function IndicatorTile({ ind, iIdx, activeYear }) {
         </div>
         <div style={{padding:"10px 12px",textAlign:"center",background:sc.bg}}>
           <div style={{fontSize:12,color:TEXT_SUB,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{activeYear} Actual</div>
-          <div style={{fontSize:19,fontWeight:800,color:sc.color}}>{actualVals[yrIdx]!==null?actualVals[yrIdx]:"—"}</div>
+          <div style={{fontSize:19,fontWeight:800,color:sc.color}}>{activeActual!==null?activeActual:"—"}</div>
         </div>
       </div>
       <div style={{padding:"10px 10px 8px"}}>
         <ResponsiveContainer width="100%" height={80}>
-          <LineChart data={[{year:"Base",Actual:baselineVal,Target:null},...lineData]} margin={{top:4,right:4,bottom:0,left:-22}}>
+          <LineChart data={allChartData} margin={{top:4,right:4,bottom:0,left:-22}}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
-            <XAxis dataKey="year" tick={({x,y,payload})=>{
-              const isHL=payload.value!=="Base"&&Number(payload.value)===activeYear;
-              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?800:400} fill={isHL?ACCENT:TEXT_SUB}>{payload.value==="Base"?"B":payload.value.slice(2)}</text>;
+            <XAxis dataKey="label" tick={({x,y,payload})=>{
+              const isBase = payload.value==="Base";
+              const isHL   = !isBase && payload.value.includes("'"+String(activeYear).slice(2));
+              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?800:400} fill={isHL?ACCENT:TEXT_SUB}>{isBase?"B":payload.value}</text>;
             }}/>
             <YAxis tick={{fontSize:9,fill:TEXT_SUB}}/>
-            <Tooltip contentStyle={{fontSize:11,borderRadius:6,border:"1px solid "+BORDER}}/>
+            <Tooltip contentStyle={{fontSize:11,borderRadius:6,border:"1px solid "+BORDER}}
+              formatter={(val,name)=>[val!==null&&val!==undefined?val:"—",name]}/>
             <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
-              data={[{year:"Base",Actual:baselineVal,Target:null},...lineData.map((d,j)=>({...d,Actual:YEARS[j]<=activeYear?d.Actual:null}))]}
               dot={(props)=>{
-                const isBase=props.payload.year==="Base";
-                const isHL=!isBase&&Number(props.payload.year)===activeYear;
-                if(!isBase&&Number(props.payload.year)>activeYear) return <circle key={props.index} r={0} cx={0} cy={0}/>;
-                return <circle key={props.index} cx={props.cx} cy={props.cy} r={isBase?4:isHL?5:2} fill={isBase?"#94A3B8":isHL?sc.color:"#fff"} stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
+                const d=props.payload;
+                const isBase=d.label==="Base";
+                const inActiveYr=!isBase&&d.year===activeYear;
+                if(d.Actual===null||d.Actual===undefined) return <circle key={props.index} r={0} cx={0} cy={0}/>;
+                return <circle key={props.index} cx={props.cx} cy={props.cy}
+                  r={isBase?4:inActiveYr?5:2}
+                  fill={isBase?"#94A3B8":inActiveYr?sc.color:"#fff"}
+                  stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
               }}/>
             <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
           </LineChart>
