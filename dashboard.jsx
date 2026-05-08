@@ -7066,7 +7066,7 @@ function MeasurementHierarchyView() {
                     stroke="#7C3AED" strokeWidth={isSel?2:1.2} strokeDasharray="5 3"
                     markerEnd="url(#mh-arrow-agg)"/>
                   <text x={lx-4} y={(y1+y2)/2} fontSize={9} fill="#7C3AED" fontStyle="italic"
-                    textAnchor="end" dominantBaseline="middle">aggregates to</text>
+                    textAnchor="end" dominantBaseline="middle">contributes to</text>
                 </g>
               );
             })()}
