@@ -1707,6 +1707,9 @@ function BowPanel({ bow, user, onBack }) {
   const [loading, setLoading]     = useState(true);
   const [outcomes, setOutcomes]   = useState([]);
   const [activeOId, setActiveOId] = useState(null);
+  const [descEditing, setDescEditing] = useState(false);
+  const [descDraft,   setDescDraft]   = useState("");
+  const [descSaving,  setDescSaving]  = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -1773,6 +1776,66 @@ function BowPanel({ bow, user, onBack }) {
           {p && <PortfolioPill portfolioId={bow.portfolio_id} />}
         </div>
       </div>
+
+      {/* ── BOW Description ── */}
+      {(() => {
+        const desc = data?.bow?.description ?? bow.description ?? "";
+        const saveDesc = () => {
+          setDescSaving(true);
+          api(`/api/bows/${bow.bow_id}/description`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: descDraft, edited_by: user?.email }),
+          })
+            .then(() => { load(); setDescEditing(false); })
+            .finally(() => setDescSaving(false));
+        };
+        return (
+          <div style={{ marginBottom: 20 }}>
+            {descEditing ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <textarea
+                  autoFocus
+                  value={descDraft}
+                  onChange={e => setDescDraft(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: "100%", fontSize: 13, padding: "8px 10px",
+                    border: `1px solid ${BORDER}`, borderRadius: 6,
+                    fontFamily: "inherit", resize: "vertical", color: TEXT,
+                  }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn size="sm" onClick={saveDesc} disabled={descSaving}>
+                    {descSaving ? "Saving…" : "Save"}
+                  </Btn>
+                  <Btn variant="secondary" size="sm" onClick={() => setDescEditing(false)}>
+                    Cancel
+                  </Btn>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <p style={{
+                  fontSize: 13, color: desc ? TEXT : TEXT_MUTED,
+                  fontStyle: desc ? "normal" : "italic", lineHeight: 1.6, flex: 1,
+                }}>
+                  {desc || "No description yet."}
+                </p>
+                <button
+                  title="Edit description"
+                  onClick={() => { setDescDraft(desc); setDescEditing(true); }}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px",
+                  }}>
+                  ✎
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Outcome tabs ── */}
       {outcomes.length > 0 && (

@@ -193,6 +193,25 @@ def get_bows_by_portfolio(portfolio_id):
     )
     return jsonify(rows)
 
+
+@app.route("/api/bows/<bow_id>/description", methods=["PATCH"])
+def update_bow_description(bow_id):
+    data        = request.json or {}
+    description = (data.get("description") or "").strip()
+    user        = _actor(data)
+    rows        = query(f"SELECT * FROM {SCHEMA}.bows WHERE bow_id = ?", [bow_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    old_desc = rows[0].get("description") or ""
+    if description == old_desc:
+        return jsonify({"status": "no_change"})
+    execute(f"UPDATE {SCHEMA}.bows SET description = ? WHERE bow_id = ?",
+            [description, bow_id])
+    _log_edit("bow", bow_id, bow_id, None,
+              {"description": {"old": old_desc, "new": description}},
+              "BOW description updated", None, user)
+    return jsonify({"status": "ok"})
+
 @app.route("/api/portfolio-outcomes/<portfolio_id>")
 def get_portfolio_outcomes(portfolio_id):
     rows = query(
@@ -1468,6 +1487,18 @@ import json as _json
 MAJOR_TEXT_FIELDS = {"title", "text"}
 TARGET_FIELDS     = {"target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
 
+def _actor(body=None):
+    """Resolve the acting user's email.
+    Priority: Databricks-injected X-Forwarded-Email header → client-supplied
+    edited_by in request body → 'unknown'.
+    This is server-side so it works even if the client omits the field."""
+    email = request.headers.get("X-Forwarded-Email")
+    if email:
+        return email.strip()
+    if body is None:
+        body = request.get_json(silent=True) or {}
+    return (body.get("edited_by") or "").strip() or "unknown"
+
 def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, rationale, revision_reason, edited_by):
     execute(
         f"""INSERT INTO {SCHEMA}.content_edit_log
@@ -1615,7 +1646,7 @@ BOW_OUTCOME_EDITABLE = {"title", "short_title", "text"}
 @app.route("/api/bow-outcomes/<outcome_id>", methods=["PATCH"])
 def update_bow_outcome(outcome_id):
     data    = request.json
-    user    = data.get("edited_by", "unknown")
+    user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
     if not rows:
         return jsonify({"error": "not found"}), 404
@@ -1641,7 +1672,7 @@ def add_bow_outcome():
     data    = request.json
     bow_id  = data.get("bow_id")
     title   = (data.get("title") or "").strip()
-    user    = data.get("edited_by", "unknown")
+    user    = _actor(data)
     if not bow_id or not title:
         return jsonify({"error": "bow_id and title required"}), 400
     max_sort = query(f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.bow_outcomes WHERE bow_id = ?", [bow_id])
@@ -1663,7 +1694,7 @@ def delete_bow_outcome(outcome_id):
     rows = query(f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
     if rows:
         o = rows[0]
-        user = (request.get_json(silent=True) or {}).get("edited_by", "unknown")
+        user = _actor()
         _log_edit("bow_outcome", outcome_id, o.get("bow_id"), None,
                   {"title": {"old": o.get("title"), "new": None}}, "Outcome removed", None, user)
     execute(f"DELETE FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
@@ -1679,7 +1710,7 @@ BOW_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline",
 @app.route("/api/bow-indicators/<indicator_id>", methods=["PATCH"])
 def update_bow_indicator(indicator_id):
     data    = request.json
-    user    = data.get("edited_by", "unknown")
+    user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
     if not rows:
         return jsonify({"error": "not found"}), 404
@@ -1711,7 +1742,7 @@ def add_bow_indicator():
     bow_id      = data.get("bow_id")
     outcome_id  = data.get("outcome_id")
     text        = (data.get("text") or "").strip()
-    user        = data.get("edited_by", "unknown")
+    user        = _actor(data)
     if not bow_id or not text:
         return jsonify({"error": "bow_id and text required"}), 400
     iid = new_id()
@@ -1737,7 +1768,7 @@ def delete_bow_indicator(indicator_id):
     rows = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
     if rows:
         ind = rows[0]
-        user = (request.get_json(silent=True) or {}).get("edited_by", "unknown")
+        user = _actor()
         _log_edit("bow_indicator", indicator_id, ind.get("bow_id"), None,
                   {"text": {"old": ind.get("text"), "new": None}}, "Indicator removed", None, user)
     execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE indicator_id = ?", [indicator_id])
@@ -1749,7 +1780,7 @@ def delete_bow_indicator(indicator_id):
 @app.route("/api/execution-targets/<target_id>", methods=["PATCH"])
 def update_execution_target(target_id):
     data    = request.json
-    user    = data.get("edited_by", "unknown")
+    user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
     if not rows:
         return jsonify({"error": "not found"}), 404
@@ -1775,7 +1806,7 @@ def add_execution_target():
     outcome_id = data.get("outcome_id")
     year       = data.get("year")
     text       = (data.get("text") or "").strip()
-    user       = data.get("edited_by", "unknown")
+    user       = _actor(data)
     if not bow_id or not year or not text:
         return jsonify({"error": "bow_id, year, and text required"}), 400
     max_sort = query(
@@ -1801,7 +1832,7 @@ def delete_execution_target(target_id):
     rows = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
     if rows:
         t = rows[0]
-        user = (request.get_json(silent=True) or {}).get("edited_by", "unknown")
+        user = _actor()
         _log_edit("execution_target", target_id, t.get("bow_id"), None,
                   {"text": {"old": t.get("text"), "new": None}},
                   "Target removed", None, user)
@@ -1817,7 +1848,7 @@ PORT_OUTCOME_EDITABLE = {"title", "short_title", "text"}
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["PATCH"])
 def update_portfolio_outcome(outcome_id):
     data    = request.json
-    user    = data.get("edited_by", "unknown")
+    user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE outcome_id = ?", [outcome_id])
     if not rows:
         return jsonify({"error": "not found"}), 404
@@ -1878,7 +1909,7 @@ PORT_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline",
 @app.route("/api/portfolio-indicators/<indicator_id>", methods=["PATCH"])
 def update_portfolio_indicator(indicator_id):
     data    = request.json
-    user    = data.get("edited_by", "unknown")
+    user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?", [indicator_id])
     if not rows:
         return jsonify({"error": "not found"}), 404
