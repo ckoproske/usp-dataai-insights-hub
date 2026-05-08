@@ -2428,7 +2428,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [editOutId, setEditOutId]   = useState(null);
   const [newOutTitle, setNewOutTitle] = useState("");
   const [saving, setSaving]         = useState(false);
-  const [portTab, setPortTab]       = useState("outcomes");
+  const [portTab, setPortTab]       = useState("toa");
 
   const p = PORT_COLORS[portfolio.portfolio_id];
 
@@ -2478,7 +2478,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
 
       {/* Tab bar */}
       <div style={{ display:"flex", gap:4, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[{id:"outcomes",label:"Outcomes & Indicators"},{id:"toa",label:"Theory of Action"}].map(t => (
+        {[{id:"toa",label:"Theory of Action"},{id:"outcomes",label:"Outcomes & Indicators"}].map(t => (
           <button key={t.id} onClick={()=>setPortTab(t.id)}
             style={{ background:"none", border:"none", borderBottom:`2px solid ${portTab===t.id?ACCENT:"transparent"}`, padding:"8px 14px", fontSize:13, fontWeight:portTab===t.id?700:500, color:portTab===t.id?ACCENT:TEXT_SUB, cursor:"pointer", fontFamily:"inherit", marginBottom:-1 }}>
             {t.label}
@@ -4162,8 +4162,8 @@ function PortalApp() {
         ))}
       </div>
 
-      {/* Page content — wider for BOW panels */}
-      <div style={{ padding: "36px 32px", maxWidth: 980, margin: "0 auto" }}>
+      {/* Page content — full width for portfolio ToA, wider for BOW panels */}
+      <div style={{ padding: "36px 32px", maxWidth: selectedPortfolio ? 1600 : 980, margin: "0 auto" }}>
 
         {tab === "content" && (
           <>
