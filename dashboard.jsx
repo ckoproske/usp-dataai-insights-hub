@@ -7197,15 +7197,6 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
             {label}
           </button>
         ))}
-        <button onClick={()=>setActiveTab("decision-insights")}
-          style={{padding:"8px 14px",fontWeight:600,fontSize:12,cursor:"pointer",letterSpacing:0.2,
-            border:"1.5px solid "+(activeTab==="decision-insights"?ACCENT:ACCENT+"66"),borderRadius:7,
-            background:activeTab==="decision-insights"?ACCENT+"18":ACCENT+"08",
-            color:ACCENT,display:"flex",alignItems:"center",gap:5,
-            marginLeft:8,transition:"all .15s"}}>
-          Decision Insights & Forecasts
-          <span style={{fontSize:11,opacity:0.8}}>↗</span>
-        </button>
       </div>
 
       {/* Content */}
@@ -7219,23 +7210,6 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
       )}
       {activeTab==="hierarchy" && (
         <MeasurementHierarchyView/>
-      )}
-      {activeTab==="decision-insights" && (
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:360}}>
-          <div style={{textAlign:"center",maxWidth:480}}>
-            <div style={{width:56,height:56,borderRadius:16,background:ACCENT+"15",border:"1.5px solid "+ACCENT+"33",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:26}}>
-              ✦
-            </div>
-            <div style={{fontSize:20,fontWeight:700,color:TEXT,marginBottom:10}}>Decision Insights & Forecasts</div>
-            <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,marginBottom:24}}>
-              This view will surface predictive insights, scenario models, and decision-support signals for the 2030 strategy goals.
-            </div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",borderRadius:20,background:ACCENT+"12",border:"1px solid "+ACCENT+"33"}}>
-              <span style={{width:7,height:7,borderRadius:"50%",background:ACCENT,display:"inline-block",animation:"pulse 2s ease-in-out infinite"}}/>
-              <span style={{fontSize:12,fontWeight:600,color:ACCENT}}>Coming Soon</span>
-            </div>
-          </div>
-        </div>
       )}
 
     </div>
