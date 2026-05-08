@@ -7857,8 +7857,6 @@ const DM_GROUP_RECTS = [
   {id:"investments", x:890, y:4,   w:200, h:194, label:"Investments"},
   {id:"tracking",    x:890, y:208, w:200, h:174, label:"Notes & Tracking"},
 ];
-const DM_EDGES = [];
-(()=>{ Object.entries(DM_TABLES).forEach(([tName,tDef])=>(tDef.refs||[]).forEach(ref=>{ if(DM_TABLE_POS[tName]&&DM_TABLE_POS[ref]) DM_EDGES.push({from:tName,to:ref}); })); })();
 function dmEdgePath(from, to) {
   const fp=DM_TABLE_POS[from], tp=DM_TABLE_POS[to];
   if(!fp||!tp) return null;
@@ -7874,6 +7872,9 @@ function DataModelDiagram({ onSelectTable }) {
   const [hl,setHl]     = useState(null);
   const [dragging,setDragging] = useState(false);
   const [lastMouse,setLastMouse] = useState(null);
+
+  const DM_EDGES = React.useMemo(()=>Object.entries(DM_TABLES).flatMap(([tName,tDef])=>
+    (tDef.refs||[]).filter(ref=>DM_TABLE_POS[tName]&&DM_TABLE_POS[ref]).map(ref=>({from:tName,to:ref}))), []);
 
   const hlEdgeKeys  = hl ? new Set(DM_EDGES.filter(e=>e.from===hl||e.to===hl).map(e=>e.from+">"+e.to)) : null;
   const hlConnected = hl ? new Set(DM_EDGES.filter(e=>e.from===hl||e.to===hl).flatMap(e=>[e.from,e.to])) : null;
