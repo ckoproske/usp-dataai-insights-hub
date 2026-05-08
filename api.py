@@ -489,7 +489,7 @@ def get_indicators(bow_id):
         rows = query(
             f"""SELECT
                   i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
-                  i.baseline, i.collection_frequency, i.last_updated, i.unit,
+                  i.baseline, i.collection_frequency, i.unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   a.year, a.period, a.actual_value, a.reading_date, a.source_notes
                 FROM {SCHEMA}.bow_indicators i
@@ -500,12 +500,11 @@ def get_indicators(bow_id):
             [bow_id]
         )
     except Exception:
-        # Fallback: omit optional columns if migration hasn't run yet
+        # Fallback: omit optional columns (unit) if migration hasn't run yet
         rows = query(
             f"""SELECT
                   i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
-                  i.baseline,
-                  NULL AS collection_frequency, NULL AS last_updated, NULL AS unit,
+                  i.baseline, i.collection_frequency, NULL AS unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   a.year, a.period, a.actual_value, a.reading_date, a.source_notes
                 FROM {SCHEMA}.bow_indicators i

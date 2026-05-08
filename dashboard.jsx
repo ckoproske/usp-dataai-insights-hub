@@ -1041,7 +1041,7 @@ async function loadFromAPI() {
               source:      ind.data_source || "",
               baseline:    ind.baseline !== null ? String(ind.baseline) : "",
               updateFreq:  ind.collection_frequency || "",
-              lastUpdated: ind.last_updated || "",
+              lastUpdated: "",   // populated below from most recent reading_date
               targets: {
                 2026: ind.target_2026 !== null ? String(ind.target_2026) : "",
                 2027: ind.target_2027 !== null ? String(ind.target_2027) : "",
@@ -1056,14 +1056,21 @@ async function loadFromAPI() {
           }
           // Actuals: one row per (year, period). Accumulate every entry so the chart
           // can plot individual period dots, and also keep actuals[year] for status calcs.
+          // Track the most recent reading_date across all actuals for the "last updated" label.
           if (ind.year && ind.actual_value !== null && ind.actual_value !== undefined) {
-            byOutcome[ind.outcome_id][ind.indicator_id].actuals[ind.year] =
-              String(ind.actual_value);
-            byOutcome[ind.outcome_id][ind.indicator_id].actualsList.push({
+            const entry = byOutcome[ind.outcome_id][ind.indicator_id];
+            entry.actuals[ind.year] = String(ind.actual_value);
+            entry.actualsList.push({
               year:   ind.year,
               period: ind.period || null,
               value:  Number(ind.actual_value),
             });
+            if (ind.reading_date) {
+              // Keep the latest reading_date seen across all period rows
+              if (!entry.lastUpdated || ind.reading_date > entry.lastUpdated) {
+                entry.lastUpdated = ind.reading_date;
+              }
+            }
           }
         });
 
