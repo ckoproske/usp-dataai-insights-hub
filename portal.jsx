@@ -3025,7 +3025,7 @@ function renderSourceNotes(text) {
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
-function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, user }) {
+function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, user, showToast }) {
   const canAct = user?.permission_level === "MLE";
   const indicatorMap = Object.fromEntries((indicators || []).map(i => [i.indicator_id, i]));
   const bowMap       = Object.fromEntries((bows || []).map(b => [b.bow_id, b]));
@@ -3056,7 +3056,12 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
         method: "POST",
         body: JSON.stringify({ reviewed_value: val ? parseFloat(val) : undefined }),
       });
-      if (res?.error) setActionError(res.error);
+      if (res?.error) {
+        setActionError(res.error);
+      } else {
+        const label = res.decision === "approved with edit" ? "Approved with edit" : "Approved";
+        showToast?.(`✓ ${label} — value recorded successfully`);
+      }
     } catch (e) {
       setActionError("Approval failed — please refresh and try again.");
     } finally {
@@ -3075,7 +3080,11 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
         method: "POST",
         body: JSON.stringify({ reviewer_notes: rejectNotes }),
       });
-      if (res?.error) setActionError(res.error);
+      if (res?.error) {
+        setActionError(res.error);
+      } else {
+        showToast?.("Submission rejected and submitter notified", "error");
+      }
     } catch (e) {
       setActionError("Rejection failed — please refresh and try again.");
     } finally {
@@ -3502,6 +3511,14 @@ function PortalApp() {
   const [loadingQueue, setLoadingQueue] = useState(false);
   const [selectedBow, setSelectedBow]           = useState(null);
   const [selectedPortfolio, setSelectedPortfolio] = useState(null);
+  const [toast, setToast]                       = useState(null); // { message, variant }
+  const toastTimer = useRef(null);
+
+  const showToast = (message, variant = "success") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message, variant });
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -3551,6 +3568,26 @@ function PortalApp() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG }}>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fade-up" style={{
+          position: "fixed", bottom: 28, right: 28, zIndex: 9999,
+          background: toast.variant === "success" ? "#059669" : "#DC2626",
+          color: "#fff", padding: "12px 20px", borderRadius: 10,
+          fontSize: 14, fontWeight: 600,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+          display: "flex", alignItems: "center", gap: 10,
+          maxWidth: 360,
+        }}>
+          <span>{toast.variant === "success" ? "✓" : "✕"}</span>
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button onClick={() => setToast(null)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              color: "#fff", fontSize: 16, lineHeight: 1, opacity: 0.7 }}>×</button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: BRAND, padding: "0 32px", display: "flex",
         alignItems: "center", justifyContent: "space-between", height: 56 }}>
@@ -3672,7 +3709,8 @@ function PortalApp() {
             </div>
             <ReviewQueue queue={queue} loading={loadingQueue}
               onRefresh={loadQueue} onRemove={removeFromQueue}
-              indicators={indicators} bows={bows} user={user} />
+              indicators={indicators} bows={bows} user={user}
+              showToast={showToast} />
           </>
         )}
       </div>
