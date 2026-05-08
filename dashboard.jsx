@@ -7824,6 +7824,210 @@ function AllInvestmentsView() {
   );
 }
 
+// ── DataModelExplorer ─────────────────────────────────────────────────────────
+const DM_GROUPS = [
+  {id:"structure",   label:"Strategy Structure",        color:"#2563EB", tables:["strategy_goals","portfolios","portfolio_goal_links","bows","portfolio_outcomes","bow_outcomes","bow_portfolio_outcome_links"]},
+  {id:"indicators",  label:"Indicators & Actuals",      color:"#059669", tables:["bow_indicators","bow_indicator_actuals","portfolio_indicators","portfolio_indicator_actuals","strategy_goal_actuals"]},
+  {id:"execution",   label:"Execution",                 color:"#D97706", tables:["execution_targets","execution_target_status"]},
+  {id:"ratings",     label:"Ratings",                   color:"#7C3AED", tables:["bow_ratings","portfolio_outcome_ratings","goal_ratings"]},
+  {id:"assumptions", label:"Assumptions",               color:"#DB2777", tables:["assumptions","assumption_confidence","assumption_indicator_links","assumption_target_links","assumption_rating_criteria","assumption_data_gaps","assumption_reassessment_log","field_signal_sources"]},
+  {id:"decisions",   label:"Key Decisions",             color:"#0891B2", tables:["key_decisions","decision_assumption_links"]},
+  {id:"investments", label:"Investments (INVEST/EDP)",  color:"#64748B", tables:["invest_investments","invest_bow_allocation","invest_bow_details","investment_overlays"]},
+  {id:"tracking",    label:"Notes & Tracking",          color:"#92400E", tables:["bow_notes","portfolio_tracking","team_members","pending_actuals"]},
+];
+const DM_TABLES = {
+  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"}],refs:[]},
+  portfolios:{cols:[{n:"portfolio_id",t:"string",pk:true},{n:"title",t:"string"},{n:"sort_order",t:"int"}],refs:[]},
+  portfolio_goal_links:{cols:[{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"goal_id",t:"string",fk:"strategy_goals"}],refs:["portfolios","strategy_goals"]},
+  bows:{cols:[{n:"bow_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"invest_bow_id",t:"string",note:"INVEST BoW_ID e.g. B06039"},{n:"sort_order",t:"int"}],refs:["portfolios"]},
+  portfolio_outcomes:{cols:[{n:"outcome_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"short_title",t:"string"},{n:"activity",t:"string"},{n:"outcome",t:"string"},{n:"sort_order",t:"int"}],refs:["portfolios"]},
+  bow_outcomes:{cols:[{n:"outcome_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"sort_order",t:"int"}],refs:["bows"]},
+  bow_portfolio_outcome_links:{cols:[{n:"bow_outcome_id",t:"string",fk:"bow_outcomes"},{n:"portfolio_outcome_id",t:"string",fk:"portfolio_outcomes"},{n:"contribution_type",t:"string",note:"direct | indirect"},{n:"sort_order",t:"int"}],refs:["bow_outcomes","portfolio_outcomes"]},
+  bow_indicators:{cols:[{n:"indicator_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"outcome_id",t:"string",fk:"bow_outcomes"},{n:"text",t:"string"},{n:"data_source",t:"string"},{n:"baseline",t:"float"},{n:"target_2026",t:"float"},{n:"target_2027",t:"float"},{n:"target_2028",t:"float"},{n:"target_2029",t:"float"},{n:"target_2030",t:"float"},{n:"collection_frequency",t:"string",note:"annual | quarterly | bimonthly | monthly"},{n:"is_active",t:"boolean",note:"default true"}],refs:["bows","bow_outcomes"]},
+  bow_indicator_actuals:{cols:[{n:"actual_id",t:"string",pk:true},{n:"indicator_id",t:"string",fk:"bow_indicators"},{n:"bow_id",t:"string",fk:"bows"},{n:"outcome_id",t:"string",fk:"bow_outcomes"},{n:"year",t:"int"},{n:"period",t:"string",note:"Q1–Q4 | M01–M12 — null for annual"},{n:"actual_value",t:"float"},{n:"reading_date",t:"date"},{n:"source_notes",t:"string"},{n:"loaded_by",t:"string"},{n:"loaded_at",t:"timestamp"}],refs:["bow_indicators","bows","bow_outcomes"]},
+  portfolio_indicators:{cols:[{n:"indicator_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"outcome_id",t:"string",fk:"portfolio_outcomes"},{n:"text",t:"string"},{n:"data_source",t:"string"},{n:"baseline",t:"float"},{n:"target_2026",t:"float"},{n:"target_2027",t:"float"},{n:"target_2028",t:"float"},{n:"target_2029",t:"float"},{n:"target_2030",t:"float"}],refs:["portfolios","portfolio_outcomes"]},
+  portfolio_indicator_actuals:{cols:[{n:"actual_id",t:"string",pk:true},{n:"indicator_id",t:"string",fk:"portfolio_indicators"},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"outcome_id",t:"string",fk:"portfolio_outcomes"},{n:"year",t:"int"},{n:"period",t:"string",note:"Q1–Q4 | M01–M12 — null for annual"},{n:"actual_value",t:"float"},{n:"reading_date",t:"date"},{n:"source_notes",t:"string"},{n:"loaded_by",t:"string"},{n:"loaded_at",t:"timestamp"}],refs:["portfolio_indicators","portfolios","portfolio_outcomes"]},
+  strategy_goal_actuals:{cols:[{n:"actual_id",t:"string",pk:true},{n:"goal_id",t:"string",fk:"strategy_goals"},{n:"year",t:"int"},{n:"actual_value",t:"float"},{n:"reading_date",t:"date"},{n:"source_notes",t:"string"},{n:"loaded_by",t:"string"},{n:"loaded_at",t:"timestamp"}],refs:["strategy_goals"]},
+  execution_targets:{cols:[{n:"target_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"outcome_id",t:"string",fk:"bow_outcomes"},{n:"year",t:"int"},{n:"text",t:"string"},{n:"sort_order",t:"int"},{n:"is_active",t:"boolean",note:"default true"}],refs:["bows","bow_outcomes"]},
+  execution_target_status:{cols:[{n:"target_id",t:"string",fk:"execution_targets"},{n:"year",t:"int"},{n:"completion",t:"string",note:"Complete | On track | At risk | Not started"},{n:"notes",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["execution_targets"]},
+  bow_ratings:{cols:[{n:"rating_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"year",t:"int"},{n:"impact_rating",t:"string"},{n:"impact_rationale",t:"string"},{n:"impact_override",t:"boolean"},{n:"impact_override_reasoning",t:"string"},{n:"execution_rating",t:"string"},{n:"execution_rationale",t:"string"},{n:"execution_override",t:"boolean"},{n:"execution_override_reasoning",t:"string"},{n:"assessed_by",t:"string"},{n:"assessed_at",t:"timestamp"}],refs:["bows"]},
+  portfolio_outcome_ratings:{cols:[{n:"rating_id",t:"string",pk:true},{n:"outcome_id",t:"string",fk:"portfolio_outcomes"},{n:"year",t:"int"},{n:"rating",t:"string"},{n:"rationale",t:"string"},{n:"assessed_by",t:"string"},{n:"assessed_at",t:"timestamp"}],refs:["portfolio_outcomes"]},
+  goal_ratings:{cols:[{n:"rating_id",t:"string",pk:true},{n:"goal_id",t:"string",fk:"strategy_goals"},{n:"year",t:"int"},{n:"rating",t:"string"},{n:"rationale",t:"string"},{n:"assessed_by",t:"string"},{n:"assessed_at",t:"timestamp"}],refs:["strategy_goals"]},
+  assumptions:{cols:[{n:"assumption_id",t:"string",pk:true},{n:"assumption_type",t:"string",note:"field | impact"},{n:"portfolio_outcome_id",t:"string",fk:"portfolio_outcomes"},{n:"bow_id",t:"string",fk:"bows",note:"nullable — BOW-scoped"},{n:"assumption_claim",t:"string",note:"if/then causal statement"},{n:"decision_gate",t:"string"},{n:"high_threshold",t:"string"},{n:"medium_threshold",t:"string"},{n:"low_threshold",t:"string"},{n:"signal_weights",t:"string",note:"JSON"},{n:"data_source_notes",t:"string"},{n:"is_active",t:"boolean",note:"default true"},{n:"version",t:"int",note:"default 1"},{n:"effective_from",t:"date"},{n:"created_by",t:"string"},{n:"created_at",t:"timestamp"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["portfolio_outcomes","bows"]},
+  assumption_confidence:{cols:[{n:"confidence_id",t:"string",pk:true},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"confidence",t:"string",note:"High | Medium | Low | Untested | Data gap"},{n:"rationale",t:"string"},{n:"data_considered",t:"string"},{n:"human_override",t:"boolean"},{n:"override_reasoning",t:"string"},{n:"rating_source",t:"string",note:"tyton_baseline | ai_generated | human_override"},{n:"evidence_snapshot",t:"string",note:"JSON"},{n:"assessed_by",t:"string"},{n:"assessed_at",t:"timestamp"}],refs:["assumptions"]},
+  assumption_indicator_links:{cols:[{n:"link_id",t:"string",pk:true},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"indicator_id",t:"string",note:"logical FK — bow_indicators or portfolio_indicators"},{n:"indicator_level",t:"string",note:"bow | portfolio"},{n:"signal_role",t:"string",note:"primary | secondary"},{n:"sort_order",t:"int"}],refs:["assumptions"]},
+  assumption_target_links:{cols:[{n:"link_id",t:"string",pk:true},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"target_id",t:"string",fk:"execution_targets"},{n:"signal_role",t:"string",note:"primary | secondary"},{n:"sort_order",t:"int"}],refs:["assumptions","execution_targets"]},
+  assumption_rating_criteria:{cols:[{n:"criteria_id",t:"string",pk:true},{n:"assumption_type",t:"string",note:"field | impact"},{n:"bow_id",t:"string",fk:"bows",note:"nullable — BOW-level"},{n:"portfolio_id",t:"string",fk:"portfolios",note:"nullable — portfolio-level"},{n:"high_threshold",t:"string"},{n:"medium_threshold",t:"string"},{n:"low_threshold",t:"string"},{n:"data_gap_trigger",t:"string"},{n:"signal_weights",t:"string",note:"JSON"},{n:"version",t:"int",note:"default 1"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["bows","portfolios"]},
+  assumption_data_gaps:{cols:[{n:"gap_id",t:"string",pk:true},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"gap_description",t:"string"},{n:"priority",t:"string",note:"H | M | L"},{n:"proposed_owner",t:"string"},{n:"target_date",t:"date"},{n:"status",t:"string",note:"open | in_progress | closed"},{n:"created_at",t:"timestamp"},{n:"created_by",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["assumptions"]},
+  assumption_reassessment_log:{cols:[{n:"log_id",t:"string",pk:true},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"trigger_type",t:"string",note:"new_actual | new_target_status | scheduled | manual"},{n:"trigger_entity_type",t:"string",note:"bow_indicator | execution_target | field_signal"},{n:"trigger_entity_id",t:"string"},{n:"prior_confidence",t:"string"},{n:"new_confidence",t:"string"},{n:"triggered_at",t:"timestamp"},{n:"triggered_by",t:"string"}],refs:["assumptions"]},
+  field_signal_sources:{cols:[{n:"source_id",t:"string",pk:true},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"source_type",t:"string",note:"market_intelligence | field_note | external_scan | hub_tool"},{n:"source_name",t:"string"},{n:"source_description",t:"string"},{n:"is_active",t:"boolean",note:"default true"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["assumptions"]},
+  key_decisions:{cols:[{n:"decision_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"portfolio_id",t:"string",fk:"portfolios",note:"nullable — portfolio-level"},{n:"goal_id",t:"string",fk:"strategy_goals",note:"nullable — strategy-level"},{n:"level",t:"string",note:"strategy | portfolio | bow"},{n:"question",t:"string"},{n:"decision_text",t:"string"},{n:"timing",t:"string"},{n:"signals",t:"string"},{n:"decision_priority",t:"string",note:"H | M | L"},{n:"decision_maker",t:"string"},{n:"resolution_type",t:"string",note:"invest | scale | adapt | stop"},{n:"decision_rationale",t:"string"},{n:"recorded_outcome",t:"string"},{n:"status",t:"string"},{n:"is_active",t:"boolean",note:"default true"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["bows","portfolios","strategy_goals"]},
+  decision_assumption_links:{cols:[{n:"link_id",t:"string",pk:true},{n:"decision_id",t:"string",fk:"key_decisions"},{n:"assumption_id",t:"string",fk:"assumptions"},{n:"signal_role",t:"string",note:"primary | secondary"},{n:"trigger_threshold",t:"string",note:"confidence level that auto-flags"},{n:"rationale",t:"string"}],refs:["key_decisions","assumptions"]},
+  invest_investments:{cols:[{n:"Investment_ID",t:"string",pk:true},{n:"Investment_Name",t:"string"},{n:"Investment_Owner",t:"string"},{n:"Grant_Description",t:"string"},{n:"Amount",t:"float"},{n:"Status",t:"string"},{n:"Stage",t:"string"},{n:"Investment_Payment_Year",t:"int"},{n:"Investment_Payment_Status",t:"string"}],refs:[]},
+  invest_bow_allocation:{cols:[{n:"Investment_ID",t:"string",fk:"invest_investments"},{n:"BoW_ID",t:"string"},{n:"Investment_Payment_Allocation_Amount",t:"float"},{n:"Investment_Payment_Allocation_Type",t:"string"},{n:"Investment_Payment_Status",t:"string"},{n:"Investment_Payment_Year",t:"int"},{n:"Investment_Payment_Date",t:"date"}],refs:["invest_investments"]},
+  invest_bow_details:{cols:[{n:"BoW_ID",t:"string",pk:true},{n:"Impact_Performance_Rating",t:"string"},{n:"Impact_Performance_Rating_Rationale",t:"string"},{n:"Execution_Performance_Rating",t:"string"},{n:"Execution_Performance_Rating_Rationale",t:"string"}],refs:[]},
+  investment_overlays:{cols:[{n:"overlay_id",t:"string",pk:true},{n:"investment_id",t:"string",fk:"invest_investments"},{n:"internal_notes",t:"string"},{n:"approver",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["invest_investments"]},
+  bow_notes:{cols:[{n:"note_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"outcome_id",t:"string",fk:"bow_outcomes"},{n:"year",t:"int"},{n:"note_text",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["bows","bow_outcomes"]},
+  portfolio_tracking:{cols:[{n:"tracking_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"year",t:"int"},{n:"notes",t:"string"},{n:"budget_annotation",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["portfolios"]},
+  team_members:{cols:[{n:"member_id",t:"string",pk:true},{n:"email",t:"string",note:"Databricks login — join key for token lookup"},{n:"display_name",t:"string"},{n:"permission_level",t:"string",note:"MLE | Leadership | Team"},{n:"portfolio_id",t:"string",fk:"portfolios",note:"nullable — primary portfolio"},{n:"is_active",t:"boolean",note:"default true"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["portfolios"]},
+  pending_actuals:{cols:[{n:"pending_id",t:"string",pk:true},{n:"indicator_id",t:"string",note:"logical FK — bow_indicators or portfolio_indicators"},{n:"level",t:"string",note:"bow | portfolio | goal"},{n:"entity_id",t:"string"},{n:"year",t:"int"},{n:"period",t:"string",note:"Q1–Q4 | M01–M12 — null for annual"},{n:"submitted_value",t:"float"},{n:"reading_date",t:"date"},{n:"source_notes",t:"string"},{n:"submitted_by",t:"string"},{n:"submitted_permission",t:"string",note:"MLE | Leadership | Team"},{n:"submitted_at",t:"timestamp"},{n:"status",t:"string",note:"pending | approved | rejected"},{n:"reviewed_value",t:"float"},{n:"reviewed_by",t:"string"},{n:"reviewer_notes",t:"string"},{n:"reviewed_at",t:"timestamp"},{n:"notes",t:"string"}],refs:[]},
+};
+// pre-compute reverse refs (which tables reference each table)
+const DM_REFERENCED_BY = {};
+Object.keys(DM_TABLES).forEach(tName => {
+  (DM_TABLES[tName].refs||[]).forEach(ref => {
+    if (!DM_REFERENCED_BY[ref]) DM_REFERENCED_BY[ref] = [];
+    if (!DM_REFERENCED_BY[ref].includes(tName)) DM_REFERENCED_BY[ref].push(tName);
+  });
+});
+function groupOfTable(tName) { return DM_GROUPS.find(g => g.tables.includes(tName)); }
+
+function DataModelExplorer() {
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState(()=>Object.fromEntries(DM_GROUPS.map(g=>[g.id,true])));
+
+  const q = search.trim().toLowerCase();
+  const matchesSearch = tName => !q || tName.toLowerCase().includes(q) ||
+    (DM_TABLES[tName]?.cols||[]).some(c => c.n.toLowerCase().includes(q));
+
+  const tbl = selected ? DM_TABLES[selected] : null;
+  const tblGroup = selected ? groupOfTable(selected) : null;
+  const referencedBy = selected ? (DM_REFERENCED_BY[selected]||[]) : [];
+
+  const TYPE_COLOR = {string:"#0891B2", float:"#059669", int:"#7C3AED", boolean:"#D97706", date:"#DB2777", timestamp:"#64748B"};
+
+  return (
+    <div style={{display:"flex",height:"100%",minHeight:0,gap:0}}>
+      {/* Left panel — table browser */}
+      <div style={{width:240,flexShrink:0,borderRight:"1px solid "+BORDER,overflowY:"auto",background:SURFACE,display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"14px 12px 10px",borderBottom:"1px solid "+BORDER,flexShrink:0}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tables or columns…"
+            style={{width:"100%",boxSizing:"border-box",padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:12,color:TEXT,background:BG,outline:"none"}}/>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
+          {DM_GROUPS.map(g => {
+            const visibleTables = g.tables.filter(matchesSearch);
+            if (q && visibleTables.length===0) return null;
+            const open = expandedGroups[g.id];
+            return (
+              <div key={g.id}>
+                <button onClick={()=>setExpandedGroups(prev=>({...prev,[g.id]:!prev[g.id]}))}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"5px 12px",border:"none",background:"none",cursor:"pointer",textAlign:"left"}}>
+                  <span style={{fontSize:9,color:g.color,fontWeight:700,letterSpacing:0.5,transform:open?"rotate(90deg)":"rotate(0deg)",transition:"transform .15s",display:"inline-block"}}>▶</span>
+                  <span style={{fontSize:10,fontWeight:700,color:g.color,textTransform:"uppercase",letterSpacing:1.2,flex:1}}>{g.label}</span>
+                  <span style={{fontSize:10,color:TEXT_MUTED}}>{g.tables.length}</span>
+                </button>
+                {open && visibleTables.map(tName => (
+                  <button key={tName} onClick={()=>setSelected(tName)}
+                    style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"5px 12px 5px 26px",border:"none",cursor:"pointer",textAlign:"left",
+                      background:selected===tName?g.color+"18":"transparent",
+                      borderLeft:selected===tName?"3px solid "+g.color:"3px solid transparent",
+                      transition:"background .1s"}}>
+                    <span style={{fontSize:13,color:selected===tName?g.color:TEXT,fontWeight:selected===tName?600:400,fontFamily:"monospace"}}>{tName}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right panel — detail or welcome */}
+      <div style={{flex:1,overflowY:"auto",padding:"28px 36px"}}>
+        {!selected ? (
+          <div>
+            <div style={{fontSize:22,fontWeight:800,color:TEXT,marginBottom:6}}>Data Model</div>
+            <div style={{fontSize:14,color:TEXT_SUB,marginBottom:28,lineHeight:1.7}}>
+              {Object.keys(DM_TABLES).length} tables across {DM_GROUPS.length} domain groups · <span style={{fontFamily:"monospace",fontSize:12}}>usp_data.usp_strategy</span>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+              {DM_GROUPS.map(g=>(
+                <div key={g.id} style={{flex:"1 1 260px",minWidth:220,border:"1px solid "+BORDER,borderLeft:"4px solid "+g.color,borderRadius:10,padding:"16px 18px",background:SURFACE,cursor:"pointer"}}
+                  onClick={()=>{ setSelected(g.tables[0]); setExpandedGroups(prev=>({...prev,[g.id]:true})); }}>
+                  <div style={{fontSize:11,fontWeight:700,color:g.color,textTransform:"uppercase",letterSpacing:1.2,marginBottom:6}}>{g.label}</div>
+                  <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.7}}>
+                    {g.tables.map((t,i)=><span key={t} style={{fontFamily:"monospace",fontSize:11}}>{t}{i<g.tables.length-1?", ":""}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+              <span style={{fontSize:10,fontWeight:700,color:tblGroup?.color,textTransform:"uppercase",letterSpacing:1.2,background:tblGroup?.color+"18",padding:"3px 8px",borderRadius:4}}>{tblGroup?.label}</span>
+            </div>
+            <div style={{fontSize:22,fontWeight:800,color:TEXT,fontFamily:"monospace",marginBottom:4}}>{selected}</div>
+            <div style={{fontSize:12,color:TEXT_MUTED,fontFamily:"monospace",marginBottom:24}}>usp_data.usp_strategy.{selected} · {tbl.cols.length} columns</div>
+
+            {/* Relationship pills */}
+            {(tbl.refs.length>0 || referencedBy.length>0) && (
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:24}}>
+                {tbl.refs.map(r=>{const rg=groupOfTable(r);return(
+                  <button key={r} onClick={()=>setSelected(r)}
+                    style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:"1px solid "+(rg?.color||BORDER)+"55",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,color:rg?.color||TEXT_SUB,fontFamily:"monospace"}}>
+                    <span style={{fontSize:10,opacity:0.7}}>→</span> {r}
+                  </button>
+                );})}
+                {referencedBy.map(r=>{const rg=groupOfTable(r);return(
+                  <button key={r} onClick={()=>setSelected(r)}
+                    style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:"1px solid "+(rg?.color||BORDER)+"55",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,color:rg?.color||TEXT_SUB,fontFamily:"monospace"}}>
+                    <span style={{fontSize:10,opacity:0.7}}>←</span> {r}
+                  </button>
+                );})}
+              </div>
+            )}
+
+            {/* Columns table */}
+            <div style={{border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 3fr",background:BG,borderBottom:"1px solid "+BORDER,padding:"8px 14px"}}>
+                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Column</span>
+                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Type</span>
+                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Notes</span>
+              </div>
+              {tbl.cols.map((c,i)=>{
+                const isHL = q && c.n.toLowerCase().includes(q);
+                return (
+                  <div key={c.n} style={{display:"grid",gridTemplateColumns:"2fr 1fr 3fr",padding:"9px 14px",borderBottom:i<tbl.cols.length-1?"1px solid "+BORDER:"none",background:isHL?"#FFFBEB":i%2===0?SURFACE:BG+"88",alignItems:"center"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      {c.pk&&<span style={{fontSize:9,fontWeight:700,color:"#D97706",background:"#FEF3C7",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 4px"}}>PK</span>}
+                      {c.fk&&<span style={{fontSize:9,fontWeight:700,color:"#2563EB",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:3,padding:"1px 4px",cursor:"pointer"}} onClick={()=>setSelected(c.fk)} title={"→ "+c.fk}>FK</span>}
+                      <span style={{fontSize:13,fontFamily:"monospace",color:TEXT,fontWeight:c.pk?700:400}}>{c.n}</span>
+                    </div>
+                    <span style={{fontSize:12,fontFamily:"monospace",color:TYPE_COLOR[c.t]||TEXT_SUB,fontWeight:500}}>{c.t}</span>
+                    <span style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
+                      {c.fk&&<span style={{cursor:"pointer",color:"#2563EB",textDecoration:"underline",marginRight:4}} onClick={()=>setSelected(c.fk)}>→ {c.fk}</span>}
+                      {c.note||c.default&&("default: "+c.default)||""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Referenced by section */}
+            {referencedBy.length>0&&(
+              <div style={{marginTop:24}}>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Referenced by ({referencedBy.length})</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {referencedBy.map(r=>{const rg=groupOfTable(r);return(
+                    <button key={r} onClick={()=>setSelected(r)}
+                      style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,border:"1px solid "+(rg?.color||BORDER)+"44",background:(rg?.color||BORDER)+"0D",cursor:"pointer",fontSize:12,fontFamily:"monospace",color:rg?.color||TEXT_SUB,fontWeight:500}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:rg?.color||TEXT_MUTED,display:"inline-block",flexShrink:0}}/>
+                      {r}
+                    </button>
+                  );})}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Sidebar({ activeView, onNavigate, data }) {
   const isStrategyActive  = activeView.type==="strategy";
   const isAllInvActive    = activeView.type==="all-investments";
@@ -7886,6 +8090,7 @@ function Sidebar({ activeView, onNavigate, data }) {
         <div style={{padding:"20px 10px 6px", fontSize:10, fontWeight:600, letterSpacing:2, color:"rgba(255,255,255,0.25)", textTransform:"uppercase"}}>
           Tools
         </div>
+        <NavItem label="Explore the Data Model" active={activeView.type==="data-model"} onClick={()=>onNavigate({type:"data-model"})}/>
         {[
           {label:"Decision Insights & Forecasts", soon:true},
           {label:"USP Co-Leverage Tracking", soon:true},
@@ -8042,12 +8247,16 @@ function App() {
     ? "2026–2030 Strategy"
     : activeView.type==="all-investments"
     ? "2026–2030 Strategy"
+    : activeView.type==="data-model"
+    ? "Tools"
     : pc?.label || "";
 
   const pageTitle = activeView.type==="strategy"
     ? "USP Data & AI Measurement & Insights Dashboard"
     : activeView.type==="all-investments"
     ? "All Investments"
+    : activeView.type==="data-model"
+    ? "Explore the Data Model"
     : (activePortData?.portfolio?.name || pc?.label || "");
 
   return (
@@ -8114,7 +8323,10 @@ function App() {
         </div>
 
         {/* Page content */}
-        <div style={{flex:1,padding:"32px 36px",maxWidth:1600,width:"100%",boxSizing:"border-box"}}>
+        <div style={{flex:1,padding:activeView.type==="data-model"?"0":"32px 36px",maxWidth:activeView.type==="data-model"?"100%":1600,width:"100%",boxSizing:"border-box",display:"flex",flexDirection:"column"}}>
+          {activeView.type==="data-model"&&(
+            <DataModelExplorer/>
+          )}
           {activeView.type==="strategy"&&(
             <StrategyOverview data={data} onUpdateRatings={r=>setData(prev=>({...prev,strategyRatings:r}))} onNavigateToPortfolio={id=>setActiveView({type:"portfolio",portId:id})} selectedGoal={activeView.goalNumber}/>
           )}
