@@ -1900,7 +1900,7 @@ def delete_bow_outcome(outcome_id):
 
 # ── BOW indicators CRUD ────────────────────────────────────────────────────────
 
-BOW_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline",
+BOW_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline", "data_source",
                     "target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
 
 @app.route("/api/bow-indicators/<indicator_id>", methods=["PATCH"])
@@ -2099,7 +2099,7 @@ def delete_portfolio_outcome(outcome_id):
 
 # ── Portfolio indicators CRUD ──────────────────────────────────────────────────
 
-PORT_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline",
+PORT_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline", "data_source",
                      "target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
 
 @app.route("/api/portfolio-indicators/<indicator_id>", methods=["PATCH"])

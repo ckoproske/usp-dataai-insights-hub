@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // ─── Design system — matches main dashboard ───────────────────────────────────
 const BRAND        = "#303A44";
@@ -489,8 +489,9 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
 }
 
 // ─── Inline Edit Indicator ─────────────────────────────────────────────────────
-function InlineEditIndicator({ indicator, onSave, onCancel, user, isPortfolio }) {
+function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isPortfolio }) {
   const [itext, setItext]     = useState(indicator.text || "");
+  const [source, setSource]   = useState(indicator.data_source || "");
   const [unit, setUnit]       = useState(indicator.unit || "");
   const [freq, setFreq]       = useState(indicator.collection_frequency || "");
   const [baseline, setBase]   = useState(String(indicator.baseline ?? ""));
@@ -501,6 +502,8 @@ function InlineEditIndicator({ indicator, onSave, onCancel, user, isPortfolio })
   const [revReason, setRevReason]   = useState("");
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
 
   const textChanged    = itext !== (indicator.text || "");
   const targetsChanged = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
@@ -514,7 +517,8 @@ function InlineEditIndicator({ indicator, onSave, onCancel, user, isPortfolio })
       ? `/api/portfolio-indicators/${indicator.indicator_id}`
       : `/api/bow-indicators/${indicator.indicator_id}`;
     const body = {
-      text: itext, unit, collection_frequency: freq, baseline: baseline || null,
+      text: itext, data_source: source || null, unit,
+      collection_frequency: freq, baseline: baseline || null,
       ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
       rationale: rationale || undefined,
       revision_reason: revReason || undefined,
@@ -531,12 +535,27 @@ function InlineEditIndicator({ indicator, onSave, onCancel, user, isPortfolio })
     }
   };
 
+  const doDelete = async () => {
+    setDeleting(true);
+    const endpoint = isPortfolio
+      ? `/api/portfolio-indicators/${indicator.indicator_id}`
+      : `/api/bow-indicators/${indicator.indicator_id}`;
+    await api(endpoint, { method: "DELETE" });
+    setDeleting(false);
+    if (onDeleted) onDeleted();
+  };
+
   return (
     <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
       border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
       <Field label="Indicator" required>
         <textarea value={itext} onChange={e => setItext(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <Field label="Data source" helper="Report, dataset, or system where this indicator is tracked — shown on the dashboard tile.">
+        <input type="text" value={source} onChange={e => setSource(e.target.value)}
+          placeholder="e.g. Annual team survey, GitHub API, Partner report..."
+          style={inputStyle} />
       </Field>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <Field label="Unit">
@@ -601,6 +620,35 @@ function InlineEditIndicator({ indicator, onSave, onCancel, user, isPortfolio })
         <Btn size="sm" onClick={save} disabled={!canSave || saving}>
           {saving ? "Saving..." : "Save indicator"}
         </Btn>
+      </div>
+
+      {/* Delete section */}
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+        {confirmDelete ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: DANGER, flexGrow: 1 }}>
+              Permanently remove this indicator?
+            </span>
+            <button onClick={doDelete} disabled={deleting}
+              style={{ fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: DANGER, color: SURFACE, border: "none",
+                borderRadius: 4, padding: "3px 10px" }}>
+              {deleting ? "Removing…" : "Yes, remove"}
+            </button>
+            <button onClick={() => setConfirmDelete(false)}
+              style={{ fontSize: 12, cursor: "pointer", background: "none",
+                border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px",
+                color: TEXT_SUB }}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 12, color: TEXT_MUTED, padding: 0, textDecoration: "underline" }}>
+            Remove indicator
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1124,7 +1172,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
   const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
   const [addingTargetFor, setAddingTargetFor] = useState(null); // {outcome_id, year}
   const [confirmDelOut, setConfirmDelOut]     = useState(null);
-  const [confirmDelInd, setConfirmDelInd]     = useState(null);
   const [confirmDelTarget, setConfirmDelTarget] = useState(null);
 
   // Group execution targets by outcome_id → year → [targets]
@@ -1431,29 +1478,14 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                   lineHeight: 1.4, marginBottom: 5 }}>
                                   {ind.text}
                                 </p>
-                                {ind.unit && (
-                                  <span style={{ fontSize: 11, fontWeight: 700,
-                                    background: SURFACE, color: ACCENT,
-                                    borderRadius: 3, padding: "1px 5px",
-                                    display: "inline-block", marginBottom: 4 }}>
-                                    {ind.unit}
-                                  </span>
-                                )}
                                 {ind.baseline != null && (
                                   <p style={{ fontSize: 11, color: TEXT_MUTED }}>
                                     Baseline: {ind.baseline}
                                     {ind.unit ? ` ${ind.unit}` : ""}
                                   </p>
                                 )}
-                                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                                  <button
-                                    onClick={() => setSubmitIndId(
-                                      submitIndId === ind.indicator_id ? null : ind.indicator_id)}
-                                    style={{ fontSize: 11, fontWeight: 700, cursor: "pointer",
-                                      background: ACCENT, color: SURFACE, border: "none",
-                                      borderRadius: 4, padding: "3px 8px" }}>
-                                    Submit
-                                  </button>
+                                <div style={{ display: "flex", alignItems: "center",
+                                  justifyContent: "space-between", marginTop: 6 }}>
                                   <button
                                     onClick={() => setEditIndId(
                                       editIndId === ind.indicator_id ? null : ind.indicator_id)}
@@ -1461,31 +1493,16 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                       background: SURFACE, color: TEXT_SUB,
                                       border: `1px solid ${BORDER}`,
                                       borderRadius: 4, padding: "3px 8px" }}>
-                                    Edit
+                                    Edit Indicator
                                   </button>
-                                  {confirmDelInd === ind.indicator_id ? (
-                                    <>
-                                      <button onClick={async () => {
-                                        await api(`/api/bow-indicators/${ind.indicator_id}`,
-                                          { method: "DELETE" });
-                                        setConfirmDelInd(null); onRefresh();
-                                      }} style={{ fontSize: 11, fontWeight: 700,
-                                        cursor: "pointer", background: "none",
-                                        border: "none", color: DANGER, padding: "3px 4px" }}>
-                                        ✓ Remove
-                                      </button>
-                                      <button onClick={() => setConfirmDelInd(null)}
-                                        style={{ fontSize: 11, cursor: "pointer",
-                                          background: "none", border: "none",
-                                          color: TEXT_MUTED, padding: "3px 4px" }}>✕</button>
-                                    </>
-                                  ) : (
-                                    <button onClick={() => setConfirmDelInd(ind.indicator_id)}
-                                      style={{ fontSize: 11, cursor: "pointer",
-                                        background: "none", border: "none",
-                                        color: TEXT_MUTED, padding: "3px 4px" }}
-                                      title="Remove">✕</button>
-                                  )}
+                                  <button
+                                    onClick={() => setSubmitIndId(
+                                      submitIndId === ind.indicator_id ? null : ind.indicator_id)}
+                                    style={{ fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                      background: ACCENT, color: SURFACE, border: "none",
+                                      borderRadius: 4, padding: "3px 8px" }}>
+                                    Submit New Data
+                                  </button>
                                 </div>
                               </td>
 
@@ -1558,6 +1575,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                       indicator={ind} user={user}
                                       onSave={() => { setEditIndId(null); onRefresh(); }}
                                       onCancel={() => setEditIndId(null)}
+                                      onDeleted={() => { setEditIndId(null); onRefresh(); }}
                                     />
                                   </div>
                                 </td>
