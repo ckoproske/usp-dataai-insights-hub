@@ -47,19 +47,26 @@ COMMENT 'Field and impact assumptions organized per portfolio outcome. Threshold
 
 -- -----------------------------------------------------------------------------
 -- 1.2 assumption_indicator_links
--- Many-to-many: impact assumptions → bow_indicators.
+-- Many-to-many: assumptions → bow_indicators or portfolio_indicators.
 -- Defines which indicators provide evidence for each assumption.
+-- indicator_level determines which table indicator_id references at runtime.
 -- When a new actual is entered for a linked indicator, triggers re-assessment.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.assumption_indicator_links (
-    link_id        STRING  NOT NULL,
-    assumption_id  STRING  NOT NULL, -- FK → assumptions.assumption_id
-    indicator_id   STRING  NOT NULL, -- FK → bow_indicators.indicator_id
-    signal_role    STRING,           -- primary | secondary
-    sort_order     INT
+    link_id         STRING  NOT NULL,
+    assumption_id   STRING  NOT NULL,  -- FK → assumptions.assumption_id
+    indicator_id    STRING  NOT NULL,  -- logical FK: bow_indicators or portfolio_indicators depending on indicator_level
+    indicator_level STRING,            -- 'bow' | 'portfolio' — NOT NULL enforced via constraint below
+    signal_role     STRING,            -- 'primary' | 'secondary'
+    sort_order      INT
 )
 USING DELTA
-COMMENT 'Links impact assumptions to the bow_indicators that provide evidence for them. Primary signals carry more weight in auto-calculation.';
+COMMENT 'Links assumptions to the BOW or portfolio indicators that provide evidence for them. indicator_level determines which indicators table indicator_id references. Primary signals carry more weight in auto-calculation.';
+
+-- Delta does not support NOT NULL inline on ADD COLUMN, so the constraint is added separately.
+-- For new tables this runs immediately after CREATE; for existing tables run as ALTER TABLE ADD CONSTRAINT.
+ALTER TABLE usp_data.usp_strategy.assumption_indicator_links
+ADD CONSTRAINT indicator_level_not_null CHECK (indicator_level IS NOT NULL);
 
 
 -- -----------------------------------------------------------------------------
@@ -84,11 +91,14 @@ COMMENT 'Links impact assumptions to the execution_targets whose completion is a
 -- Tyton-maintained reference/template table for threshold patterns by assumption type.
 -- Provides starting points for new assumption definitions.
 -- Operative thresholds live on the assumptions table itself, not here.
+-- Scope levels are mutually exclusive: bow_id set = BOW-level assumption,
+-- portfolio_id set = portfolio-level assumption, both null = global type-level default.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS usp_data.usp_strategy.assumption_rating_criteria (
     criteria_id       STRING    NOT NULL,
     assumption_type   STRING    NOT NULL, -- field | impact
-    bow_id            STRING,             -- nullable — global if null, BOW-specific if set
+    bow_id            STRING,             -- set for BOW-level assumptions; null otherwise
+    portfolio_id      STRING,             -- set for portfolio-level assumptions; null otherwise
     high_threshold    STRING,
     medium_threshold  STRING,
     low_threshold     STRING,

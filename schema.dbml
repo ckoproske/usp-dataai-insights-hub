@@ -245,11 +245,12 @@ Table assumption_confidence {
 }
 
 Table assumption_indicator_links {
-  link_id        string [pk]
-  assumption_id  string [ref: > assumptions.assumption_id]
-  indicator_id   string [ref: > bow_indicators.indicator_id]
-  signal_role    string [note: 'primary | secondary']
-  sort_order     int
+  link_id         string [pk]
+  assumption_id   string [ref: > assumptions.assumption_id]
+  indicator_id    string [note: 'logical FK — references bow_indicators or portfolio_indicators depending on indicator_level']
+  indicator_level string [not null, note: 'bow | portfolio']
+  signal_role     string [note: 'primary | secondary']
+  sort_order      int
 }
 
 Table assumption_target_links {
@@ -263,7 +264,8 @@ Table assumption_target_links {
 Table assumption_rating_criteria {
   criteria_id      string [pk]
   assumption_type  string [note: 'field | impact']
-  bow_id           string [ref: > bows.bow_id, note: 'nullable — global if null']
+  bow_id           string [ref: > bows.bow_id, note: 'set for BOW-level assumptions; null otherwise']
+  portfolio_id     string [ref: > portfolios.portfolio_id, note: 'set for portfolio-level assumptions; null otherwise']
   high_threshold   string
   medium_threshold string
   low_threshold    string
