@@ -1259,7 +1259,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                     onCancel={() => setEditTargetId(null)} />
                                 ) : (
                                   <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
-                                    <span style={{ color: p?.color || ACCENT, fontWeight: 700,
+                                    <span style={{ color: TEXT, fontWeight: 700,
                                       fontSize: 14, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
                                       •
                                     </span>
