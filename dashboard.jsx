@@ -1344,12 +1344,23 @@ function execAutoStatus(outcome, year) {
   const yr = year || CURRENT_YEAR;
   const allT = (outcome.executionTargets[yr]||[]).map(t=>typeof t==="string"?{completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
   if (!allT.length) return null;
-  const completed = allT.filter(t=>t.completion==="Complete").length;
-  const total = allT.length;
-  const pct = Math.round((completed/total)*100);
-  if (pct>=90) return {pct,completed,total,year:yr,...STATUS["Meets Expectations"]};
-  if (pct>=60) return {pct,completed,total,year:yr,...STATUS["Slightly Below Expectations"]};
-  return {pct,completed,total,year:yr,...STATUS["Below Expectations"]};
+
+  const total     = allT.length;
+  const complete  = allT.filter(t=>t.completion==="Complete").length;
+  const onTrack   = allT.filter(t=>t.completion==="On Track").length;
+  const delayed   = allT.filter(t=>t.completion==="Delayed").length;
+  const positive  = complete + onTrack;  // Complete or On Track = heading in the right direction
+
+  // All untouched — too early to assess
+  if (positive === 0 && delayed === 0) return {complete,onTrack,delayed,total,year:yr,...STATUS["No Data"]};
+
+  let rating;
+  if (delayed === 0 && complete === total)          rating = "Exceeds Expectations";       // everything done
+  else if (delayed === 0)                           rating = "Meets Expectations";          // on track, nothing slipping
+  else if (positive > delayed)                      rating = "Slightly Below Expectations"; // majority positive, some slippage
+  else                                              rating = "Below Expectations";           // delayed items outnumber or match positive
+
+  return { complete, onTrack, delayed, total, year:yr, ...STATUS[rating] };
 }
 function impactAutoStatus(outcome) {
   const s = outcome.impactIndicators.map(i=>autoSuggestStatus(i));
@@ -2020,7 +2031,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                                   <div style={{textAlign:"right"}}>
                                     <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec</div>
                                     {oExec
-                                      ? <div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.completed}/{oExec.total}</span></div>
+                                      ? <div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.complete+oExec.onTrack}/{oExec.total}</span></div>
                                       : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
                                   </div>
                                   <div style={{textAlign:"right"}}>
@@ -2445,7 +2456,7 @@ function YearlyPlanView({ bow, onUpdate }) {
       {bow.outcomes.map((o,oIdx)=>{
         const rollup=outcomeRollupStatus(o.impactIndicators), rs=STATUS[rollup];
         const raw=(o.executionTargets[planYear]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started",quarter:null,notes:""}:{...t,completion:migrateCompletion(t.completion),quarter:t.quarter||null,notes:t.notes||""});
-        const pct=raw.length?Math.round((raw.filter(t=>t.completion==="Complete").length/raw.length)*100):null;
+        const pct=raw.length?Math.round((raw.filter(t=>t.completion==="Complete"||t.completion==="On Track").length/raw.length)*100):null;
         const todos = (o.planningTodos||{})[planYear] || {Q1:[],Q2:[],Q3:[],Q4:[]};
         return (
           <div key={o.id} style={{border:"1px solid "+BORDER,borderRadius:12,marginBottom:14,overflow:"hidden"}}>
@@ -5755,7 +5766,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                             <div style={{padding:"10px 18px 12px",borderTop:"1px solid "+(manualRs?manualRs.color+"22":BORDER),background:manualRs?manualRs.pill+"88":"#FAFBFC",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                               <div>
                                 <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Execution {progressYear}</div>
-                                {exec?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:exec.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:exec.color}}>{exec.completed}/{exec.total}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>No targets</span>}
+                                {exec?<div style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:8,height:8,borderRadius:"50%",background:exec.color,display:"inline-block"}}/><span style={{fontSize:14,fontWeight:700,color:exec.color}}>{exec.complete+exec.onTrack}/{exec.total}</span></div>:<span style={{fontSize:13,color:TEXT_SUB}}>No targets</span>}
                               </div>
                               <div>
                                 <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Impact</div>
