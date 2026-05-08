@@ -1053,7 +1053,9 @@ async function loadFromAPI() {
               manualStatus: null,
             };
           }
-          // Actuals can have multiple rows per indicator (one per year)
+          // Actuals: one row per (year, period). Annual → one row/year. Bimonthly/quarterly
+          // → multiple rows/year ordered by period. Each row overwrites actuals[year] so the
+          // last (latest) period value for the year becomes the displayed chart point.
           if (ind.year && ind.actual_value !== null && ind.actual_value !== undefined) {
             byOutcome[ind.outcome_id][ind.indicator_id].actuals[ind.year] =
               String(ind.actual_value);

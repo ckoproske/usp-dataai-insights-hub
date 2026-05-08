@@ -461,22 +461,28 @@ def update_target_status(target_id):
 
 @app.route("/api/indicators/<bow_id>")
 def get_indicators(bow_id):
-    """Returns BOW indicators with most recent actual per year.
-    One row per (indicator × year) — dashboard accumulates actuals across rows.
+    """Returns BOW indicators with most recent actual per (year, period).
+    Multiple rows per indicator when the collection frequency produces several
+    periods in the same year (quarterly / bimonthly).  The dashboard accumulates
+    rows by year key, so the last period row for a year becomes the displayed value.
     Falls back gracefully if optional columns (unit, collection_frequency,
     last_updated) haven't been added via migration yet."""
+    # Dedup: one row per (indicator, year, period) — keeps the latest loaded_at.
+    # COALESCE(period,'') normalises NULLs so annual indicators still deduplicate.
     actuals_join = f"""
         LEFT JOIN (
-          SELECT a1.indicator_id, a1.year, a1.actual_value,
+          SELECT a1.indicator_id, a1.year, a1.period, a1.actual_value,
                  a1.reading_date, a1.source_notes
           FROM {SCHEMA}.bow_indicator_actuals a1
           INNER JOIN (
-            SELECT indicator_id, year, MAX(loaded_at) AS max_loaded
+            SELECT indicator_id, year, COALESCE(period, '') AS period_key,
+                   MAX(loaded_at) AS max_loaded
             FROM {SCHEMA}.bow_indicator_actuals
-            GROUP BY indicator_id, year
-          ) a2 ON a1.indicator_id = a2.indicator_id
-               AND a1.year        = a2.year
-               AND a1.loaded_at   = a2.max_loaded
+            GROUP BY indicator_id, year, COALESCE(period, '')
+          ) a2 ON a1.indicator_id                  = a2.indicator_id
+               AND a1.year                          = a2.year
+               AND COALESCE(a1.period, '')           = a2.period_key
+               AND a1.loaded_at                     = a2.max_loaded
         ) a ON i.indicator_id = a.indicator_id
     """
     try:
@@ -485,12 +491,12 @@ def get_indicators(bow_id):
                   i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
                   i.baseline, i.collection_frequency, i.last_updated, i.unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
-                  a.year, a.actual_value, a.reading_date, a.source_notes
+                  a.year, a.period, a.actual_value, a.reading_date, a.source_notes
                 FROM {SCHEMA}.bow_indicators i
                 {actuals_join}
                 WHERE i.bow_id = ?
                   AND COALESCE(i.is_active, true) = true
-                ORDER BY i.outcome_id, i.indicator_id, a.year""",
+                ORDER BY i.outcome_id, i.indicator_id, a.year, a.period""",
             [bow_id]
         )
     except Exception:
@@ -501,11 +507,11 @@ def get_indicators(bow_id):
                   i.baseline,
                   NULL AS collection_frequency, NULL AS last_updated, NULL AS unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
-                  a.year, a.actual_value, a.reading_date, a.source_notes
+                  a.year, a.period, a.actual_value, a.reading_date, a.source_notes
                 FROM {SCHEMA}.bow_indicators i
                 {actuals_join}
                 WHERE i.bow_id = ?
-                ORDER BY i.outcome_id, i.indicator_id, a.year""",
+                ORDER BY i.outcome_id, i.indicator_id, a.year, a.period""",
             [bow_id]
         )
     return jsonify(rows)
