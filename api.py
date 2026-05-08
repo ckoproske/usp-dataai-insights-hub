@@ -1694,7 +1694,7 @@ def get_bow_full(bow_id):
     )
 
     try:
-        indicators = query(
+        ind_rows = query(
             f"""SELECT i.*,
                        a.actual_value AS latest_actual,
                        a.year         AS latest_actual_year
@@ -1712,12 +1712,50 @@ def get_bow_full(bow_id):
             [bow_id]
         )
     except Exception:
-        indicators = query(
+        ind_rows = query(
             f"""SELECT * FROM {SCHEMA}.bow_indicators
                 WHERE bow_id = ? AND COALESCE(is_active, true) = true
                 ORDER BY outcome_id, indicator_id""",
             [bow_id]
         )
+
+    # Fetch all actuals for this BOW, deduped to latest per (indicator_id, year, period)
+    try:
+        all_actuals = query(
+            f"""SELECT a.indicator_id, a.year, a.period, a.actual_value, a.reading_date
+                FROM {SCHEMA}.bow_indicator_actuals a
+                INNER JOIN (
+                    SELECT indicator_id, year, period, MAX(loaded_at) AS max_loaded
+                    FROM {SCHEMA}.bow_indicator_actuals
+                    WHERE indicator_id IN (
+                        SELECT indicator_id FROM {SCHEMA}.bow_indicators
+                        WHERE bow_id = ? AND COALESCE(is_active, true) = true
+                    )
+                    GROUP BY indicator_id, year, period
+                ) b ON a.indicator_id = b.indicator_id
+                    AND a.year        = b.year
+                    AND COALESCE(a.period, '')  = COALESCE(b.period, '')
+                    AND a.loaded_at   = b.max_loaded
+                ORDER BY a.indicator_id, a.year, a.period""",
+            [bow_id]
+        )
+    except Exception:
+        all_actuals = []
+
+    # Index actuals by indicator_id
+    actuals_by_ind = {}
+    for a in all_actuals:
+        actuals_by_ind.setdefault(a["indicator_id"], []).append({
+            "year":          a["year"],
+            "period":        a.get("period"),
+            "actual_value":  a["actual_value"],
+            "reading_date":  a.get("reading_date"),
+        })
+
+    indicators = []
+    for ind in ind_rows:
+        ind["actuals"] = actuals_by_ind.get(ind["indicator_id"], [])
+        indicators.append(ind)
 
     execution_targets = query(
         f"""SELECT t.*, s.completion, s.notes AS status_notes, s.last_updated, s.updated_by

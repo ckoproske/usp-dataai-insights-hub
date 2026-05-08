@@ -1482,16 +1482,18 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                 </div>
                               </td>
 
-                              {/* Year cells — T: target, A: actual */}
+                              {/* Year cells — T: target, A: actual(s) */}
                               {TARGET_YEARS.map(year => {
                                 const tval = ind[`target_${year}`];
-                                const aval = ind.latest_actual_year === year
-                                  ? ind.latest_actual : null;
+                                // All approved actuals for this year, sorted by period
+                                const yearActuals = (ind.actuals || [])
+                                  .filter(a => a.year === year)
+                                  .sort((a, b) => (a.period || "").localeCompare(b.period || ""));
                                 return (
                                   <td key={year} style={{ ...tdStyle, textAlign: "center",
                                     background: SURFACE }}>
                                     {tval != null ? (
-                                      <div style={{ marginBottom: aval != null ? 4 : 0 }}>
+                                      <div style={{ marginBottom: yearActuals.length ? 4 : 0 }}>
                                         <span style={{ fontSize: 10, fontWeight: 700,
                                           color: TEXT_MUTED }}>T: </span>
                                         <span style={{ fontSize: 13, fontWeight: 700,
@@ -1502,16 +1504,22 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                     ) : (
                                       <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
                                     )}
-                                    {aval != null && (
-                                      <div>
+                                    {yearActuals.map((a, ai) => (
+                                      <div key={ai} style={{ marginTop: ai === 0 ? 0 : 3 }}>
+                                        {a.period && (
+                                          <span style={{ fontSize: 10, fontWeight: 700,
+                                            color: TEXT_MUTED, display: "block" }}>
+                                            {a.period}
+                                          </span>
+                                        )}
                                         <span style={{ fontSize: 10, fontWeight: 700,
                                           color: SUCCESS }}>A: </span>
                                         <span style={{ fontSize: 13, fontWeight: 700,
                                           color: SUCCESS }}>
-                                          {aval}{ind.unit ? ` ${ind.unit}` : ""}
+                                          {a.actual_value}{ind.unit ? ` ${ind.unit}` : ""}
                                         </span>
                                       </div>
-                                    )}
+                                    ))}
                                   </td>
                                 );
                               })}

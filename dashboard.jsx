@@ -1061,7 +1061,9 @@ async function loadFromAPI() {
         });
 
         bow.outcomes.forEach(o => {
-          const inds = byOutcome[o.id];
+          // outcome_id in DB may be fully-qualified ("bow1-o1") while DEFAULT_DATA
+          // uses short form ("o1") — try both so either schema works
+          const inds = byOutcome[o.id] || byOutcome[`${bowId}-${o.id}`];
           if (!inds) return;
           o.impactIndicators = Object.values(inds);
         });
