@@ -1810,20 +1810,118 @@ def get_portfolio_toa(portfolio_id):
     for lane in lanes:
         lid = lane["lane_id"]
         acts = query(
-            f"""SELECT activity_text FROM {SCHEMA}.portfolio_toa_activities
+            f"""SELECT activity_id, activity_text, sort_order
+                FROM {SCHEMA}.portfolio_toa_activities
                 WHERE lane_id = ? ORDER BY sort_order""",
             [lid]
         )
-        lane["activities"] = [a["activity_text"] for a in acts]
+        lane["activities"] = acts  # full objects with activity_id
 
         inds = query(
-            f"""SELECT indicator_text FROM {SCHEMA}.portfolio_toa_lane_indicators
+            f"""SELECT indicator_id, indicator_text, sort_order
+                FROM {SCHEMA}.portfolio_toa_lane_indicators
                 WHERE lane_id = ? ORDER BY sort_order""",
             [lid]
         )
-        lane["indicators"] = [i["indicator_text"] for i in inds]
+        lane["indicators"] = inds  # full objects with indicator_id
 
     return jsonify({"toa": toa, "lanes": lanes})
+
+
+# ── Theory of Action — edit endpoints ─────────────────────────────────────────
+
+@app.route("/api/toa/<portfolio_id>", methods=["PATCH"])
+def update_portfolio_toa(portfolio_id):
+    data    = request.json or {}
+    allowed = {
+        "problem_statement", "col1_label", "col2_label",
+        "cross_indicators_json", "cross_indicators_label",
+        "amb45_intro_text", "amb45_label", "amb45_full_text", "amb45_buckets_json"
+    }
+    sets, vals = [], []
+    for f in allowed:
+        if f in data:
+            sets.append(f"{f} = ?")
+            vals.append(data[f])
+    if not sets:
+        return jsonify({"status": "no_change"})
+    vals.append(portfolio_id)
+    execute(f"UPDATE {SCHEMA}.portfolio_toa SET {', '.join(sets)} WHERE portfolio_id = ?", vals)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/toa/lanes/<lane_id>", methods=["PATCH"])
+def update_toa_lane(lane_id):
+    data    = request.json or {}
+    allowed = {"label", "outcome_text", "icon", "color"}
+    sets, vals = [], []
+    for f in allowed:
+        if f in data:
+            sets.append(f"{f} = ?")
+            vals.append(data[f])
+    if not sets:
+        return jsonify({"status": "no_change"})
+    vals.append(lane_id)
+    execute(f"UPDATE {SCHEMA}.portfolio_toa_lanes SET {', '.join(sets)} WHERE lane_id = ?", vals)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/toa/activities", methods=["POST"])
+def add_toa_activity():
+    data = request.json or {}
+    aid  = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.portfolio_toa_activities
+            (activity_id, lane_id, portfolio_id, activity_text, sort_order)
+            VALUES (?, ?, ?, ?, ?)""",
+        [aid, data["lane_id"], data["portfolio_id"], data["activity_text"], data.get("sort_order", 99)]
+    )
+    return jsonify({"status": "ok", "activity_id": aid})
+
+
+@app.route("/api/toa/activities/<activity_id>", methods=["PATCH"])
+def update_toa_activity(activity_id):
+    data = request.json or {}
+    execute(
+        f"UPDATE {SCHEMA}.portfolio_toa_activities SET activity_text = ? WHERE activity_id = ?",
+        [data.get("activity_text", ""), activity_id]
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/toa/activities/<activity_id>", methods=["DELETE"])
+def delete_toa_activity(activity_id):
+    execute(f"DELETE FROM {SCHEMA}.portfolio_toa_activities WHERE activity_id = ?", [activity_id])
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/toa/lane-indicators", methods=["POST"])
+def add_toa_lane_indicator():
+    data = request.json or {}
+    iid  = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.portfolio_toa_lane_indicators
+            (indicator_id, lane_id, portfolio_id, indicator_text, sort_order)
+            VALUES (?, ?, ?, ?, ?)""",
+        [iid, data["lane_id"], data["portfolio_id"], data["indicator_text"], data.get("sort_order", 99)]
+    )
+    return jsonify({"status": "ok", "indicator_id": iid})
+
+
+@app.route("/api/toa/lane-indicators/<indicator_id>", methods=["PATCH"])
+def update_toa_lane_indicator(indicator_id):
+    data = request.json or {}
+    execute(
+        f"UPDATE {SCHEMA}.portfolio_toa_lane_indicators SET indicator_text = ? WHERE indicator_id = ?",
+        [data.get("indicator_text", ""), indicator_id]
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/toa/lane-indicators/<indicator_id>", methods=["DELETE"])
+def delete_toa_lane_indicator(indicator_id):
+    execute(f"DELETE FROM {SCHEMA}.portfolio_toa_lane_indicators WHERE indicator_id = ?", [indicator_id])
+    return jsonify({"status": "ok"})
 
 
 # ── Portfolio full detail ───────────────────────────────────────────────────────
