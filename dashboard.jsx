@@ -5515,27 +5515,11 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       </div>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Reporting"},{id:"partners",label:"Partners"},{id:"decision-insights",label:"Decision Insights & Forecasts"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Reporting"},{id:"partners",label:"Partners"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
             :tab.id==="partners"?activeTab==="partners"
             :tab.id==="theory-of-action"?activeTab==="theory-of-action"
-            :tab.id==="decision-insights"?activeTab==="decision-insights"
             :inMeasurement;
-          if(tab.id==="decision-insights") {
-            return (
-              <button key={tab.id} onClick={()=>setActiveTab("decision-insights")}
-                style={{padding:"8px 14px",fontWeight:600,fontSize:12,cursor:"pointer",letterSpacing:0.2,
-                  border:"1.5px solid "+(active?pc.color:ACCENT+"66"),borderRadius:7,
-                  background:active?pc.color+"18":ACCENT+"08",
-                  color:active?pc.color:ACCENT,
-                  display:"flex",alignItems:"center",gap:5,
-                  alignSelf:"center",marginLeft:8,
-                  transition:"all .15s"}}>
-                {tab.label}
-                <span style={{fontSize:11,opacity:0.8}}>↗</span>
-              </button>
-            );
-          }
           return <button key={tab.id}
             onClick={()=>{
               if(tab.id==="portfolio-overview") setActiveTab("portfolio-overview");
@@ -5657,23 +5641,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         )}
         {activeTab==="partners"&&(
           <PortfolioPartnersView portId={portId} portColor={pc}/>
-        )}
-        {activeTab==="decision-insights"&&(
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:360}}>
-            <div style={{textAlign:"center",maxWidth:480}}>
-              <div style={{width:56,height:56,borderRadius:16,background:pc.color+"15",border:"1.5px solid "+pc.color+"33",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:26}}>
-                ✦
-              </div>
-              <div style={{fontSize:20,fontWeight:700,color:TEXT,marginBottom:10}}>Decision Insights & Forecasts</div>
-              <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,marginBottom:24}}>
-                This view will connect directly to the portfolio dashboard within our AI-enabled forecasting and analysis tool, surfacing predictive insights, scenario models, and decision-support signals for this portfolio.
-              </div>
-              <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",borderRadius:20,background:pc.color+"12",border:"1px solid "+pc.color+"33"}}>
-                <span style={{width:7,height:7,borderRadius:"50%",background:pc.color,display:"inline-block",animation:"pulse 2s ease-in-out infinite"}}/>
-                <span style={{fontSize:12,fontWeight:600,color:pc.color}}>Coming Soon</span>
-              </div>
-            </div>
-          </div>
         )}
         {activeTab==="theory-of-action"&&(
           <div style={{margin:"0 -32px",overflowX:"auto"}}>
