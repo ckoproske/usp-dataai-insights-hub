@@ -3030,6 +3030,7 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
   const [editId, setEditId]           = useState(null);
   const [editValue, setEditValue]     = useState("");
   const [working, setWorking]         = useState(false);
+  const [actionError, setActionError] = useState(null);
   const [expandedId, setExpandedId]   = useState(null);
   const [actualsCache, setActualsCache] = useState({});
 
@@ -3046,11 +3047,17 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
   const approve = async (id, val) => {
     setWorking(true);
     onRemove(id);   // disappear immediately
-    await api(`/api/pending-actuals/${id}/approve`, {
-      method: "POST",
-      body: JSON.stringify({ reviewed_value: val ? parseFloat(val) : undefined }),
-    });
-    setWorking(false); setEditId(null); onRefresh();
+    try {
+      const res = await api(`/api/pending-actuals/${id}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ reviewed_value: val ? parseFloat(val) : undefined }),
+      });
+      if (res?.error) setActionError(res.error);
+    } catch (e) {
+      setActionError("Approval failed — please refresh and try again.");
+    } finally {
+      setWorking(false); setEditId(null); onRefresh();
+    }
   };
 
   const reject = async () => {
@@ -3059,11 +3066,17 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
     setWorking(true);
     onRemove(id);   // disappear immediately
     setRejectId(null); setRejectNotes("");
-    await api(`/api/pending-actuals/${id}/reject`, {
-      method: "POST",
-      body: JSON.stringify({ reviewer_notes: rejectNotes }),
-    });
-    setWorking(false); onRefresh();
+    try {
+      const res = await api(`/api/pending-actuals/${id}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reviewer_notes: rejectNotes }),
+      });
+      if (res?.error) setActionError(res.error);
+    } catch (e) {
+      setActionError("Rejection failed — please refresh and try again.");
+    } finally {
+      setWorking(false); onRefresh();
+    }
   };
 
   if (loading) return (
@@ -3080,6 +3093,17 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
 
   return (
     <>
+      {/* Action error banner */}
+      {actionError && (
+        <div style={{ marginBottom: 12, padding: "10px 16px", borderRadius: 8,
+          background: "#FEF2F2", border: "1px solid #FEE2E2", color: "#991B1B",
+          fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>⚠ {actionError}</span>
+          <button onClick={() => setActionError(null)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 16, color: "#991B1B", lineHeight: 1 }}>×</button>
+        </div>
+      )}
       {/* Reject modal */}
       {rejectId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(48,58,68,0.5)",

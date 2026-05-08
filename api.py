@@ -1259,7 +1259,7 @@ def approve_actual(pending_id):
             f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
                 (actual_id, indicator_id, bow_id, outcome_id, year, period,
                  actual_value, reading_date, source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
             [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
              r["year"], r.get("period"), reviewed_value,
              r.get("reading_date"), r.get("source_notes"), reviewed_by]
@@ -1269,7 +1269,7 @@ def approve_actual(pending_id):
             f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
                 (actual_id, indicator_id, portfolio_id, outcome_id, year, period,
                  actual_value, reading_date, source_notes, loaded_by, loaded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
             [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
              r["year"], r.get("period"), reviewed_value,
              r.get("reading_date"), r.get("source_notes"), reviewed_by]
