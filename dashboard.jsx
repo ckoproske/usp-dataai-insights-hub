@@ -5515,9 +5515,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       </div>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Reporting"},{id:"investments",label:"Investments"},{id:"partners",label:"Partners"},{id:"decision-insights",label:"Decision Insights & Forecasts"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Reporting"},{id:"partners",label:"Partners"},{id:"decision-insights",label:"Decision Insights & Forecasts"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
-            :tab.id==="investments"?activeTab==="investments"
             :tab.id==="partners"?activeTab==="partners"
             :tab.id==="theory-of-action"?activeTab==="theory-of-action"
             :tab.id==="decision-insights"?activeTab==="decision-insights"
@@ -5540,7 +5539,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
           return <button key={tab.id}
             onClick={()=>{
               if(tab.id==="portfolio-overview") setActiveTab("portfolio-overview");
-              else if(tab.id==="investments") setActiveTab("investments");
               else if(tab.id==="partners") setActiveTab("partners");
               else if(tab.id==="theory-of-action") setActiveTab("theory-of-action");
               else if(!inMeasurement) setActiveTab("portfolio-progress");
@@ -5656,9 +5654,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         )}
         {activeTab==="portfolio-progress"&&(
           <PortfolioOutcomesView portId={portId} portfolio={portfolio} bows={bows} portColor={pc} onChange={p=>onUpdatePortfolio(p)} initialIdx={activePortfolioOutcomeIdx} portShortTitles={SHORT_TITLES} onNavigateToStrategy={onNavigateToStrategy}/>
-        )}
-        {activeTab==="investments"&&(
-          <PortfolioInvestmentsRollup bows={bows} portColor={pc} portId={portId} onUpdateBows={onUpdateBows}/>
         )}
         {activeTab==="partners"&&(
           <PortfolioPartnersView portId={portId} portColor={pc}/>
