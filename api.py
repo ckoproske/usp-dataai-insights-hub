@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 from databricks import sql
-import os, uuid, datetime
+import os, uuid, datetime, smtplib, textwrap
+from email.mime.text import MIMEText
 
 app = Flask(__name__)
 
@@ -29,6 +30,34 @@ SCHEMA  = f"{CATALOG}.usp_strategy"
 # Set to False to suspend activity logging during bulk edit sessions.
 # Flip back to True when done.
 LOGGING_ENABLED = True
+
+# ── Email notifications ───────────────────────────────────────────────────────
+# Set SMTP_USER + SMTP_PASSWORD as Databricks App environment variables.
+# Defaults to Office 365; change SMTP_HOST/PORT if your org uses a different relay.
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.office365.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")      # sender address, e.g. insights-hub@gatesfoundation.org
+SMTP_PASS = os.environ.get("SMTP_PASSWORD", "")  # app password for the sender account
+
+def _send_notification_email(to_email, subject, body_text):
+    """Send a plain-text email via SMTP.  Silently logs and continues on any error
+    so a mis-configured mail server never breaks the approval API."""
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"[email] SMTP not configured — skipping notification to {to_email}")
+        return
+    try:
+        msg = MIMEText(body_text, "plain")
+        msg["Subject"] = subject
+        msg["From"]    = SMTP_USER
+        msg["To"]      = to_email
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+            s.ehlo()
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(SMTP_USER, [to_email], msg.as_string())
+        print(f"[email] Sent '{subject}' → {to_email}")
+    except Exception as e:
+        print(f"[email] Failed to send to {to_email}: {e}")
 
 def get_connection():
     token = request.headers.get("X-Forwarded-Access-Token")
@@ -1240,13 +1269,15 @@ def approve_actual(pending_id):
              "pending_actuals_review", reviewed_by]
         )
 
-    current_user  = query("SELECT current_user() AS user")
-    email         = current_user[0]["user"] if current_user else None
-    member        = query(
+    reviewer_email = _actor()
+    reviewer_member = query(
         f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
-        [email]
-    ) if email else []
-    reviewed_by = member[0]["display_name"] if member else (email or "reviewer")
+        [reviewer_email]
+    ) if reviewer_email != "unknown" else []
+    reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
+
+    was_edited = (reviewed_value != r["submitted_value"])
+    decision   = "approved with edit" if was_edited else "approved"
 
     execute(
         f"""UPDATE {SCHEMA}.pending_actuals
@@ -1257,18 +1288,62 @@ def approve_actual(pending_id):
             WHERE pending_id   = ?""",
         [reviewed_value, reviewed_by, pending_id]
     )
-    return jsonify({"status": "ok"})
+
+    # Look up indicator label for the email body
+    ind_rows = query(
+        f"SELECT text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
+        f"SELECT text FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+        [r["indicator_id"], r["indicator_id"]]
+    )
+    ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
+
+    # Send email to submitter (look up email by display name)
+    submitter_rows = query(
+        f"SELECT email FROM {SCHEMA}.team_members WHERE display_name = ? AND is_active = true",
+        [r["submitted_by"]]
+    )
+    if submitter_rows:
+        submitter_email = submitter_rows[0]["email"]
+        val_note = (f"\n\nThe reviewer adjusted your submitted value "
+                    f"from {r['submitted_value']} to {reviewed_value}.") if was_edited else ""
+        body = textwrap.dedent(f"""\
+            Hi {r['submitted_by']},
+
+            Your data submission has been {decision}.
+
+            Indicator: {ind_label}
+            Year / period: {r['year']}{' · ' + r['period'] if r.get('period') else ''}
+            Submitted value: {r['submitted_value']}{val_note}
+
+            Reviewed by: {reviewed_by}
+
+            You can view your submission history in the Data Hub portal under "My Submissions".
+
+            — Measurement & Insights Data Hub
+        """)
+        _send_notification_email(
+            submitter_email,
+            f"Data submission {decision}: {ind_label} ({r['year']})",
+            body
+        )
+
+    return jsonify({"status": "ok", "decision": decision})
 
 @app.route("/api/pending-actuals/<pending_id>/reject", methods=["POST"])
 def reject_actual(pending_id):
-    data = request.json
-    current_user = query("SELECT current_user() AS user")
-    email        = current_user[0]["user"] if current_user else None
-    member       = query(
+    data = request.json or {}
+    row  = query(f"SELECT * FROM {SCHEMA}.pending_actuals WHERE pending_id = ?", [pending_id])
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    r = row[0]
+
+    reviewer_email = _actor(data)
+    reviewer_member = query(
         f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
-        [email]
-    ) if email else []
-    reviewed_by = member[0]["display_name"] if member else (email or "reviewer")
+        [reviewer_email]
+    ) if reviewer_email != "unknown" else []
+    reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
+
     execute(
         f"""UPDATE {SCHEMA}.pending_actuals
             SET status         = 'rejected',
@@ -1278,6 +1353,48 @@ def reject_actual(pending_id):
             WHERE pending_id   = ?""",
         [data.get("reviewer_notes"), reviewed_by, pending_id]
     )
+
+    # Look up indicator label for the email body
+    ind_rows = query(
+        f"SELECT text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
+        f"SELECT text FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+        [r["indicator_id"], r["indicator_id"]]
+    )
+    ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
+
+    # Send email to submitter
+    submitter_rows = query(
+        f"SELECT email FROM {SCHEMA}.team_members WHERE display_name = ? AND is_active = true",
+        [r["submitted_by"]]
+    )
+    if submitter_rows:
+        submitter_email = submitter_rows[0]["email"]
+        reviewer_notes  = data.get("reviewer_notes") or ""
+        body = textwrap.dedent(f"""\
+            Hi {r['submitted_by']},
+
+            Your data submission has been rejected.
+
+            Indicator: {ind_label}
+            Year / period: {r['year']}{' · ' + r['period'] if r.get('period') else ''}
+            Submitted value: {r['submitted_value']}
+
+            Reviewer feedback:
+            {reviewer_notes}
+
+            Reviewed by: {reviewed_by}
+
+            If you have questions or would like to resubmit, please reach out to the MLE team or
+            resubmit corrected data through the Data Hub portal.
+
+            — Measurement & Insights Data Hub
+        """)
+        _send_notification_email(
+            submitter_email,
+            f"Data submission rejected: {ind_label} ({r['year']})",
+            body
+        )
+
     return jsonify({"status": "ok"})
 
 

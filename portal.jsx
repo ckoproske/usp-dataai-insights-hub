@@ -3010,7 +3010,7 @@ function renderSourceNotes(text) {
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
-function ReviewQueue({ queue, loading, onRefresh, indicators, bows, user }) {
+function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, user }) {
   const canAct = user?.permission_level === "MLE";
   const indicatorMap = Object.fromEntries((indicators || []).map(i => [i.indicator_id, i]));
   const bowMap       = Object.fromEntries((bows || []).map(b => [b.bow_id, b]));
@@ -3034,6 +3034,7 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows, user }) {
 
   const approve = async (id, val) => {
     setWorking(true);
+    onRemove(id);   // disappear immediately
     await api(`/api/pending-actuals/${id}/approve`, {
       method: "POST",
       body: JSON.stringify({ reviewed_value: val ? parseFloat(val) : undefined }),
@@ -3043,12 +3044,15 @@ function ReviewQueue({ queue, loading, onRefresh, indicators, bows, user }) {
 
   const reject = async () => {
     if (!rejectNotes.trim()) return;
+    const id = rejectId;
     setWorking(true);
-    await api(`/api/pending-actuals/${rejectId}/reject`, {
+    onRemove(id);   // disappear immediately
+    setRejectId(null); setRejectNotes("");
+    await api(`/api/pending-actuals/${id}/reject`, {
       method: "POST",
       body: JSON.stringify({ reviewer_notes: rejectNotes }),
     });
-    setWorking(false); setRejectId(null); setRejectNotes(""); onRefresh();
+    setWorking(false); onRefresh();
   };
 
   if (loading) return (
@@ -3480,6 +3484,12 @@ function PortalApp() {
     api("/api/pending-actuals?status=pending").then(setQueue).finally(() => setLoadingQueue(false));
   };
 
+  // Optimistic removal — drop the acted-on item immediately so the queue
+  // updates without waiting for a server round-trip.
+  const removeFromQueue = (pendingId) => {
+    setQueue(prev => prev.filter(s => s.pending_id !== pendingId));
+  };
+
   useEffect(() => { if (tab === "queue") loadQueue(); }, [tab]);
 
   const canReview = user?.permission_level === "MLE" || user?.permission_level === "Leadership";
@@ -3622,7 +3632,8 @@ function PortalApp() {
               <Btn variant="secondary" size="sm" onClick={loadQueue}>Refresh</Btn>
             </div>
             <ReviewQueue queue={queue} loading={loadingQueue}
-              onRefresh={loadQueue} indicators={indicators} bows={bows} user={user} />
+              onRefresh={loadQueue} onRemove={removeFromQueue}
+              indicators={indicators} bows={bows} user={user} />
           </>
         )}
       </div>
