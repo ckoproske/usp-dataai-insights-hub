@@ -462,45 +462,52 @@ def update_target_status(target_id):
 @app.route("/api/indicators/<bow_id>")
 def get_indicators(bow_id):
     """Returns BOW indicators with most recent actual per year.
-    One row per (indicator × year) — dashboard accumulates actuals across rows."""
-    rows = query(
-        f"""SELECT
-              i.indicator_id,
-              i.bow_id,
-              i.outcome_id,
-              i.text,
-              i.data_source,
-              i.baseline,
-              i.collection_frequency,
-              i.last_updated,
-              i.unit,
-              i.target_2026,
-              i.target_2027,
-              i.target_2028,
-              i.target_2029,
-              i.target_2030,
-              a.year,
-              a.actual_value,
-              a.reading_date,
-              a.source_notes
-            FROM {SCHEMA}.bow_indicators i
-            LEFT JOIN (
-              SELECT a1.indicator_id, a1.year, a1.actual_value,
-                     a1.reading_date, a1.source_notes
-              FROM {SCHEMA}.bow_indicator_actuals a1
-              INNER JOIN (
-                SELECT indicator_id, year, MAX(loaded_at) AS max_loaded
-                FROM {SCHEMA}.bow_indicator_actuals
-                GROUP BY indicator_id, year
-              ) a2 ON a1.indicator_id = a2.indicator_id
-                   AND a1.year        = a2.year
-                   AND a1.loaded_at   = a2.max_loaded
-            ) a ON i.indicator_id = a.indicator_id
-            WHERE i.bow_id = ?
-              AND COALESCE(i.is_active, true) = true
-            ORDER BY i.outcome_id, i.indicator_id, a.year""",
-        [bow_id]
-    )
+    One row per (indicator × year) — dashboard accumulates actuals across rows.
+    Falls back gracefully if optional columns (unit, collection_frequency,
+    last_updated) haven't been added via migration yet."""
+    actuals_join = f"""
+        LEFT JOIN (
+          SELECT a1.indicator_id, a1.year, a1.actual_value,
+                 a1.reading_date, a1.source_notes
+          FROM {SCHEMA}.bow_indicator_actuals a1
+          INNER JOIN (
+            SELECT indicator_id, year, MAX(loaded_at) AS max_loaded
+            FROM {SCHEMA}.bow_indicator_actuals
+            GROUP BY indicator_id, year
+          ) a2 ON a1.indicator_id = a2.indicator_id
+               AND a1.year        = a2.year
+               AND a1.loaded_at   = a2.max_loaded
+        ) a ON i.indicator_id = a.indicator_id
+    """
+    try:
+        rows = query(
+            f"""SELECT
+                  i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
+                  i.baseline, i.collection_frequency, i.last_updated, i.unit,
+                  i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  a.year, a.actual_value, a.reading_date, a.source_notes
+                FROM {SCHEMA}.bow_indicators i
+                {actuals_join}
+                WHERE i.bow_id = ?
+                  AND COALESCE(i.is_active, true) = true
+                ORDER BY i.outcome_id, i.indicator_id, a.year""",
+            [bow_id]
+        )
+    except Exception:
+        # Fallback: omit optional columns if migration hasn't run yet
+        rows = query(
+            f"""SELECT
+                  i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
+                  i.baseline,
+                  NULL AS collection_frequency, NULL AS last_updated, NULL AS unit,
+                  i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  a.year, a.actual_value, a.reading_date, a.source_notes
+                FROM {SCHEMA}.bow_indicators i
+                {actuals_join}
+                WHERE i.bow_id = ?
+                ORDER BY i.outcome_id, i.indicator_id, a.year""",
+            [bow_id]
+        )
     return jsonify(rows)
 
 @app.route("/api/portfolio-actuals/<portfolio_id>")
