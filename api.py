@@ -1256,23 +1256,35 @@ def approve_actual(pending_id):
         reviewed_value = data.get("reviewed_value", r["submitted_value"])
         reviewed_by    = data.get("reviewed_by", "dashboard")
 
+        # Look up outcome_id from the indicator row (pending_actuals doesn't store it)
+        ind_meta = query(
+            f"SELECT outcome_id FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?",
+            [r["indicator_id"]]
+        )
+        outcome_id = ind_meta[0]["outcome_id"] if ind_meta else r.get("outcome_id")
+
         if level == "bow":
             execute(
                 f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
                     (actual_id, indicator_id, bow_id, outcome_id, year, period,
                      actual_value, reading_date, source_notes, loaded_by, loaded_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
-                [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
+                [new_id(), r["indicator_id"], r["entity_id"], outcome_id,
                  r["year"], r.get("period"), reviewed_value,
                  r.get("reading_date"), r.get("source_notes"), reviewed_by]
             )
         elif level == "portfolio":
+            ind_meta_port = query(
+                f"SELECT outcome_id FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+                [r["indicator_id"]]
+            )
+            port_outcome_id = ind_meta_port[0]["outcome_id"] if ind_meta_port else r.get("outcome_id")
             execute(
                 f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
                     (actual_id, indicator_id, portfolio_id, outcome_id, year, period,
                      actual_value, reading_date, source_notes, loaded_by, loaded_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
-                [new_id(), r["indicator_id"], r["entity_id"], r.get("outcome_id"),
+                [new_id(), r["indicator_id"], r["entity_id"], port_outcome_id,
                  r["year"], r.get("period"), reviewed_value,
                  r.get("reading_date"), r.get("source_notes"), reviewed_by]
             )
