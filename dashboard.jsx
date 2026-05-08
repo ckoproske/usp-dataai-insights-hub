@@ -7037,6 +7037,7 @@ function MeasurementHierarchyView() {
           <defs>
             <marker id="mh-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#94A3B8"/></marker>
             <marker id="mh-arrow-sel" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill={sel?.color||"#94A3B8"}/></marker>
+            <marker id="mh-arrow-agg" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#7C3AED"/></marker>
           </defs>
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`} onClick={()=>setSelected(null)}>
 
@@ -7053,6 +7054,22 @@ function MeasurementHierarchyView() {
                 </g>
               );
             })}
+
+            {/* BOW Outcomes → Portfolio Outcomes aggregation (upward, routed left) */}
+            {(()=>{
+              const bo=NODES.find(n=>n.id==="bow-outcomes"), po=NODES.find(n=>n.id==="port-outcomes");
+              const x1=0, y1=bo.y+BOX_H/2, y2=po.y+BOX_H/2, lx=-36;
+              const isSel=selected==="bow-outcomes"||selected==="port-outcomes";
+              return (
+                <g opacity={selected&&!isSel?0.12:1}>
+                  <path d={`M ${x1},${y1} H ${lx} V ${y2} H ${x1}`} fill="none"
+                    stroke="#7C3AED" strokeWidth={isSel?2:1.2} strokeDasharray="5 3"
+                    markerEnd="url(#mh-arrow-agg)"/>
+                  <text x={lx-4} y={(y1+y2)/2} fontSize={9} fill="#7C3AED" fontStyle="italic"
+                    textAnchor="end" dominantBaseline="middle">aggregates to</text>
+                </g>
+              );
+            })()}
 
             {/* Lateral connector edges */}
             {latWithPos.map(lat=>
