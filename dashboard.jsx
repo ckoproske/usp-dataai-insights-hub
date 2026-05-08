@@ -1655,7 +1655,7 @@ function IndicatorTile({ ind, iIdx, activeYear }) {
             <XAxis dataKey="label" tick={({x,y,payload})=>{
               const isBase = payload.value==="Base";
               const isHL   = !isBase && payload.value.includes("'"+String(activeYear).slice(2));
-              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?800:400} fill={isHL?ACCENT:TEXT_SUB}>{isBase?"B":payload.value}</text>;
+              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?700:400} fill={TEXT_SUB}>{isBase?"B":payload.value}</text>;
             }}/>
             <YAxis tick={{fontSize:9,fill:TEXT_SUB}}/>
             <Tooltip contentStyle={{fontSize:11,borderRadius:6,border:"1px solid "+BORDER}}
