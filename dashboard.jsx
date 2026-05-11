@@ -6138,7 +6138,15 @@ function AllInvestmentsView() {
                             boxSizing: "border-box" }} />
                       </th>
                       {plainCol("BOW", false)}
-                      {sortCol("amount", "Amount")}
+                      <th onClick={() => handleColSort("amount")}
+                        style={{ ...hStyle(sortBy === "amount"), borderRight: "1px solid " + BORDER,
+                          cursor: "pointer", userSelect: "none" }}>
+                        Total Amount<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "amount" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
+                        <div style={{ fontSize: 9, fontWeight: 400, color: TEXT_MUTED,
+                          textTransform: "none", letterSpacing: 0, marginTop: 2, fontStyle: "italic" }}>
+                          Hover for By Year breakouts
+                        </div>
+                      </th>
                       {plainCol("Start Date", false)}
                       {plainCol("End Date", false)}
                       {plainCol("Co-Funding Team", false)}
