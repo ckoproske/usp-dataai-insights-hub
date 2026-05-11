@@ -6478,13 +6478,19 @@ function AllInvestmentsView() {
         const { rows, rect } = paymentPopover;
         const top  = rect.bottom + 6 + window.scrollY;
         const left = rect.left + window.scrollX;
+        const fmtExact = (n) => {
+          const num = parseFloat(n) || 0;
+          const abs = Math.abs(num).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+          return (num < 0 ? "-$" : "$") + abs;
+        };
+        const total = rows ? rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0) : 0;
         return (
           <div onMouseEnter={() => clearTimeout(popoverTimeout.current)}
             onMouseLeave={hidePayments}
             style={{ position: "absolute", top, left, zIndex: 300,
               background: SURFACE, border: "1px solid " + BORDER, borderRadius: 10,
               boxShadow: "0 6px 24px rgba(10,37,64,0.13)", padding: "12px 16px",
-              minWidth: 180, pointerEvents: "auto" }}>
+              minWidth: 200, pointerEvents: "auto" }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
               textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
               Committed by Year
@@ -6497,18 +6503,18 @@ function AllInvestmentsView() {
               <>
                 {rows.map(r => (
                   <div key={r.year} style={{ display: "flex", justifyContent: "space-between",
-                    gap: 20, fontSize: 11, padding: "2px 0",
+                    gap: 24, fontSize: 11, padding: "2px 0",
                     borderBottom: "1px solid " + BORDER + "50" }}>
                     <span style={{ color: TEXT_SUB }}>{r.year}</span>
-                    <span style={{ fontWeight: 600, color: r.amount < 0 ? "#F87171" : TEXT }}>
-                      {fmtM(r.amount)}
+                    <span style={{ fontWeight: 600, color: parseFloat(r.amount) < 0 ? "#F87171" : TEXT }}>
+                      {fmtExact(r.amount)}
                     </span>
                   </div>
                 ))}
                 <div style={{ display: "flex", justifyContent: "space-between",
-                  gap: 20, fontSize: 11, fontWeight: 700, paddingTop: 6, color: TEXT }}>
+                  gap: 24, fontSize: 11, fontWeight: 700, paddingTop: 6, color: TEXT }}>
                   <span>Total</span>
-                  <span>{fmtM(rows.reduce((s, r) => s + (r.amount || 0), 0))}</span>
+                  <span style={{ color: total < 0 ? "#F87171" : TEXT }}>{fmtExact(total)}</span>
                 </div>
               </>
             )}
