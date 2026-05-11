@@ -1032,8 +1032,10 @@ def portal_jsx():
 @app.route("/api/me")
 def get_me():
     """Returns current user's display name and permission level from team_members."""
-    current_user = query("SELECT current_user() AS user")
-    email = current_user[0]["user"] if current_user else None
+    email = request.headers.get("X-Forwarded-Email", "").strip() or None
+    if not email:
+        current_user = query("SELECT current_user() AS user")
+        email = current_user[0]["user"] if current_user else None
     if not email:
         return jsonify({"email": None, "display_name": "Unknown", "permission_level": "Team", "portfolio_id": None})
     member = query(
@@ -1189,8 +1191,10 @@ def portal_debug():
 @app.route("/api/pending-actuals/mine")
 def get_my_actuals():
     """Returns submissions by the current logged-in user, newest first."""
-    current_user = query("SELECT current_user() AS user")
-    email = current_user[0]["user"] if current_user else None
+    email = request.headers.get("X-Forwarded-Email", "").strip() or None
+    if not email:
+        current_user = query("SELECT current_user() AS user")
+        email = current_user[0]["user"] if current_user else None
     member = query(
         f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
@@ -1227,8 +1231,10 @@ def get_pending_actuals():
 def submit_actual():
     """Submit a new actual for review. Name and role resolved from Databricks login token."""
     data = request.json
-    current_user = query("SELECT current_user() AS user")
-    email = current_user[0]["user"] if current_user else "unknown"
+    email = request.headers.get("X-Forwarded-Email", "").strip() or None
+    if not email:
+        current_user = query("SELECT current_user() AS user")
+        email = current_user[0]["user"] if current_user else "unknown"
     member = query(
         f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
@@ -1478,8 +1484,10 @@ def get_indicator_context(indicator_id):
 def submit_insight():
     """Submit a qualitative insight directly to bow_notes (no review queue)."""
     data = request.json
-    current_user_row = query("SELECT current_user() AS user")
-    email = current_user_row[0]["user"] if current_user_row else "unknown"
+    email = request.headers.get("X-Forwarded-Email", "").strip() or None
+    if not email:
+        current_user_row = query("SELECT current_user() AS user")
+        email = current_user_row[0]["user"] if current_user_row else "unknown"
     member = query(
         f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
