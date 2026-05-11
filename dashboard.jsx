@@ -2789,6 +2789,15 @@ function fmtNoteDate(ts) {
   if (isNaN(d)) return "";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+function fmtInvDate(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  if (isNaN(d)) return ts.split("T")[0] || ts;
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const yr = String(d.getFullYear()).slice(2);
+  return `${m}/${day}/${yr}`;
+}
 
 
 const STAGE_FILTER_OPTIONS = [
@@ -6266,7 +6275,7 @@ function AllInvestmentsView() {
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
-                      {inv.startDate || "—"}
+                      {fmtInvDate(inv.startDate)}
                     </span>
                   </div>
 
@@ -6274,7 +6283,7 @@ function AllInvestmentsView() {
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
-                      {inv.endDate || "—"}
+                      {fmtInvDate(inv.endDate)}
                     </span>
                   </div>
 
