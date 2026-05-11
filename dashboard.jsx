@@ -6018,26 +6018,22 @@ function AllInvestmentsView() {
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        {bowOptions.length > 0 && (
-          <select value={selectedBow} onChange={e => setSelectedBow(e.target.value)}
-            style={{ border: "1px solid " + BORDER, borderRadius: 8,
-              padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
-              outline: "none", color: selectedBow !== "all" ? TEXT : TEXT_MUTED,
-              background: SURFACE, cursor: "pointer", maxWidth: 220 }}>
-            <option value="all">All BOWs</option>
-            {bowOptions.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        )}
-        {coFundingOptions.length > 0 && (
-          <select value={selectedCoFundingTeam} onChange={e => setSelectedCoFundingTeam(e.target.value)}
-            style={{ border: "1px solid " + BORDER, borderRadius: 8,
-              padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
-              outline: "none", color: selectedCoFundingTeam !== "all" ? TEXT : TEXT_MUTED,
-              background: SURFACE, cursor: "pointer", maxWidth: 200 }}>
-            <option value="all">All Co-Funding Teams</option>
-            {coFundingOptions.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        )}
+        <select value={selectedBow} onChange={e => setSelectedBow(e.target.value)}
+          style={{ border: "1px solid " + BORDER, borderRadius: 8,
+            padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
+            outline: "none", color: selectedBow !== "all" ? TEXT : TEXT_MUTED,
+            background: SURFACE, cursor: "pointer", maxWidth: 220 }}>
+          <option value="all">All BOWs</option>
+          {bowOptions.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <select value={selectedCoFundingTeam} onChange={e => setSelectedCoFundingTeam(e.target.value)}
+          style={{ border: "1px solid " + BORDER, borderRadius: 8,
+            padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
+            outline: "none", color: selectedCoFundingTeam !== "all" ? TEXT : TEXT_MUTED,
+            background: SURFACE, cursor: "pointer", maxWidth: 200 }}>
+          <option value="all">All Co-Funding Teams</option>
+          {coFundingOptions.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
         <div style={{ position: "relative", minWidth: 200 }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search grantee, initiative, notes…"
