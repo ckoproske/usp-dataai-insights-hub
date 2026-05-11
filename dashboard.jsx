@@ -6142,41 +6142,74 @@ function AllInvestmentsView() {
                 </div>
               </div>
             ) : isStrategyLevel ? (
-              /* Bar chart — all portfolios */
+              /* Stacked bar chart — stages L→R, stacked by portfolio */
               <div style={{ background: SURFACE, borderRadius: 12, border: "1px solid " + BORDER, padding: "20px 24px" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 20 }}>
                   In-Process Investments by Stage
                 </div>
                 {(() => {
-                  const maxCount = Math.max(1, ...PIPELINE_STAGES.map(s =>
+                  const portList = portfolioOptions.filter(p => p.id !== "all");
+                  const maxTotal = Math.max(1, ...PIPELINE_STAGES.map(s =>
                     pipelineInvs.filter(inv => inv.stage === s).length));
-                  return PIPELINE_STAGES.map(stage => {
-                    const stageInvs = pipelineInvs.filter(inv => inv.stage === stage);
-                    const pct = (stageInvs.length / maxCount) * 100;
-                    return (
-                      <div key={stage} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                        <div style={{ width: 170, fontSize: 11, textAlign: "right", flexShrink: 0,
-                          color: stageInvs.length > 0 ? TEXT : TEXT_MUTED }}>
-                          {stage}
-                        </div>
-                        <div style={{ flex: 1, background: SURFACE_2, borderRadius: 5, height: 30,
-                          overflow: "hidden", border: "1px solid " + BORDER }}>
-                          {stageInvs.length > 0 && (
-                            <div style={{ width: pct + "%", background: pc.color, height: "100%",
-                              borderRadius: 4, minWidth: 30, display: "flex", alignItems: "center",
-                              paddingLeft: 10 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                                {stageInvs.length}
-                              </span>
+                  const BAR_MAX_H = 160;
+                  return (
+                    <>
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+                        {PIPELINE_STAGES.map(stage => {
+                          const stageInvs = pipelineInvs.filter(inv => inv.stage === stage);
+                          const total = stageInvs.length;
+                          const barH = Math.max(0, (total / maxTotal) * BAR_MAX_H);
+                          return (
+                            <div key={stage} style={{ flex: 1, display: "flex", flexDirection: "column",
+                              alignItems: "center", gap: 6, minWidth: 0 }}>
+                              {/* count label */}
+                              <div style={{ fontSize: 11, fontWeight: 700,
+                                color: total > 0 ? TEXT : "transparent",
+                                height: 16, lineHeight: "16px" }}>
+                                {total || ""}
+                              </div>
+                              {/* fixed-height track, bar anchored at bottom */}
+                              <div style={{ width: "100%", height: BAR_MAX_H,
+                                display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                                <div style={{ width: "100%", height: barH,
+                                  display: "flex", flexDirection: "column",
+                                  borderRadius: 4, overflow: "hidden" }}>
+                                  {portList.map(p => {
+                                    const cnt = stageInvs.filter(inv => inv.portfolio_id === p.id).length;
+                                    if (!cnt) return null;
+                                    return (
+                                      <div key={p.id}
+                                        title={`${p.name}: ${cnt}`}
+                                        style={{ width: "100%",
+                                          height: ((cnt / total) * 100) + "%",
+                                          background: PORT_COLORS[p.id]?.color || "#94A3B8" }} />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              {/* stage label */}
+                              <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.2,
+                                color: total > 0 ? TEXT : TEXT_MUTED, textAlign: "center",
+                                lineHeight: 1.3, wordBreak: "break-word" }}>
+                                {stage}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        {stageInvs.length === 0 && (
-                          <span style={{ fontSize: 11, color: TEXT_MUTED, width: 24 }}>—</span>
-                        )}
+                          );
+                        })}
                       </div>
-                    );
-                  });
+                      {/* Legend */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px",
+                        marginTop: 16, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                        {portList.filter(p => pipelineInvs.some(inv => inv.portfolio_id === p.id)).map(p => (
+                          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            <div style={{ width: 9, height: 9, borderRadius: 2,
+                              background: PORT_COLORS[p.id]?.color || "#94A3B8", flexShrink: 0 }} />
+                            <span style={{ fontSize: 10, color: TEXT_MUTED }}>{p.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
                 })()}
               </div>
             ) : (
