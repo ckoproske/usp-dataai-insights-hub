@@ -1,4 +1,4 @@
-// ── CDN Shims — replaces import statements (loaded via index.html script tags) ──
+﻿// ── CDN Shims — replaces import statements (loaded via index.html script tags) ──
 const { useState, useEffect, useRef, useCallback } = React;
 const _Recharts = window.Recharts || window.recharts || {};
 const { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -6065,373 +6065,389 @@ function AllInvestmentsView() {
         </div>
       ) : (
         <div style={{ background: SURFACE, borderRadius: 12,
-          border: "1px solid " + BORDER, overflow: "visible", position: "relative" }}>
-
-          {/* Column headers */}
-          {(() => {
-            const hStyle = (active) => ({ padding: "9px 12px", fontSize: 10, fontWeight: 700,
-              color: active ? pc.color : TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8 });
-            const sortArrow = (field) => sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕";
-            const sortCol = (field, label, borderR) => (
-              <div onClick={() => handleColSort(field)}
-                style={{ ...hStyle(sortBy === field), borderRight: borderR ? "1px solid " + BORDER : "none",
-                  cursor: "pointer", userSelect: "none" }}>
-                {label}<span style={{ fontSize: 8, opacity: 0.7 }}>{sortArrow(field)}</span>
-              </div>
-            );
-            const plainCol = (label, borderR) => (
-              <div style={{ ...hStyle(false), borderRight: borderR ? "1px solid " + BORDER : "none" }}>{label}</div>
-            );
-            return (
-              <div style={{ display: "grid",
-                gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 90px 90px 180px 110px 2fr",
-                background: SURFACE_2, borderBottom: "2px solid " + BORDER,
-                borderRadius: "11px 11px 0 0" }}>
-                {plainCol("Investment ID", true)}
-                {sortCol("initiative", "Investment Title", true)}
-                {sortCol("grantee", "Grantee", true)}
-                {plainCol("Description", true)}
-                <div style={{ borderRight: "1px solid " + BORDER, padding: "5px 12px" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: ownerSearch ? pc.color : TEXT_SUB,
-                    textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
-                    Investment Owner
-                  </div>
-                  <input value={ownerSearch} onChange={e => setOwnerSearch(e.target.value)}
-                    placeholder="Filter by name…"
-                    style={{ width: "100%", border: "1px solid " + (ownerSearch ? pc.color + "60" : BORDER),
-                      borderRadius: 4, padding: "2px 6px", fontSize: 10, fontFamily: "inherit",
-                      outline: "none", color: TEXT, background: ownerSearch ? pc.color + "08" : BG,
-                      boxSizing: "border-box" }} />
-                </div>
-                {plainCol("BOW", true)}
-                {sortCol("amount", "Amount", true)}
-                {plainCol("Start Date", true)}
-                {plainCol("End Date", true)}
-                {plainCol("Co-Funding Team", true)}
-                <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
-                  <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-                    style={{ ...hStyle(filterStatuses.length > 0), padding: "7px 12px", cursor: "pointer",
-                      userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                    {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
-                    <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
-                  </div>
-                  <div onClick={() => handleColSort("approver")}
-                    style={{ ...hStyle(sortBy === "approver"), padding: "4px 12px", cursor: "pointer",
-                      borderTop: "1px solid " + BORDER + "60", userSelect: "none",
-                      display: "flex", alignItems: "center", gap: 2 }}>
-                    Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
-                  </div>
-                  {openDropdown === "status" && (
-                    <>
-                      <div onClick={() => setOpenDropdown(null)}
-                        style={{ position: "fixed", inset: 0, zIndex: 99 }} />
-                      <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
-                        background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
-                        padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
-                        {STAGE_FILTER_OPTIONS.map(opt => {
-                          const isClear = opt.value === "";
-                          const isSelected = isClear ? filterStatuses.length === 0 : filterStatuses.includes(opt.value);
-                          return (
-                            <div key={opt.value}
-                              onClick={() => {
-                                if (isClear) { setFilterStatuses([]); setOpenDropdown(null); }
-                                else setFilterStatuses(prev =>
-                                  prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]
-                                );
-                              }}
-                              style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                                background: isSelected ? pc.color + "12" : "transparent",
-                                color: isSelected ? pc.color : TEXT,
-                                fontWeight: isSelected ? 700 : 400,
-                                display: "flex", alignItems: "center", gap: 8 }}>
-                              {!isClear && (
-                                <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
-                                  border: "1.5px solid " + (isSelected ? pc.color : BORDER),
-                                  background: isSelected ? pc.color : "transparent",
-                                  display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                                  {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
-                                </span>
-                              )}
-                              {opt.label}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-                {plainCol("Notes", false)}
-              </div>
-            );
-          })()}
-
-          {filtered.length === 0
-            ? <div style={{ padding: "32px 24px", textAlign: "center",
-                color: TEXT_SUB, fontSize: 13 }}>
-                No investments match the selected filters. Try adjusting the status filter.
-              </div>
-            : null}
-          {filtered.map((inv, idx) => {
-            const isEditing  = editingId === inv.id;
-            const isSaving   = savingId === inv.id;
-            const rowBg      = idx % 2 === 0 ? SURFACE : SURFACE_2;
-            const statusColor = inv.status === "Active"     ? "#10B981"
-              : inv.status === "In Process" ? "#60A5FA"
-              : inv.status === "Closed"     ? "#9CA3AF"
-              : inv.status === "Cancelled"  ? "#F87171"
-              : TEXT_MUTED;
-            const rowPc = inv.portfolio_id && PORT_COLORS[inv.portfolio_id]
-              ? PORT_COLORS[inv.portfolio_id]
-              : pc;
-
-            return (
-              <div key={inv.id}
-                style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
-                <div style={{ display: "grid",
-                  gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 90px 90px 180px 110px 2fr",
-                  background: isEditing ? "#F0F7FF" : rowBg }}>
-
-                  {/* Investment ID */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, fontFamily: "monospace" }}>
-                      {inv.investmentUrl
-                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
-                            style={{ color: "#3086AB", textDecoration: "none" }}
-                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
-                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
-                            {inv.id || "—"}
-                          </a>
-                        : <span style={{ color: TEXT_SUB }}>{inv.id || "—"}</span>
-                      }
-                    </span>
-                  </div>
-
-                  {/* Initiative */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 12, lineHeight: 1.35 }}>
-                      <span style={{ color: TEXT, fontWeight: 500 }}>{inv.initiative || "—"}</span>
-                    </div>
-                    {inv.type && (
-                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>{inv.type}</div>
-                    )}
-                  </div>
-
-                  {/* Grantee */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
-                      {inv.grantee || "—"}
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
-                    <div style={{ fontSize: 11, color: TEXT_SUB, lineHeight: 1.5 }}>
-                      {inv.description || <span style={{ color: TEXT_MUTED }}>—</span>}
-                    </div>
-                  </div>
-
-                  {/* Investment Owner */}
-                  <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", flexDirection: "column", gap: 2, justifyContent: "center" }}>
-                    <span style={{ fontSize: 11, color: TEXT, lineHeight: 1.4 }}>
-                      {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
-                    </span>
-                    {inv.secondaryOwner && (
-                      <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.4 }}>
-                        {inv.secondaryOwner}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* BOW */}
-                  <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
-                    {inv.bowTitles && inv.bowTitles.length > 0
-                      ? inv.bowTitles.map((title, i) => {
-                          const bowPc = PORT_COLORS[inv.portfolio_id] || rowPc;
-                          return (
-                            <span key={i} style={{ fontSize: 10, fontWeight: 600,
-                              color: bowPc.color, background: bowPc.color + "15",
-                              borderRadius: 4, padding: "2px 6px",
-                              wordBreak: "break-word", alignSelf: "flex-start" }}>
-                              {title}
-                            </span>
-                          );
-                        })
-                      : <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
-                    }
-                  </div>
-
-                  {/* Amount */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
-                      {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
-                    </span>
-                  </div>
-
-                  {/* Start Date */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
-                      {fmtInvDate(inv.startDate)}
-                    </span>
-                  </div>
-
-                  {/* End Date */}
-                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
-                      {fmtInvDate(inv.endDate)}
-                    </span>
-                  </div>
-
-                  {/* Co-Funding Teams */}
-                  {(() => {
-                    const teams = inv.coFundingTeams
-                      ? inv.coFundingTeams.split(", ").filter(Boolean)
-                      : [];
-                    return (
-                      <div style={{ padding: "9px 12px", borderRight: "1px solid " + BORDER,
-                        display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
-                        {teams.length > 0 ? teams.map((t, ti) => {
-                          const c = teamColor(t);
-                          return (
-                            <span key={ti} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
-                              borderRadius: 20, background: c.bg, color: c.color,
-                              wordBreak: "break-word", alignSelf: "flex-start" }}>
-                              {t}
-                            </span>
-                          );
-                        }) : (
-                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Status */}
-                  <div style={{ padding: "8px 12px", borderRight: "1px solid " + BORDER,
-                    display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
-                    {inv.status ? (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: statusColor,
-                        background: statusColor + "15", borderRadius: 5,
-                        padding: "2px 7px", border: "1px solid " + statusColor + "30",
-                        alignSelf: "flex-start" }}>
-                        {inv.status === "In Process" && inv.stage ? inv.stage : inv.status}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
-                    )}
-                    {inv.status === "In Process" && (
-                      <div style={{ position: "relative" }}>
-                        <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
-                          style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
-                            display: "flex", alignItems: "center", gap: 3,
-                            color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
-                          <span>👤</span>
-                          {inv.approver || "Set approver…"}
-                          <span style={{ fontSize: 8, opacity: 0.6 }}>▼</span>
+          border: "1px solid " + BORDER, overflow: "hidden", position: "relative" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "auto" }}>
+              <colgroup>
+                <col style={{ width: 100 }} />
+                <col style={{ minWidth: 120 }} />
+                <col style={{ minWidth: 100 }} />
+                <col style={{ minWidth: 140 }} />
+                <col style={{ minWidth: 110 }} />
+                <col style={{ width: 130 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 180 }} />
+                <col style={{ width: 110 }} />
+                <col style={{ minWidth: 120 }} />
+              </colgroup>
+              <thead>
+                {(() => {
+                  const hStyle = (active) => ({
+                    padding: "9px 12px", fontSize: 10, fontWeight: 700,
+                    color: active ? pc.color : TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8,
+                    textAlign: "left", verticalAlign: "middle"
+                  });
+                  const sortArrow = (field) => sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕";
+                  const sortCol = (field, label) => (
+                    <th onClick={() => handleColSort(field)}
+                      style={{ ...hStyle(sortBy === field), borderRight: "1px solid " + BORDER,
+                        cursor: "pointer", userSelect: "none" }}>
+                      {label}<span style={{ fontSize: 8, opacity: 0.7 }}>{sortArrow(field)}</span>
+                    </th>
+                  );
+                  const plainCol = (label, lastCol) => (
+                    <th style={{ ...hStyle(false), borderRight: lastCol ? "none" : "1px solid " + BORDER }}>{label}</th>
+                  );
+                  return (
+                    <tr style={{ background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
+                      {plainCol("Investment ID", false)}
+                      {sortCol("initiative", "Investment Title")}
+                      {sortCol("grantee", "Grantee")}
+                      {plainCol("Description", false)}
+                      <th style={{ borderRight: "1px solid " + BORDER, padding: "5px 12px", verticalAlign: "middle" }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: ownerSearch ? pc.color : TEXT_SUB,
+                          textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
+                          Investment Owner
                         </div>
-                        {openDropdown === `appr-${inv.id}` && (
+                        <input value={ownerSearch} onChange={e => setOwnerSearch(e.target.value)}
+                          placeholder="Filter by name…"
+                          style={{ width: "100%", border: "1px solid " + (ownerSearch ? pc.color + "60" : BORDER),
+                            borderRadius: 4, padding: "2px 6px", fontSize: 10, fontFamily: "inherit",
+                            outline: "none", color: TEXT, background: ownerSearch ? pc.color + "08" : BG,
+                            boxSizing: "border-box" }} />
+                      </th>
+                      {plainCol("BOW", false)}
+                      {sortCol("amount", "Amount")}
+                      {plainCol("Start Date", false)}
+                      {plainCol("End Date", false)}
+                      {plainCol("Co-Funding Team", false)}
+                      <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
+                          style={{ ...hStyle(filterStatuses.length > 0), padding: "7px 12px", cursor: "pointer",
+                            userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
+                          <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                        </div>
+                        <div onClick={() => handleColSort("approver")}
+                          style={{ ...hStyle(sortBy === "approver"), padding: "4px 12px", cursor: "pointer",
+                            borderTop: "1px solid " + BORDER + "60", userSelect: "none",
+                            display: "flex", alignItems: "center", gap: 2 }}>
+                          Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
+                        </div>
+                        {openDropdown === "status" && (
                           <>
                             <div onClick={() => setOpenDropdown(null)}
-                              style={{ position: "fixed", inset: 0, zIndex: 199 }} />
-                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 200,
+                              style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
                               background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
-                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
-                              {APPROVERS.map(name => (
-                                <div key={name}
-                                  onClick={() => { saveApprover(inv.id, name); setOpenDropdown(null); }}
-                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                                    background: inv.approver === name ? pc.color + "12" : "transparent",
-                                    color: inv.approver === name ? pc.color : TEXT,
-                                    fontWeight: inv.approver === name ? 700 : 400 }}>
-                                  {name}
-                                </div>
-                              ))}
-                              {inv.approver && (
-                                <div onClick={() => { saveApprover(inv.id, null); setOpenDropdown(null); }}
-                                  style={{ padding: "6px 14px", fontSize: 11, cursor: "pointer",
-                                    color: TEXT_MUTED, borderTop: "1px solid " + BORDER }}>
-                                  Clear
-                                </div>
-                              )}
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180 }}>
+                              {STAGE_FILTER_OPTIONS.map(opt => {
+                                const isClear = opt.value === "";
+                                const isSelected = isClear ? filterStatuses.length === 0 : filterStatuses.includes(opt.value);
+                                return (
+                                  <div key={opt.value}
+                                    onClick={() => {
+                                      if (isClear) { setFilterStatuses([]); setOpenDropdown(null); }
+                                      else setFilterStatuses(prev =>
+                                        prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]
+                                      );
+                                    }}
+                                    style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                      background: isSelected ? pc.color + "12" : "transparent",
+                                      color: isSelected ? pc.color : TEXT,
+                                      fontWeight: isSelected ? 700 : 400,
+                                      display: "flex", alignItems: "center", gap: 8 }}>
+                                    {!isClear && (
+                                      <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+                                        border: "1.5px solid " + (isSelected ? pc.color : BORDER),
+                                        background: isSelected ? pc.color : "transparent",
+                                        display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                        {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                                      </span>
+                                    )}
+                                    {opt.label}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </>
                         )}
-                      </div>
-                    )}
-                  </div>
+                      </th>
+                      {plainCol("Notes", true)}
+                    </tr>
+                  );
+                })()}
+              </thead>
+              <tbody>
+                {filtered.map((inv, idx) => {
+                  const isEditing  = editingId === inv.id;
+                  const isSaving   = savingId === inv.id;
+                  const rowBg      = idx % 2 === 0 ? SURFACE : SURFACE_2;
+                  const rowBorder  = idx < filtered.length - 1 ? "1px solid " + BORDER : "none";
+                  const statusColor = inv.status === "Active"     ? "#10B981"
+                    : inv.status === "In Process" ? "#60A5FA"
+                    : inv.status === "Closed"     ? "#9CA3AF"
+                    : inv.status === "Cancelled"  ? "#F87171"
+                    : TEXT_MUTED;
+                  const rowPc = inv.portfolio_id && PORT_COLORS[inv.portfolio_id]
+                    ? PORT_COLORS[inv.portfolio_id]
+                    : pc;
+                  const tdBase = {
+                    borderRight: "1px solid " + BORDER,
+                    borderBottom: rowBorder,
+                    verticalAlign: "middle",
+                    background: isEditing ? "#F0F7FF" : rowBg,
+                  };
 
-                  {/* Notes */}
-                  <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
-                    {isEditing ? (
-                      <>
-                        <PortfolioNotesEditor
-                          value={inv.internal_notes || ""}
-                          onSave={notes => saveNotes(inv.id, notes)}
-                          isSaving={isSaving}
-                        />
-                        <button onClick={() => setEditingId(null)}
-                          style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: 700,
-                            cursor: "pointer", borderRadius: 5, padding: "2px 7px",
-                            border: "1px solid " + pc.color, background: pc.color,
-                            color: "#fff", whiteSpace: "nowrap" }}>
-                          Done
-                        </button>
-                      </>
-                    ) : (
-                      <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, lineHeight: 1.5,
-                            color: inv.internal_notes ? TEXT : TEXT_MUTED,
-                            fontStyle: inv.internal_notes ? "normal" : "italic" }}>
-                            {inv.internal_notes || "Add note…"}
+                  return (
+                    <React.Fragment key={inv.id}>
+                      <tr>
+
+                        {/* Investment ID */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <span style={{ fontSize: 11, fontFamily: "monospace" }}>
+                            {inv.investmentUrl
+                              ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                                  style={{ color: "#3086AB", textDecoration: "none" }}
+                                  onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                                  onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
+                                  {inv.id || "—"}
+                                </a>
+                              : <span style={{ color: TEXT_SUB }}>{inv.id || "—"}</span>
+                            }
+                          </span>
+                        </td>
+
+                        {/* Initiative */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <div style={{ fontSize: 12, lineHeight: 1.35 }}>
+                            <span style={{ color: TEXT, fontWeight: 500 }}>{inv.initiative || "—"}</span>
                           </div>
-                          {inv.notesUpdatedBy && inv.internal_notes && (
-                            <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3 }}>
-                              {inv.notesUpdatedBy} · {fmtNoteDate(inv.notesUpdatedAt)}
+                          {inv.type && (
+                            <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>{inv.type}</div>
+                          )}
+                        </td>
+
+                        {/* Grantee */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
+                            {inv.grantee || "—"}
+                          </div>
+                        </td>
+
+                        {/* Description */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <div style={{ fontSize: 11, color: TEXT_SUB, lineHeight: 1.5 }}>
+                            {inv.description || <span style={{ color: TEXT_MUTED }}>—</span>}
+                          </div>
+                        </td>
+
+                        {/* Investment Owner */}
+                        <td style={{ ...tdBase, padding: "8px 12px" }}>
+                          <span style={{ fontSize: 11, color: TEXT, lineHeight: 1.4, display: "block" }}>
+                            {inv.owner || <span style={{ color: TEXT_MUTED }}>—</span>}
+                          </span>
+                          {inv.secondaryOwner && (
+                            <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.4, display: "block" }}>
+                              {inv.secondaryOwner}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* BOW */}
+                        <td style={{ ...tdBase, padding: "9px 12px" }}>
+                          {inv.bowTitles && inv.bowTitles.length > 0
+                            ? inv.bowTitles.map((title, i) => {
+                                const bowPc = PORT_COLORS[inv.portfolio_id] || rowPc;
+                                return (
+                                  <span key={i} style={{ fontSize: 10, fontWeight: 600,
+                                    color: bowPc.color, background: bowPc.color + "15",
+                                    borderRadius: 4, padding: "2px 6px",
+                                    marginBottom: i < inv.bowTitles.length - 1 ? 3 : 0,
+                                    wordBreak: "break-word", display: "inline-block" }}>
+                                    {title}
+                                  </span>
+                                );
+                              })
+                            : <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                          }
+                        </td>
+
+                        {/* Amount */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
+                            {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
+                          </span>
+                        </td>
+
+                        {/* Start Date */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
+                            {fmtInvDate(inv.startDate)}
+                          </span>
+                        </td>
+
+                        {/* End Date */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
+                            {fmtInvDate(inv.endDate)}
+                          </span>
+                        </td>
+
+                        {/* Co-Funding Teams */}
+                        {(() => {
+                          const teams = inv.coFundingTeams
+                            ? inv.coFundingTeams.split(", ").filter(Boolean)
+                            : [];
+                          return (
+                            <td style={{ ...tdBase, padding: "9px 12px" }}>
+                              {teams.length > 0 ? teams.map((t, ti) => {
+                                const c = teamColor(t);
+                                return (
+                                  <span key={ti} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px",
+                                    borderRadius: 20, background: c.bg, color: c.color,
+                                    wordBreak: "break-word", display: "inline-block",
+                                    marginBottom: ti < teams.length - 1 ? 3 : 0 }}>
+                                    {t}
+                                  </span>
+                                );
+                              }) : (
+                                <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                              )}
+                            </td>
+                          );
+                        })()}
+
+                        {/* Status */}
+                        <td style={{ ...tdBase, padding: "8px 12px" }}>
+                          {inv.status ? (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: statusColor,
+                              background: statusColor + "15", borderRadius: 5,
+                              padding: "2px 7px", border: "1px solid " + statusColor + "30",
+                              display: "inline-block",
+                              marginBottom: inv.status === "In Process" ? 4 : 0 }}>
+                              {inv.status === "In Process" && inv.stage ? inv.stage : inv.status}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                          )}
+                          {inv.status === "In Process" && (
+                            <div style={{ position: "relative" }}>
+                              <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
+                                style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
+                                  display: "flex", alignItems: "center", gap: 3,
+                                  color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
+                                <span>👤</span>
+                                {inv.approver || "Set approver…"}
+                                <span style={{ fontSize: 8, opacity: 0.6 }}>▼</span>
+                              </div>
+                              {openDropdown === `appr-${inv.id}` && (
+                                <>
+                                  <div onClick={() => setOpenDropdown(null)}
+                                    style={{ position: "fixed", inset: 0, zIndex: 199 }} />
+                                  <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 200,
+                                    background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                                    padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
+                                    {APPROVERS.map(name => (
+                                      <div key={name}
+                                        onClick={() => { saveApprover(inv.id, name); setOpenDropdown(null); }}
+                                        style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                          background: inv.approver === name ? pc.color + "12" : "transparent",
+                                          color: inv.approver === name ? pc.color : TEXT,
+                                          fontWeight: inv.approver === name ? 700 : 400 }}>
+                                        {name}
+                                      </div>
+                                    ))}
+                                    {inv.approver && (
+                                      <div onClick={() => { saveApprover(inv.id, null); setOpenDropdown(null); }}
+                                        style={{ padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                                          color: TEXT_MUTED, borderTop: "1px solid " + BORDER }}>
+                                        Clear
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           )}
-                        </div>
-                        <button onClick={() => setEditingId(inv.id)}
-                          style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
-                            border: "1px solid " + BORDER, borderRadius: 4,
-                            padding: "2px 6px", background: BG, color: TEXT_MUTED }}>
-                          ✎
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                        </td>
 
-                {isEditing && (
-                  <div style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
-                    padding: "10px 16px", display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
-                    {[
-                      ["Investment Owner", inv.owner],
-                      ["Workflow Step",    inv.stage],
-                      ["Start Date",       inv.startDate],
-                      ["End Date",         inv.endDate],
-                      ["Last Edited By",   inv.notesUpdatedBy && inv.internal_notes
-                        ? `${inv.notesUpdatedBy} · ${fmtNoteDate(inv.notesUpdatedAt)}`
-                        : null],
-                    ].filter(([, v]) => v).map(([label, val]) => (
-                      <div key={label}>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
-                          textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
-                          {label}
-                        </div>
-                        <div style={{ fontSize: 12, color: TEXT }}>{val}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                        {/* Notes */}
+                        <td style={{ ...tdBase, padding: "8px 12px", borderRight: "none" }}>
+                          {isEditing ? (
+                            <>
+                              <PortfolioNotesEditor
+                                value={inv.internal_notes || ""}
+                                onSave={notes => saveNotes(inv.id, notes)}
+                                isSaving={isSaving}
+                              />
+                              <button onClick={() => setEditingId(null)}
+                                style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: 700,
+                                  cursor: "pointer", borderRadius: 5, padding: "2px 7px",
+                                  border: "1px solid " + pc.color, background: pc.color,
+                                  color: "#fff", whiteSpace: "nowrap", marginTop: 4 }}>
+                                Done
+                              </button>
+                            </>
+                          ) : (
+                            <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 11, lineHeight: 1.5,
+                                  color: inv.internal_notes ? TEXT : TEXT_MUTED,
+                                  fontStyle: inv.internal_notes ? "normal" : "italic" }}>
+                                  {inv.internal_notes || "Add note…"}
+                                </div>
+                                {inv.notesUpdatedBy && inv.internal_notes && (
+                                  <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3 }}>
+                                    {inv.notesUpdatedBy} · {fmtNoteDate(inv.notesUpdatedAt)}
+                                  </div>
+                                )}
+                              </div>
+                              <button onClick={() => setEditingId(inv.id)}
+                                style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
+                                  border: "1px solid " + BORDER, borderRadius: 4,
+                                  padding: "2px 6px", background: BG, color: TEXT_MUTED }}>
+                                ✎
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+
+                      {isEditing && (
+                        <tr>
+                          <td colSpan={12} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
+                            padding: "10px 16px", borderBottom: rowBorder }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
+                              {[
+                                ["Investment Owner", inv.owner],
+                                ["Workflow Step",    inv.stage],
+                                ["Start Date",       inv.startDate],
+                                ["End Date",         inv.endDate],
+                                ["Last Edited By",   inv.notesUpdatedBy && inv.internal_notes
+                                  ? `${inv.notesUpdatedBy} · ${fmtNoteDate(inv.notesUpdatedAt)}`
+                                  : null],
+                              ].filter(([, v]) => v).map(([label, val]) => (
+                                <div key={label}>
+                                  <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+                                    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+                                    {label}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: TEXT }}>{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
