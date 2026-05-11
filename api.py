@@ -864,6 +864,8 @@ def get_all_investments():
               o.internal_notes,
               o.approver,
               o.overlay_id,
+              o.last_updated   AS notes_updated_at,
+              o.updated_by     AS notes_updated_by,
               COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.invest_investments i
             JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
@@ -889,6 +891,8 @@ def get_investments_by_bow(bow_id):
               o.internal_notes,
               o.approver,
               o.overlay_id,
+              o.last_updated   AS notes_updated_at,
+              o.updated_by     AS notes_updated_by,
               COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.bows b
             JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a
@@ -917,6 +921,8 @@ def get_investments_by_portfolio(portfolio_id):
               o.internal_notes,
               o.approver,
               o.overlay_id,
+              o.last_updated   AS notes_updated_at,
+              o.updated_by     AS notes_updated_by,
               COALESCE(cf.co_funding_teams, '') AS co_funding_teams
             FROM {SCHEMA}.bows b
             JOIN (SELECT DISTINCT Investment_ID, BoW_ID FROM {SCHEMA}.invest_bow_allocation) a

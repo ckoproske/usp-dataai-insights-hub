@@ -1231,11 +1231,13 @@ async function loadBowInvestments(bowId) {
       description:    inv.Public_Description    || "",
       strategicFit:   inv.Strategic_Fit        || "",
       projectOverview: inv.Project_Overview    || "",
-      coFundingTeams: inv.co_funding_teams || "",
+      coFundingTeams:   inv.co_funding_teams || "",
       // Internal overlay fields
-      internal_notes: inv.internal_notes       || "",
-      approver:       inv.approver             || "",
-      overlay_id:     inv.overlay_id           || null,
+      internal_notes:   inv.internal_notes       || "",
+      approver:         inv.approver             || "",
+      overlay_id:       inv.overlay_id           || null,
+      notesUpdatedAt:   inv.notes_updated_at     || null,
+      notesUpdatedBy:   inv.notes_updated_by     || null,
     }));
   } catch (err) {
     console.warn(`loadBowInvestments(${bowId}) failed:`, err);
@@ -1280,10 +1282,14 @@ async function loadAllInvestments(filters = {}) {
       portfolio_id:   inv.portfolio_id           || "",
       investmentUrl:  inv.Investment_URL         || "",
       description:    inv.Public_Description     || "",
-      coFundingTeams: inv.co_funding_teams || "",
-      internal_notes: inv.internal_notes         || "",
-      approver:       inv.approver               || "",
-      overlay_id:     inv.overlay_id             || null,
+      coFundingTeams:  inv.co_funding_teams || "",
+      startDate:       inv.Start_Date             || "",
+      endDate:         inv.End_Date               || "",
+      internal_notes:  inv.internal_notes         || "",
+      approver:        inv.approver               || "",
+      overlay_id:      inv.overlay_id             || null,
+      notesUpdatedAt:  inv.notes_updated_at       || null,
+      notesUpdatedBy:  inv.notes_updated_by       || null,
     }));
     // Deduplicate by Investment_ID — collect all BOW associations into arrays
     const byId = {};
@@ -2828,6 +2834,14 @@ function GoalProgressCard({ g, isPending, cardIdx }) {
 }
 
 // ── BowDecisionsView ──────────────────────────────────────────────────────────
+// ── Shared investment helpers ─────────────────────────────────────────────────
+function fmtNoteDate(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 // ── BowInvestmentsView ────────────────────────────────────────────────────────
 const INVEST_STATUS_OPTS = [
   { id:"",           label:"No Status",     color:"#94A3B8", bg:"#F8FAFC" },
@@ -2868,7 +2882,12 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [search, setSearch]             = useState("");
   const [savingId, setSavingId]         = useState(null);
- 
+  const [currentUser, setCurrentUser]   = useState(null);
+
+  useEffect(() => {
+    apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(() => {});
+  }, []);
+
   // ── Load investments from INVEST on mount / bow change ────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -2887,18 +2906,20 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
     });
     return () => { cancelled = true; };
   }, [bow.id]);
- 
+
   // ── Save internal notes overlay ────────────────────────────────────────────
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
     const cur = investments.find(i => i.id === invId);
+    const author = currentUser?.display_name || null;
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: author }),
       });
+      const savedAt = new Date().toISOString();
       setInvestments(prev => prev.map(inv =>
-        inv.id === invId ? { ...inv, internal_notes: notes } : inv
+        inv.id === invId ? { ...inv, internal_notes: notes, notesUpdatedBy: author, notesUpdatedAt: savedAt } : inv
       ));
     } catch (err) {
       console.warn("Failed to save overlay:", err);
@@ -3145,7 +3166,7 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
             );
             return (
               <div style={{ display: "grid",
-                gridTemplateColumns: "100px 2.5fr 2fr 3fr 2fr 110px 180px 130px 110px 2fr",
+                gridTemplateColumns: "100px 2.5fr 2fr 3fr 2fr 110px 90px 90px 180px 130px 110px 2fr",
                 background: "#F8FAFC", borderBottom: "2px solid " + BORDER,
                 borderRadius: "11px 11px 0 0" }}>
                 {plainCol("Investment ID", true)}
@@ -3165,6 +3186,8 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                       boxSizing: "border-box" }} />
                 </div>
                 {sortCol("amount", "Amount", true)}
+                {plainCol("Start Date", true)}
+                {plainCol("End Date", true)}
                 {plainCol("Co-Funding Team", true)}
                 {plainCol("Outstanding", true)}
                 {/* Status — filter dropdown + approver sort */}
@@ -3247,29 +3270,29 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
  
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "100px 2.5fr 2fr 3fr 2fr 110px 180px 130px 110px 2fr",
+                  gridTemplateColumns: "100px 2.5fr 2fr 3fr 2fr 110px 90px 90px 180px 130px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg, transition: "background .15s" }}>
 
                   {/* Investment ID */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: TEXT_SUB, fontFamily: "monospace" }}>
-                      {inv.id || "—"}
+                    <span style={{ fontSize: 11, fontFamily: "monospace" }}>
+                      {inv.investmentUrl
+                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                            style={{ color: "#3086AB", textDecoration: "none" }}
+                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
+                            {inv.id || "—"}
+                          </a>
+                        : <span style={{ color: TEXT_SUB }}>{inv.id || "—"}</span>
+                      }
                     </span>
                   </div>
 
                   {/* Initiative */}
                   <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 13, lineHeight: 1.4 }}>
-                      {inv.investmentUrl
-                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
-                            style={{ color: "#3086AB", textDecoration: "none", fontWeight: 500 }}
-                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
-                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
-                            {inv.initiative}
-                          </a>
-                        : <span style={{ color: TEXT }}>{inv.initiative}</span>
-                      }
+                      <span style={{ color: TEXT, fontWeight: 500 }}>{inv.initiative}</span>
                     </div>
                     <div style={{ fontSize: 11, color: TEXT_SUB, marginTop: 2 }}>{inv.type}</div>
                     {inv.stage && (
@@ -3312,6 +3335,22 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                     <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
                       {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
                     </div>
+                  </div>
+
+                  {/* Start Date */}
+                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: inv.startDate ? TEXT : TEXT_MUTED }}>
+                      {inv.startDate || "—"}
+                    </span>
+                  </div>
+
+                  {/* End Date */}
+                  <div style={{ padding: "13px 14px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: inv.endDate ? TEXT : TEXT_MUTED }}>
+                      {inv.endDate || "—"}
+                    </span>
                   </div>
 
                   {/* Co-Funding Teams */}
@@ -3420,10 +3459,17 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                       </>
                     ) : (
                       <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                        <div style={{ flex: 1, fontSize: 12, lineHeight: 1.5,
-                          color: inv.internal_notes ? TEXT : TEXT_MUTED,
-                          fontStyle: inv.internal_notes ? "normal" : "italic" }}>
-                          {inv.internal_notes || "Add note…"}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, lineHeight: 1.5,
+                            color: inv.internal_notes ? TEXT : TEXT_MUTED,
+                            fontStyle: inv.internal_notes ? "normal" : "italic" }}>
+                            {inv.internal_notes || "Add note…"}
+                          </div>
+                          {inv.notesUpdatedBy && inv.internal_notes && (
+                            <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>
+                              {inv.notesUpdatedBy} · {fmtNoteDate(inv.notesUpdatedAt)}
+                            </div>
+                          )}
                         </div>
                         <button onClick={() => setEditingId(inv.id)}
                           style={{ fontSize: 11, cursor: "pointer", flexShrink: 0,
@@ -3446,6 +3492,9 @@ function BowInvestmentsView({ bow, portColor, onUpdate }) {
                       ["Start Date",       inv.startDate],
                       ["End Date",         inv.endDate],
                       ["Workflow Step",    inv.stage],
+                      ["Last Edited By",   inv.notesUpdatedBy && inv.internal_notes
+                        ? `${inv.notesUpdatedBy} · ${fmtNoteDate(inv.notesUpdatedAt)}`
+                        : null],
                     ].filter(([, v]) => v).map(([label, val]) => (
                       <div key={label}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_SUB,
@@ -3907,6 +3956,11 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [currentUser, setCurrentUser]   = useState(null);
+
+  useEffect(() => {
+    apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(() => {});
+  }, []);
 
   // ── Load investments on mount / portId change ─────────────────────────────
   useEffect(() => {
@@ -3926,18 +3980,20 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
     });
     return () => { cancelled = true; };
   }, [portId]);
- 
+
   // ── Save internal notes overlay ───────────────────────────────────────────
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
     const cur = investments.find(i => i.id === invId);
+    const author = currentUser?.display_name || null;
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: author }),
       });
+      const savedAt = new Date().toISOString();
       setInvestments(prev => prev.map(inv =>
-        inv.id === invId ? { ...inv, internal_notes: notes } : inv
+        inv.id === invId ? { ...inv, internal_notes: notes, notesUpdatedBy: author, notesUpdatedAt: savedAt } : inv
       ));
     } catch (err) {
       console.warn("Failed to save overlay:", err);
@@ -4169,7 +4225,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
             );
             return (
               <div style={{ display: "grid",
-                gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 180px 110px 2fr",
+                gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 90px 90px 180px 110px 2fr",
                 background: SURFACE_2, borderBottom: "2px solid " + BORDER,
                 borderRadius: "11px 11px 0 0" }}>
                 {plainCol("Investment ID", true)}
@@ -4190,6 +4246,8 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                 </div>
                 {plainCol("BOW", true)}
                 {sortCol("amount", "Amount", true)}
+                {plainCol("Start Date", true)}
+                {plainCol("End Date", true)}
                 {plainCol("Co-Funding Team", true)}
                 {/* Status — filter dropdown + approver sort */}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
@@ -4270,29 +4328,29 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 180px 110px 2fr",
+                  gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 90px 90px 180px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
 
                   {/* Investment ID */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: TEXT_SUB, fontFamily: "monospace" }}>
-                      {inv.id || "—"}
+                    <span style={{ fontSize: 11, fontFamily: "monospace" }}>
+                      {inv.investmentUrl
+                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                            style={{ color: "#3086AB", textDecoration: "none" }}
+                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
+                            {inv.id || "—"}
+                          </a>
+                        : <span style={{ color: TEXT_SUB }}>{inv.id || "—"}</span>
+                      }
                     </span>
                   </div>
 
                   {/* Initiative */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 12, lineHeight: 1.35 }}>
-                      {inv.investmentUrl
-                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
-                            style={{ color: "#3086AB", textDecoration: "none", fontWeight: 500 }}
-                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
-                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
-                            {inv.initiative || "—"}
-                          </a>
-                        : <span style={{ color: TEXT }}>{inv.initiative || "—"}</span>
-                      }
+                      <span style={{ color: TEXT, fontWeight: 500 }}>{inv.initiative || "—"}</span>
                     </div>
                     {inv.type && (
                       <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
@@ -4352,6 +4410,22 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                     display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
                       {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
+                    </span>
+                  </div>
+
+                  {/* Start Date */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
+                      {inv.startDate || "—"}
+                    </span>
+                  </div>
+
+                  {/* End Date */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
+                      {inv.endDate || "—"}
                     </span>
                   </div>
 
@@ -4453,10 +4527,17 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                       </>
                     ) : (
                       <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                        <div style={{ flex: 1, fontSize: 11, lineHeight: 1.5,
-                          color: inv.internal_notes ? TEXT : TEXT_MUTED,
-                          fontStyle: inv.internal_notes ? "normal" : "italic" }}>
-                          {inv.internal_notes || "Add note…"}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, lineHeight: 1.5,
+                            color: inv.internal_notes ? TEXT : TEXT_MUTED,
+                            fontStyle: inv.internal_notes ? "normal" : "italic" }}>
+                            {inv.internal_notes || "Add note…"}
+                          </div>
+                          {inv.notesUpdatedBy && inv.internal_notes && (
+                            <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3 }}>
+                              {inv.notesUpdatedBy} · {fmtNoteDate(inv.notesUpdatedAt)}
+                            </div>
+                          )}
                         </div>
                         <button onClick={() => setEditingId(inv.id)}
                           style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
@@ -4478,6 +4559,9 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
                       ["Workflow Step",    inv.stage],
                       ["Start Date",       inv.startDate],
                       ["End Date",         inv.endDate],
+                      ["Last Edited By",   inv.notesUpdatedBy && inv.internal_notes
+                        ? `${inv.notesUpdatedBy} · ${fmtNoteDate(inv.notesUpdatedAt)}`
+                        : null],
                     ].filter(([, v]) => v).map(([label, val]) => (
                       <div key={label}>
                         <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
@@ -4497,7 +4581,7 @@ function PortfolioInvestmentsRollup({ bows, portColor, portId, onUpdateBows }) {
     </div>
   );
 }
- 
+
 // Small notes editor sub-component — save on blur
 function PortfolioNotesEditor({ value, onSave, isSaving }) {
   const [draft, setDraft] = useState(value);
@@ -7090,6 +7174,13 @@ function AllInvestmentsView() {
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [selectedBow, setSelectedBow]               = useState("all");
+  const [selectedCoFundingTeam, setSelectedCoFundingTeam] = useState("all");
+  const [currentUser, setCurrentUser]               = useState(null);
+
+  useEffect(() => {
+    apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(() => {});
+  }, []);
 
   const pc = selectedPortfolio !== "all" && PORT_COLORS[selectedPortfolio]
     ? PORT_COLORS[selectedPortfolio]
@@ -7099,6 +7190,16 @@ function AllInvestmentsView() {
     { id: "all", name: "All Portfolios", color: "#3086AB" },
     ...PORTFOLIOS.map(p => ({ id: p.id, name: p.label, color: PORT_COLORS[p.id].color })),
   ];
+
+  const bowOptions = Array.from(new Set(
+    investments.flatMap(inv => inv.bowTitles)
+  )).filter(Boolean).sort();
+
+  const coFundingOptions = Array.from(new Set(
+    investments.flatMap(inv => inv.coFundingTeams
+      ? inv.coFundingTeams.split(", ").filter(Boolean)
+      : [])
+  )).sort();
 
   useEffect(() => {
     let cancelled = false;
@@ -7115,13 +7216,15 @@ function AllInvestmentsView() {
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
     const cur = investments.find(i => i.id === invId);
+    const author = currentUser?.display_name || null;
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: author }),
       });
+      const savedAt = new Date().toISOString();
       setInvestments(prev => prev.map(inv =>
-        inv.id === invId ? { ...inv, internal_notes: notes } : inv
+        inv.id === invId ? { ...inv, internal_notes: notes, notesUpdatedBy: author, notesUpdatedAt: savedAt } : inv
       ));
     } catch (err) {
       console.warn("Failed to save overlay:", err);
@@ -7136,7 +7239,7 @@ function AllInvestmentsView() {
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, updated_by: "dashboard" }),
+        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, updated_by: currentUser?.display_name || null }),
       });
       setInvestments(prev => prev.map(inv =>
         inv.id === invId ? { ...inv, approver: approver || "" } : inv
@@ -7164,6 +7267,9 @@ function AllInvestmentsView() {
 
   const filtered = investments
     .filter(inv => selectedPortfolio === "all" || inv.portfolio_id === selectedPortfolio)
+    .filter(inv => selectedBow === "all" || inv.bowTitles.includes(selectedBow))
+    .filter(inv => selectedCoFundingTeam === "all" || (inv.coFundingTeams &&
+      inv.coFundingTeams.split(", ").includes(selectedCoFundingTeam)))
     .filter(inv => {
       if (!filterStatuses.length) return true;
       return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
@@ -7294,6 +7400,26 @@ function AllInvestmentsView() {
           ))}
         </div>
         <div style={{ flex: 1 }} />
+        {bowOptions.length > 0 && (
+          <select value={selectedBow} onChange={e => setSelectedBow(e.target.value)}
+            style={{ border: "1px solid " + BORDER, borderRadius: 8,
+              padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
+              outline: "none", color: selectedBow !== "all" ? TEXT : TEXT_MUTED,
+              background: SURFACE, cursor: "pointer", maxWidth: 220 }}>
+            <option value="all">All BOWs</option>
+            {bowOptions.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        )}
+        {coFundingOptions.length > 0 && (
+          <select value={selectedCoFundingTeam} onChange={e => setSelectedCoFundingTeam(e.target.value)}
+            style={{ border: "1px solid " + BORDER, borderRadius: 8,
+              padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
+              outline: "none", color: selectedCoFundingTeam !== "all" ? TEXT : TEXT_MUTED,
+              background: SURFACE, cursor: "pointer", maxWidth: 200 }}>
+            <option value="all">All Co-Funding Teams</option>
+            {coFundingOptions.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        )}
         <div style={{ position: "relative", minWidth: 200 }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search grantee, initiative, notes…"
@@ -7340,7 +7466,7 @@ function AllInvestmentsView() {
             );
             return (
               <div style={{ display: "grid",
-                gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 180px 110px 2fr",
+                gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 90px 90px 180px 110px 2fr",
                 background: SURFACE_2, borderBottom: "2px solid " + BORDER,
                 borderRadius: "11px 11px 0 0" }}>
                 {plainCol("Investment ID", true)}
@@ -7361,6 +7487,8 @@ function AllInvestmentsView() {
                 </div>
                 {plainCol("BOW", true)}
                 {sortCol("amount", "Amount", true)}
+                {plainCol("Start Date", true)}
+                {plainCol("End Date", true)}
                 {plainCol("Co-Funding Team", true)}
                 <div style={{ position: "relative", borderRight: "1px solid " + BORDER }}>
                   <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
@@ -7442,29 +7570,29 @@ function AllInvestmentsView() {
               <div key={inv.id}
                 style={{ borderBottom: idx < filtered.length - 1 ? "1px solid " + BORDER : "none" }}>
                 <div style={{ display: "grid",
-                  gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 180px 110px 2fr",
+                  gridTemplateColumns: "100px 2fr 2fr 3fr 2fr 130px 90px 90px 90px 180px 110px 2fr",
                   background: isEditing ? "#F0F7FF" : rowBg }}>
 
                   {/* Investment ID */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
                     display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: TEXT_SUB, fontFamily: "monospace" }}>
-                      {inv.id || "—"}
+                    <span style={{ fontSize: 11, fontFamily: "monospace" }}>
+                      {inv.investmentUrl
+                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                            style={{ color: "#3086AB", textDecoration: "none" }}
+                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
+                            {inv.id || "—"}
+                          </a>
+                        : <span style={{ color: TEXT_SUB }}>{inv.id || "—"}</span>
+                      }
                     </span>
                   </div>
 
                   {/* Initiative */}
                   <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER }}>
                     <div style={{ fontSize: 12, lineHeight: 1.35 }}>
-                      {inv.investmentUrl
-                        ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
-                            style={{ color: "#3086AB", textDecoration: "none", fontWeight: 500 }}
-                            onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
-                            onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>
-                            {inv.initiative || "—"}
-                          </a>
-                        : <span style={{ color: TEXT }}>{inv.initiative || "—"}</span>
-                      }
+                      <span style={{ color: TEXT, fontWeight: 500 }}>{inv.initiative || "—"}</span>
                     </div>
                     {inv.type && (
                       <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>{inv.type}</div>
@@ -7522,6 +7650,22 @@ function AllInvestmentsView() {
                     display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
                       {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
+                    </span>
+                  </div>
+
+                  {/* Start Date */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
+                      {inv.startDate || "—"}
+                    </span>
+                  </div>
+
+                  {/* End Date */}
+                  <div style={{ padding: "11px 12px", borderRight: "1px solid " + BORDER,
+                    display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
+                      {inv.endDate || "—"}
                     </span>
                   </div>
 
@@ -7622,10 +7766,17 @@ function AllInvestmentsView() {
                       </>
                     ) : (
                       <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                        <div style={{ flex: 1, fontSize: 11, lineHeight: 1.5,
-                          color: inv.internal_notes ? TEXT : TEXT_MUTED,
-                          fontStyle: inv.internal_notes ? "normal" : "italic" }}>
-                          {inv.internal_notes || "Add note…"}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, lineHeight: 1.5,
+                            color: inv.internal_notes ? TEXT : TEXT_MUTED,
+                            fontStyle: inv.internal_notes ? "normal" : "italic" }}>
+                            {inv.internal_notes || "Add note…"}
+                          </div>
+                          {inv.notesUpdatedBy && inv.internal_notes && (
+                            <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3 }}>
+                              {inv.notesUpdatedBy} · {fmtNoteDate(inv.notesUpdatedAt)}
+                            </div>
+                          )}
                         </div>
                         <button onClick={() => setEditingId(inv.id)}
                           style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
@@ -7646,6 +7797,9 @@ function AllInvestmentsView() {
                       ["Workflow Step",    inv.stage],
                       ["Start Date",       inv.startDate],
                       ["End Date",         inv.endDate],
+                      ["Last Edited By",   inv.notesUpdatedBy && inv.internal_notes
+                        ? `${inv.notesUpdatedBy} · ${fmtNoteDate(inv.notesUpdatedAt)}`
+                        : null],
                     ].filter(([, v]) => v).map(([label, val]) => (
                       <div key={label}>
                         <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
