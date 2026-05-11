@@ -962,6 +962,16 @@ def get_investment_bow_details(investment_id):
 def update_investment_overlay(investment_id):
     """Upsert internal notes overlay for an investment."""
     data = request.json
+    # Resolve author server-side — don't trust client-supplied updated_by
+    email = request.headers.get("X-Forwarded-Email", "").strip() or None
+    if email:
+        member = query(
+            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [email]
+        )
+        updated_by = (member[0]["display_name"] if member and member[0]["display_name"] else email)
+    else:
+        updated_by = data.get("updated_by") or "unknown"
     existing = query(
         f"SELECT overlay_id FROM {SCHEMA}.investment_overlays WHERE investment_id = ?",
         [investment_id]
@@ -974,8 +984,7 @@ def update_investment_overlay(investment_id):
                     last_updated   = current_timestamp(),
                     updated_by     = ?
                 WHERE investment_id = ?""",
-            [data.get("internal_notes"), data.get("approver"),
-             data.get("updated_by", "dashboard"), investment_id]
+            [data.get("internal_notes"), data.get("approver"), updated_by, investment_id]
         )
     else:
         execute(
@@ -983,9 +992,9 @@ def update_investment_overlay(investment_id):
                 (overlay_id, investment_id, internal_notes, approver, last_updated, updated_by)
                 VALUES (?, ?, ?, ?, current_timestamp(), ?)""",
             [new_id(), investment_id, data.get("internal_notes"),
-             data.get("approver"), data.get("updated_by", "dashboard")]
+             data.get("approver"), updated_by]
         )
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "updated_by": updated_by})
 
 @app.route("/api/investments/<investment_id>/payments")
 def get_investment_payments(investment_id):

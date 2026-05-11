@@ -5832,12 +5832,16 @@ function AllInvestmentsView() {
     ...PORTFOLIOS.map(p => ({ id: p.id, name: p.label, color: PORT_COLORS[p.id].color })),
   ];
 
+  const portfolioFiltered = selectedPortfolio === "all"
+    ? investments
+    : investments.filter(inv => inv.portfolio_id === selectedPortfolio);
+
   const bowOptions = Array.from(new Set(
-    investments.flatMap(inv => inv.bowTitles)
+    portfolioFiltered.flatMap(inv => inv.bowTitles)
   )).filter(Boolean).sort();
 
   const coFundingOptions = Array.from(new Set(
-    investments.flatMap(inv => inv.coFundingTeams
+    portfolioFiltered.flatMap(inv => inv.coFundingTeams
       ? inv.coFundingTeams.split(", ").filter(Boolean)
       : [])
   )).sort();
@@ -5857,13 +5861,13 @@ function AllInvestmentsView() {
   const saveNotes = async (invId, notes) => {
     setSavingId(invId);
     const cur = investments.find(i => i.id === invId);
-    const author = currentUser?.display_name || null;
     try {
-      await apiFetch(`/api/investments/${invId}/overlay`, {
+      const res = await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, updated_by: author }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null }),
       });
       const savedAt = new Date().toISOString();
+      const author = res?.updated_by || currentUser?.display_name || null;
       setInvestments(prev => prev.map(inv =>
         inv.id === invId ? { ...inv, internal_notes: notes, notesUpdatedBy: author, notesUpdatedAt: savedAt } : inv
       ));
@@ -6029,7 +6033,7 @@ function AllInvestmentsView() {
         {/* Portfolio filter pills */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {portfolioOptions.map(p => (
-            <button key={p.id} onClick={() => setSelectedPortfolio(p.id)}
+            <button key={p.id} onClick={() => { setSelectedPortfolio(p.id); setSelectedBow("all"); setSelectedCoFundingTeam("all"); }}
               style={{ padding: "5px 12px", borderRadius: 16,
                 border: "1.5px solid " + (selectedPortfolio === p.id ? p.color : BORDER),
                 background: selectedPortfolio === p.id ? p.color + "12" : SURFACE,
