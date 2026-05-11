@@ -987,6 +987,21 @@ def update_investment_overlay(investment_id):
         )
     return jsonify({"status": "ok"})
 
+@app.route("/api/investments/<investment_id>/payments")
+def get_investment_payments(investment_id):
+    """Year-by-year payment breakdown for a single investment from invest_bow_allocation."""
+    rows = query(
+        f"""SELECT
+              Investment_Payment_Year                       AS year,
+              SUM(`Investment_Payment_Allocation Amount`)   AS amount
+            FROM {SCHEMA}.invest_bow_allocation
+            WHERE Investment_ID = ?
+            GROUP BY Investment_Payment_Year
+            ORDER BY Investment_Payment_Year""",
+        [investment_id]
+    )
+    return jsonify(rows)
+
 @app.route("/api/investments/budget-summary/<portfolio_id>")
 def get_budget_summary(portfolio_id):
     """Payment summary by BOW for a portfolio, derived from invest_bow_allocation."""

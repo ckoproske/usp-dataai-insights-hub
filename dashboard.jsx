@@ -5795,10 +5795,33 @@ function AllInvestmentsView() {
   const [selectedBow, setSelectedBow]               = useState("all");
   const [selectedCoFundingTeam, setSelectedCoFundingTeam] = useState("all");
   const [currentUser, setCurrentUser]               = useState(null);
+  const [paymentPopover, setPaymentPopover]         = useState(null);
+  const paymentCache   = React.useRef({});
+  const popoverTimeout = React.useRef(null);
 
   useEffect(() => {
     apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(() => {});
   }, []);
+
+  const showPayments = async (invId, rect) => {
+    clearTimeout(popoverTimeout.current);
+    if (paymentCache.current[invId]) {
+      setPaymentPopover({ invId, rows: paymentCache.current[invId], rect });
+      return;
+    }
+    setPaymentPopover({ invId, rows: null, rect });
+    try {
+      const rows = await apiFetch(`/api/investments/${invId}/payments`);
+      paymentCache.current[invId] = rows || [];
+      setPaymentPopover(prev => prev?.invId === invId ? { invId, rows: rows || [], rect } : prev);
+    } catch {
+      paymentCache.current[invId] = [];
+    }
+  };
+
+  const hidePayments = () => {
+    popoverTimeout.current = setTimeout(() => setPaymentPopover(null), 200);
+  };
 
   const pc = selectedPortfolio !== "all" && PORT_COLORS[selectedPortfolio]
     ? PORT_COLORS[selectedPortfolio]
@@ -6272,8 +6295,11 @@ function AllInvestmentsView() {
                         </td>
 
                         {/* Amount */}
-                        <td style={{ ...tdBase, padding: "11px 12px" }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>
+                        <td style={{ ...tdBase, padding: "11px 12px", position: "relative" }}
+                          onMouseEnter={e => inv.amount && showPayments(inv.id, e.currentTarget.getBoundingClientRect())}
+                          onMouseLeave={hidePayments}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT,
+                            borderBottom: inv.amount ? "1px dashed " + BORDER : "none", cursor: inv.amount ? "default" : "auto" }}>
                             {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
                           </span>
                         </td>
@@ -6446,6 +6472,49 @@ function AllInvestmentsView() {
           </div>
         </div>
       )}
+
+      {/* Payment by year popover */}
+      {paymentPopover && (() => {
+        const { rows, rect } = paymentPopover;
+        const top  = rect.bottom + 6 + window.scrollY;
+        const left = rect.left + window.scrollX;
+        return (
+          <div onMouseEnter={() => clearTimeout(popoverTimeout.current)}
+            onMouseLeave={hidePayments}
+            style={{ position: "absolute", top, left, zIndex: 300,
+              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 10,
+              boxShadow: "0 6px 24px rgba(10,37,64,0.13)", padding: "12px 16px",
+              minWidth: 180, pointerEvents: "auto" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+              textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
+              Committed by Year
+            </div>
+            {rows === null ? (
+              <div style={{ fontSize: 11, color: TEXT_MUTED }}>Loading…</div>
+            ) : rows.length === 0 ? (
+              <div style={{ fontSize: 11, color: TEXT_MUTED }}>No payment data</div>
+            ) : (
+              <>
+                {rows.map(r => (
+                  <div key={r.year} style={{ display: "flex", justifyContent: "space-between",
+                    gap: 20, fontSize: 11, padding: "2px 0",
+                    borderBottom: "1px solid " + BORDER + "50" }}>
+                    <span style={{ color: TEXT_SUB }}>{r.year}</span>
+                    <span style={{ fontWeight: 600, color: r.amount < 0 ? "#F87171" : TEXT }}>
+                      {fmtM(r.amount)}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between",
+                  gap: 20, fontSize: 11, fontWeight: 700, paddingTop: 6, color: TEXT }}>
+                  <span>Total</span>
+                  <span>{fmtM(rows.reduce((s, r) => s + (r.amount || 0), 0))}</span>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
