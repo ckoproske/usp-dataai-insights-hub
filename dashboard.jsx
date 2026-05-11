@@ -6071,22 +6071,6 @@ function AllInvestmentsView() {
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        <select value={selectedBow} onChange={e => setSelectedBow(e.target.value)}
-          style={{ border: "1px solid " + BORDER, borderRadius: 8,
-            padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
-            outline: "none", color: selectedBow !== "all" ? TEXT : TEXT_MUTED,
-            background: SURFACE, cursor: "pointer", maxWidth: 220 }}>
-          <option value="all">All BOWs</option>
-          {bowOptions.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-        <select value={selectedCoFundingTeam} onChange={e => setSelectedCoFundingTeam(e.target.value)}
-          style={{ border: "1px solid " + BORDER, borderRadius: 8,
-            padding: "6px 10px", fontSize: 12, fontFamily: "inherit",
-            outline: "none", color: selectedCoFundingTeam !== "all" ? TEXT : TEXT_MUTED,
-            background: SURFACE, cursor: "pointer", maxWidth: 200 }}>
-          <option value="all">All Co-Funding Teams</option>
-          {coFundingOptions.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
         <div style={{ position: "relative", minWidth: 200 }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search grantee, initiative, notes…"
@@ -6362,7 +6346,35 @@ function AllInvestmentsView() {
                             outline: "none", color: TEXT, background: ownerSearch ? pc.color + "08" : BG,
                             boxSizing: "border-box" }} />
                       </th>
-                      {plainCol("BOW", false)}
+                      <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === "bow" ? null : "bow")}
+                          style={{ ...hStyle(selectedBow !== "all"), padding: "9px 12px", cursor: "pointer",
+                            userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          {selectedBow === "all" ? "BOW" : selectedBow.length > 22 ? selectedBow.slice(0, 22) + "…" : selectedBow}
+                          <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                        </div>
+                        {openDropdown === "bow" && (
+                          <>
+                            <div onClick={() => setOpenDropdown(null)}
+                              style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
+                              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                              minWidth: 220, maxHeight: 260, overflowY: "auto" }}>
+                              {[{ value: "all", label: "All BOWs" }, ...bowOptions.map(b => ({ value: b, label: b }))].map(opt => (
+                                <div key={opt.value}
+                                  onClick={() => { setSelectedBow(opt.value); setOpenDropdown(null); }}
+                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                    background: selectedBow === opt.value ? pc.color + "12" : "transparent",
+                                    color: selectedBow === opt.value ? pc.color : TEXT,
+                                    fontWeight: selectedBow === opt.value ? 700 : 400 }}>
+                                  {opt.label}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </th>
                       <th onClick={() => handleColSort("amount")}
                         style={{ ...hStyle(sortBy === "amount"), borderRight: "1px solid " + BORDER,
                           cursor: "pointer", userSelect: "none" }}>
@@ -6374,7 +6386,35 @@ function AllInvestmentsView() {
                       </th>
                       {plainCol("Start Date", false)}
                       {plainCol("End Date", false)}
-                      {plainCol("Co-Funding Team", false)}
+                      <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === "cofunding" ? null : "cofunding")}
+                          style={{ ...hStyle(selectedCoFundingTeam !== "all"), padding: "9px 12px", cursor: "pointer",
+                            userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          {selectedCoFundingTeam === "all" ? "Co-Funding Team" : selectedCoFundingTeam.length > 18 ? selectedCoFundingTeam.slice(0, 18) + "…" : selectedCoFundingTeam}
+                          <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                        </div>
+                        {openDropdown === "cofunding" && (
+                          <>
+                            <div onClick={() => setOpenDropdown(null)}
+                              style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
+                              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                              minWidth: 200, maxHeight: 260, overflowY: "auto" }}>
+                              {[{ value: "all", label: "All Co-Funding Teams" }, ...coFundingOptions.map(t => ({ value: t, label: t }))].map(opt => (
+                                <div key={opt.value}
+                                  onClick={() => { setSelectedCoFundingTeam(opt.value); setOpenDropdown(null); }}
+                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                    background: selectedCoFundingTeam === opt.value ? pc.color + "12" : "transparent",
+                                    color: selectedCoFundingTeam === opt.value ? pc.color : TEXT,
+                                    fontWeight: selectedCoFundingTeam === opt.value ? 700 : 400 }}>
+                                  {opt.label}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </th>
                       <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
                         <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
                           style={{ ...hStyle(filterStatuses.length > 0), padding: "7px 12px", cursor: "pointer",
