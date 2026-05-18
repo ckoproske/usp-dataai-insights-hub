@@ -6131,11 +6131,11 @@ function AllInvestmentsView() {
       {viewMode === "pipeline" ? (() => {
         const pipelineInvs   = filtered.filter(inv => inv.status === "In Process");
         const isStrategyLevel = selectedPortfolio === "all" && selectedBow === "all";
-        const newInvCount    = filtered.filter(inv => !inv.type?.toLowerCase().includes("amendment")).length;
-        const amendCount     = filtered.filter(inv =>  inv.type?.toLowerCase().includes("amendment")).length;
-        const distinctGrantees = new Set(filtered.map(inv => inv.grantee).filter(Boolean)).size;
-        const distinctBows   = new Set(filtered.flatMap(inv => inv.bowTitles).filter(Boolean)).size;
-        const potentialAmt   = filtered.reduce((s, inv) => s + toNum(inv.amount), 0);
+        const newInvCount    = pipelineInvs.filter(inv => !inv.type?.toLowerCase().includes("amendment")).length;
+        const amendCount     = pipelineInvs.filter(inv =>  inv.type?.toLowerCase().includes("amendment")).length;
+        const distinctGrantees = new Set(pipelineInvs.map(inv => inv.grantee).filter(Boolean)).size;
+        const distinctBows   = new Set(pipelineInvs.flatMap(inv => inv.bowTitles).filter(Boolean)).size;
+        const potentialAmt   = pipelineInvs.reduce((s, inv) => s + toNum(inv.amount), 0);
         const thP = { padding: "9px 12px", fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
           textTransform: "uppercase", letterSpacing: 0.8, textAlign: "left",
           borderLeft: "1px solid " + BORDER, verticalAlign: "middle" };
