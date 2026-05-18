@@ -6515,8 +6515,8 @@ function AllInvestmentsView() {
                           userSelect: "none", padding: showNotes ? "9px 12px" : "9px 6px",
                           textAlign: showNotes ? "left" : "center", whiteSpace: "nowrap", overflow: "hidden" }}>
                         {showNotes
-                          ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Notes <span style={{ fontSize: 9, opacity: 0.5 }}>◀</span></span>
-                          : <span style={{ fontSize: 11, color: TEXT_MUTED }} title="Expand Notes">+</span>}
+                          ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Investment Coordinator Notes <span style={{ fontSize: 9, opacity: 0.5 }}>◀</span></span>
+                          : <span style={{ fontSize: 11, color: TEXT_MUTED }} title="Expand Investment Coordinator Notes">+</span>}
                       </th>
                     </tr>
                   );
@@ -6747,11 +6747,6 @@ function AllInvestmentsView() {
                                   fontStyle: inv.internal_notes ? "normal" : "italic" }}>
                                   {inv.internal_notes || "Add note…"}
                                 </div>
-                                {inv.notesUpdatedBy && inv.internal_notes && (
-                                  <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3 }}>
-                                    {inv.notesUpdatedBy} · {fmtNoteDate(inv.notesUpdatedAt)}
-                                  </div>
-                                )}
                               </div>
                               <button onClick={() => setEditingId(inv.id)}
                                 style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
