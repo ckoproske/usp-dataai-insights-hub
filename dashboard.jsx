@@ -2802,11 +2802,9 @@ function fmtInvDate(ts) {
 
 const PIPELINE_STAGES = [
   "Start Concept",
-  "Start Amendment",
   "Request Proposal",
   "Refine Proposal",
   "Create Agreement",
-  "Finalize Amendment",
   "Request Approval",
   "Obtain Signatures",
 ];
@@ -2815,11 +2813,9 @@ const STAGE_FILTER_OPTIONS = [
   { value: "",                    label: "All" },
   { value: "Active",              label: "Active" },
   { value: "Start Concept",       label: "Start Concept" },
-  { value: "Start Amendment",     label: "Start Amendment" },
   { value: "Request Proposal",    label: "Request Proposal" },
   { value: "Refine Proposal",     label: "Refine Proposal" },
   { value: "Create Agreement",    label: "Create Agreement" },
-  { value: "Finalize Amendment",  label: "Finalize Amendment" },
   { value: "Request Approval",    label: "Request Approval" },
   { value: "Obtain Signatures",   label: "Obtain Signatures" },
 ];
@@ -6129,8 +6125,6 @@ function AllInvestmentsView() {
       {viewMode === "pipeline" ? (() => {
         const pipelineInvs   = filtered.filter(inv => inv.status === "In Process");
         const isStrategyLevel = selectedPortfolio === "all" && selectedBow === "all";
-        const newInvCount    = pipelineInvs.filter(inv => !inv.type?.toLowerCase().includes("amendment")).length;
-        const amendCount     = pipelineInvs.filter(inv =>  inv.type?.toLowerCase().includes("amendment")).length;
         const distinctGrantees = new Set(pipelineInvs.map(inv => inv.grantee).filter(Boolean)).size;
         const distinctBows   = new Set(pipelineInvs.flatMap(inv => inv.bowTitles).filter(Boolean)).size;
         const potentialAmt   = pipelineInvs.reduce((s, inv) => s + toNum(inv.amount), 0);
@@ -6143,8 +6137,6 @@ function AllInvestmentsView() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
               {[
                 ["In Pipeline",       pipelineInvs.length],
-                ["New Investments",   newInvCount],
-                ["Amendments",        amendCount],
                 ["Grantees / Vendors",distinctGrantees],
                 ["Funding BOWs",      distinctBows],
                 ["Potential",         fmtM(potentialAmt)],
