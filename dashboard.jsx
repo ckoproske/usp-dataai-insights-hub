@@ -3943,7 +3943,10 @@ function PortfolioByTheNumbers({ portId, portColor }) {
       const coFundedCount = active.filter(inv => inv.coFundingTeams && inv.coFundingTeams.trim()).length;
       const coFundedPct = count > 0 ? Math.round((coFundedCount / count) * 100) : 0;
       const partners = new Set(active.map(inv => inv.grantee).filter(Boolean)).size;
-      setStats({ count, totalBudget, coFundedPct, partners });
+      const coFundingTeams = Array.from(new Set(
+        active.flatMap(inv => inv.coFundingTeams ? inv.coFundingTeams.split(", ").filter(Boolean) : [])
+      )).sort();
+      setStats({ count, totalBudget, coFundedPct, partners, coFundingTeams });
     }).catch(() => {
       if (!cancelled) setStats({ count: 0, totalBudget: 0, coFundedPct: 0, partners: 0 });
     });
@@ -3974,7 +3977,7 @@ function PortfolioByTheNumbers({ portId, portColor }) {
   const loading = stats === null;
   const STATS = [
     { label:"Active Investments", value: loading ? "…" : String(stats.count||"0"),   sub:"grants & contracts" },
-    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,    sub:"active investments with a co-funding team" },
+    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,    sub:"active investments with a co-funding team", teams: stats?.coFundingTeams || [] },
     { label:"Partners",           value: loading ? "…" : String(stats.partners||"0"),sub:"discrete grantees / vendors" },
   ];
 
@@ -4006,6 +4009,17 @@ function PortfolioByTheNumbers({ portId, portColor }) {
               <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1,marginBottom:8}}>{stat.value}</div>
               <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:3}}>{stat.label}</div>
               <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
+              {stat.teams && stat.teams.length > 0 && (
+                <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:3}}>
+                  {stat.teams.map(t => (
+                    <span key={t} style={{fontSize:10,fontWeight:600,color:TEXT_SUB,
+                      background:SURFACE_2,border:"1px solid "+BORDER,
+                      borderRadius:4,padding:"2px 7px",display:"inline-block",alignSelf:"flex-start"}}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {/* Budget pie tile */}
