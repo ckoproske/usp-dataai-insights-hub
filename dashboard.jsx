@@ -7123,9 +7123,413 @@ function DataModelExplorer() {
   );
 }
 
+// ── BudgetForecastsView ────────────────────────────────────────────────────────
+function BudgetForecastsView() {
+  const [year, setYear]                         = useState(2026);
+  const [level, setLevel]                       = useState("bow");
+  const [loading, setLoading]                   = useState(true);
+  const [error, setError]                       = useState(null);
+  const [rows, setRows]                         = useState([]);
+  const [snapshots, setSnapshots]               = useState([]);
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState(null);
+  const [snapshotRows, setSnapshotRows]         = useState(null);
+  const [currentUser, setCurrentUser]           = useState(null);
+  const [showCommittedDetail, setShowCommittedDetail] = useState(false);
+  const [showPotentialDetail, setShowPotentialDetail] = useState(false);
+  const [expandedBows, setExpandedBows]         = useState({});
+  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [snapshotLabel, setSnapshotLabel]       = useState("");
+  const [takingSnapshot, setTakingSnapshot]     = useState(false);
+  const [snapshotError, setSnapshotError]       = useState(null);
+
+  useEffect(() => {
+    apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(()=>{});
+    apiFetch("/api/budget-forecasts/snapshots").then(d => setSnapshots(d||[])).catch(()=>{});
+  }, []);
+
+  useEffect(() => {
+    if (selectedSnapshotId) return;
+    let cancelled = false;
+    setLoading(true); setError(null);
+    apiFetch(`/api/budget-forecasts/summary?year=${year}`)
+      .then(d => { if (!cancelled) { setRows(d||[]); setLoading(false); } })
+      .catch(() => { if (!cancelled) { setError("Could not load budget forecast data."); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, [year, selectedSnapshotId]);
+
+  useEffect(() => {
+    if (!selectedSnapshotId) { setSnapshotRows(null); return; }
+    setLoading(true);
+    apiFetch(`/api/budget-forecasts/snapshots/${selectedSnapshotId}`)
+      .then(d => { setSnapshotRows(d?.snapshot_data||[]); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [selectedSnapshotId]);
+
+  const displayRows = selectedSnapshotId ? (snapshotRows||[]) : rows;
+  const canSnapshot = ["Leadership","MLE"].includes(currentUser?.permission_level);
+  const selectedSnapshot = snapshots.find(s => s.snapshot_id === selectedSnapshotId);
+
+  const fmtM = n => {
+    if (n === null || n === undefined) return "—";
+    const v = parseFloat(n);
+    if (isNaN(v)) return "—";
+    if (v === 0) return "0.0";
+    return (v/1_000_000).toFixed(1);
+  };
+
+  const pctOfBudget = (n, budget) => {
+    if (!budget || !n) return "—";
+    return Math.round((n/budget)*100) + "%";
+  };
+
+  const AGG_KEYS = ["budget_allocation","committed_total","committed_paid","committed_unpaid",
+    "committed_grants","committed_contracts","potential_total","potential_grants",
+    "potential_contracts","pipeline_total","headroom"];
+
+  const portfolioAgg = React.useMemo(() => {
+    const map = {};
+    displayRows.forEach(r => {
+      const pid = r.portfolio_id;
+      if (!map[pid]) map[pid] = {
+        portfolio_id:pid, portfolio_title:r.portfolio_title, portfolio_sort:r.portfolio_sort, bows:[],
+        ...Object.fromEntries(AGG_KEYS.map(k=>[k,0])),
+      };
+      map[pid].bows.push(r);
+      AGG_KEYS.forEach(k => { map[pid][k] += r[k]||0; });
+    });
+    return Object.values(map).sort((a,b)=>a.portfolio_sort-b.portfolio_sort);
+  }, [displayRows]);
+
+  const strategyTotal = React.useMemo(() =>
+    portfolioAgg.reduce((acc,p) => {
+      AGG_KEYS.forEach(k => { acc[k] += p[k]; });
+      return acc;
+    }, Object.fromEntries(AGG_KEYS.map(k=>[k,0]))),
+  [portfolioAgg]);
+
+  const takeSnapshot = async () => {
+    if (!snapshotLabel.trim()) return;
+    setTakingSnapshot(true); setSnapshotError(null);
+    try {
+      await apiFetch("/api/budget-forecasts/snapshots", {
+        method:"POST",
+        body: JSON.stringify({ label: snapshotLabel.trim(), fiscal_year: year }),
+      });
+      const updated = await apiFetch("/api/budget-forecasts/snapshots");
+      setSnapshots(updated||[]); setShowSnapshotModal(false); setSnapshotLabel("");
+    } catch { setSnapshotError("Failed to save snapshot."); }
+    finally { setTakingSnapshot(false); }
+  };
+
+  const headroomStyle = n => {
+    const v = parseFloat(n);
+    if (isNaN(v) || v === 0) return {};
+    if (v < 0) return {color:"#DC2626", fontWeight:600};
+    if (v < 1_000_000) return {color:"#D97706"};
+    return {color:"#059669"};
+  };
+
+  const th = (align="right", extra={}) => ({
+    padding:"8px 12px", fontSize:11, fontWeight:700, color:TEXT_SUB, textAlign:align,
+    borderBottom:"2px solid "+BORDER, letterSpacing:0.3, whiteSpace:"nowrap",
+    background:SURFACE, ...extra,
+  });
+  const td = (extra={}) => ({
+    padding:"7px 12px", fontSize:13, color:TEXT, textAlign:"right",
+    borderBottom:"1px solid "+BORDER, whiteSpace:"nowrap", ...extra,
+  });
+
+  const DataRow = ({ r, variant="bow" }) => {
+    const isTot = variant !== "bow";
+    const bg = variant==="portfolio" ? "#EEE9DF" : SURFACE;
+    const fw = isTot ? 700 : 400;
+    const bid = r.bow_id;
+
+    return (
+      <>
+        <tr style={{background:bg}}>
+          {variant==="strategy" ? (
+            <td colSpan={2} style={td({textAlign:"left", fontWeight:700, background:bg, paddingLeft:16})}>USP Data Total</td>
+          ) : variant==="portfolio" ? (
+            <>
+              <td style={td({textAlign:"left", fontWeight:fw, background:bg, paddingLeft:16})}>{r.portfolio_title}</td>
+              <td style={td({background:bg})}></td>
+            </>
+          ) : (
+            <>
+              <td style={td({background:bg})}></td>
+              <td style={td({textAlign:"left", background:bg, paddingLeft:20})}>{r.bow_title}</td>
+            </>
+          )}
+
+          <td style={td({fontWeight:fw, background:bg})}>{fmtM(r.committed_total)}</td>
+          {showCommittedDetail && <>
+            <td style={td({background:bg, color:TEXT_SUB, fontSize:12})}>{fmtM(r.committed_paid)}</td>
+            <td style={td({background:bg, color:TEXT_SUB, fontSize:12})}>{fmtM(r.committed_unpaid)}</td>
+            <td style={td({background:bg, color:"#1F5F80", fontSize:12})}>{fmtM(r.committed_grants)}</td>
+            <td style={td({background:bg, color:"#337A6C", fontSize:12})}>{fmtM(r.committed_contracts)}</td>
+          </>}
+
+          <td style={td({fontWeight:fw, background:bg})}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
+              {fmtM(r.potential_total)}
+              {variant==="bow" && r.potential_by_stage && Object.keys(r.potential_by_stage).length>0 && (
+                <button onClick={()=>setExpandedBows(prev=>({...prev,[bid]:!prev[bid]}))}
+                  style={{background:"none",border:"1px solid "+BORDER,borderRadius:3,cursor:"pointer",fontSize:9,color:TEXT_MUTED,padding:"1px 4px",lineHeight:1.4}}>
+                  {expandedBows[bid]?"▲":"▼"}
+                </button>
+              )}
+            </div>
+          </td>
+          {showPotentialDetail && <>
+            <td style={td({background:bg, color:"#1F5F80", fontSize:12})}>{fmtM(r.potential_grants)}</td>
+            <td style={td({background:bg, color:"#337A6C", fontSize:12})}>{fmtM(r.potential_contracts)}</td>
+          </>}
+
+          <td style={td({fontWeight:fw, background:bg})}>{fmtM(r.pipeline_total)}</td>
+          <td style={td({fontWeight:fw, background:bg})}>{fmtM(r.budget_allocation)}</td>
+          <td style={td({fontWeight:fw, background:bg, ...headroomStyle(r.headroom)})}>{fmtM(r.headroom)}</td>
+          <td style={td({background:bg, color:TEXT_MUTED})}>—</td>
+          <td style={td({background:bg, color:TEXT_MUTED})}>—</td>
+        </tr>
+
+        {variant==="bow" && expandedBows[bid] && r.potential_by_stage &&
+          PIPELINE_STAGES.filter(s=>r.potential_by_stage[s]).map(s => {
+            const sd = r.potential_by_stage[s];
+            const stageBg = "#FAFAF8";
+            return (
+              <tr key={`${bid}-${s}`} style={{background:stageBg}}>
+                <td style={td({background:stageBg})}></td>
+                <td style={td({textAlign:"left",background:stageBg,paddingLeft:32,color:TEXT_MUTED,fontSize:12})}>↳ {s}</td>
+                <td style={td({background:stageBg})}></td>
+                {showCommittedDetail && <><td style={td({background:stageBg})}/><td style={td({background:stageBg})}/><td style={td({background:stageBg})}/><td style={td({background:stageBg})}/></>}
+                <td style={td({background:stageBg,color:TEXT_SUB,fontSize:12})}>{fmtM(sd.total)}</td>
+                {showPotentialDetail && <>
+                  <td style={td({background:stageBg,color:"#1F5F80",fontSize:12})}>{fmtM(sd.grants)}</td>
+                  <td style={td({background:stageBg,color:"#337A6C",fontSize:12})}>{fmtM(sd.contracts)}</td>
+                </>}
+                <td style={td({background:stageBg})}/><td style={td({background:stageBg})}/><td style={td({background:stageBg})}/><td style={td({background:stageBg})}/><td style={td({background:stageBg})}/>
+              </tr>
+            );
+          })
+        }
+      </>
+    );
+  };
+
+  const tableBody = () => {
+    if (level==="strategy") return <DataRow r={strategyTotal} variant="strategy"/>;
+    if (level==="portfolio") return portfolioAgg.map(p=><DataRow key={p.portfolio_id} r={p} variant="portfolio"/>);
+    return portfolioAgg.map(p=>(
+      <React.Fragment key={p.portfolio_id}>
+        <DataRow r={p} variant="portfolio"/>
+        {p.bows.sort((a,b)=>a.bow_sort-b.bow_sort).map(b=><DataRow key={b.bow_id} r={b} variant="bow"/>)}
+      </React.Fragment>
+    ));
+  };
+
+  if (loading) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:300,gap:12}}>
+      <div style={{width:24,height:24,border:"2px solid "+BORDER,borderTopColor:ACCENT,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+      <span style={{fontSize:14,color:TEXT_MUTED}}>Loading budget forecast…</span>
+    </div>
+  );
+
+  if (error) return <div style={{padding:32,color:"#DC2626",fontSize:14}}>{error}</div>;
+
+  return (
+    <div className="fade-up">
+      {/* Toolbar */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          {/* Year */}
+          <div style={{display:"flex",gap:3}}>
+            {BUDGET_YEARS.map(y=>(
+              <button key={y} onClick={()=>{setYear(y);setSelectedSnapshotId(null);}}
+                style={{padding:"5px 13px",borderRadius:6,border:"1px solid "+(year===y&&!selectedSnapshotId?ACCENT:BORDER),
+                        background:year===y&&!selectedSnapshotId?ACCENT_LIGHT:SURFACE,
+                        color:year===y&&!selectedSnapshotId?ACCENT:TEXT_SUB,
+                        fontSize:13,fontWeight:year===y&&!selectedSnapshotId?700:400,cursor:"pointer"}}>
+                {y}
+              </button>
+            ))}
+          </div>
+          {/* Level toggle */}
+          <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:6,overflow:"hidden"}}>
+            {[{v:"strategy",l:"Strategy"},{v:"portfolio",l:"Portfolio"},{v:"bow",l:"BOW"}].map(({v,l})=>(
+              <button key={v} onClick={()=>setLevel(v)}
+                style={{padding:"5px 13px",border:"none",borderRight:"1px solid "+BORDER,
+                        background:level===v?BRAND:SURFACE,color:level===v?"#fff":TEXT_SUB,
+                        fontSize:13,fontWeight:level===v?600:400,cursor:"pointer"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {/* Detail toggles */}
+          <button onClick={()=>setShowCommittedDetail(v=>!v)}
+            style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
+                    background:showCommittedDetail?"#EBF4F9":SURFACE,
+                    color:showCommittedDetail?"#1F5F80":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
+            {showCommittedDetail?"▲":"▼"} Committed detail
+          </button>
+          <button onClick={()=>setShowPotentialDetail(v=>!v)}
+            style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
+                    background:showPotentialDetail?"#ECF7F5":SURFACE,
+                    color:showPotentialDetail?"#337A6C":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
+            {showPotentialDetail?"▲":"▼"} Potential detail
+          </button>
+        </div>
+        {/* Snapshot controls */}
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {snapshots.length>0 && (
+            <select value={selectedSnapshotId||""} onChange={e=>setSelectedSnapshotId(e.target.value||null)}
+              style={{padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:12,color:TEXT,background:SURFACE,cursor:"pointer"}}>
+              <option value="">Live data</option>
+              {snapshots.map(s=>(
+                <option key={s.snapshot_id} value={s.snapshot_id}>{s.label} (FY{s.fiscal_year})</option>
+              ))}
+            </select>
+          )}
+          {canSnapshot && (
+            <button onClick={()=>{setShowSnapshotModal(true);setSnapshotLabel("");setSnapshotError(null);}}
+              style={{padding:"6px 16px",borderRadius:6,border:"none",background:BRAND,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+              Take Snapshot
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Snapshot banner */}
+      {selectedSnapshot && (
+        <div style={{marginBottom:12,padding:"8px 14px",background:"#FEF5E7",borderRadius:6,border:"1px solid #FDE68A",display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:12,color:"#92400E"}}>
+            Viewing snapshot: <strong>{selectedSnapshot.label}</strong> · FY{selectedSnapshot.fiscal_year} · taken by {selectedSnapshot.taken_by} on {selectedSnapshot.snapshot_date}
+          </span>
+          <button onClick={()=>setSelectedSnapshotId(null)}
+            style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#92400E",textDecoration:"underline"}}>
+            Return to live
+          </button>
+        </div>
+      )}
+
+      {/* Table */}
+      <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            <tr style={{background:"#F5F3ED"}}>
+              <th colSpan={2} style={th("left",{borderRight:"1px solid "+BORDER})}></th>
+              <th colSpan={showCommittedDetail?5:1} style={th("center",{borderRight:"1px solid "+BORDER,color:"#1F5F80",background:"#EBF4F9"})}>
+                Committed (Active)
+              </th>
+              <th colSpan={showPotentialDetail?3:1} style={th("center",{borderRight:"1px solid "+BORDER,color:"#337A6C",background:"#ECF7F5"})}>
+                Potential (In-Process)
+              </th>
+              <th colSpan={5} style={th("center")}></th>
+            </tr>
+            <tr>
+              <th style={th("left",{minWidth:140})}>Portfolio</th>
+              <th style={th("left",{minWidth:200})}>BOW</th>
+              <th style={th("right",{background:"#EBF4F9"})}>Total ($M)</th>
+              {showCommittedDetail && <>
+                <th style={th("right",{color:"#1F5F80",fontSize:10,background:"#EBF4F9"})}>Paid</th>
+                <th style={th("right",{color:"#1F5F80",fontSize:10,background:"#EBF4F9"})}>Unpaid</th>
+                <th style={th("right",{color:"#1F5F80",fontSize:10,background:"#EBF4F9"})}>Grants</th>
+                <th style={th("right",{color:"#337A6C",fontSize:10,background:"#EBF4F9"})}>Contracts</th>
+              </>}
+              <th style={th("right",{background:"#ECF7F5"})}>Total ($M)</th>
+              {showPotentialDetail && <>
+                <th style={th("right",{color:"#1F5F80",fontSize:10,background:"#ECF7F5"})}>Grants</th>
+                <th style={th("right",{color:"#337A6C",fontSize:10,background:"#ECF7F5"})}>Contracts</th>
+              </>}
+              <th style={th("right")}>Pipeline Total</th>
+              <th style={th("right")}>Budget Allocation</th>
+              <th style={th("right")}>Headroom</th>
+              <th style={th("right",{color:TEXT_MUTED})}>Exp. Forecast</th>
+              <th style={th("right",{color:TEXT_MUTED})}>Exp. Headroom</th>
+            </tr>
+          </thead>
+          <tbody>{tableBody()}</tbody>
+          {level!=="strategy" && (
+            <tfoot>
+              <tr style={{background:"#E8E4DB"}}>
+                <td colSpan={2} style={td({textAlign:"left",fontWeight:700,background:"#E8E4DB",paddingLeft:16,fontSize:12,letterSpacing:0.3})}>
+                  TOTAL MANAGED
+                </td>
+                <td style={td({fontWeight:700,background:"#E8E4DB"})}>{fmtM(strategyTotal.committed_total)}</td>
+                {showCommittedDetail && <>
+                  <td style={td({fontWeight:700,background:"#E8E4DB",fontSize:12})}>{fmtM(strategyTotal.committed_paid)}</td>
+                  <td style={td({fontWeight:700,background:"#E8E4DB",fontSize:12})}>{fmtM(strategyTotal.committed_unpaid)}</td>
+                  <td style={td({fontWeight:700,background:"#E8E4DB",fontSize:12})}>{fmtM(strategyTotal.committed_grants)}</td>
+                  <td style={td({fontWeight:700,background:"#E8E4DB",fontSize:12})}>{fmtM(strategyTotal.committed_contracts)}</td>
+                </>}
+                <td style={td({fontWeight:700,background:"#E8E4DB"})}>{fmtM(strategyTotal.potential_total)}</td>
+                {showPotentialDetail && <>
+                  <td style={td({fontWeight:700,background:"#E8E4DB",fontSize:12})}>{fmtM(strategyTotal.potential_grants)}</td>
+                  <td style={td({fontWeight:700,background:"#E8E4DB",fontSize:12})}>{fmtM(strategyTotal.potential_contracts)}</td>
+                </>}
+                <td style={td({fontWeight:700,background:"#E8E4DB"})}>{fmtM(strategyTotal.pipeline_total)}</td>
+                <td style={td({fontWeight:700,background:"#E8E4DB"})}>{fmtM(strategyTotal.budget_allocation)}</td>
+                <td style={td({fontWeight:700,background:"#E8E4DB",...headroomStyle(strategyTotal.headroom)})}>{fmtM(strategyTotal.headroom)}</td>
+                <td style={td({background:"#E8E4DB",color:TEXT_MUTED})}>—</td>
+                <td style={td({background:"#E8E4DB",color:TEXT_MUTED})}>—</td>
+              </tr>
+              <tr style={{background:"#F0EDE6"}}>
+                <td colSpan={2} style={td({textAlign:"left",background:"#F0EDE6",paddingLeft:16,fontSize:11,color:TEXT_MUTED})}>% of budget</td>
+                <td style={td({background:"#F0EDE6",fontSize:11,color:TEXT_MUTED})}>{pctOfBudget(strategyTotal.committed_total, strategyTotal.budget_allocation)}</td>
+                {showCommittedDetail && <><td style={td({background:"#F0EDE6"})}/><td style={td({background:"#F0EDE6"})}/><td style={td({background:"#F0EDE6"})}/><td style={td({background:"#F0EDE6"})}/></>}
+                <td style={td({background:"#F0EDE6",fontSize:11,color:TEXT_MUTED})}>{pctOfBudget(strategyTotal.potential_total, strategyTotal.budget_allocation)}</td>
+                {showPotentialDetail && <><td style={td({background:"#F0EDE6"})}/><td style={td({background:"#F0EDE6"})}/></>}
+                <td style={td({background:"#F0EDE6",fontSize:11,color:TEXT_MUTED})}>{pctOfBudget(strategyTotal.pipeline_total, strategyTotal.budget_allocation)}</td>
+                <td style={td({background:"#F0EDE6"})}/>
+                <td style={td({background:"#F0EDE6",fontSize:11,color:TEXT_MUTED})}>{pctOfBudget(strategyTotal.headroom, strategyTotal.budget_allocation)}</td>
+                <td style={td({background:"#F0EDE6"})}/><td style={td({background:"#F0EDE6"})}/>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+      <div style={{marginTop:8,fontSize:11,color:TEXT_MUTED}}>All figures in $M · All funding sources · Excludes envelope to NAT</div>
+
+      {/* Snapshot modal */}
+      {showSnapshotModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.35)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center"}}
+          onClick={e=>{if(e.target===e.currentTarget)setShowSnapshotModal(false);}}>
+          <div style={{background:SURFACE,borderRadius:10,padding:28,width:380,boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
+            <div style={{fontSize:16,fontWeight:700,color:TEXT,marginBottom:4}}>Take Budget Snapshot</div>
+            <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:20}}>
+              Captures the current FY{year} budget forecast as a named, permanent record.
+            </div>
+            <label style={{fontSize:12,fontWeight:600,color:TEXT_SUB,display:"block",marginBottom:4}}>Snapshot label</label>
+            <input value={snapshotLabel} onChange={e=>setSnapshotLabel(e.target.value)}
+              placeholder={`e.g. "May ${year} Forecast"`}
+              style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:13,color:TEXT,marginBottom:16,boxSizing:"border-box"}}
+              onKeyDown={e=>e.key==="Enter"&&takeSnapshot()}
+              autoFocus/>
+            {snapshotError && <div style={{fontSize:12,color:"#DC2626",marginBottom:12}}>{snapshotError}</div>}
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={()=>setShowSnapshotModal(false)}
+                style={{padding:"7px 16px",borderRadius:6,border:"1px solid "+BORDER,background:SURFACE,color:TEXT_SUB,fontSize:13,cursor:"pointer"}}>
+                Cancel
+              </button>
+              <button onClick={takeSnapshot} disabled={!snapshotLabel.trim()||takingSnapshot}
+                style={{padding:"7px 16px",borderRadius:6,border:"none",
+                        background:snapshotLabel.trim()?BRAND:BORDER,
+                        color:"#fff",fontSize:13,fontWeight:600,
+                        cursor:snapshotLabel.trim()?"pointer":"default",opacity:takingSnapshot?0.7:1}}>
+                {takingSnapshot?"Saving…":"Save Snapshot"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Sidebar({ activeView, onNavigate, data }) {
   const isStrategyActive  = activeView.type==="strategy";
   const isAllInvActive    = activeView.type==="all-investments";
+  const isBudgetActive    = activeView.type==="budget-forecasts";
   const isPortActive = (id) => activeView.type==="portfolio" && activeView.portId===id;
 
   return (
@@ -7159,6 +7563,12 @@ function Sidebar({ activeView, onNavigate, data }) {
           icon={<IconTable/>}
           active={isAllInvActive}
           onClick={()=>onNavigate({type:"all-investments"})}
+        />
+        <NavItem
+          label="Budget Forecasts"
+          icon={<IconTable/>}
+          active={isBudgetActive}
+          onClick={()=>onNavigate({type:"budget-forecasts"})}
         />
 
         {/* Portfolios */}
@@ -7342,6 +7752,8 @@ function App() {
     ? "2026–2030 Strategy"
     : activeView.type==="all-investments"
     ? "2026–2030 Strategy"
+    : activeView.type==="budget-forecasts"
+    ? "All Investments"
     : activeView.type==="data-model"
     ? "Tools"
     : pc?.label || "";
@@ -7350,6 +7762,8 @@ function App() {
     ? "USP Data & AI Measurement & Insights Dashboard"
     : activeView.type==="all-investments"
     ? "All Investments"
+    : activeView.type==="budget-forecasts"
+    ? "Budget Forecasts"
     : activeView.type==="data-model"
     ? "Explore the Data Model"
     : (activePortData?.portfolio?.name || pc?.label || "");
@@ -7427,6 +7841,9 @@ function App() {
           )}
           {activeView.type==="all-investments"&&(
             <AllInvestmentsView/>
+          )}
+          {activeView.type==="budget-forecasts"&&(
+            <BudgetForecastsView/>
           )}
           {activeView.type==="portfolio"&&activePortData&&(
             <PortfolioDashboard

@@ -23,8 +23,9 @@ def dashboard():
 DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "adb-527625614048962.2.azuredatabricks.net")
 HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/0cd0e380d94af214")
 
-CATALOG = "usp_data"
-SCHEMA  = f"{CATALOG}.usp_strategy"
+CATALOG       = "usp_data"
+SCHEMA        = f"{CATALOG}.usp_strategy"
+INVEST_SCHEMA = f"{CATALOG}.invest"
 
 # ── Activity log toggle ───────────────────────────────────────────────────────
 # Set to False to suspend activity logging during bulk edit sessions.
@@ -154,7 +155,6 @@ def debug():
     result["invest_table_status"] = invest_status
 
     # Probe candidate view names in usp_data.invest directly
-    INVEST_SCHEMA = "usp_data.invest"
     candidate_views = [
         "v_investments", "v_bow_allocation", "v_bow_details",
         "investments", "bow_allocation", "bow_details",
@@ -1036,6 +1036,213 @@ def get_budget_summary(portfolio_id):
         [portfolio_id]
     )
     return jsonify(rows)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# BUDGET FORECASTS
+# ═════════════════════════════════════════════════════════════════════════════
+
+PIPELINE_STAGES = [
+    'Start Concept', 'Start Amendment', 'Request Proposal', 'Refine Proposal',
+    'Create Agreement', 'Finalize Amendment', 'Request Approval', 'Obtain Signatures',
+]
+
+def _build_budget_forecast(year):
+    """Assembles the full budget forecast table for all USP portfolios for a given year.
+    Merges three sources: allocation view (budget + committed), invest tables (committed
+    by type, potential by stage/type). Returns a list of BOW-level dicts."""
+
+    # All app BOWs that have an INVEST link
+    bow_rows = query(
+        f"""SELECT b.bow_id, b.title AS bow_title, b.invest_bow_id,
+                   b.portfolio_id, b.sort_order AS bow_sort,
+                   p.title AS portfolio_title, p.sort_order AS portfolio_sort
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.portfolios p ON b.portfolio_id = p.portfolio_id
+            WHERE b.invest_bow_id IS NOT NULL
+            ORDER BY p.sort_order, b.sort_order"""
+    )
+
+    # Budget allocation + committed totals from INVEST allocation view
+    alloc_rows = query(
+        f"""SELECT
+              f.BoW_ID,
+              TRY_CAST(f.BoW_Funding_Allocation_Amount AS DECIMAL(18,2)) AS budget_allocation,
+              TRY_CAST(f.Allocation_Amount_Committed   AS DECIMAL(18,2)) AS committed_total,
+              TRY_CAST(f.Allocation_Amount_Paid        AS DECIMAL(18,2)) AS committed_paid,
+              TRY_CAST(f.Allocation_Amount_Unpaid      AS DECIMAL(18,2)) AS committed_unpaid
+            FROM {INVEST_SCHEMA}.v_bow_annual_funding_allocation f
+            WHERE f.BoW_Funding_Strategy = 'USP Data'
+              AND TRY_CAST(f.BoW_Funding_Allocation_Year AS INT) = ?""",
+        [year]
+    )
+    alloc_by_invest_id = {r['BoW_ID']: r for r in alloc_rows}
+
+    # Committed grants vs contracts (Status = Active, from invest tables)
+    committed_type_rows = query(
+        f"""SELECT b.bow_id, i.Type AS investment_type,
+                   SUM(a.`Investment_Payment_Allocation Amount`) AS amount
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
+            JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
+            WHERE i.Status = 'Active'
+              AND a.Investment_Payment_Year = ?
+            GROUP BY b.bow_id, i.Type""",
+        [year]
+    )
+    committed_type = {}
+    for r in committed_type_rows:
+        bid = r['bow_id']
+        if bid not in committed_type:
+            committed_type[bid] = {'Grant': 0.0, 'Contract': 0.0}
+        committed_type[bid][r['investment_type']] = float(r['amount'] or 0)
+
+    # Potential by workflow stage and type (Status = In Process)
+    stage_placeholders = ','.join(['?' for _ in PIPELINE_STAGES])
+    potential_rows = query(
+        f"""SELECT b.bow_id, i.Workflow_Step AS stage, i.Type AS investment_type,
+                   SUM(a.`Investment_Payment_Allocation Amount`) AS amount
+            FROM {SCHEMA}.bows b
+            JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
+            JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
+            WHERE i.Status = 'In Process'
+              AND a.Investment_Payment_Year = ?
+              AND i.Workflow_Step IN ({stage_placeholders})
+            GROUP BY b.bow_id, i.Workflow_Step, i.Type""",
+        [year] + PIPELINE_STAGES
+    )
+    potential_by_bow = {}
+    for r in potential_rows:
+        bid    = r['bow_id']
+        stage  = r['stage']
+        t      = r['investment_type']
+        amount = float(r['amount'] or 0)
+        if bid not in potential_by_bow:
+            potential_by_bow[bid] = {'total': 0.0, 'grants': 0.0, 'contracts': 0.0, 'by_stage': {}}
+        potential_by_bow[bid]['total'] += amount
+        if t == 'Grant':
+            potential_by_bow[bid]['grants'] += amount
+        elif t == 'Contract':
+            potential_by_bow[bid]['contracts'] += amount
+        by_stage = potential_by_bow[bid]['by_stage']
+        if stage not in by_stage:
+            by_stage[stage] = {'total': 0.0, 'grants': 0.0, 'contracts': 0.0}
+        by_stage[stage]['total'] += amount
+        if t == 'Grant':
+            by_stage[stage]['grants'] += amount
+        elif t == 'Contract':
+            by_stage[stage]['contracts'] += amount
+
+    # Merge all sources into final BOW-level rows
+    result = []
+    for b in bow_rows:
+        bid      = b['bow_id']
+        alloc    = alloc_by_invest_id.get(b['invest_bow_id'], {})
+        ct       = committed_type.get(bid, {'Grant': 0.0, 'Contract': 0.0})
+        pot      = potential_by_bow.get(bid, {'total': 0.0, 'grants': 0.0, 'contracts': 0.0, 'by_stage': {}})
+
+        budget_allocation = float(alloc.get('budget_allocation') or 0)
+        committed_total   = float(alloc.get('committed_total')   or 0)
+        committed_paid    = float(alloc.get('committed_paid')    or 0)
+        committed_unpaid  = float(alloc.get('committed_unpaid')  or 0)
+        potential_total   = pot['total']
+        pipeline_total    = committed_total + potential_total
+
+        result.append({
+            'bow_id':              bid,
+            'bow_title':           b['bow_title'],
+            'portfolio_id':        b['portfolio_id'],
+            'portfolio_title':     b['portfolio_title'],
+            'portfolio_sort':      b['portfolio_sort'],
+            'bow_sort':            b['bow_sort'],
+            'budget_allocation':   budget_allocation,
+            'committed_total':     committed_total,
+            'committed_paid':      committed_paid,
+            'committed_unpaid':    committed_unpaid,
+            'committed_grants':    ct['Grant'],
+            'committed_contracts': ct['Contract'],
+            'potential_total':     potential_total,
+            'potential_grants':    pot['grants'],
+            'potential_contracts': pot['contracts'],
+            'potential_by_stage':  pot['by_stage'],
+            'pipeline_total':      pipeline_total,
+            'headroom':            budget_allocation - pipeline_total,
+            'expected_forecast':   None,
+            'expected_headroom':   None,
+        })
+    return result
+
+
+@app.route("/api/budget-forecasts/summary")
+def get_budget_forecast_summary():
+    """Full budget forecast table for all USP portfolios, merged from the INVEST
+    allocation view (budget + committed) and invest tables (committed by type,
+    potential by stage/type). Returns BOW-level rows."""
+    year = request.args.get("year", 2026, type=int)
+    return jsonify(_build_budget_forecast(year))
+
+
+@app.route("/api/budget-forecasts/snapshots")
+def list_budget_forecast_snapshots():
+    """Lists all snapshot metadata (no data blob). Optionally filter by fiscal_year."""
+    year   = request.args.get("year", type=int)
+    where  = "WHERE fiscal_year = ?" if year else ""
+    params = [year] if year else []
+    rows   = query(
+        f"""SELECT snapshot_id, label, fiscal_year, snapshot_date, taken_by
+            FROM {SCHEMA}.budget_forecast_snapshots
+            {where}
+            ORDER BY snapshot_date DESC""",
+        params
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/budget-forecasts/snapshots/<snapshot_id>")
+def get_budget_forecast_snapshot(snapshot_id):
+    """Returns a single snapshot including its full data blob (parsed from JSON)."""
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.budget_forecast_snapshots WHERE snapshot_id = ?",
+        [snapshot_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    import json as _j
+    row = rows[0]
+    row['snapshot_data'] = _j.loads(row['snapshot_data'])
+    return jsonify(row)
+
+
+@app.route("/api/budget-forecasts/snapshots", methods=["POST"])
+def take_budget_forecast_snapshot():
+    """Captures current budget forecast state as a named snapshot.
+    Restricted to Leadership and MLE permission levels."""
+    import json as _j
+    email = request.headers.get("X-Forwarded-Email", "").strip() or "unknown"
+
+    if email != "unknown":
+        member = query(
+            f"SELECT permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [email]
+        )
+        level = member[0]['permission_level'] if member else None
+        if level not in ('Leadership', 'MLE'):
+            return jsonify({"error": "Insufficient permissions to take a snapshot"}), 403
+
+    data  = request.json or {}
+    label = (data.get("label") or "").strip()
+    year  = data.get("fiscal_year", 2026)
+
+    if not label:
+        return jsonify({"error": "label is required"}), 400
+
+    execute(
+        f"""INSERT INTO {SCHEMA}.budget_forecast_snapshots
+            (snapshot_id, label, fiscal_year, snapshot_date, taken_by, snapshot_data)
+            VALUES (?, ?, ?, current_date(), ?, ?)""",
+        [new_id(), label, year, email, _j.dumps(_build_budget_forecast(year))]
+    )
+    return jsonify({"status": "ok"})
 
 
 # ═════════════════════════════════════════════════════════════════════════════
