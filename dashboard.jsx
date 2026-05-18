@@ -6105,20 +6105,16 @@ function AllInvestmentsView() {
             </button>
           ))}
         </div>
-        {/* Portfolio filter pills */}
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {/* Portfolio filter dropdown */}
+        <select value={selectedPortfolio}
+          onChange={e => { setSelectedPortfolio(e.target.value); setSelectedBow("all"); setSelectedCoFundingTeam("all"); }}
+          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
+            fontSize: 12, color: TEXT, background: SURFACE, cursor: "pointer",
+            fontFamily: "inherit", outline: "none" }}>
           {portfolioOptions.map(p => (
-            <button key={p.id} onClick={() => { setSelectedPortfolio(p.id); setSelectedBow("all"); setSelectedCoFundingTeam("all"); }}
-              style={{ padding: "5px 12px", borderRadius: 16,
-                border: "1.5px solid " + (selectedPortfolio === p.id ? p.color : BORDER),
-                background: selectedPortfolio === p.id ? p.color + "12" : SURFACE,
-                color: selectedPortfolio === p.id ? p.color : TEXT_MUTED,
-                fontSize: 12, fontWeight: selectedPortfolio === p.id ? 600 : 400,
-                cursor: "pointer" }}>
-              {p.name}
-            </button>
+            <option key={p.id} value={p.id}>{p.name}</option>
           ))}
-        </div>
+        </select>
         <div style={{ flex: 1 }} />
         <div style={{ position: "relative", minWidth: 200 }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
