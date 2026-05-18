@@ -3929,7 +3929,8 @@ function PortfolioToaView({ portfolioId, portColor }) {
 // ── Portfolio Overview — By the Numbers ──────────────────────────────────────
 function PortfolioByTheNumbers({ portId, portColor }) {
   const pc = portColor || { color: ACCENT };
-  const [stats, setStats] = useState(null);
+  const [stats, setStats]           = useState(null);
+  const [budgetAlloc, setBudgetAlloc] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -3949,6 +3950,20 @@ function PortfolioByTheNumbers({ portId, portColor }) {
     return () => { cancelled = true; };
   }, [portId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/api/budget-forecasts/multi-year").then(data => {
+      if (cancelled || !data) return;
+      let total = 0;
+      [2026, 2027, 2028, 2029].forEach(y => {
+        (data[String(y)] || []).filter(r => r.portfolio_id === portId)
+          .forEach(r => { total += r.budget_allocation || 0; });
+      });
+      if (!cancelled) setBudgetAlloc(total);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [portId]);
+
   const fmtM = n => {
     if (!n) return "—";
     if (n >= 1000000) return `$${(n/1000000).toFixed(1)}M`;
@@ -3958,11 +3973,22 @@ function PortfolioByTheNumbers({ portId, portColor }) {
 
   const loading = stats === null;
   const STATS = [
-    { label:"Active Investments", value: loading ? "…" : String(stats.count||"0"),        sub:"grants & contracts" },
-    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,          sub:"active investments with a co-funding team" },
-    { label:"Total Budget",       value: loading ? "…" : fmtM(stats.totalBudget),          sub:"committed investment" },
-    { label:"Partners",           value: loading ? "…" : String(stats.partners||"0"),       sub:"discrete grantees / vendors" },
+    { label:"Active Investments", value: loading ? "…" : String(stats.count||"0"),   sub:"grants & contracts" },
+    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,    sub:"active investments with a co-funding team" },
+    { label:"Partners",           value: loading ? "…" : String(stats.partners||"0"),sub:"discrete grantees / vendors" },
   ];
+
+  const committed   = stats?.totalBudget || 0;
+  const allocation  = budgetAlloc || 0;
+  const remaining   = Math.max(0, allocation - committed);
+  const overBudget  = Math.max(0, committed - allocation);
+  const pieData = allocation > 0
+    ? [
+        { name:"Committed",  value: Math.min(committed, allocation), color: pc.color },
+        ...(remaining > 0 ? [{ name:"Remaining",  value: remaining,  color: "#E8E4DB" }] : []),
+        ...(overBudget > 0 ? [{ name:"Over Budget", value: overBudget, color: "#FCA5A5" }] : []),
+      ]
+    : [{ name:"No data", value: 1, color: BORDER }];
 
   return (
     <div style={{
@@ -3976,19 +4002,35 @@ function PortfolioByTheNumbers({ portId, portColor }) {
         <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2.5,marginBottom:20,opacity:0.85}}>By the Numbers</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0}}>
           {STATS.map((stat,i) => (
-            <div key={i} style={{
-              padding:"4px 28px 4px"+(i===0?"0":""),
-              borderLeft:i===0?"none":"1px solid "+BORDER,
-            }}>
-              <div style={{
-                fontSize:44,fontWeight:800,
-                color:stat.value==="—"||stat.value==="…"?BORDER:pc.color,
-                letterSpacing:-2,lineHeight:1,marginBottom:8,
-              }}>{stat.value}</div>
+            <div key={i} style={{padding:"4px 28px 4px"+(i===0?"0":""),borderLeft:i===0?"none":"1px solid "+BORDER}}>
+              <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1,marginBottom:8}}>{stat.value}</div>
               <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:3}}>{stat.label}</div>
               <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
             </div>
           ))}
+          {/* Budget pie tile */}
+          <div style={{padding:"4px 28px",borderLeft:"1px solid "+BORDER,display:"flex",gap:14,alignItems:"center"}}>
+            <PieChart width={90} height={90}>
+              <Pie data={pieData} cx={40} cy={40} innerRadius={26} outerRadius={42}
+                dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
+                {pieData.map((entry,i) => <Cell key={i} fill={entry.color}/>)}
+              </Pie>
+              <Tooltip formatter={(v,n)=>[`$${(v/1e6).toFixed(1)}M`, n]} contentStyle={{fontSize:11}}/>
+            </PieChart>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:6}}>Budget Outlook</div>
+              {[
+                {label:"4-Yr Allocation", value: budgetAlloc===null ? "…" : fmtM(allocation), color: TEXT_SUB},
+                {label:"Committed",       value: loading ? "…" : fmtM(committed),              color: pc.color},
+                ...(overBudget > 0 ? [{label:"Over Budget", value: fmtM(overBudget), color:"#DC2626"}] : []),
+              ].map(({label,value,color}) => (
+                <div key={label} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:11,marginBottom:2}}>
+                  <span style={{color:TEXT_MUTED}}>{label}</span>
+                  <span style={{fontWeight:600,color}}>{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
