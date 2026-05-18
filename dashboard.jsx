@@ -7142,6 +7142,7 @@ function BudgetForecastsView() {
   const [takingSnapshot, setTakingSnapshot]     = useState(false);
   const [snapshotError, setSnapshotError]       = useState(null);
   const [viewMode, setViewMode]                 = useState("table");
+  const [multiYearData, setMultiYearData]       = useState({});
 
   useEffect(() => {
     apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(()=>{});
@@ -7149,7 +7150,7 @@ function BudgetForecastsView() {
   }, []);
 
   useEffect(() => {
-    if (selectedSnapshotId) return;
+    if (selectedSnapshotId || year === "all") return;
     let cancelled = false;
     setLoading(true); setError(null);
     apiFetch(`/api/budget-forecasts/summary?year=${year}`)
@@ -7157,6 +7158,16 @@ function BudgetForecastsView() {
       .catch(() => { if (!cancelled) { setError("Could not load budget forecast data."); setLoading(false); } });
     return () => { cancelled = true; };
   }, [year, selectedSnapshotId]);
+
+  useEffect(() => {
+    if (year !== "all") return;
+    let cancelled = false;
+    setLoading(true); setError(null);
+    apiFetch("/api/budget-forecasts/multi-year")
+      .then(d => { if (!cancelled) { setMultiYearData(d||{}); setLoading(false); } })
+      .catch(() => { if (!cancelled) { setError("Could not load multi-year data."); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, [year]);
 
   useEffect(() => {
     if (!selectedSnapshotId) { setSnapshotRows(null); return; }
@@ -7207,6 +7218,48 @@ function BudgetForecastsView() {
       return acc;
     }, Object.fromEntries(AGG_KEYS.map(k=>[k,0]))),
   [portfolioAgg]);
+
+  // Multi-year: flatten all years into per-BOW rows with per-year sub-objects
+  const multiYearRows = React.useMemo(() => {
+    if (year !== "all") return [];
+    const bowMap = {};
+    BUDGET_YEARS.forEach(y => {
+      (multiYearData[String(y)] || []).forEach(r => {
+        if (!bowMap[r.bow_id]) bowMap[r.bow_id] = {
+          bow_id: r.bow_id, bow_title: r.bow_title,
+          portfolio_id: r.portfolio_id, portfolio_title: r.portfolio_title,
+          portfolio_sort: r.portfolio_sort, bow_sort: r.bow_sort, years: {},
+        };
+        bowMap[r.bow_id].years[y] = r;
+      });
+    });
+    return Object.values(bowMap).sort((a,b) => a.portfolio_sort-b.portfolio_sort || a.bow_sort-b.bow_sort);
+  }, [year, multiYearData]);
+
+  const multiYearPortfolios = React.useMemo(() => {
+    if (year !== "all") return [];
+    const map = {};
+    multiYearRows.forEach(r => {
+      const pid = r.portfolio_id;
+      if (!map[pid]) map[pid] = {
+        portfolio_id: pid, portfolio_title: r.portfolio_title,
+        portfolio_sort: r.portfolio_sort, bows: [], years: {},
+      };
+      map[pid].bows.push(r);
+      BUDGET_YEARS.forEach(y => {
+        if (!map[pid].years[y]) map[pid].years[y] = {
+          budget_allocation:0, committed_total:0, potential_total:0, pipeline_total:0, headroom:0,
+        };
+        const yr = r.years[y] || {};
+        map[pid].years[y].budget_allocation += yr.budget_allocation || 0;
+        map[pid].years[y].committed_total   += yr.committed_total   || 0;
+        map[pid].years[y].potential_total   += yr.potential_total   || 0;
+        map[pid].years[y].pipeline_total    += yr.pipeline_total    || 0;
+        map[pid].years[y].headroom          += yr.headroom          || 0;
+      });
+    });
+    return Object.values(map).sort((a,b) => a.portfolio_sort-b.portfolio_sort);
+  }, [multiYearRows]);
 
   // Chart data — one entry per portfolio or BOW depending on level
   const chartSource = level === "bow" ? displayRows : portfolioAgg;
@@ -7413,17 +7466,13 @@ function BudgetForecastsView() {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           {/* Year */}
-          <div style={{display:"flex",gap:3}}>
-            {BUDGET_YEARS.map(y=>(
-              <button key={y} onClick={()=>{setYear(y);setSelectedSnapshotId(null);}}
-                style={{padding:"5px 13px",borderRadius:6,border:"1px solid "+(year===y&&!selectedSnapshotId?ACCENT:BORDER),
-                        background:year===y&&!selectedSnapshotId?ACCENT_LIGHT:SURFACE,
-                        color:year===y&&!selectedSnapshotId?ACCENT:TEXT_SUB,
-                        fontSize:13,fontWeight:year===y&&!selectedSnapshotId?700:400,cursor:"pointer"}}>
-                {y}
-              </button>
-            ))}
-          </div>
+          <select
+            value={year}
+            onChange={e=>{const v=e.target.value; setYear(v==="all"?"all":+v); setSelectedSnapshotId(null); setViewMode("table");}}
+            style={{padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:13,color:TEXT,background:SURFACE,cursor:"pointer",fontWeight:600}}>
+            <option value="all">All Years (2026–2029)</option>
+            {BUDGET_YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
           {/* Level toggle */}
           <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:6,overflow:"hidden"}}>
             {[{v:"strategy",l:"Strategy"},{v:"portfolio",l:"Portfolio"},{v:"bow",l:"BOW"}].map(({v,l})=>(
@@ -7435,8 +7484,8 @@ function BudgetForecastsView() {
               </button>
             ))}
           </div>
-          {/* View mode toggle */}
-          <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:6,overflow:"hidden"}}>
+          {/* View mode toggle — single year only */}
+          {year!=="all" && <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:6,overflow:"hidden"}}>
             {[{v:"table",l:"Table"},{v:"chart",l:"Chart"}].map(({v,l})=>(
               <button key={v} onClick={()=>setViewMode(v)}
                 style={{padding:"5px 13px",border:"none",borderRight:"1px solid "+BORDER,
@@ -7445,9 +7494,9 @@ function BudgetForecastsView() {
                 {l}
               </button>
             ))}
-          </div>
-          {/* Detail toggles — table only */}
-          {viewMode==="table" && <>
+          </div>}
+          {/* Detail toggles — single year table only */}
+          {year!=="all" && viewMode==="table" && <>
             <button onClick={()=>setShowCommittedDetail(v=>!v)}
               style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
                       background:showCommittedDetail?"#EBF4F9":SURFACE,
@@ -7495,8 +7544,97 @@ function BudgetForecastsView() {
         </div>
       )}
 
+      {/* Multi-year table */}
+      {year==="all" && (() => {
+        const src = level==="bow" ? multiYearRows
+          : level==="portfolio" ? multiYearPortfolios
+          : [{ portfolio_title:"USP Data Total", portfolio_id:"_total", bow_id:"_total",
+               years: BUDGET_YEARS.reduce((acc,y)=>{
+                 acc[y] = multiYearPortfolios.reduce((s,p)=>({
+                   budget_allocation: s.budget_allocation + (p.years[y]?.budget_allocation||0),
+                   committed_total:   s.committed_total   + (p.years[y]?.committed_total  ||0),
+                   potential_total:   s.potential_total   + (p.years[y]?.potential_total  ||0),
+                   pipeline_total:    s.pipeline_total    + (p.years[y]?.pipeline_total   ||0),
+                   headroom:          s.headroom          + (p.years[y]?.headroom         ||0),
+                 }), {budget_allocation:0,committed_total:0,potential_total:0,pipeline_total:0,headroom:0});
+                 return acc;
+               }, {}) }];
+        const byPortfolio = level==="bow"
+          ? multiYearPortfolios.map(p=>({...p, bowRows: multiYearRows.filter(r=>r.portfolio_id===p.portfolio_id)}))
+          : [];
+        const myTh = (extra={}) => ({padding:"7px 10px",fontSize:11,fontWeight:700,color:TEXT_SUB,
+          textAlign:"right",borderBottom:"2px solid "+BORDER,whiteSpace:"nowrap",background:SURFACE,...extra});
+        const myTd = (extra={}) => ({padding:"6px 10px",fontSize:12,color:TEXT,textAlign:"right",
+          borderBottom:"1px solid "+BORDER,whiteSpace:"nowrap",...extra});
+        const myFmtM = n => { const v=parseFloat(n); return isNaN(v)||v===0?"—":(v/1e6).toFixed(1); };
+        const myHStyle = n => { const v=parseFloat(n); if(isNaN(v)||v===0) return {}; return v<0?{color:"#DC2626",fontWeight:600}:v<1e6?{color:"#D97706"}:{color:"#059669"}; };
+        const YearCols = ({d}) => BUDGET_YEARS.map(y=>{
+          const r=d?.years?.[y]||{}; return (
+            <React.Fragment key={y}>
+              <td style={myTd()}>{myFmtM(r.committed_total)}</td>
+              <td style={myTd()}>{myFmtM(r.potential_total)}</td>
+              <td style={myTd()}>{myFmtM(r.budget_allocation)}</td>
+              <td style={myTd({...myHStyle(r.headroom)})}>{myFmtM(r.headroom)}</td>
+            </React.Fragment>
+          );
+        });
+        return (
+          <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:"#F5F3ED"}}>
+                  <th colSpan={2} style={myTh({textAlign:"left"})}></th>
+                  {BUDGET_YEARS.map(y=>(
+                    <th key={y} colSpan={4} style={myTh({textAlign:"center",borderLeft:"2px solid "+BORDER,
+                      background: y%2===0?"#EBF4F9":"#ECF7F5", color: y%2===0?"#1F5F80":"#337A6C"})}>
+                      FY{y}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
+                  <th style={myTh({textAlign:"left",minWidth:140})}>Portfolio</th>
+                  <th style={myTh({textAlign:"left",minWidth:180})}>BOW</th>
+                  {BUDGET_YEARS.map(y=>(
+                    <React.Fragment key={y}>
+                      <th style={myTh({borderLeft:"2px solid "+BORDER})}>Committed</th>
+                      <th style={myTh()}>Potential</th>
+                      <th style={myTh()}>Budget Alloc</th>
+                      <th style={myTh()}>Headroom</th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {level==="bow" ? byPortfolio.map(p=>(
+                  <React.Fragment key={p.portfolio_id}>
+                    <tr style={{background:"#EEE9DF"}}>
+                      <td style={myTd({textAlign:"left",fontWeight:700,paddingLeft:16})}>{p.portfolio_title}</td>
+                      <td style={myTd()}></td>
+                      <YearCols d={p}/>
+                    </tr>
+                    {p.bowRows.sort((a,b)=>a.bow_sort-b.bow_sort).map(b=>(
+                      <tr key={b.bow_id} style={{background:SURFACE}}>
+                        <td style={myTd()}></td>
+                        <td style={myTd({textAlign:"left",paddingLeft:20})}>{b.bow_title}</td>
+                        <YearCols d={b}/>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                )) : src.map((r,i)=>(
+                  <tr key={r.portfolio_id||i} style={{background: level==="portfolio"?"#EEE9DF":SURFACE}}>
+                    <td style={myTd({textAlign:"left",fontWeight:700,paddingLeft:16})}>{r.portfolio_title||"USP Data Total"}</td>
+                    <td style={myTd()}></td>
+                    <YearCols d={r}/>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
       {/* Chart */}
-      {viewMode==="chart" && (
+      {year!=="all" && viewMode==="chart" && (
         <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,padding:"24px 24px 16px"}}>
           {/* Legend */}
           <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:20,flexWrap:"wrap"}}>
@@ -7551,7 +7689,7 @@ function BudgetForecastsView() {
       )}
 
       {/* Table */}
-      {viewMode==="table" && <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,overflowX:"auto"}}>
+      {year!=="all" && viewMode==="table" && <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead>
             <tr style={{background:"#F5F3ED"}}>

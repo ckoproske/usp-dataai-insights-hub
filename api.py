@@ -1184,6 +1184,124 @@ def _build_budget_forecast(year):
     return result
 
 
+def _build_budget_forecast_multi(years):
+    """Builds forecast for multiple years in a single Databricks connection.
+    Returns {str(year): [bow_rows]} using IN-clause queries for efficiency."""
+    year_ph  = ','.join(['?' for _ in years])
+    stage_ph = ','.join(['?' for _ in PIPELINE_STAGES])
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            bow_rows = _qc(cur,
+                f"""SELECT b.bow_id, b.title AS bow_title, b.invest_bow_id,
+                           b.portfolio_id, b.sort_order AS bow_sort,
+                           p.title AS portfolio_title, p.sort_order AS portfolio_sort
+                    FROM {SCHEMA}.bows b
+                    JOIN {SCHEMA}.portfolios p ON b.portfolio_id = p.portfolio_id
+                    WHERE b.invest_bow_id IS NOT NULL
+                    ORDER BY p.sort_order, b.sort_order"""
+            )
+            alloc_rows = _qc(cur,
+                f"""SELECT f.BoW_ID,
+                      TRY_CAST(f.BoW_Funding_Allocation_Year AS INT)   AS year,
+                      TRY_CAST(f.BoW_Funding_Allocation_Amount AS DECIMAL(18,2)) AS budget_allocation,
+                      TRY_CAST(f.Allocation_Amount_Committed   AS DECIMAL(18,2)) AS committed_total,
+                      TRY_CAST(f.Allocation_Amount_Paid        AS DECIMAL(18,2)) AS committed_paid,
+                      TRY_CAST(f.Allocation_Amount_Unpaid      AS DECIMAL(18,2)) AS committed_unpaid
+                    FROM {INVEST_SCHEMA}.v_bow_annual_funding_allocation f
+                    WHERE f.BoW_Funding_Strategy = 'USP Data'
+                      AND TRY_CAST(f.BoW_Funding_Allocation_Year AS INT) IN ({year_ph})""",
+                years
+            )
+            committed_type_rows = _qc(cur,
+                f"""SELECT b.bow_id, a.Investment_Payment_Year AS year,
+                           i.Type AS investment_type,
+                           SUM(a.`Investment_Payment_Allocation Amount`) AS amount
+                    FROM {SCHEMA}.bows b
+                    JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
+                    JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
+                    WHERE i.Status = 'Active'
+                      AND a.Investment_Payment_Year IN ({year_ph})
+                    GROUP BY b.bow_id, a.Investment_Payment_Year, i.Type""",
+                years
+            )
+            potential_rows = _qc(cur,
+                f"""SELECT b.bow_id, a.Investment_Payment_Year AS year,
+                           i.Workflow_Step AS stage, i.Type AS investment_type,
+                           SUM(a.`Investment_Payment_Allocation Amount`) AS amount
+                    FROM {SCHEMA}.bows b
+                    JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
+                    JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
+                    WHERE i.Status = 'In Process'
+                      AND a.Investment_Payment_Year IN ({year_ph})
+                      AND i.Workflow_Step IN ({stage_ph})
+                    GROUP BY b.bow_id, a.Investment_Payment_Year, i.Workflow_Step, i.Type""",
+                years + PIPELINE_STAGES
+            )
+
+    results = {}
+    for year in years:
+        alloc_by_invest = {r['BoW_ID']: r for r in alloc_rows if r['year'] == year}
+
+        ct = {}
+        for r in committed_type_rows:
+            if r['year'] != year: continue
+            bid = r['bow_id']
+            if bid not in ct: ct[bid] = {'Grant': 0.0, 'Contract': 0.0}
+            ct[bid][r['investment_type']] = float(r['amount'] or 0)
+
+        pot = {}
+        for r in potential_rows:
+            if r['year'] != year: continue
+            bid, stage, t, amount = r['bow_id'], r['stage'], r['investment_type'], float(r['amount'] or 0)
+            if bid not in pot: pot[bid] = {'total': 0.0, 'grants': 0.0, 'contracts': 0.0, 'by_stage': {}}
+            pot[bid]['total'] += amount
+            if t == 'Grant':    pot[bid]['grants']    += amount
+            elif t == 'Contract': pot[bid]['contracts'] += amount
+            by_stage = pot[bid]['by_stage']
+            if stage not in by_stage: by_stage[stage] = {'total': 0.0, 'grants': 0.0, 'contracts': 0.0}
+            by_stage[stage]['total'] += amount
+            if t == 'Grant':    by_stage[stage]['grants']    += amount
+            elif t == 'Contract': by_stage[stage]['contracts'] += amount
+
+        year_rows = []
+        for b in bow_rows:
+            bid   = b['bow_id']
+            alloc = alloc_by_invest.get(b['invest_bow_id'], {})
+            c     = ct.get(bid, {'Grant': 0.0, 'Contract': 0.0})
+            p     = pot.get(bid, {'total': 0.0, 'grants': 0.0, 'contracts': 0.0, 'by_stage': {}})
+            budget_allocation = float(alloc.get('budget_allocation') or 0)
+            committed_total   = float(alloc.get('committed_total')   or 0)
+            potential_total   = p['total']
+            pipeline_total    = committed_total + potential_total
+            year_rows.append({
+                'bow_id': bid, 'bow_title': b['bow_title'],
+                'portfolio_id': b['portfolio_id'], 'portfolio_title': b['portfolio_title'],
+                'portfolio_sort': b['portfolio_sort'], 'bow_sort': b['bow_sort'],
+                'budget_allocation': budget_allocation,
+                'committed_total': committed_total,
+                'committed_paid':    float(alloc.get('committed_paid')    or 0),
+                'committed_unpaid':  float(alloc.get('committed_unpaid')  or 0),
+                'committed_grants':  c['Grant'], 'committed_contracts': c['Contract'],
+                'potential_total': potential_total,
+                'potential_grants': p['grants'], 'potential_contracts': p['contracts'],
+                'potential_by_stage': p['by_stage'],
+                'pipeline_total': pipeline_total,
+                'headroom': budget_allocation - pipeline_total,
+                'expected_forecast': None, 'expected_headroom': None,
+            })
+        results[str(year)] = year_rows
+
+    return results
+
+
+@app.route("/api/budget-forecasts/multi-year")
+def get_budget_forecast_multi_year():
+    """Returns budget forecast for all budget years (2026–2029) in one response,
+    using a single Databricks connection. Returns {year: [bow_rows]}."""
+    return jsonify(_build_budget_forecast_multi([2026, 2027, 2028, 2029]))
+
+
 @app.route("/api/budget-forecasts/summary")
 def get_budget_forecast_summary():
     """Full budget forecast table for all USP portfolios, merged from the INVEST
