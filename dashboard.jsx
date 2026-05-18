@@ -7885,7 +7885,7 @@ function Sidebar({ activeView, onNavigate, data }) {
         />
         <NavItem
           label="Budget Forecasts"
-          icon={<IconTable/>}
+          icon={<IconBarChart/>}
           active={isBudgetActive}
           onClick={()=>onNavigate({type:"budget-forecasts"})}
         />
@@ -7983,6 +7983,17 @@ function IconGrid() {
       <rect x="8" y="0" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.7"/>
       <rect x="0" y="8" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.7"/>
       <rect x="8" y="8" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.7"/>
+    </svg>
+  );
+}
+
+function IconBarChart() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="0"  y="7" width="3" height="7" rx="1" fill="currentColor" opacity="0.7"/>
+      <rect x="4"  y="3" width="3" height="11" rx="1" fill="currentColor" opacity="0.7"/>
+      <rect x="8"  y="5" width="3" height="9" rx="1" fill="currentColor" opacity="0.7"/>
+      <rect x="12" y="1" width="2" height="13" rx="1" fill="currentColor" opacity="0.7"/>
     </svg>
   );
 }
