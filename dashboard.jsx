@@ -6343,10 +6343,10 @@ function AllInvestmentsView() {
                 <col style={{ minWidth: 140 }} />
                 <col style={{ minWidth: 110 }} />
                 <col style={{ width: 130 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 90 }} />
                 <col style={{ width: 110 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
                 <col style={{ width: 110 }} />
                 <col style={{ width: showApprover ? 130 : 30 }} />
                 <col style={{ width: showNotes ? 200 : 30 }} />
@@ -6416,17 +6416,6 @@ function AllInvestmentsView() {
                           </>
                         )}
                       </th>
-                      <th onClick={() => handleColSort("amount")}
-                        style={{ ...hStyle(sortBy === "amount"), borderRight: "1px solid " + BORDER,
-                          cursor: "pointer", userSelect: "none" }}>
-                        Total Amount<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "amount" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
-                        <div style={{ fontSize: 9, fontWeight: 400, color: TEXT_MUTED,
-                          textTransform: "none", letterSpacing: 0, marginTop: 2, fontStyle: "italic" }}>
-                          Hover for By Year breakouts
-                        </div>
-                      </th>
-                      {plainCol("Start Date", false)}
-                      {plainCol("End Date", false)}
                       <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
                         <div onClick={() => setOpenDropdown(openDropdown === "cofunding" ? null : "cofunding")}
                           style={{ ...hStyle(selectedCoFundingTeam !== "all"), padding: "9px 12px", cursor: "pointer",
@@ -6456,6 +6445,17 @@ function AllInvestmentsView() {
                           </>
                         )}
                       </th>
+                      <th onClick={() => handleColSort("amount")}
+                        style={{ ...hStyle(sortBy === "amount"), borderRight: "1px solid " + BORDER,
+                          cursor: "pointer", userSelect: "none" }}>
+                        Total Amount<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "amount" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
+                        <div style={{ fontSize: 9, fontWeight: 400, color: TEXT_MUTED,
+                          textTransform: "none", letterSpacing: 0, marginTop: 2, fontStyle: "italic" }}>
+                          Hover for By Year breakouts
+                        </div>
+                      </th>
+                      {plainCol("Start Date", false)}
+                      {plainCol("End Date", false)}
                       <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
                         <div onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
                           style={{ ...hStyle(filterStatuses.length > 0), padding: "7px 12px", cursor: "pointer",
@@ -6619,30 +6619,6 @@ function AllInvestmentsView() {
                           }
                         </td>
 
-                        {/* Amount */}
-                        <td style={{ ...tdBase, padding: "11px 12px", position: "relative" }}
-                          onMouseEnter={e => inv.amount && showPayments(inv.id, e.currentTarget.getBoundingClientRect())}
-                          onMouseLeave={hidePayments}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT,
-                            borderBottom: inv.amount ? "1px dashed " + BORDER : "none", cursor: inv.amount ? "default" : "auto" }}>
-                            {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
-                          </span>
-                        </td>
-
-                        {/* Start Date */}
-                        <td style={{ ...tdBase, padding: "11px 12px" }}>
-                          <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
-                            {fmtInvDate(inv.startDate)}
-                          </span>
-                        </td>
-
-                        {/* End Date */}
-                        <td style={{ ...tdBase, padding: "11px 12px" }}>
-                          <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
-                            {fmtInvDate(inv.endDate)}
-                          </span>
-                        </td>
-
                         {/* Co-Funding Teams */}
                         {(() => {
                           const teams = inv.coFundingTeams
@@ -6666,6 +6642,30 @@ function AllInvestmentsView() {
                             </td>
                           );
                         })()}
+
+                        {/* Amount */}
+                        <td style={{ ...tdBase, padding: "11px 12px", position: "relative" }}
+                          onMouseEnter={e => inv.amount && showPayments(inv.id, e.currentTarget.getBoundingClientRect())}
+                          onMouseLeave={hidePayments}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT,
+                            borderBottom: inv.amount ? "1px dashed " + BORDER : "none", cursor: inv.amount ? "default" : "auto" }}>
+                            {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
+                          </span>
+                        </td>
+
+                        {/* Start Date */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <span style={{ fontSize: 11, color: inv.startDate ? TEXT : TEXT_MUTED }}>
+                            {fmtInvDate(inv.startDate)}
+                          </span>
+                        </td>
+
+                        {/* End Date */}
+                        <td style={{ ...tdBase, padding: "11px 12px" }}>
+                          <span style={{ fontSize: 11, color: inv.endDate ? TEXT : TEXT_MUTED }}>
+                            {fmtInvDate(inv.endDate)}
+                          </span>
+                        </td>
 
                         {/* Status */}
                         <td style={{ ...tdBase, padding: "8px 12px" }}>
