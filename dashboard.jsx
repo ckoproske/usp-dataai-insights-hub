@@ -1245,14 +1245,16 @@ async function loadAllInvestments(filters = {}) {
       if (!byId[inv.id]) {
         byId[inv.id] = {
           ...inv,
-          bowIds:    inv.bow_id    ? [inv.bow_id]    : [],
-          bowTitles: inv.bow_title ? [inv.bow_title] : [],
+          bowIds:          inv.bow_id    ? [inv.bow_id]          : [],
+          bowTitles:       inv.bow_title ? [inv.bow_title]       : [],
+          bowPortfolioIds: inv.portfolio_id ? [inv.portfolio_id] : [],
         };
       } else {
-        if (inv.bow_id    && !byId[inv.id].bowIds.includes(inv.bow_id))
+        if (inv.bow_id && !byId[inv.id].bowIds.includes(inv.bow_id)) {
           byId[inv.id].bowIds.push(inv.bow_id);
-        if (inv.bow_title && !byId[inv.id].bowTitles.includes(inv.bow_title))
-          byId[inv.id].bowTitles.push(inv.bow_title);
+          byId[inv.id].bowTitles.push(inv.bow_title || "");
+          byId[inv.id].bowPortfolioIds.push(inv.portfolio_id || "");
+        }
       }
     });
     return Object.values(byId);
@@ -6602,7 +6604,7 @@ function AllInvestmentsView() {
                         <td style={{ ...tdBase, padding: "9px 12px" }}>
                           {inv.bowTitles && inv.bowTitles.length > 0
                             ? inv.bowTitles.map((title, i) => {
-                                const bowPc = PORT_COLORS[inv.portfolio_id] || rowPc;
+                                const bowPc = PORT_COLORS[inv.bowPortfolioIds?.[i]] || PORT_COLORS[inv.portfolio_id] || rowPc;
                                 return (
                                   <span key={i} style={{ fontSize: 10, fontWeight: 600,
                                     color: bowPc.color, background: bowPc.color + "15",
