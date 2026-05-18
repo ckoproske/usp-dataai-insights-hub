@@ -5805,6 +5805,7 @@ function AllInvestmentsView() {
   const [selectedCoFundingTeam, setSelectedCoFundingTeam] = useState("all");
   const [currentUser, setCurrentUser]               = useState(null);
   const [viewMode, setViewMode]                     = useState("table");
+  const [selectedOwner, setSelectedOwner]           = useState("all");
   const [paymentPopover, setPaymentPopover]         = useState(null);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
@@ -5929,6 +5930,7 @@ function AllInvestmentsView() {
       if (!filterStatuses.length) return true;
       return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
     })
+    .filter(inv => selectedOwner === "all" || inv.owner === selectedOwner || inv.secondaryOwner === selectedOwner)
     .filter(inv => !ownerSearch || [inv.owner, inv.secondaryOwner]
       .some(s => s && s.toLowerCase().includes(ownerSearch.toLowerCase())))
     .filter(inv => !search || [inv.grantee || "", inv.initiative || "", inv.internal_notes || ""]
@@ -6130,6 +6132,10 @@ function AllInvestmentsView() {
 
       {/* Pipeline / Table view */}
       {viewMode === "pipeline" ? (() => {
+        const allPipelineInvs = investments.filter(inv => inv.status === "In Process");
+        const ownerOptions = ["all", ...Array.from(new Set(
+          allPipelineInvs.flatMap(inv => [inv.owner, inv.secondaryOwner].filter(Boolean))
+        )).sort()];
         const pipelineInvs   = filtered.filter(inv => inv.status === "In Process");
         const isStrategyLevel = selectedPortfolio === "all" && selectedBow === "all";
         const distinctGrantees = new Set(pipelineInvs.map(inv => inv.grantee).filter(Boolean)).size;
@@ -6140,8 +6146,8 @@ function AllInvestmentsView() {
           borderLeft: "1px solid " + BORDER, verticalAlign: "middle" };
         return (
           <>
-            {/* Summary cards */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            {/* Summary cards + owner filter */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
               {[
                 ["In Pipeline",       pipelineInvs.length],
                 ["Grantees / Vendors",distinctGrantees],
@@ -6155,6 +6161,17 @@ function AllInvestmentsView() {
                     letterSpacing: 0.6, marginTop: 4 }}>{label}</div>
                 </div>
               ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, justifyContent: "center", alignSelf: "center" }}>
+                <div style={{ fontSize: 10, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.6 }}>Owner</div>
+                <select value={selectedOwner} onChange={e => setSelectedOwner(e.target.value)}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
+                    fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit",
+                    outline: "none", cursor: "pointer", minWidth: 160 }}>
+                  {ownerOptions.map(o => (
+                    <option key={o} value={o}>{o === "all" ? "All Owners" : o}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {pipelineInvs.length === 0 ? (
