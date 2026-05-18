@@ -6344,7 +6344,7 @@ function AllInvestmentsView() {
                 <col style={{ width: 90 }} />
                 <col style={{ width: 90 }} />
                 <col style={{ width: 90 }} />
-                <col style={{ width: 180 }} />
+                <col style={{ width: 110 }} />
                 <col style={{ width: 110 }} />
                 <col style={{ width: showApprover ? 130 : 30 }} />
                 <col style={{ width: showNotes ? 200 : 30 }} />
