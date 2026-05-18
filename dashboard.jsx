@@ -7735,17 +7735,22 @@ function BudgetForecastsView() {
               <th colSpan={2} style={th("left",{borderRight:"1px solid "+BORDER})}></th>
               <th colSpan={showCommittedDetail?5:1} onClick={()=>setShowCommittedDetail(v=>!v)}
                 style={th("center",{borderRight:"1px solid "+BORDER,color:"#1F5F80",background:"#EBF4F9",cursor:"pointer",userSelect:"none"})}>
-                <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
                   Committed (Active)
-                  <span style={{fontSize:9,opacity:0.6}}>{showCommittedDetail?"◀":"+"}
+                  <span style={{fontSize:10,fontWeight:700,background:"#3086AB",color:"#fff",
+                    borderRadius:3,padding:"1px 5px",lineHeight:1.5,letterSpacing:0}}>
+                    {showCommittedDetail?"−":"+"}
                   </span>
                 </span>
               </th>
               <th colSpan={showPotentialDetail?3:1} onClick={()=>setShowPotentialDetail(v=>!v)}
                 style={th("center",{borderRight:"1px solid "+BORDER,color:"#337A6C",background:"#ECF7F5",cursor:"pointer",userSelect:"none"})}>
-                <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
                   Potential (In-Process)
-                  <span style={{fontSize:9,opacity:0.6}}>{showPotentialDetail?"◀":"+"}</span>
+                  <span style={{fontSize:10,fontWeight:700,background:"#4EAB9A",color:"#fff",
+                    borderRadius:3,padding:"1px 5px",lineHeight:1.5,letterSpacing:0}}>
+                    {showPotentialDetail?"−":"+"}
+                  </span>
                 </span>
               </th>
               <th colSpan={5} style={th("center")}></th>
