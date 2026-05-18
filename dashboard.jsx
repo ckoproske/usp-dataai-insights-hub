@@ -7262,10 +7262,11 @@ function BudgetForecastsView() {
   }, [multiYearRows]);
 
   // Chart data — one entry per portfolio or BOW depending on level
-  const chartSource = level === "bow" ? displayRows : portfolioAgg;
   const chartData = React.useMemo(() => {
     const src = level === "bow"
       ? displayRows.slice().sort((a,b) => a.portfolio_sort - b.portfolio_sort || a.bow_sort - b.bow_sort)
+      : level === "strategy"
+      ? [{ ...strategyTotal, name: "USP Data Total" }]
       : portfolioAgg;
     return src.map(r => {
       const committed_paid    = +((r.committed_paid    ||0)/1e6).toFixed(2);
@@ -7275,7 +7276,7 @@ function BudgetForecastsView() {
       const headroom          = +(Math.max(0, rawHeadroom)).toFixed(2);
       const over_budget       = +(Math.max(0, -rawHeadroom)).toFixed(2);
       return {
-        name:              level === "bow" ? r.bow_title : r.portfolio_title,
+        name:              r.name || (level === "bow" ? r.bow_title : r.portfolio_title),
         portfolio:         r.portfolio_title || "",
         committed_paid,
         committed_unpaid,
