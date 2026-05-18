@@ -6110,7 +6110,7 @@ function AllInvestmentsView() {
         </div>
         {/* Portfolio filter dropdown */}
         <select value={selectedPortfolio}
-          onChange={e => { setSelectedPortfolio(e.target.value); setSelectedBow("all"); setSelectedCoFundingTeam("all"); }}
+          onChange={e => { setSelectedPortfolio(e.target.value); setSelectedBow("all"); setSelectedCoFundingTeam("all"); setSelectedOwner("all"); }}
           style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
             fontSize: 12, color: TEXT, background: SURFACE, cursor: "pointer",
             fontFamily: "inherit", outline: "none" }}>
@@ -6118,6 +6118,24 @@ function AllInvestmentsView() {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
+        {/* Owner filter dropdown */}
+        {viewMode === "pipeline" && (() => {
+          const ownerOpts = ["all", ...Array.from(new Set(
+            investments.filter(inv => inv.status === "In Process")
+              .flatMap(inv => [inv.owner, inv.secondaryOwner].filter(Boolean))
+          )).sort()];
+          return (
+            <select value={selectedOwner}
+              onChange={e => { setSelectedOwner(e.target.value); setSelectedPortfolio("all"); setSelectedBow("all"); setSelectedCoFundingTeam("all"); }}
+              style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
+                fontSize: 12, color: TEXT, background: SURFACE, cursor: "pointer",
+                fontFamily: "inherit", outline: "none" }}>
+              {ownerOpts.map(o => (
+                <option key={o} value={o}>{o === "all" ? "All Owners" : o}</option>
+              ))}
+            </select>
+          );
+        })()}
         <div style={{ flex: 1 }} />
         <div style={{ position: "relative", minWidth: 200 }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
@@ -6132,10 +6150,6 @@ function AllInvestmentsView() {
 
       {/* Pipeline / Table view */}
       {viewMode === "pipeline" ? (() => {
-        const allPipelineInvs = investments.filter(inv => inv.status === "In Process");
-        const ownerOptions = ["all", ...Array.from(new Set(
-          allPipelineInvs.flatMap(inv => [inv.owner, inv.secondaryOwner].filter(Boolean))
-        )).sort()];
         const pipelineInvs   = filtered.filter(inv => inv.status === "In Process");
         const isStrategyLevel = selectedPortfolio === "all" && selectedBow === "all";
         const distinctGrantees = new Set(pipelineInvs.map(inv => inv.grantee).filter(Boolean)).size;
@@ -6146,8 +6160,8 @@ function AllInvestmentsView() {
           borderLeft: "1px solid " + BORDER, verticalAlign: "middle" };
         return (
           <>
-            {/* Summary cards + owner filter */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            {/* Summary cards */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
               {[
                 ["In Pipeline",       pipelineInvs.length],
                 ["Grantees / Vendors",distinctGrantees],
@@ -6161,17 +6175,6 @@ function AllInvestmentsView() {
                     letterSpacing: 0.6, marginTop: 4 }}>{label}</div>
                 </div>
               ))}
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, justifyContent: "center", alignSelf: "center" }}>
-                <div style={{ fontSize: 10, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.6 }}>Owner</div>
-                <select value={selectedOwner} onChange={e => setSelectedOwner(e.target.value)}
-                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
-                    fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit",
-                    outline: "none", cursor: "pointer", minWidth: 160 }}>
-                  {ownerOptions.map(o => (
-                    <option key={o} value={o}>{o === "all" ? "All Owners" : o}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {pipelineInvs.length === 0 ? (
