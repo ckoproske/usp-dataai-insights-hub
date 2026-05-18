@@ -5945,16 +5945,37 @@ function AllInvestmentsView() {
     });
 
   const totalAmt = filtered.reduce((s, inv) => s + toNum(inv.amount), 0);
-  const INVEST_STATUSES = [
-    { key: "Active",     color: "#10B981" },
-    { key: "In Process", color: "#60A5FA" },
-    { key: "Closed",     color: "#9CA3AF" },
-    { key: "Cancelled",  color: "#F87171" },
-  ];
-  const bucketAmts = INVEST_STATUSES.map(b => ({
-    ...b,
-    amt: filtered.filter(inv => inv.status === b.key).reduce((s, inv) => s + toNum(inv.amount), 0),
-  }));
+
+  const contextLevel = selectedBow !== "all" ? "BOW"
+    : selectedPortfolio !== "all" ? "Portfolio"
+    : "Strategy";
+  const contextTitle = selectedBow !== "all" ? selectedBow
+    : selectedPortfolio !== "all" ? (PORT_COLORS[selectedPortfolio]?.label || selectedPortfolio)
+    : "Strategy-Wide Pipeline";
+
+  const STAGE_SHORT = {
+    "Start Concept":      "Start Concept",
+    "Start Amendment":    "Start Amend.",
+    "Request Proposal":   "Req. Proposal",
+    "Refine Proposal":    "Refine Proposal",
+    "Create Agreement":   "Agreement",
+    "Finalize Amendment": "Fin. Amendment",
+    "Request Approval":   "Req. Approval",
+    "Obtain Signatures":  "Signatures",
+    "Active":             "Active",
+  };
+  const stageData = [...PIPELINE_STAGES, "Active"].map(stage => {
+    const invs = stage === "Active"
+      ? filtered.filter(inv => inv.status === "Active")
+      : filtered.filter(inv => inv.stage === stage);
+    return {
+      stage,
+      count:  invs.length,
+      amount: invs.reduce((s, inv) => s + toNum(inv.amount), 0),
+      grants:    invs.filter(inv => !inv.type?.toLowerCase().includes("amendment")).length,
+      contracts: invs.filter(inv =>  inv.type?.toLowerCase().includes("amendment")).length,
+    };
+  });
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
@@ -5976,70 +5997,98 @@ function AllInvestmentsView() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Header */}
-      <div style={{ background: BRAND, borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "20px 24px 16px", display: "flex",
-          justifyContent: "space-between", alignItems: "flex-start", gap: 20 }}>
+      {/* Pipeline tracker header */}
+      <div style={{ background: BRAND, borderRadius: 12, padding: "18px 22px 16px" }}>
+        {/* Title + summary stats */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, gap: 16 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)",
-              textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
-              All Investments
+            <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.4)",
+              textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>
+              Investment Pipeline · {contextLevel}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 4 }}>
-              Strategy-Wide Investment Portfolio
-            </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
-              All active and in-process investments across {PORTFOLIOS.length} portfolios
-            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>{contextTitle}</div>
           </div>
-          <div style={{ display: "flex", gap: 16, flexShrink: 0 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)",
-                textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
-                Investments
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "#fff" }}>
-                {filtered.length}
-              </div>
-            </div>
-            <div style={{ width: 1, background: "rgba(255,255,255,0.1)" }} />
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)",
-                textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>
-                Total Value
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>
-                {fmtM(totalAmt)}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style={{ padding: "0 24px 18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between",
-            alignItems: "baseline", marginBottom: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)",
-              textTransform: "uppercase", letterSpacing: 1.2 }}>By Investment Status</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.65)" }}>
-              {fmtM(totalAmt)}
-            </span>
-          </div>
-          <div style={{ height: 8, borderRadius: 4, overflow: "hidden",
-            display: "flex", background: "rgba(255,255,255,0.1)" }}>
-            {totalAmt > 0 && bucketAmts.map(b => b.amt > 0 && (
-              <div key={b.key} style={{ width: (b.amt/totalAmt*100)+"%", background: b.color, flexShrink: 0 }}/>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
-            {bucketAmts.map(b => (
-              <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 7, height: 7, borderRadius: 2, background: b.color, display: "inline-block" }}/>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>{b.key}</span>
-                <span style={{ fontSize: 10, fontWeight: 700,
-                  color: b.amt > 0 ? "#fff" : "rgba(255,255,255,0.25)" }}>{fmtM(b.amt)}</span>
-              </div>
+          <div style={{ display: "flex", gap: 18, flexShrink: 0 }}>
+            {[
+              { label: "In Pipeline", value: filtered.filter(i=>i.status==="In Process").length, color: "#60A5FA" },
+              { label: "Active",      value: filtered.filter(i=>i.status==="Active").length,     color: "#10B981" },
+              { label: "Total Value", value: fmtM(totalAmt), color: "#fff" },
+            ].map(({ label, value, color }, i, arr) => (
+              <React.Fragment key={label}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+                </div>
+                {i < arr.length - 1 && <div style={{ width: 1, background: "rgba(255,255,255,0.1)", alignSelf: "stretch" }}/>}
+              </React.Fragment>
             ))}
           </div>
         </div>
+
+        {/* Stage flow */}
+        <div style={{ display: "flex", alignItems: "stretch", gap: 3, overflowX: "auto", paddingBottom: 2 }}>
+          {stageData.map((sd, i) => {
+            const isActive  = sd.stage === "Active";
+            const hasInvs   = sd.count > 0;
+            const isLast    = i === stageData.length - 1;
+            const isFiltered = filterStatuses.includes(sd.stage) || (isActive && filterStatuses.includes("Active"));
+            const stageColor = isActive ? "#10B981" : "#60A5FA";
+            return (
+              <React.Fragment key={sd.stage}>
+                <button
+                  onClick={() => {
+                    if (!hasInvs) return;
+                    const key = isActive ? "Active" : sd.stage;
+                    setFilterStatuses(prev =>
+                      prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key]
+                    );
+                  }}
+                  title={sd.stage}
+                  style={{
+                    flex: "1 1 0", minWidth: 80,
+                    background: isFiltered
+                      ? (isActive ? "rgba(16,185,129,0.25)" : "rgba(96,165,250,0.2)")
+                      : hasInvs
+                      ? (isActive ? "rgba(16,185,129,0.1)" : "rgba(96,165,250,0.08)")
+                      : "rgba(255,255,255,0.03)",
+                    border: "1px solid " + (isFiltered ? stageColor : hasInvs ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"),
+                    borderRadius: 7, padding: "8px 6px", cursor: hasInvs ? "pointer" : "default",
+                    textAlign: "center", transition: "background .12s, border .12s",
+                  }}>
+                  <div style={{ fontSize: 9, color: isFiltered ? "#fff" : "rgba(255,255,255,0.42)",
+                    textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 1.25, marginBottom: 5,
+                    whiteSpace: "normal", wordBreak: "break-word" }}>
+                    {isActive ? "● Active" : STAGE_SHORT[sd.stage]}
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1,
+                    color: hasInvs ? stageColor : "rgba(255,255,255,0.15)" }}>
+                    {sd.count}
+                  </div>
+                  <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                    {hasInvs ? fmtM(sd.amount) : "—"}
+                  </div>
+                </button>
+                {!isLast && (
+                  <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.18)", fontSize: 11, flexShrink: 0 }}>›</div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+        {filterStatuses.length > 0 && (
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Filtered to:</span>
+            {filterStatuses.map(s => (
+              <span key={s} style={{ fontSize: 10, fontWeight: 600, color: "#fff",
+                background: "rgba(255,255,255,0.12)", borderRadius: 4, padding: "2px 7px" }}>{s}</span>
+            ))}
+            <button onClick={() => setFilterStatuses([])}
+              style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", background: "none", border: "none",
+                cursor: "pointer", textDecoration: "underline", padding: 0, marginLeft: 4 }}>
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Toolbar */}
