@@ -5954,15 +5954,13 @@ function AllInvestmentsView() {
     : "Strategy-Wide Pipeline";
 
   const STAGE_SHORT = {
-    "Start Concept":      "Start Concept",
-    "Start Amendment":    "Start Amend.",
-    "Request Proposal":   "Req. Proposal",
-    "Refine Proposal":    "Refine Proposal",
-    "Create Agreement":   "Agreement",
-    "Finalize Amendment": "Fin. Amendment",
-    "Request Approval":   "Req. Approval",
-    "Obtain Signatures":  "Signatures",
-    "Active":             "Active",
+    "Start Concept":    "Start Concept",
+    "Request Proposal": "Req. Proposal",
+    "Refine Proposal":  "Refine Proposal",
+    "Create Agreement": "Agreement",
+    "Request Approval": "Req. Approval",
+    "Obtain Signatures":"Signatures",
+    "Active":           "Active",
   };
   const stageData = [...PIPELINE_STAGES, "Active"].map(stage => {
     const invs = stage === "Active"

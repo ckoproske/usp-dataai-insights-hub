@@ -1049,8 +1049,8 @@ def get_budget_summary(portfolio_id):
 # ═════════════════════════════════════════════════════════════════════════════
 
 PIPELINE_STAGES = [
-    'Start Concept', 'Start Amendment', 'Request Proposal', 'Refine Proposal',
-    'Create Agreement', 'Finalize Amendment', 'Request Approval', 'Obtain Signatures',
+    'Start Concept', 'Request Proposal', 'Refine Proposal',
+    'Create Agreement', 'Request Approval', 'Obtain Signatures',
 ]
 
 def _build_budget_forecast(year):
