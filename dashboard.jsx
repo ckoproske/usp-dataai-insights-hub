@@ -5992,92 +5992,99 @@ function AllInvestmentsView() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* Pipeline tracker header */}
-      <div style={{ background: BRAND, borderRadius: 12, padding: "18px 22px 16px" }}>
+      <div style={{ background: "#EEF4FB", border: "1px solid #D3E4F4", borderRadius: 12, padding: "16px 20px 14px" }}>
         {/* Title + summary stats */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 16 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.4)",
-              textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+              textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 3 }}>
               Investment Pipeline · {contextLevel}
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>{contextTitle}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: TEXT }}>{contextTitle}</div>
           </div>
           <div style={{ display: "flex", gap: 18, flexShrink: 0 }}>
             {[
-              { label: "In Pipeline", value: filtered.filter(i=>i.status==="In Process").length, color: "#60A5FA" },
-              { label: "Active",      value: filtered.filter(i=>i.status==="Active").length,     color: "#10B981" },
-              { label: "Total Value", value: fmtM(totalAmt), color: "#fff" },
+              { label: "In Pipeline", value: filtered.filter(i=>i.status==="In Process").length, color: "#3086AB" },
+              { label: "Active",      value: filtered.filter(i=>i.status==="Active").length,     color: "#059669" },
+              { label: "Total Value", value: fmtM(totalAmt), color: TEXT },
             ].map(({ label, value, color }, i, arr) => (
               <React.Fragment key={label}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 10, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>{label}</div>
                   <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
                 </div>
-                {i < arr.length - 1 && <div style={{ width: 1, background: "rgba(255,255,255,0.1)", alignSelf: "stretch" }}/>}
+                {i < arr.length - 1 && <div style={{ width: 1, background: BORDER, alignSelf: "stretch" }}/>}
               </React.Fragment>
             ))}
           </div>
         </div>
 
-        {/* Stage flow */}
-        <div style={{ display: "flex", alignItems: "stretch", gap: 3, overflowX: "auto", paddingBottom: 2 }}>
+        {/* Stage flow — chevron chain */}
+        <div style={{ display: "flex", alignItems: "stretch", gap: 2, overflowX: "auto", paddingBottom: 2 }}>
           {stageData.map((sd, i) => {
-            const isActive  = sd.stage === "Active";
-            const hasInvs   = sd.count > 0;
-            const isLast    = i === stageData.length - 1;
+            const isActive   = sd.stage === "Active";
+            const isFirst    = i === 0;
+            const isLast     = i === stageData.length - 1;
+            const hasInvs    = sd.count > 0;
             const isFiltered = filterStatuses.includes(sd.stage) || (isActive && filterStatuses.includes("Active"));
-            const stageColor = isActive ? "#10B981" : "#60A5FA";
+            const N = 11; // notch size px
+            const clipPath = isFirst
+              ? `polygon(0 0, calc(100% - ${N}px) 0, 100% 50%, calc(100% - ${N}px) 100%, 0 100%)`
+              : isLast
+              ? `polygon(${N}px 0, 100% 0, 100% 100%, ${N}px 100%, 0 50%)`
+              : `polygon(${N}px 0, calc(100% - ${N}px) 0, 100% 50%, calc(100% - ${N}px) 100%, ${N}px 100%, 0 50%)`;
+            const bg = isFiltered
+              ? (isActive ? "#059669" : "#3086AB")
+              : hasInvs
+              ? (isActive ? "#D1FAE5" : "#DBEAFE")
+              : "#E8EEF5";
+            const labelCol  = isFiltered ? "rgba(255,255,255,0.8)" : hasInvs ? (isActive ? "#065F46" : "#1E4D8C") : "#94A3B8";
+            const countCol  = isFiltered ? "#fff" : hasInvs ? (isActive ? "#047857" : "#3086AB") : "#C0CAD6";
+            const amtCol    = isFiltered ? "rgba(255,255,255,0.7)" : hasInvs ? "#64748B" : "#C0CAD6";
+            const pl = isFirst ? 10 : N + 5;
+            const pr = isLast  ? 10 : N + 5;
             return (
-              <React.Fragment key={sd.stage}>
-                <button
-                  onClick={() => {
-                    if (!hasInvs) return;
-                    const key = isActive ? "Active" : sd.stage;
-                    setFilterStatuses(prev =>
-                      prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key]
-                    );
-                  }}
-                  title={sd.stage}
-                  style={{
-                    flex: "1 1 0", minWidth: 80,
-                    background: isFiltered
-                      ? (isActive ? "rgba(16,185,129,0.25)" : "rgba(96,165,250,0.2)")
-                      : hasInvs
-                      ? (isActive ? "rgba(16,185,129,0.1)" : "rgba(96,165,250,0.08)")
-                      : "rgba(255,255,255,0.03)",
-                    border: "1px solid " + (isFiltered ? stageColor : hasInvs ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"),
-                    borderRadius: 7, padding: "8px 6px", cursor: hasInvs ? "pointer" : "default",
-                    textAlign: "center", transition: "background .12s, border .12s",
-                  }}>
-                  <div style={{ fontSize: 9, color: isFiltered ? "#fff" : "rgba(255,255,255,0.42)",
-                    textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 1.25, marginBottom: 5,
-                    whiteSpace: "normal", wordBreak: "break-word" }}>
-                    {isActive ? "● Active" : STAGE_SHORT[sd.stage]}
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1,
-                    color: hasInvs ? stageColor : "rgba(255,255,255,0.15)" }}>
-                    {sd.count}
-                  </div>
-                  <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-                    {hasInvs ? fmtM(sd.amount) : "—"}
-                  </div>
-                </button>
-                {!isLast && (
-                  <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.18)", fontSize: 11, flexShrink: 0 }}>›</div>
-                )}
-              </React.Fragment>
+              <button
+                key={sd.stage}
+                onClick={() => {
+                  if (!hasInvs) return;
+                  const key = isActive ? "Active" : sd.stage;
+                  setFilterStatuses(prev =>
+                    prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key]
+                  );
+                }}
+                title={sd.stage}
+                style={{
+                  flex: "1 1 0", minWidth: 88, border: "none",
+                  background: bg, clipPath,
+                  padding: `8px ${pr}px 8px ${pl}px`,
+                  cursor: hasInvs ? "pointer" : "default",
+                  textAlign: "center", transition: "background .12s",
+                }}>
+                <div style={{ fontSize: 9, color: labelCol, textTransform: "uppercase",
+                  letterSpacing: 0.4, lineHeight: 1.25, marginBottom: 4,
+                  whiteSpace: "normal", wordBreak: "break-word" }}>
+                  {isActive ? "● Active" : STAGE_SHORT[sd.stage]}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: countCol }}>
+                  {sd.count}
+                </div>
+                <div style={{ fontSize: 9, color: amtCol, marginTop: 3 }}>
+                  {hasInvs ? fmtM(sd.amount) : "—"}
+                </div>
+              </button>
             );
           })}
         </div>
         {filterStatuses.length > 0 && (
           <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Filtered to:</span>
+            <span style={{ fontSize: 10, color: TEXT_MUTED }}>Filtered to:</span>
             {filterStatuses.map(s => (
-              <span key={s} style={{ fontSize: 10, fontWeight: 600, color: "#fff",
-                background: "rgba(255,255,255,0.12)", borderRadius: 4, padding: "2px 7px" }}>{s}</span>
+              <span key={s} style={{ fontSize: 10, fontWeight: 600, color: "#3086AB",
+                background: "#DBEAFE", borderRadius: 4, padding: "2px 7px" }}>{s}</span>
             ))}
             <button onClick={() => setFilterStatuses([])}
-              style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", background: "none", border: "none",
+              style={{ fontSize: 10, color: TEXT_MUTED, background: "none", border: "none",
                 cursor: "pointer", textDecoration: "underline", padding: 0, marginLeft: 4 }}>
               Clear
             </button>
