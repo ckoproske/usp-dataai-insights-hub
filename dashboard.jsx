@@ -3936,10 +3936,15 @@ function PortfolioByTheNumbers({ portId, portColor }) {
     const toNum = v => parseFloat(String(v||"0").replace(/[^0-9.]/g,""))||0;
     loadAllInvestments({ portfolio_id: portId }).then(rows => {
       if (cancelled) return;
-      const total = rows.reduce((s, inv) => s + toNum(inv.amount), 0);
-      setStats({ count: rows.length, totalBudget: total });
+      const active = rows.filter(inv => inv.status === "Active");
+      const count = active.length;
+      const totalBudget = active.reduce((s, inv) => s + toNum(inv.amount), 0);
+      const coFundedCount = active.filter(inv => inv.coFundingTeams && inv.coFundingTeams.trim()).length;
+      const coFundedPct = count > 0 ? Math.round((coFundedCount / count) * 100) : 0;
+      const partners = new Set(active.map(inv => inv.grantee).filter(Boolean)).size;
+      setStats({ count, totalBudget, coFundedPct, partners });
     }).catch(() => {
-      if (!cancelled) setStats({ count: 0, totalBudget: 0 });
+      if (!cancelled) setStats({ count: 0, totalBudget: 0, coFundedPct: 0, partners: 0 });
     });
     return () => { cancelled = true; };
   }, [portId]);
@@ -3953,10 +3958,10 @@ function PortfolioByTheNumbers({ portId, portColor }) {
 
   const loading = stats === null;
   const STATS = [
-    { label:"Active Investments",    value: loading ? "…" : String(stats.count||"0"),  sub:"grants & contracts" },
-    { label:"% Co-funded",          value: "—",                                        sub:"with other teams" },
-    { label:"Total Budget",         value: loading ? "…" : fmtM(stats.totalBudget),   sub:"committed investment" },
-    { label:"Partners",             value: "—",                                        sub:"key external relationships" },
+    { label:"Active Investments", value: loading ? "…" : String(stats.count||"0"),        sub:"grants & contracts" },
+    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,          sub:"active investments with a co-funding team" },
+    { label:"Total Budget",       value: loading ? "…" : fmtM(stats.totalBudget),          sub:"committed investment" },
+    { label:"Partners",           value: loading ? "…" : String(stats.partners||"0"),       sub:"discrete grantees / vendors" },
   ];
 
   return (
