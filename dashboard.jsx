@@ -2,7 +2,7 @@
 const { useState, useEffect, useRef, useCallback } = React;
 const _Recharts = window.Recharts || window.recharts || {};
 const { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid,
-        Tooltip, ResponsiveContainer, BarChart, Bar, LabelList } = _Recharts;
+        Tooltip, ResponsiveContainer, BarChart, Bar, LabelList, Legend } = _Recharts;
 
 
 // ── Design System ─────────────────────────────────────────────────────────────
@@ -7141,6 +7141,7 @@ function BudgetForecastsView() {
   const [snapshotLabel, setSnapshotLabel]       = useState("");
   const [takingSnapshot, setTakingSnapshot]     = useState(false);
   const [snapshotError, setSnapshotError]       = useState(null);
+  const [viewMode, setViewMode]                 = useState("table");
 
   useEffect(() => {
     apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(()=>{});
@@ -7206,6 +7207,75 @@ function BudgetForecastsView() {
       return acc;
     }, Object.fromEntries(AGG_KEYS.map(k=>[k,0]))),
   [portfolioAgg]);
+
+  // Chart data — one entry per portfolio or BOW depending on level
+  const chartSource = level === "bow" ? displayRows : portfolioAgg;
+  const chartData = React.useMemo(() => {
+    const src = level === "bow"
+      ? displayRows.slice().sort((a,b) => a.portfolio_sort - b.portfolio_sort || a.bow_sort - b.bow_sort)
+      : portfolioAgg;
+    return src.map(r => {
+      const committed_paid    = +((r.committed_paid    ||0)/1e6).toFixed(2);
+      const committed_unpaid  = +((r.committed_unpaid  ||0)/1e6).toFixed(2);
+      const potential         = +((r.potential_total   ||0)/1e6).toFixed(2);
+      const rawHeadroom       = (r.headroom||0)/1e6;
+      const headroom          = +(Math.max(0, rawHeadroom)).toFixed(2);
+      const over_budget       = +(Math.max(0, -rawHeadroom)).toFixed(2);
+      return {
+        name:              level === "bow" ? r.bow_title : r.portfolio_title,
+        portfolio:         r.portfolio_title || "",
+        committed_paid,
+        committed_unpaid,
+        potential,
+        headroom,
+        over_budget,
+        budget_allocation: +((r.budget_allocation||0)/1e6).toFixed(2),
+        pipeline_total:    +((r.pipeline_total   ||0)/1e6).toFixed(2),
+        committed_grants:  +((r.committed_grants ||0)/1e6).toFixed(2),
+        committed_contracts: +((r.committed_contracts||0)/1e6).toFixed(2),
+        potential_grants:  +((r.potential_grants ||0)/1e6).toFixed(2),
+        potential_contracts: +((r.potential_contracts||0)/1e6).toFixed(2),
+      };
+    });
+  }, [level, displayRows, portfolioAgg]);
+
+  const BudgetTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload || {};
+    const hColor = d.over_budget > 0 ? "#DC2626" : "#059669";
+    return (
+      <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:8,padding:"12px 16px",fontSize:12,boxShadow:"0 4px 16px rgba(0,0,0,0.1)",minWidth:200}}>
+        <div style={{fontWeight:700,color:TEXT,marginBottom:8,fontSize:13}}>{label}</div>
+        {level==="bow" && <div style={{color:TEXT_MUTED,marginBottom:6,fontSize:11}}>{d.portfolio}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:24}}>
+            <span style={{color:TEXT_SUB}}>Budget Allocation</span>
+            <span style={{fontWeight:600}}>${d.budget_allocation}M</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",gap:24}}>
+            <span style={{color:"#3086AB"}}>Committed – Paid</span>
+            <span>${d.committed_paid}M</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",gap:24}}>
+            <span style={{color:"#A8D0E6"}}>Committed – Unpaid</span>
+            <span>${d.committed_unpaid}M</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",gap:24}}>
+            <span style={{color:"#4EAB9A"}}>Potential</span>
+            <span>${d.potential}M</span>
+          </div>
+          <div style={{borderTop:"1px solid "+BORDER,marginTop:4,paddingTop:4,display:"flex",justifyContent:"space-between",gap:24}}>
+            <span style={{color:TEXT_SUB}}>Pipeline Total</span>
+            <span style={{fontWeight:600}}>${d.pipeline_total}M</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",gap:24}}>
+            <span style={{color:hColor,fontWeight:600}}>Headroom</span>
+            <span style={{color:hColor,fontWeight:600}}>{d.over_budget>0 ? "-" : ""}${(d.over_budget||d.headroom).toFixed(2)}M</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const takeSnapshot = async () => {
     if (!snapshotLabel.trim()) return;
@@ -7365,19 +7435,32 @@ function BudgetForecastsView() {
               </button>
             ))}
           </div>
-          {/* Detail toggles */}
-          <button onClick={()=>setShowCommittedDetail(v=>!v)}
-            style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
-                    background:showCommittedDetail?"#EBF4F9":SURFACE,
-                    color:showCommittedDetail?"#1F5F80":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
-            {showCommittedDetail?"▲":"▼"} Committed detail
-          </button>
-          <button onClick={()=>setShowPotentialDetail(v=>!v)}
-            style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
-                    background:showPotentialDetail?"#ECF7F5":SURFACE,
-                    color:showPotentialDetail?"#337A6C":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
-            {showPotentialDetail?"▲":"▼"} Potential detail
-          </button>
+          {/* View mode toggle */}
+          <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:6,overflow:"hidden"}}>
+            {[{v:"table",l:"Table"},{v:"chart",l:"Chart"}].map(({v,l})=>(
+              <button key={v} onClick={()=>setViewMode(v)}
+                style={{padding:"5px 13px",border:"none",borderRight:"1px solid "+BORDER,
+                        background:viewMode===v?BRAND:SURFACE,color:viewMode===v?"#fff":TEXT_SUB,
+                        fontSize:13,fontWeight:viewMode===v?600:400,cursor:"pointer"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {/* Detail toggles — table only */}
+          {viewMode==="table" && <>
+            <button onClick={()=>setShowCommittedDetail(v=>!v)}
+              style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
+                      background:showCommittedDetail?"#EBF4F9":SURFACE,
+                      color:showCommittedDetail?"#1F5F80":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
+              {showCommittedDetail?"▲":"▼"} Committed detail
+            </button>
+            <button onClick={()=>setShowPotentialDetail(v=>!v)}
+              style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
+                      background:showPotentialDetail?"#ECF7F5":SURFACE,
+                      color:showPotentialDetail?"#337A6C":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
+              {showPotentialDetail?"▲":"▼"} Potential detail
+            </button>
+          </>}
         </div>
         {/* Snapshot controls */}
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -7412,8 +7495,63 @@ function BudgetForecastsView() {
         </div>
       )}
 
+      {/* Chart */}
+      {viewMode==="chart" && (
+        <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,padding:"24px 24px 16px"}}>
+          {/* Legend */}
+          <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:20,flexWrap:"wrap"}}>
+            {[
+              {color:"#3086AB", label:"Committed – Paid"},
+              {color:"#A8D0E6", label:"Committed – Unpaid"},
+              {color:"#4EAB9A", label:"Potential (In-Process)"},
+              {color:"#E8E4DB", label:"Headroom", border:true},
+              {color:"#FCA5A5", label:"Over Budget"},
+            ].map(({color,label,border})=>(
+              <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:12,height:12,borderRadius:2,background:color,border:border?"1px solid "+BORDER:"none",flexShrink:0}}/>
+                <span style={{fontSize:12,color:TEXT_SUB}}>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <ResponsiveContainer width="100%" height={Math.max(260, chartData.length * (level==="bow" ? 38 : 56))}>
+            <BarChart
+              layout="vertical"
+              data={chartData}
+              margin={{top:0, right:60, left:level==="bow"?200:160, bottom:0}}
+              barSize={level==="bow" ? 18 : 28}>
+              <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke={BORDER}/>
+              <XAxis
+                type="number"
+                tickFormatter={v=>`$${v}M`}
+                tick={{fontSize:11,fill:TEXT_MUTED}}
+                axisLine={false}
+                tickLine={false}/>
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={level==="bow"?195:155}
+                tick={{fontSize:level==="bow"?11:12, fill:TEXT}}
+                axisLine={false}
+                tickLine={false}/>
+              <Tooltip content={<BudgetTooltip/>} cursor={{fill:"rgba(0,0,0,0.04)"}}/>
+              <Bar dataKey="committed_paid"   stackId="s" fill="#3086AB" name="Committed – Paid" radius={[0,0,0,0]}/>
+              <Bar dataKey="committed_unpaid" stackId="s" fill="#A8D0E6" name="Committed – Unpaid"/>
+              <Bar dataKey="potential"        stackId="s" fill="#4EAB9A" name="Potential"/>
+              <Bar dataKey="headroom"         stackId="s" fill="#E8E4DB" name="Headroom" stroke={BORDER} strokeWidth={0.5}
+                radius={[0,3,3,0]}/>
+              <Bar dataKey="over_budget"      stackId="s" fill="#FCA5A5" name="Over Budget"
+                radius={[0,3,3,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{marginTop:12,fontSize:11,color:TEXT_MUTED}}>
+            Total bar width = Budget Allocation · Gap = Headroom · Red extension = Over Budget
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,overflowX:"auto"}}>
+      {viewMode==="table" && <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead>
             <tr style={{background:"#F5F3ED"}}>
@@ -7487,7 +7625,7 @@ function BudgetForecastsView() {
             </tfoot>
           )}
         </table>
-      </div>
+      </div>}
       <div style={{marginTop:8,fontSize:11,color:TEXT_MUTED}}>All figures in $M · All funding sources · Excludes envelope to NAT</div>
 
       {/* Snapshot modal */}
