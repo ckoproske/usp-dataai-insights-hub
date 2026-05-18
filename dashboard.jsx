@@ -7895,7 +7895,7 @@ function Sidebar({ activeView, onNavigate, data }) {
           onClick={()=>onNavigate({type:"all-investments"})}
         />
         <NavItem
-          label="Budget Forecasts"
+          label="Budget Forecast"
           icon={<IconBarChart/>}
           active={isBudgetActive}
           onClick={()=>onNavigate({type:"budget-forecasts"})}
@@ -8104,7 +8104,7 @@ function App() {
     : activeView.type==="all-investments"
     ? "All Investments"
     : activeView.type==="budget-forecasts"
-    ? "Budget Forecasts"
+    ? "Budget Forecast"
     : activeView.type==="data-model"
     ? "Explore the Data Model"
     : (activePortData?.portfolio?.name || pc?.label || "");
