@@ -7193,6 +7193,7 @@ function BudgetForecastsView() {
   const [snapshotError, setSnapshotError]       = useState(null);
   const [viewMode, setViewMode]                 = useState("table");
   const [multiYearData, setMultiYearData]       = useState({});
+  const [selectedBar, setSelectedBar]           = useState(null);
 
   useEffect(() => {
     apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(()=>{});
@@ -7674,55 +7675,137 @@ function BudgetForecastsView() {
 
       {/* Chart */}
       {year!=="all" && viewMode==="chart" && (
-        <div style={{background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,padding:"24px 24px 16px"}}>
-          {/* Legend */}
-          <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:20,flexWrap:"wrap"}}>
-            {[
-              {color:"#3086AB", label:"Committed – Paid"},
-              {color:"#A8D0E6", label:"Committed – Unpaid"},
-              {color:"#4EAB9A", label:"Potential (In-Process)"},
-              {color:"#E8E4DB", label:"Headroom", border:true},
-              {color:"#FCA5A5", label:"Over Budget"},
-            ].map(({color,label,border})=>(
-              <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:12,height:12,borderRadius:2,background:color,border:border?"1px solid "+BORDER:"none",flexShrink:0}}/>
-                <span style={{fontSize:12,color:TEXT_SUB}}>{label}</span>
-              </div>
-            ))}
+        <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
+          {/* Chart panel */}
+          <div style={{flex:1,minWidth:0,background:SURFACE,borderRadius:8,border:"1px solid "+BORDER,padding:"24px 24px 16px"}}>
+            {/* Legend */}
+            <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:20,flexWrap:"wrap"}}>
+              {[
+                {color:"#3086AB", label:"Committed – Paid"},
+                {color:"#A8D0E6", label:"Committed – Unpaid"},
+                {color:"#4EAB9A", label:"Potential (In-Process)"},
+                {color:"#E8E4DB", label:"Headroom", border:true},
+                {color:"#FCA5A5", label:"Over Budget"},
+              ].map(({color,label,border})=>(
+                <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:12,height:12,borderRadius:2,background:color,border:border?"1px solid "+BORDER:"none",flexShrink:0}}/>
+                  <span style={{fontSize:12,color:TEXT_SUB}}>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            <ResponsiveContainer width="100%" height={Math.max(260, chartData.length * (level==="bow" ? 38 : 56))}>
+              <BarChart
+                layout="vertical"
+                data={chartData}
+                margin={{top:0, right:40, left:level==="bow"?200:160, bottom:0}}
+                barSize={level==="bow" ? 18 : 28}
+                onClick={e => { if (e?.activePayload?.[0]) setSelectedBar(e.activePayload[0].payload); }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke={BORDER}/>
+                <XAxis
+                  type="number"
+                  tickFormatter={v=>`$${v}M`}
+                  tick={{fontSize:11,fill:TEXT_MUTED}}
+                  axisLine={false}
+                  tickLine={false}/>
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={level==="bow"?195:155}
+                  tick={({x, y, payload}) => {
+                    const isSelected = selectedBar?.name === payload.value;
+                    return (
+                      <text x={x} y={y} dy={4} textAnchor="end"
+                        fontSize={level==="bow"?11:12}
+                        fontWeight={isSelected?700:400}
+                        fill={isSelected?"#3086AB":TEXT}>
+                        {payload.value}
+                      </text>
+                    );
+                  }}
+                  axisLine={false}
+                  tickLine={false}/>
+                <Tooltip content={<BudgetTooltip/>} cursor={{fill:"rgba(0,0,0,0.04)"}}/>
+                <Bar dataKey="committed_paid"   stackId="s" fill="#3086AB" name="Committed – Paid" radius={[0,0,0,0]}/>
+                <Bar dataKey="committed_unpaid" stackId="s" fill="#A8D0E6" name="Committed – Unpaid"/>
+                <Bar dataKey="potential"        stackId="s" fill="#4EAB9A" name="Potential"/>
+                <Bar dataKey="headroom"         stackId="s" fill="#E8E4DB" name="Headroom" stroke={BORDER} strokeWidth={0.5}
+                  radius={[0,3,3,0]}/>
+                <Bar dataKey="over_budget"      stackId="s" fill="#FCA5A5" name="Over Budget"
+                  radius={[0,3,3,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{marginTop:12,fontSize:11,color:TEXT_MUTED}}>
+              Total bar width = Budget Allocation · Gap = Headroom · Red extension = Over Budget · Click a bar for detail
+            </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={Math.max(260, chartData.length * (level==="bow" ? 38 : 56))}>
-            <BarChart
-              layout="vertical"
-              data={chartData}
-              margin={{top:0, right:60, left:level==="bow"?200:160, bottom:0}}
-              barSize={level==="bow" ? 18 : 28}>
-              <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke={BORDER}/>
-              <XAxis
-                type="number"
-                tickFormatter={v=>`$${v}M`}
-                tick={{fontSize:11,fill:TEXT_MUTED}}
-                axisLine={false}
-                tickLine={false}/>
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={level==="bow"?195:155}
-                tick={{fontSize:level==="bow"?11:12, fill:TEXT}}
-                axisLine={false}
-                tickLine={false}/>
-              <Tooltip content={<BudgetTooltip/>} cursor={{fill:"rgba(0,0,0,0.04)"}}/>
-              <Bar dataKey="committed_paid"   stackId="s" fill="#3086AB" name="Committed – Paid" radius={[0,0,0,0]}/>
-              <Bar dataKey="committed_unpaid" stackId="s" fill="#A8D0E6" name="Committed – Unpaid"/>
-              <Bar dataKey="potential"        stackId="s" fill="#4EAB9A" name="Potential"/>
-              <Bar dataKey="headroom"         stackId="s" fill="#E8E4DB" name="Headroom" stroke={BORDER} strokeWidth={0.5}
-                radius={[0,3,3,0]}/>
-              <Bar dataKey="over_budget"      stackId="s" fill="#FCA5A5" name="Over Budget"
-                radius={[0,3,3,0]}/>
-            </BarChart>
-          </ResponsiveContainer>
-          <div style={{marginTop:12,fontSize:11,color:TEXT_MUTED}}>
-            Total bar width = Budget Allocation · Gap = Headroom · Red extension = Over Budget
+          {/* Detail panel */}
+          <div style={{width:240,flexShrink:0,background:SURFACE,borderRadius:8,
+            border:"1px solid "+(selectedBar ? "#3086AB" : BORDER),
+            transition:"border-color .15s"}}>
+            {selectedBar ? (() => {
+              const d = selectedBar;
+              const hColor = d.over_budget > 0 ? "#DC2626" : "#059669";
+              const hVal = d.over_budget > 0 ? -d.over_budget : d.headroom;
+              return (
+                <div style={{padding:"16px 18px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.3}}>{d.name}</div>
+                      {level==="bow" && d.portfolio && (
+                        <div style={{fontSize:11,color:TEXT_MUTED,marginTop:3}}>{d.portfolio}</div>
+                      )}
+                    </div>
+                    <button onClick={()=>setSelectedBar(null)}
+                      style={{background:"none",border:"none",cursor:"pointer",color:TEXT_MUTED,fontSize:16,lineHeight:1,padding:"0 2px",flexShrink:0}}>
+                      ×
+                    </button>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {[
+                      {label:"Budget Allocation", value:`$${d.budget_allocation}M`, color:TEXT, bold:true},
+                      {label:"Committed – Paid",   value:`$${d.committed_paid}M`,   color:"#3086AB"},
+                      {label:"Committed – Unpaid", value:`$${d.committed_unpaid}M`, color:"#7EB8D4"},
+                      {label:"Committed Grants",   value:`$${d.committed_grants}M`, color:TEXT_SUB},
+                      {label:"Committed Contracts",value:`$${d.committed_contracts}M`, color:TEXT_SUB},
+                    ].map(({label,value,color,bold})=>(
+                      <div key={label} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                        <span style={{color}}>{label}</span>
+                        <span style={{fontWeight:bold?700:400,color}}>{value}</span>
+                      </div>
+                    ))}
+                    <div style={{borderTop:"1px solid "+BORDER,paddingTop:6,marginTop:2,display:"flex",flexDirection:"column",gap:6}}>
+                      {[
+                        {label:"Potential",          value:`$${d.potential}M`,       color:"#4EAB9A"},
+                        {label:"Potential Grants",   value:`$${d.potential_grants}M`,color:TEXT_SUB},
+                        {label:"Potential Contracts",value:`$${d.potential_contracts}M`,color:TEXT_SUB},
+                      ].map(({label,value,color})=>(
+                        <div key={label} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                          <span style={{color}}>{label}</span>
+                          <span style={{color}}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{borderTop:"1px solid "+BORDER,paddingTop:6,marginTop:2,display:"flex",flexDirection:"column",gap:6}}>
+                      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                        <span style={{color:TEXT_SUB}}>Pipeline Total</span>
+                        <span style={{fontWeight:600}}>${d.pipeline_total}M</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                        <span style={{color:hColor,fontWeight:600}}>Headroom</span>
+                        <span style={{color:hColor,fontWeight:600}}>${hVal.toFixed(2)}M</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
+              <div style={{padding:"32px 18px",textAlign:"center",color:TEXT_MUTED}}>
+                <div style={{fontSize:22,marginBottom:8,opacity:0.3}}>↖</div>
+                <div style={{fontSize:12}}>Click a bar to see breakdown</div>
+              </div>
+            )}
           </div>
         </div>
       )}
