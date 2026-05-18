@@ -7517,13 +7517,16 @@ function BudgetForecastsView() {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           {/* Year */}
-          <select
-            value={year}
-            onChange={e=>{const v=e.target.value; setYear(v==="all"?"all":+v); setSelectedSnapshotId(null); setViewMode("table");}}
-            style={{padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:13,color:TEXT,background:SURFACE,cursor:"pointer",fontWeight:600}}>
-            <option value="all">All Years (2026–2029)</option>
-            {BUDGET_YEARS.map(y=><option key={y} value={y}>{y}</option>)}
-          </select>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            <span style={{fontSize:12,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Timeframe</span>
+            <select
+              value={year}
+              onChange={e=>{const v=e.target.value; setYear(v==="all"?"all":+v); setSelectedSnapshotId(null); setViewMode("table");}}
+              style={{padding:"6px 10px",borderRadius:6,border:"1px solid "+BORDER,fontSize:13,color:TEXT,background:SURFACE,cursor:"pointer",fontWeight:600}}>
+              {BUDGET_YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+              <option value="all">4-Year Outlook</option>
+            </select>
+          </div>
           {/* Level toggle */}
           <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:6,overflow:"hidden"}}>
             {[{v:"strategy",l:"Strategy"},{v:"portfolio",l:"Portfolio"},{v:"bow",l:"BOW"}].map(({v,l})=>(
