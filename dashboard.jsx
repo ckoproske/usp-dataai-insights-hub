@@ -7549,21 +7549,6 @@ function BudgetForecastsView() {
               </button>
             ))}
           </div>}
-          {/* Detail toggles — single year table only */}
-          {year!=="all" && viewMode==="table" && <>
-            <button onClick={()=>setShowCommittedDetail(v=>!v)}
-              style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
-                      background:showCommittedDetail?"#EBF4F9":SURFACE,
-                      color:showCommittedDetail?"#1F5F80":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
-              {showCommittedDetail?"▲":"▼"} Committed detail
-            </button>
-            <button onClick={()=>setShowPotentialDetail(v=>!v)}
-              style={{padding:"5px 11px",borderRadius:6,border:"1px solid "+BORDER,
-                      background:showPotentialDetail?"#ECF7F5":SURFACE,
-                      color:showPotentialDetail?"#337A6C":TEXT_SUB,fontSize:12,cursor:"pointer"}}>
-              {showPotentialDetail?"▲":"▼"} Potential detail
-            </button>
-          </>}
         </div>
         {/* Snapshot controls */}
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -7748,11 +7733,20 @@ function BudgetForecastsView() {
           <thead>
             <tr style={{background:"#F5F3ED"}}>
               <th colSpan={2} style={th("left",{borderRight:"1px solid "+BORDER})}></th>
-              <th colSpan={showCommittedDetail?5:1} style={th("center",{borderRight:"1px solid "+BORDER,color:"#1F5F80",background:"#EBF4F9"})}>
-                Committed (Active)
+              <th colSpan={showCommittedDetail?5:1} onClick={()=>setShowCommittedDetail(v=>!v)}
+                style={th("center",{borderRight:"1px solid "+BORDER,color:"#1F5F80",background:"#EBF4F9",cursor:"pointer",userSelect:"none"})}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                  Committed (Active)
+                  <span style={{fontSize:9,opacity:0.6}}>{showCommittedDetail?"◀":"+"}
+                  </span>
+                </span>
               </th>
-              <th colSpan={showPotentialDetail?3:1} style={th("center",{borderRight:"1px solid "+BORDER,color:"#337A6C",background:"#ECF7F5"})}>
-                Potential (In-Process)
+              <th colSpan={showPotentialDetail?3:1} onClick={()=>setShowPotentialDetail(v=>!v)}
+                style={th("center",{borderRight:"1px solid "+BORDER,color:"#337A6C",background:"#ECF7F5",cursor:"pointer",userSelect:"none"})}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                  Potential (In-Process)
+                  <span style={{fontSize:9,opacity:0.6}}>{showPotentialDetail?"◀":"+"}</span>
+                </span>
               </th>
               <th colSpan={5} style={th("center")}></th>
             </tr>
