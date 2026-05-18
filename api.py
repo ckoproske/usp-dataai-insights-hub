@@ -77,6 +77,12 @@ def query(sql_str, params=None):
             cols = [d[0] for d in cursor.description]
             return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
+def _qc(cursor, sql_str, params=None):
+    """Run a query on an existing cursor — avoids reopening a connection per call."""
+    cursor.execute(sql_str, params or [])
+    cols = [d[0] for d in cursor.description]
+    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
 def execute(sql_str, params=None):
     with get_connection() as conn:
         with conn.cursor() as cursor:
@@ -1050,67 +1056,72 @@ PIPELINE_STAGES = [
 def _build_budget_forecast(year):
     """Assembles the full budget forecast table for all USP portfolios for a given year.
     Merges three sources: allocation view (budget + committed), invest tables (committed
-    by type, potential by stage/type). Returns a list of BOW-level dicts."""
+    by type, potential by stage/type). Uses a single connection for all four queries."""
 
-    # All app BOWs that have an INVEST link
-    bow_rows = query(
-        f"""SELECT b.bow_id, b.title AS bow_title, b.invest_bow_id,
-                   b.portfolio_id, b.sort_order AS bow_sort,
-                   p.title AS portfolio_title, p.sort_order AS portfolio_sort
-            FROM {SCHEMA}.bows b
-            JOIN {SCHEMA}.portfolios p ON b.portfolio_id = p.portfolio_id
-            WHERE b.invest_bow_id IS NOT NULL
-            ORDER BY p.sort_order, b.sort_order"""
-    )
+    stage_placeholders = ','.join(['?' for _ in PIPELINE_STAGES])
 
-    # Budget allocation + committed totals from INVEST allocation view
-    alloc_rows = query(
-        f"""SELECT
-              f.BoW_ID,
-              TRY_CAST(f.BoW_Funding_Allocation_Amount AS DECIMAL(18,2)) AS budget_allocation,
-              TRY_CAST(f.Allocation_Amount_Committed   AS DECIMAL(18,2)) AS committed_total,
-              TRY_CAST(f.Allocation_Amount_Paid        AS DECIMAL(18,2)) AS committed_paid,
-              TRY_CAST(f.Allocation_Amount_Unpaid      AS DECIMAL(18,2)) AS committed_unpaid
-            FROM {INVEST_SCHEMA}.v_bow_annual_funding_allocation f
-            WHERE f.BoW_Funding_Strategy = 'USP Data'
-              AND TRY_CAST(f.BoW_Funding_Allocation_Year AS INT) = ?""",
-        [year]
-    )
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # All app BOWs that have an INVEST link
+            bow_rows = _qc(cur,
+                f"""SELECT b.bow_id, b.title AS bow_title, b.invest_bow_id,
+                           b.portfolio_id, b.sort_order AS bow_sort,
+                           p.title AS portfolio_title, p.sort_order AS portfolio_sort
+                    FROM {SCHEMA}.bows b
+                    JOIN {SCHEMA}.portfolios p ON b.portfolio_id = p.portfolio_id
+                    WHERE b.invest_bow_id IS NOT NULL
+                    ORDER BY p.sort_order, b.sort_order"""
+            )
+
+            # Budget allocation + committed totals from INVEST allocation view
+            alloc_rows = _qc(cur,
+                f"""SELECT
+                      f.BoW_ID,
+                      TRY_CAST(f.BoW_Funding_Allocation_Amount AS DECIMAL(18,2)) AS budget_allocation,
+                      TRY_CAST(f.Allocation_Amount_Committed   AS DECIMAL(18,2)) AS committed_total,
+                      TRY_CAST(f.Allocation_Amount_Paid        AS DECIMAL(18,2)) AS committed_paid,
+                      TRY_CAST(f.Allocation_Amount_Unpaid      AS DECIMAL(18,2)) AS committed_unpaid
+                    FROM {INVEST_SCHEMA}.v_bow_annual_funding_allocation f
+                    WHERE f.BoW_Funding_Strategy = 'USP Data'
+                      AND TRY_CAST(f.BoW_Funding_Allocation_Year AS INT) = ?""",
+                [year]
+            )
+
+            # Committed grants vs contracts (Status = Active)
+            committed_type_rows = _qc(cur,
+                f"""SELECT b.bow_id, i.Type AS investment_type,
+                           SUM(a.`Investment_Payment_Allocation Amount`) AS amount
+                    FROM {SCHEMA}.bows b
+                    JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
+                    JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
+                    WHERE i.Status = 'Active'
+                      AND a.Investment_Payment_Year = ?
+                    GROUP BY b.bow_id, i.Type""",
+                [year]
+            )
+
+            # Potential by workflow stage and type (Status = In Process)
+            potential_rows = _qc(cur,
+                f"""SELECT b.bow_id, i.Workflow_Step AS stage, i.Type AS investment_type,
+                           SUM(a.`Investment_Payment_Allocation Amount`) AS amount
+                    FROM {SCHEMA}.bows b
+                    JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
+                    JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
+                    WHERE i.Status = 'In Process'
+                      AND a.Investment_Payment_Year = ?
+                      AND i.Workflow_Step IN ({stage_placeholders})
+                    GROUP BY b.bow_id, i.Workflow_Step, i.Type""",
+                [year] + PIPELINE_STAGES
+            )
+
     alloc_by_invest_id = {r['BoW_ID']: r for r in alloc_rows}
 
-    # Committed grants vs contracts (Status = Active, from invest tables)
-    committed_type_rows = query(
-        f"""SELECT b.bow_id, i.Type AS investment_type,
-                   SUM(a.`Investment_Payment_Allocation Amount`) AS amount
-            FROM {SCHEMA}.bows b
-            JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
-            JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
-            WHERE i.Status = 'Active'
-              AND a.Investment_Payment_Year = ?
-            GROUP BY b.bow_id, i.Type""",
-        [year]
-    )
     committed_type = {}
     for r in committed_type_rows:
         bid = r['bow_id']
         if bid not in committed_type:
             committed_type[bid] = {'Grant': 0.0, 'Contract': 0.0}
         committed_type[bid][r['investment_type']] = float(r['amount'] or 0)
-
-    # Potential by workflow stage and type (Status = In Process)
-    stage_placeholders = ','.join(['?' for _ in PIPELINE_STAGES])
-    potential_rows = query(
-        f"""SELECT b.bow_id, i.Workflow_Step AS stage, i.Type AS investment_type,
-                   SUM(a.`Investment_Payment_Allocation Amount`) AS amount
-            FROM {SCHEMA}.bows b
-            JOIN {SCHEMA}.invest_bow_allocation a ON b.invest_bow_id = a.BoW_ID
-            JOIN {SCHEMA}.invest_investments i    ON a.Investment_ID = i.Investment_ID
-            WHERE i.Status = 'In Process'
-              AND a.Investment_Payment_Year = ?
-              AND i.Workflow_Step IN ({stage_placeholders})
-            GROUP BY b.bow_id, i.Workflow_Step, i.Type""",
-        [year] + PIPELINE_STAGES
-    )
     potential_by_bow = {}
     for r in potential_rows:
         bid    = r['bow_id']
