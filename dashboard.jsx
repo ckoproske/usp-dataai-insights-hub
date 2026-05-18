@@ -5953,10 +5953,10 @@ function AllInvestmentsView() {
 
   const STAGE_SHORT = {
     "Start Concept":    "Start Concept",
-    "Request Proposal": "Req. Proposal",
+    "Request Proposal": "Request Proposal",
     "Refine Proposal":  "Refine Proposal",
     "Create Agreement": "Agreement",
-    "Request Approval": "Req. Approval",
+    "Request Approval": "Request Approval",
     "Obtain Signatures":"Signatures",
     "Active":           "Active",
   };
