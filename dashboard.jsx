@@ -6150,33 +6150,12 @@ function AllInvestmentsView() {
 
       {/* Pipeline / Table view */}
       {viewMode === "pipeline" ? (() => {
-        const pipelineInvs   = filtered.filter(inv => inv.status === "In Process");
-        const isStrategyLevel = selectedPortfolio === "all" && selectedBow === "all";
-        const distinctGrantees = new Set(pipelineInvs.map(inv => inv.grantee).filter(Boolean)).size;
-        const distinctBows   = new Set(pipelineInvs.flatMap(inv => inv.bowTitles).filter(Boolean)).size;
-        const potentialAmt   = pipelineInvs.reduce((s, inv) => s + toNum(inv.amount), 0);
+        const pipelineInvs = filtered.filter(inv => inv.status === "In Process");
         const thP = { padding: "9px 12px", fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
           textTransform: "uppercase", letterSpacing: 0.8, textAlign: "left",
           borderLeft: "1px solid " + BORDER, verticalAlign: "middle" };
         return (
           <>
-            {/* Summary cards */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-              {[
-                ["In Pipeline",       pipelineInvs.length],
-                ["Grantees / Vendors",distinctGrantees],
-                ["Funding BOWs",      distinctBows],
-                ["Potential",         fmtM(potentialAmt)],
-              ].map(([label, value]) => (
-                <div key={label} style={{ background: SURFACE, border: "1px solid " + BORDER,
-                  borderRadius: 10, padding: "12px 18px", textAlign: "center", flex: "1 1 120px" }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: pc.color, lineHeight: 1 }}>{value}</div>
-                  <div style={{ fontSize: 10, color: TEXT_MUTED, textTransform: "uppercase",
-                    letterSpacing: 0.6, marginTop: 4 }}>{label}</div>
-                </div>
-              ))}
-            </div>
-
             {pipelineInvs.length === 0 ? (
               <div style={{ background: SURFACE, border: "1px solid " + BORDER, borderRadius: 12,
                 padding: 40, textAlign: "center" }}>
@@ -6187,154 +6166,149 @@ function AllInvestmentsView() {
                   Try adjusting your portfolio, BOW, or search filters.
                 </div>
               </div>
-            ) : isStrategyLevel ? (
-              /* Stacked bar chart — stages L→R, stacked by portfolio */
-              <div style={{ background: SURFACE, borderRadius: 12, border: "1px solid " + BORDER, padding: "20px 24px" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 20 }}>
-                  In-Process Investments by Stage
-                </div>
-                {(() => {
-                  const portList = portfolioOptions.filter(p => p.id !== "all");
-                  const maxTotal = Math.max(1, ...PIPELINE_STAGES.map(s =>
-                    pipelineInvs.filter(inv => inv.stage === s).length));
-                  const BAR_MAX_H = 160;
-                  return (
-                    <>
-                      <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
-                        {PIPELINE_STAGES.map(stage => {
-                          const stageInvs = pipelineInvs.filter(inv => inv.stage === stage);
-                          const total = stageInvs.length;
-                          const barH = Math.max(0, (total / maxTotal) * BAR_MAX_H);
-                          return (
-                            <div key={stage} style={{ flex: 1, display: "flex", flexDirection: "column",
-                              alignItems: "center", gap: 6, minWidth: 0 }}>
-                              {/* count label */}
-                              <div style={{ fontSize: 11, fontWeight: 700,
-                                color: total > 0 ? TEXT : "transparent",
-                                height: 16, lineHeight: "16px" }}>
-                                {total || ""}
-                              </div>
-                              {/* fixed-height track, bar anchored at bottom */}
-                              <div style={{ width: "100%", height: BAR_MAX_H,
-                                display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-                                <div style={{ width: "100%", height: barH,
-                                  display: "flex", flexDirection: "column",
-                                  borderRadius: 4, overflow: "hidden" }}>
-                                  {portList.map(p => {
-                                    const cnt = stageInvs.filter(inv => inv.portfolio_id === p.id).length;
-                                    if (!cnt) return null;
-                                    return (
-                                      <div key={p.id}
-                                        title={`${p.name}: ${cnt}`}
-                                        style={{ width: "100%",
-                                          height: ((cnt / total) * 100) + "%",
-                                          background: PORT_COLORS[p.id]?.color || "#94A3B8" }} />
-                                    );
-                                  })}
+            ) : (
+              <>
+                {/* Stacked bar chart — stages L→R, stacked by portfolio */}
+                <div style={{ background: SURFACE, borderRadius: 12, border: "1px solid " + BORDER, padding: "20px 24px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 20 }}>
+                    In-Process Investments by Stage
+                  </div>
+                  {(() => {
+                    const portList = portfolioOptions.filter(p => p.id !== "all");
+                    const maxTotal = Math.max(1, ...PIPELINE_STAGES.map(s =>
+                      pipelineInvs.filter(inv => inv.stage === s).length));
+                    const BAR_MAX_H = 160;
+                    return (
+                      <>
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+                          {PIPELINE_STAGES.map(stage => {
+                            const stageInvs = pipelineInvs.filter(inv => inv.stage === stage);
+                            const total = stageInvs.length;
+                            const barH = Math.max(0, (total / maxTotal) * BAR_MAX_H);
+                            return (
+                              <div key={stage} style={{ flex: 1, display: "flex", flexDirection: "column",
+                                alignItems: "center", gap: 6, minWidth: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700,
+                                  color: total > 0 ? TEXT : "transparent", height: 16, lineHeight: "16px" }}>
+                                  {total || ""}
+                                </div>
+                                <div style={{ width: "100%", height: BAR_MAX_H,
+                                  display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                                  <div style={{ width: "100%", height: barH,
+                                    display: "flex", flexDirection: "column",
+                                    borderRadius: 4, overflow: "hidden" }}>
+                                    {portList.map(p => {
+                                      const cnt = stageInvs.filter(inv => inv.portfolio_id === p.id).length;
+                                      if (!cnt) return null;
+                                      return (
+                                        <div key={p.id} title={`${p.name}: ${cnt}`}
+                                          style={{ width: "100%", height: ((cnt / total) * 100) + "%",
+                                            background: PORT_COLORS[p.id]?.color || "#94A3B8" }} />
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.2,
+                                  color: total > 0 ? TEXT : TEXT_MUTED, textAlign: "center",
+                                  lineHeight: 1.3, wordBreak: "break-word" }}>
+                                  {stage}
                                 </div>
                               </div>
-                              {/* stage label */}
-                              <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.2,
-                                color: total > 0 ? TEXT : TEXT_MUTED, textAlign: "center",
-                                lineHeight: 1.3, wordBreak: "break-word" }}>
-                                {stage}
-                              </div>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px",
+                          marginTop: 16, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
+                          {portList.filter(p => pipelineInvs.some(inv => inv.portfolio_id === p.id)).map(p => (
+                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              <div style={{ width: 9, height: 9, borderRadius: 2,
+                                background: PORT_COLORS[p.id]?.color || "#94A3B8", flexShrink: 0 }} />
+                              <span style={{ fontSize: 10, color: TEXT_MUTED }}>{p.name}</span>
                             </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Per-investment dot table */}
+                <div style={{ background: SURFACE, borderRadius: 12, border: "1px solid " + BORDER,
+                  overflow: "hidden" }}>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed",
+                      minWidth: 600 + PIPELINE_STAGES.length * 80 }}>
+                      <colgroup>
+                        <col style={{ minWidth: 180 }} />
+                        <col style={{ width: 140 }} />
+                        <col style={{ width: 100 }} />
+                        {PIPELINE_STAGES.map(s => <col key={s} style={{ width: 78 }} />)}
+                      </colgroup>
+                      <thead>
+                        <tr style={{ background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
+                          <th style={{ ...thP, borderLeft: "none" }}>Investment</th>
+                          <th style={{ ...thP }}>Owner</th>
+                          <th style={{ ...thP }}>Amount</th>
+                          {PIPELINE_STAGES.map(s => (
+                            <th key={s} style={{ ...thP, fontSize: 9, textAlign: "center",
+                              letterSpacing: 0.3, lineHeight: 1.3, padding: "6px 4px" }}>
+                              {s}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pipelineInvs.map((inv, idx) => {
+                          const stageIdx = PIPELINE_STAGES.indexOf(inv.stage);
+                          const rowBg = idx % 2 === 0 ? SURFACE : SURFACE_2;
+                          const rowPc = inv.portfolio_id && PORT_COLORS[inv.portfolio_id]
+                            ? PORT_COLORS[inv.portfolio_id] : pc;
+                          const rowBorder = idx < pipelineInvs.length - 1 ? "1px solid " + BORDER : "none";
+                          const tdP = { background: rowBg, verticalAlign: "middle",
+                            borderBottom: rowBorder, borderLeft: "1px solid " + BORDER };
+                          return (
+                            <tr key={inv.id}>
+                              <td style={{ ...tdP, borderLeft: "none", padding: "10px 12px" }}>
+                                <div style={{ fontSize: 12, fontWeight: 500, color: TEXT,
+                                  lineHeight: 1.3 }}>{inv.initiative || "—"}</div>
+                                <div style={{ fontSize: 10, color: TEXT_MUTED, fontFamily: "monospace",
+                                  marginTop: 2 }}>
+                                  {inv.investmentUrl
+                                    ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
+                                        style={{ color: "#3086AB", textDecoration: "none" }}>{inv.id}</a>
+                                    : inv.id}
+                                </div>
+                              </td>
+                              <td style={{ ...tdP, padding: "10px 12px", fontSize: 11, color: TEXT_SUB }}>
+                                {inv.owner || "—"}
+                              </td>
+                              <td style={{ ...tdP, padding: "10px 12px", fontSize: 12, fontWeight: 600,
+                                color: TEXT }}>
+                                {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
+                              </td>
+                              {PIPELINE_STAGES.map((s, si) => (
+                                <td key={s} style={{ ...tdP, padding: "10px 4px", textAlign: "center" }}>
+                                  {si === stageIdx ? (
+                                    <span style={{ display: "inline-block", width: 14, height: 14,
+                                      borderRadius: "50%", background: rowPc.color,
+                                      boxShadow: "0 0 0 3px " + rowPc.color + "28" }} />
+                                  ) : si < stageIdx && stageIdx !== -1 ? (
+                                    <span style={{ display: "inline-block", width: 10, height: 10,
+                                      borderRadius: "50%", background: rowPc.color + "35" }} />
+                                  ) : (
+                                    <span style={{ display: "inline-block", width: 10, height: 10,
+                                      borderRadius: "50%", border: "1.5px solid " + BORDER }} />
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
                           );
                         })}
-                      </div>
-                      {/* Legend */}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px",
-                        marginTop: 16, paddingTop: 12, borderTop: "1px solid " + BORDER }}>
-                        {portList.filter(p => pipelineInvs.some(inv => inv.portfolio_id === p.id)).map(p => (
-                          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                            <div style={{ width: 9, height: 9, borderRadius: 2,
-                              background: PORT_COLORS[p.id]?.color || "#94A3B8", flexShrink: 0 }} />
-                            <span style={{ fontSize: 10, color: TEXT_MUTED }}>{p.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            ) : (
-              /* Per-investment table — portfolio or BOW selected */
-              <div style={{ background: SURFACE, borderRadius: 12, border: "1px solid " + BORDER,
-                overflow: "hidden" }}>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed",
-                    minWidth: 600 + PIPELINE_STAGES.length * 80 }}>
-                    <colgroup>
-                      <col style={{ minWidth: 180 }} />
-                      <col style={{ width: 140 }} />
-                      <col style={{ width: 100 }} />
-                      {PIPELINE_STAGES.map(s => <col key={s} style={{ width: 78 }} />)}
-                    </colgroup>
-                    <thead>
-                      <tr style={{ background: SURFACE_2, borderBottom: "2px solid " + BORDER }}>
-                        <th style={{ ...thP, borderLeft: "none" }}>Investment</th>
-                        <th style={{ ...thP }}>Owner</th>
-                        <th style={{ ...thP }}>Amount</th>
-                        {PIPELINE_STAGES.map(s => (
-                          <th key={s} style={{ ...thP, fontSize: 9, textAlign: "center",
-                            letterSpacing: 0.3, lineHeight: 1.3, padding: "6px 4px" }}>
-                            {s}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pipelineInvs.map((inv, idx) => {
-                        const stageIdx = PIPELINE_STAGES.indexOf(inv.stage);
-                        const rowBg = idx % 2 === 0 ? SURFACE : SURFACE_2;
-                        const rowPc = inv.portfolio_id && PORT_COLORS[inv.portfolio_id]
-                          ? PORT_COLORS[inv.portfolio_id] : pc;
-                        const rowBorder = idx < pipelineInvs.length - 1 ? "1px solid " + BORDER : "none";
-                        const tdP = { background: rowBg, verticalAlign: "middle",
-                          borderBottom: rowBorder, borderLeft: "1px solid " + BORDER };
-                        return (
-                          <tr key={inv.id}>
-                            <td style={{ ...tdP, borderLeft: "none", padding: "10px 12px" }}>
-                              <div style={{ fontSize: 12, fontWeight: 500, color: TEXT,
-                                lineHeight: 1.3 }}>{inv.initiative || "—"}</div>
-                              <div style={{ fontSize: 10, color: TEXT_MUTED, fontFamily: "monospace",
-                                marginTop: 2 }}>
-                                {inv.investmentUrl
-                                  ? <a href={inv.investmentUrl} target="_blank" rel="noreferrer"
-                                      style={{ color: "#3086AB", textDecoration: "none" }}>{inv.id}</a>
-                                  : inv.id}
-                              </div>
-                            </td>
-                            <td style={{ ...tdP, padding: "10px 12px", fontSize: 11, color: TEXT_SUB }}>
-                              {inv.owner || "—"}
-                            </td>
-                            <td style={{ ...tdP, padding: "10px 12px", fontSize: 12, fontWeight: 600,
-                              color: TEXT }}>
-                              {inv.amount ? fmtM(toNum(inv.amount)) : "—"}
-                            </td>
-                            {PIPELINE_STAGES.map((s, si) => (
-                              <td key={s} style={{ ...tdP, padding: "10px 4px", textAlign: "center" }}>
-                                {si === stageIdx ? (
-                                  <span style={{ display: "inline-block", width: 14, height: 14,
-                                    borderRadius: "50%", background: rowPc.color,
-                                    boxShadow: "0 0 0 3px " + rowPc.color + "28" }} />
-                                ) : si < stageIdx && stageIdx !== -1 ? (
-                                  <span style={{ display: "inline-block", width: 10, height: 10,
-                                    borderRadius: "50%", background: rowPc.color + "35" }} />
-                                ) : (
-                                  <span style={{ display: "inline-block", width: 10, height: 10,
-                                    borderRadius: "50%", border: "1.5px solid " + BORDER }} />
-                                )}
-                              </td>
-                            ))}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </>
         );
