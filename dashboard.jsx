@@ -5806,6 +5806,8 @@ function AllInvestmentsView() {
   const [currentUser, setCurrentUser]               = useState(null);
   const [viewMode, setViewMode]                     = useState("table");
   const [selectedOwner, setSelectedOwner]           = useState("all");
+  const [showApprover, setShowApprover]             = useState(false);
+  const [showNotes, setShowNotes]                   = useState(false);
   const [paymentPopover, setPaymentPopover]         = useState(null);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
@@ -6344,7 +6346,8 @@ function AllInvestmentsView() {
                 <col style={{ width: 90 }} />
                 <col style={{ width: 180 }} />
                 <col style={{ width: 110 }} />
-                <col style={{ minWidth: 120 }} />
+                <col style={{ width: showApprover ? 130 : 30 }} />
+                <col style={{ width: showNotes ? 200 : 30 }} />
               </colgroup>
               <thead>
                 {(() => {
@@ -6458,12 +6461,6 @@ function AllInvestmentsView() {
                           {filterStatuses.length === 0 ? "Status" : filterStatuses.length === 1 ? `Status · ${filterStatuses[0]}` : `Status · ${filterStatuses.length} selected`}
                           <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
                         </div>
-                        <div onClick={() => handleColSort("approver")}
-                          style={{ ...hStyle(sortBy === "approver"), padding: "4px 12px", cursor: "pointer",
-                            borderTop: "1px solid " + BORDER + "60", userSelect: "none",
-                            display: "flex", alignItems: "center", gap: 2 }}>
-                          Approver<span style={{ fontSize: 8, opacity: 0.7 }}>{sortBy === "approver" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}</span>
-                        </div>
                         {openDropdown === "status" && (
                           <>
                             <div onClick={() => setOpenDropdown(null)}
@@ -6503,7 +6500,24 @@ function AllInvestmentsView() {
                           </>
                         )}
                       </th>
-                      {plainCol("Notes", true)}
+                      {/* Approver — collapsible */}
+                      <th onClick={() => setShowApprover(v => !v)}
+                        style={{ ...hStyle(false), borderRight: "1px solid " + BORDER, cursor: "pointer",
+                          userSelect: "none", padding: showApprover ? "9px 12px" : "9px 6px",
+                          textAlign: showApprover ? "left" : "center", whiteSpace: "nowrap", overflow: "hidden" }}>
+                        {showApprover
+                          ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Approver <span style={{ fontSize: 9, opacity: 0.5 }}>◀</span></span>
+                          : <span style={{ fontSize: 11, color: TEXT_MUTED }} title="Expand Approver">+</span>}
+                      </th>
+                      {/* Notes — collapsible */}
+                      <th onClick={() => setShowNotes(v => !v)}
+                        style={{ ...hStyle(false), borderRight: "none", cursor: "pointer",
+                          userSelect: "none", padding: showNotes ? "9px 12px" : "9px 6px",
+                          textAlign: showNotes ? "left" : "center", whiteSpace: "nowrap", overflow: "hidden" }}>
+                        {showNotes
+                          ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Notes <span style={{ fontSize: 9, opacity: 0.5 }}>◀</span></span>
+                          : <span style={{ fontSize: 11, color: TEXT_MUTED }} title="Expand Notes">+</span>}
+                      </th>
                     </tr>
                   );
                 })()}
@@ -6657,14 +6671,17 @@ function AllInvestmentsView() {
                             <span style={{ fontSize: 10, fontWeight: 700, color: statusColor,
                               background: statusColor + "15", borderRadius: 5,
                               padding: "2px 7px", border: "1px solid " + statusColor + "30",
-                              display: "inline-block",
-                              marginBottom: inv.status === "In Process" ? 4 : 0 }}>
+                              display: "inline-block" }}>
                               {inv.status === "In Process" && inv.stage ? inv.stage : inv.status}
                             </span>
                           ) : (
                             <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
                           )}
-                          {inv.status === "In Process" && (
+                        </td>
+
+                        {/* Approver — collapsible */}
+                        <td style={{ ...tdBase, padding: showApprover ? "8px 12px" : 0, overflow: "hidden" }}>
+                          {showApprover && inv.status === "In Process" && (
                             <div style={{ position: "relative" }}>
                               <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
                                 style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
@@ -6705,9 +6722,9 @@ function AllInvestmentsView() {
                           )}
                         </td>
 
-                        {/* Notes */}
-                        <td style={{ ...tdBase, padding: "8px 12px", borderRight: "none" }}>
-                          {isEditing ? (
+                        {/* Notes — collapsible */}
+                        <td style={{ ...tdBase, padding: showNotes ? "8px 12px" : 0, borderRight: "none", overflow: "hidden" }}>
+                          {showNotes && (isEditing ? (
                             <>
                               <PortfolioNotesEditor
                                 value={inv.internal_notes || ""}
@@ -6743,13 +6760,13 @@ function AllInvestmentsView() {
                                 ✎
                               </button>
                             </div>
-                          )}
+                          ))}
                         </td>
                       </tr>
 
                       {isEditing && (
                         <tr>
-                          <td colSpan={12} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
+                          <td colSpan={13} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
                             padding: "10px 16px", borderBottom: rowBorder }}>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
                               {[
