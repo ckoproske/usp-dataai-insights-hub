@@ -7797,6 +7797,16 @@ function BudgetForecastsView() {
                         <span style={{color:hColor,fontWeight:600}}>${hVal.toFixed(2)}M</span>
                       </div>
                     </div>
+                    <div style={{borderTop:"1px solid "+BORDER,paddingTop:6,marginTop:2,display:"flex",flexDirection:"column",gap:6}}>
+                      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                        <span style={{color:TEXT_MUTED}}>Exp. Forecast</span>
+                        <span style={{color:TEXT_MUTED,fontStyle:"italic"}}>—</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                        <span style={{color:TEXT_MUTED}}>Exp. Headroom</span>
+                        <span style={{color:TEXT_MUTED,fontStyle:"italic"}}>—</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
