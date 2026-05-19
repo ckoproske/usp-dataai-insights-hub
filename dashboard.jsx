@@ -1530,7 +1530,7 @@ function DataMeta({ source, lastUpdated, updateFreq, style }) {
 }
 
 // ── IndicatorTile ─────────────────────────────────────────────────────────────
-function IndicatorTile({ ind, iIdx, activeYear }) {
+function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
   const { baseline:baselineVal, actuals:actualVals, targets:targetVals } = getIndData(ind);
   const sc = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
   const yrIdx = YEARS.indexOf(activeYear);
@@ -1587,11 +1587,10 @@ function IndicatorTile({ ind, iIdx, activeYear }) {
     : actualVals[yrIdx];
 
   return (
-    <div style={{flexShrink:0,width:ind._fluid?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE}}>
-      <div style={{padding:"14px 16px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
-        <div style={{marginBottom:6}}>
-          <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.5}}>{ind.text}</div>
-        </div>
+    <div style={{flexShrink:0,width:(fluid||ind._fluid)?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE}}>
+      <div style={{padding:"12px 16px 10px",background:sc.color+"08",borderBottom:"1px solid "+sc.color+"22"}}>
+        <div style={{fontSize:10,fontWeight:700,color:sc.color,textTransform:"uppercase",letterSpacing:1.4,marginBottom:5}}>Indicator {iIdx+1}</div>
+        <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:5}}>{ind.text}</div>
         <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:"1px solid "+BORDER}}>
@@ -1972,39 +1971,81 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
             </div>
           )}
 
-          {/* Impact Indicators — chart tiles */}
+          {/* Leading Signals — indicator chart tiles, 3-across grid */}
           <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
-            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:14}}>
-              Impact Indicators
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
+                Leading Signals
+              </div>
+              <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>
+                These indicators are the early signals that this enabling condition is beginning to take hold.
+              </div>
             </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
-              {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
-                <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR}/>
-              ))}
-              {po.indicators.filter(ind=>ind.text).length===0&&(
-                <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
-              )}
-            </div>
+            {po.indicators.filter(ind=>ind.text).length > 0 ? (
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
+                  <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR} fluid/>
+                ))}
+              </div>
+            ) : (
+              <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
+            )}
           </div>
 
-          {/* 2030 Goals */}
+          {/* 2030 Goals Enabled */}
           {(PORT_GOAL_MAP[portId]||[]).length>0&&(
-            <div style={{padding:"16px 24px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>2030 Goals</div>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
+                  2030 Goals Enabled
+                </div>
+                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>
+                  When this enabling condition holds, it accelerates progress toward these cross-cutting strategy goals.
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
                   const g = STRATEGY_GOALS.find(x=>x.number===gNum);
                   if(!g) return null;
+                  const pct = g.goal2030 && g.current2026 !== undefined
+                    ? Math.round((g.current2026 / g.goal2030) * 100)
+                    : null;
                   return (
-                    <div key={g.id} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,
-                        border:"1px solid "+g.color+"44",background:g.color+"08",
-                        cursor:onNavigateToStrategy?"pointer":"default",transition:"box-shadow .15s"}}
-                      onMouseEnter={e=>{if(onNavigateToStrategy)e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.1)";}}
-                      onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-                      <span style={{width:24,height:24,borderRadius:"50%",background:g.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.number}</span>
-                      <span style={{fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
-                      {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
+                    <div key={g.id} style={{borderRadius:10,border:"1px solid "+g.color+"33",background:g.color+"06",overflow:"hidden"}}>
+                      <div style={{padding:"12px 16px"}}>
+                        {/* Goal header row */}
+                        <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                          <span style={{width:26,height:26,borderRadius:"50%",background:g.color,color:"#fff",fontSize:12,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.3,marginBottom:3}}>{g.title}</div>
+                            <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{g.target}</div>
+                          </div>
+                          {onNavigateToStrategy&&(
+                            <button onClick={()=>onNavigateToStrategy(g.number)}
+                              style={{flexShrink:0,fontSize:11,fontWeight:600,color:g.color,background:g.color+"15",
+                                border:"1px solid "+g.color+"33",borderRadius:6,padding:"3px 10px",cursor:"pointer",whiteSpace:"nowrap"}}>
+                              View goal ↗
+                            </button>
+                          )}
+                        </div>
+                        {/* Progress bar */}
+                        {pct !== null && (
+                          <div>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                              <span style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8}}>Progress toward 2030 target</span>
+                              <span style={{fontSize:11,color:TEXT_MUTED,fontStyle:"italic"}}>Directional estimate</span>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <div style={{flex:1,height:6,borderRadius:3,background:BORDER,overflow:"hidden"}}>
+                                <div style={{height:"100%",borderRadius:3,width:Math.min(pct,100)+"%",background:g.color,transition:"width .4s"}}/>
+                              </div>
+                              <span style={{fontSize:12,fontWeight:700,color:g.color,flexShrink:0,minWidth:60,textAlign:"right"}}>
+                                {g.current2026}{g.unit} <span style={{fontWeight:400,color:TEXT_MUTED}}>of {g.goal2030}{g.unit}</span>
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
