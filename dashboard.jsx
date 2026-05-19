@@ -1639,6 +1639,95 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
   );
 }
 
+// ── IndicatorRow — flat inline indicator (no card chrome) ─────────────────────
+function IndicatorRow({ ind, iIdx, activeYear }) {
+  const { baseline:baselineVal, actuals:actualVals, targets:targetVals } = getIndData(ind);
+  const sc = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
+  const yrIdx = YEARS.indexOf(activeYear);
+
+  const rawList = (ind.actualsList || []).slice().sort((a,b)=>
+    a.year!==b.year ? a.year-b.year : (a.period||"").localeCompare(b.period||""));
+  const isMultiPeriod = rawList.some(a => a.period);
+
+  const periodLabel = (year, period) => {
+    if (!period) return "'" + String(year).slice(2);
+    const abbr = period.length > 3 ? period.slice(0,3) : period;
+    return abbr + " '" + String(year).slice(2);
+  };
+
+  let chartPoints;
+  if (isMultiPeriod) {
+    const targetByYear = {};
+    YEARS.forEach((yr,j)=>{ if(targetVals[j]!==null) targetByYear[yr]=targetVals[j]; });
+    const yearsWithActuals = new Set(rawList.map(a=>a.year));
+    chartPoints = rawList.map(a => ({
+      label:periodLabel(a.year,a.period), year:a.year, isTarget:false,
+      Actual:a.year<=activeYear?a.value:null, Target:targetByYear[a.year]||null,
+    }));
+    YEARS.forEach((yr,j)=>{
+      if(!yearsWithActuals.has(yr)&&targetVals[j]!==null)
+        chartPoints.push({label:periodLabel(yr,null),year:yr,isTarget:true,Actual:null,Target:targetVals[j]});
+    });
+    chartPoints.sort((a,b)=>a.year!==b.year?a.year-b.year:(a.label).localeCompare(b.label));
+  } else {
+    chartPoints = YEARS.map((yr,j)=>({label:String(yr),year:yr,isTarget:false,Actual:actualVals[j],Target:targetVals[j]}));
+  }
+  const allChartData = [{label:"Base",year:null,Actual:baselineVal,Target:null},...chartPoints];
+
+  const activeActual = isMultiPeriod
+    ? (rawList.filter(a=>a.year===activeYear).slice(-1)[0]?.value ?? null)
+    : actualVals[yrIdx];
+
+  return (
+    <div style={{display:"flex",alignItems:"stretch",gap:0,borderBottom:"1px solid "+BORDER,padding:"14px 0"}}>
+      {/* Status accent bar */}
+      <div style={{width:3,borderRadius:2,background:sc.color,flexShrink:0,marginRight:14,alignSelf:"stretch"}}/>
+      {/* Text + meta */}
+      <div style={{flex:1,minWidth:0,paddingRight:16}}>
+        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Indicator {iIdx+1}</div>
+        <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:4}}>{ind.text}</div>
+        <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
+      </div>
+      {/* Numbers */}
+      <div style={{flexShrink:0,display:"flex",gap:16,alignItems:"center",paddingRight:16}}>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:9,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>{activeYear} Target</div>
+          <div style={{fontSize:22,fontWeight:800,color:targetVals[yrIdx]!==null?sc.color:"#D0CBC2",lineHeight:1}}>
+            {targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}
+          </div>
+        </div>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:9,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>{activeYear} Actual</div>
+          <div style={{fontSize:22,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",lineHeight:1}}>
+            {activeActual!==null?activeActual:"—"}
+          </div>
+        </div>
+      </div>
+      {/* Mini chart */}
+      <div style={{flexShrink:0,width:180}}>
+        <ResponsiveContainer width="100%" height={70}>
+          <LineChart data={allChartData} margin={{top:4,right:4,bottom:0,left:-22}}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+            <XAxis dataKey="label" tick={({x,y,payload})=>{
+              const isHL=payload.value.includes("'"+String(activeYear).slice(2));
+              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?9:7} fontWeight={isHL?700:400} fill={TEXT_SUB}>{payload.value==="Base"?"B":payload.value}</text>;
+            }}/>
+            <YAxis tick={{fontSize:8,fill:TEXT_SUB}}/>
+            <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
+            <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
+              dot={({payload:d,...p})=>{
+                if(d.Actual===null||d.Actual===undefined) return <circle key={p.index} r={0} cx={0} cy={0}/>;
+                const isBase=d.label==="Base", inYr=!isBase&&d.year===activeYear;
+                return <circle key={p.index} cx={p.cx} cy={p.cy} r={isBase?3:inYr?4:2} fill={isBase?"#94A3B8":inYr?sc.color:"#fff"} stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
+              }}/>
+            <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 
 // ── BowOutcomePanel ───────────────────────────────────────────────────────────
 function BowOutcomePanel({ outcome, onUpdate }) {
@@ -1952,9 +2041,9 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                 <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>Early signals that this enabling condition is beginning to take hold.</div>
               </div>
               {po.indicators.filter(ind=>ind.text).length > 0 ? (
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                <div>
                   {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
-                    <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR} fluid/>
+                    <IndicatorRow key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR}/>
                   ))}
                 </div>
               ) : (
