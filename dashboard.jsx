@@ -1847,7 +1847,6 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
   const [activeIdx, setActiveIdx] = useState(initialIdx ?? 0);
   const [bowOpen, setBowOpen] = useState(false);
-  const [editingOpen, setEditingOpen] = useState(false);
 
   const [bowLinks, setBowLinks] = useState({});
   useEffect(() => {
@@ -1863,7 +1862,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
       });
   }, [portId]);
 
-  const switchOutcome = (i) => { setActiveIdx(i); setBowOpen(false); setEditingOpen(false); };
+  const switchOutcome = (i) => { setActiveIdx(i); setBowOpen(false); };
   const bowProgress = (bows||[]).map(b => ({ id:b.id, name:b.name, outcomes:b.outcomes }));
   const po = portfolio.portfolioOutcomes[activeIdx] || portfolio.portfolioOutcomes[0];
 
@@ -1889,7 +1888,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
           const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
           return (
             <div key={p.id} onClick={() => switchOutcome(i)}
-              style={{flex:"1 1 0",minWidth:140,padding:"14px 18px 12px",
+              style={{flex:"1 1 0",minWidth:120,padding:"12px 16px",
                 borderRight:"1px solid "+BORDER,
                 borderBottom:"3px solid "+(isActive ? pc.color : "transparent"),
                 background:isActive ? pc.color+"0A" : "transparent",
@@ -1897,24 +1896,9 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
               <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.3,marginBottom:4}}>
                 Outcome {i+1}
               </div>
-              <div style={{fontSize:13,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35,marginBottom:isActive?8:6}}>
+              <div style={{fontSize:13,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35}}>
                 {SHORT_TITLES[i]||p.shortTitle}
               </div>
-              {/* Full outcome text — only when active */}
-              {isActive && (
-                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.6,marginBottom:8}}>
-                  {p.outcome}
-                </div>
-              )}
-              {/* Impact status badge */}
-              {pImpact
-                ? <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 9px",borderRadius:10,fontWeight:700,fontSize:11,
-                    background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
-                    border:"1px solid "+(impactRs?.color||pImpact.color)+"44"}}>
-                    <span style={{width:5,height:5,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
-                    {pImpact.label.replace(" Expectations","")}
-                  </span>
-                : <span style={{fontSize:11,color:TEXT_MUTED,fontStyle:"italic"}}>No data</span>}
             </div>
           );
         })}
@@ -1927,41 +1911,15 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
         {po && (
           <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
 
-            {/* Edit button row */}
-            <div style={{padding:"12px 22px",borderBottom:"1px solid "+BORDER,display:"flex",justifyContent:"flex-end",alignItems:"center",gap:10}}>
-              {(()=>{
-                const pImpact = impactAutoStatus({impactIndicators:po.indicators});
-                const impactRs = pImpact ? STATUS[pImpact.label] : null;
-                return pImpact
-                  ? <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 14px",borderRadius:20,fontWeight:700,fontSize:12,
-                      background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
-                      border:"1.5px solid "+(impactRs?.color||pImpact.color)+"44"}}>
-                      <span style={{width:6,height:6,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
-                      Impact: {pImpact.label.replace(" Expectations","")}
-                    </span>
-                  : null;
-              })()}
-              <button onClick={()=>setEditingOpen(v=>!v)}
-                style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:7,
-                  border:"1px solid "+(editingOpen?pc.color:BORDER),
-                  background:editingOpen?pc.color+"12":SURFACE,
-                  color:editingOpen?pc.color:TEXT_MUTED,cursor:"pointer"}}>
-                {editingOpen?"Done Editing":"Edit"}
-              </button>
-            </div>
-
-            {/* Inline edit panel */}
-            {editingOpen && (
-              <div style={{borderBottom:"1px solid "+BORDER}}>
-                <PortfolioOutcomePanel po={po} poIdx={activeIdx}
-                  onChange={(iIdx,f,v)=>{
-                    const updPo = {...po, indicators: po.indicators.map((ind,j)=>j!==iIdx?ind:{...ind,[f]:v})};
-                    const updPortfolio = {...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,j)=>j!==activeIdx?p:updPo)};
-                    onChange(updPortfolio);
-                  }}
-                  portShortTitles={SHORT_TITLES}/>
+            {/* Full outcome text — bold, prominent */}
+            <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
+              <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>
+                Enabling Condition
               </div>
-            )}
+              <div style={{fontSize:16,fontWeight:700,color:TEXT,lineHeight:1.6}}>
+                {po.outcome}
+              </div>
+            </div>
 
             {/* Leading Signals — 3-column indicator grid */}
             <div style={{padding:"18px 22px",borderBottom:"1px solid "+BORDER}}>
@@ -4232,34 +4190,36 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         })}
       </div>
       {inMeasurement&&(
-        <div style={{background:SURFACE_2,borderBottom:"1px solid "+BORDER,paddingLeft:20,display:"flex",alignItems:"stretch"}}>
-          <div style={{display:"flex",flexDirection:"column",marginRight:8}}>
-            <div style={{fontSize:10,fontWeight:600,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,padding:"5px 16px 0",opacity:0.7}}>Portfolio</div>
-            <button onClick={()=>setActiveTab("portfolio-progress")}
-              style={{padding:"6px 16px 8px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
-                borderBottom:activeTab==="portfolio-progress"?"2px solid "+pc.color:"2px solid transparent",
-                color:activeTab==="portfolio-progress"?pc.color:TEXT_MUTED,marginBottom:-1,whiteSpace:"nowrap"}}>
-              Portfolio Progress
-            </button>
+        <div style={{background:pc.color+"0C",borderBottom:"1px solid "+pc.color+"33",borderTop:"none",display:"flex",alignItems:"stretch",paddingLeft:0}}>
+          {/* Portfolio Progress tab */}
+          <button onClick={()=>setActiveTab("portfolio-progress")}
+            style={{padding:"10px 20px",fontWeight:600,fontSize:13,border:"none",cursor:"pointer",
+              background:activeTab==="portfolio-progress"?SURFACE:"transparent",
+              borderBottom:activeTab==="portfolio-progress"?"3px solid "+pc.color:"3px solid transparent",
+              borderRight:"1px solid "+pc.color+"22",
+              color:activeTab==="portfolio-progress"?pc.color:TEXT_SUB,
+              marginBottom:-1,whiteSpace:"nowrap",transition:"all .15s",flexShrink:0}}>
+            Portfolio Progress
+          </button>
+          {/* Divider + BOW label */}
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 14px",borderRight:"1px solid "+pc.color+"22",flexShrink:0}}>
+            <span style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2,opacity:0.7}}>Bodies of Work</span>
+            <span style={{fontSize:12,color:pc.color+"66"}}>→</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 8px"}}>
-            <div style={{width:1,height:28,background:BORDER}}/>
-            <div style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,lineHeight:1.3,textAlign:"center"}}>Bodies<br/>of Work</div>
-            <svg width="10" height="20" viewBox="0 0 10 20"><polyline points="2,4 8,10 2,16" fill="none" stroke={BORDER} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
-          <div style={{display:"flex",alignItems:"flex-end"}}>
+          {/* BOW tabs */}
+          <div style={{display:"flex",alignItems:"stretch",flex:1}}>
             {bows.map(b=>{
               const active=activeTab==="bow"&&activeBow===b.id;
-              return <div key={b.id} style={{display:"flex",flexDirection:"column"}}>
-                <div style={{height:14}}/>
-                <button onClick={()=>{setActiveTab("bow");setActiveBow(b.id);setBowView("progress");setActiveBowOutcomeIdx(0);}}
-                  style={{padding:"6px 16px 8px",fontWeight:active?600:400,fontSize:13,cursor:"pointer",
-                    background:"transparent",border:"none",
-                    borderBottom:active?"2px solid "+pc.color:"2px solid transparent",
-                    color:active?pc.color:TEXT_MUTED,marginBottom:-1,whiteSpace:"nowrap",transition:"color .15s"}}>
+              return (
+                <button key={b.id} onClick={()=>{setActiveTab("bow");setActiveBow(b.id);setBowView("progress");setActiveBowOutcomeIdx(0);}}
+                  style={{padding:"10px 18px",fontWeight:active?700:500,fontSize:13,cursor:"pointer",
+                    background:active?SURFACE:"transparent",border:"none",
+                    borderBottom:active?"3px solid "+pc.color:"3px solid transparent",
+                    borderRight:"1px solid "+pc.color+"22",
+                    color:active?pc.color:TEXT_SUB,marginBottom:-1,whiteSpace:"nowrap",transition:"all .15s"}}>
                   {b.name}
                 </button>
-              </div>;
+              );
             })}
           </div>
         </div>
