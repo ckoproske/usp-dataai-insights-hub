@@ -1846,8 +1846,9 @@ ${context}`;
 function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, initialIdx, portShortTitles, onNavigateToStrategy }) {
   const pc = portColor || { color: ACCENT, light: ACCENT_LIGHT };
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
-  const [openBows, setOpenBows] = useState({});   // po.id → bool (BOW section expanded)
-  const [editingPo, setEditingPo] = useState(null); // po.id in edit mode
+  const [activeIdx, setActiveIdx] = useState(initialIdx ?? 0);
+  const [bowOpen, setBowOpen] = useState(false);
+  const [editingOpen, setEditingOpen] = useState(false);
 
   // Fetch BOW-to-portfolio outcome links from DB
   const [bowLinks, setBowLinks] = useState({});
@@ -1864,259 +1865,205 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
       });
   }, [portId]);
 
+  // Reset panel state when switching outcomes
+  const switchOutcome = (i) => { setActiveIdx(i); setBowOpen(false); setEditingOpen(false); };
+
   const bowProgress = (bows||[]).map(b => ({ id:b.id, name:b.name, outcomes:b.outcomes }));
+  const po = portfolio.portfolioOutcomes[activeIdx] || portfolio.portfolioOutcomes[0];
+
+  // Contributing BOW outcomes for the active portfolio outcome
+  const linkedIds = po ? bowLinks[po.id] : null;
+  const contributingBows = bowProgress.map(b => {
+    const visible = linkedIds
+      ? b.outcomes.filter(o => linkedIds.has(o.id))
+      : b.outcomes.filter(o => o.title || o.shortTitle);
+    return {...b, outcomes: visible};
+  }).filter(b => b.outcomes.length > 0);
+  const bowCount = contributingBows.reduce((s,b) => s + b.outcomes.length, 0);
 
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      {portfolio.portfolioOutcomes.map((po, i) => {
-        const pImpact = impactAutoStatus({impactIndicators: po.indicators});
-        const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
-        const isEditOpen = editingPo === po.id;
-        const isBowOpen = !!openBows[po.id];
+    <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:14,overflow:"hidden",background:SURFACE,boxShadow:"0 2px 12px rgba(10,37,64,0.06)"}}>
 
-        // Contributing BOW outcomes for this portfolio outcome
-        const linkedIds = bowLinks[po.id];
-        const contributingBows = bowProgress.map(b => {
-          const visible = linkedIds
-            ? b.outcomes.filter(o => linkedIds.has(o.id))
-            : b.outcomes.filter(o => o.title || o.shortTitle);
-          return {...b, outcomes: visible};
-        }).filter(b => b.outcomes.length > 0);
+      {/* ── Left: vertical outcome tabs ── */}
+      <div style={{flex:"0 0 280px",borderRight:"1px solid "+BORDER,display:"flex",flexDirection:"column",background:"#FAFBFC"}}>
+        {portfolio.portfolioOutcomes.map((p, i) => {
+          const isActive = i === activeIdx;
+          const pImpact = impactAutoStatus({impactIndicators: p.indicators});
+          const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
+          return (
+            <div key={p.id} onClick={() => switchOutcome(i)}
+              style={{padding:"16px 18px",borderBottom:"1px solid "+BORDER,
+                borderLeft:"4px solid "+(isActive ? pc.color : "transparent"),
+                background:isActive ? pc.color+"0A" : "transparent",
+                cursor:"pointer",transition:"all .15s"}}>
+              <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.4,marginBottom:6}}>
+                Outcome {i+1}
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.4,marginBottom:6}}>
+                {SHORT_TITLES[i]||p.shortTitle}
+              </div>
+              <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55,marginBottom:10}}>
+                {p.outcome}
+              </div>
+              {pImpact
+                ? <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:12,fontWeight:700,fontSize:11,
+                    background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
+                    border:"1px solid "+(impactRs?.color||pImpact.color)+"44"}}>
+                    <span style={{width:5,height:5,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
+                    {pImpact.label.replace(" Expectations","")}
+                  </span>
+                : <span style={{fontSize:11,color:TEXT_MUTED,fontStyle:"italic"}}>No data</span>}
+            </div>
+          );
+        })}
+      </div>
 
-        // Aggregate execution targets from contributing BOW outcomes
-        const allTargets = contributingBows.flatMap(b =>
-          b.outcomes.flatMap(o =>
-            (o.executionTargets[CURRENT_YEAR]||[]).map(t =>
-              typeof t === "string" ? {text:t, completion:"Not Started"} : {...t, completion: migrateCompletion(t.completion)}
-            )
-          )
-        );
-        const totalT = allTargets.length;
-        const completeT = allTargets.filter(t => t.completion === "Complete").length;
-        const onTrackT  = allTargets.filter(t => t.completion === "On Track").length;
-        const positiveT = completeT + onTrackT;
-        const progressPct = totalT > 0 ? Math.round((positiveT / totalT) * 100) : null;
-        const barColor = progressPct === null ? BORDER : progressPct >= 80 ? "#059669" : progressPct >= 50 ? "#D97706" : "#DC2626";
+      {/* ── Right: detail panel ── */}
+      {po && (
+        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
 
-        return (
-          <div key={po.id} style={{borderRadius:14,border:"1.5px solid "+(isEditOpen?pc.color:BORDER),background:SURFACE,overflow:"hidden",boxShadow:"0 2px 12px rgba(10,37,64,0.06)"}}>
-
-            {/* Top accent bar */}
-            <div style={{height:4,background:pc.color}}/>
-
-            {/* Card header */}
-            <div style={{padding:"18px 22px 16px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:"wrap"}}>
-
-                {/* Left: label, goals chips, title, outcome text */}
-                <div style={{flex:1,minWidth:200}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                    <span style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5}}>Outcome {i+1}</span>
-                    {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
-                      const g = STRATEGY_GOALS.find(x=>x.number===gNum);
-                      if(!g) return null;
-                      return (
-                        <span key={g.id} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                          style={{fontSize:11,fontWeight:600,color:g.color,background:g.color+"12",
-                            border:"1px solid "+g.color+"33",borderRadius:5,padding:"1px 8px",
-                            cursor:onNavigateToStrategy?"pointer":"default",whiteSpace:"nowrap"}}>
-                          Goal {g.number}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <div style={{fontSize:18,fontWeight:800,color:TEXT,lineHeight:1.3,marginBottom:6,letterSpacing:-0.2}}>
-                    {SHORT_TITLES[i]||po.shortTitle}
-                  </div>
-                  <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65}}>{po.outcome}</div>
+          {/* Header */}
+          <div style={{padding:"20px 24px 16px",borderBottom:"1px solid "+BORDER}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>
+                  Outcome {activeIdx+1}
                 </div>
-
-                {/* Right: impact status badge + edit button */}
-                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0}}>
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:5}}>Impact Status</div>
-                    {pImpact
-                      ? <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 16px",borderRadius:20,fontWeight:700,fontSize:13,
-                          background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
-                          border:"1.5px solid "+(impactRs?.color||pImpact.color)+"55"}}>
-                          <span style={{width:7,height:7,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
-                          {pImpact.label.replace(" Expectations","")}
-                        </span>
-                      : <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 16px",borderRadius:20,fontWeight:600,fontSize:13,
-                          background:"#F3F4F6",color:TEXT_MUTED,border:"1.5px solid "+BORDER}}>No data</span>
-                    }
-                  </div>
-                  <button onClick={()=>setEditingPo(isEditOpen?null:po.id)}
-                    style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:7,
-                      border:"1px solid "+(isEditOpen?pc.color:BORDER),
-                      background:isEditOpen?pc.color+"12":SURFACE,
-                      color:isEditOpen?pc.color:TEXT_MUTED,cursor:"pointer",whiteSpace:"nowrap"}}>
-                    {isEditOpen?"Done Editing":"Edit"}
-                  </button>
+                <div style={{fontSize:18,fontWeight:800,color:TEXT,lineHeight:1.3,marginBottom:6,letterSpacing:-0.2}}>
+                  {SHORT_TITLES[activeIdx]||po.shortTitle}
                 </div>
+                <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65}}>{po.outcome}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,flexShrink:0}}>
+                {/* Impact badge */}
+                {(()=>{
+                  const pImpact = impactAutoStatus({impactIndicators:po.indicators});
+                  const impactRs = pImpact ? STATUS[pImpact.label] : null;
+                  return pImpact
+                    ? <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 16px",borderRadius:20,fontWeight:700,fontSize:13,
+                        background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
+                        border:"1.5px solid "+(impactRs?.color||pImpact.color)+"55"}}>
+                        <span style={{width:7,height:7,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
+                        {pImpact.label.replace(" Expectations","")}
+                      </span>
+                    : <span style={{display:"inline-flex",alignItems:"center",padding:"7px 16px",borderRadius:20,fontWeight:600,fontSize:13,background:"#F3F4F6",color:TEXT_MUTED,border:"1.5px solid "+BORDER}}>No data</span>;
+                })()}
+                <button onClick={()=>setEditingOpen(v=>!v)}
+                  style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:7,
+                    border:"1px solid "+(editingOpen?pc.color:BORDER),
+                    background:editingOpen?pc.color+"12":SURFACE,
+                    color:editingOpen?pc.color:TEXT_MUTED,cursor:"pointer"}}>
+                  {editingOpen?"Done Editing":"Edit"}
+                </button>
               </div>
             </div>
+          </div>
 
-            {/* Inline edit panel */}
-            {isEditOpen && (
-              <div style={{borderBottom:"1px solid "+BORDER}}>
-                <PortfolioOutcomePanel po={po} poIdx={i}
-                  onChange={(iIdx,f,v)=>{
-                    const updPo = {...po, indicators: po.indicators.map((ind,j)=>j!==iIdx?ind:{...ind,[f]:v})};
-                    const updPortfolio = {...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,j)=>j!==i?p:updPo)};
-                    onChange(updPortfolio);
-                  }}
-                  portShortTitles={SHORT_TITLES}/>
-              </div>
-            )}
-
-            {/* Body: execution progress + indicators table */}
-            <div style={{padding:"18px 22px",display:"flex",gap:28,flexWrap:"wrap",borderBottom:"1px solid "+BORDER}}>
-
-              {/* Execution Progress */}
-              <div style={{flex:"0 0 240px",minWidth:200}}>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
-                  Execution Progress {CURRENT_YEAR}
-                </div>
-                {totalT > 0 ? (
-                  <div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                      <div style={{flex:1,height:8,borderRadius:4,background:BORDER,overflow:"hidden"}}>
-                        <div style={{height:"100%",borderRadius:4,width:progressPct+"%",background:barColor,transition:"width .4s"}}/>
-                      </div>
-                      <span style={{fontSize:13,fontWeight:700,color:barColor,flexShrink:0,minWidth:36}}>{progressPct}%</span>
-                    </div>
-                    <div style={{fontSize:12,color:TEXT_SUB,marginBottom:8}}>
-                      {completeT > 0 && <span style={{fontWeight:600,color:"#059669"}}>{completeT} complete</span>}
-                      {completeT > 0 && onTrackT > 0 && <span style={{color:TEXT_MUTED}}>, </span>}
-                      {onTrackT > 0 && <span style={{fontWeight:600,color:"#D97706"}}>{onTrackT} on track</span>}
-                      <span style={{color:TEXT_MUTED}}> of {totalT} targets</span>
-                    </div>
-                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                      {allTargets.map((t,ti)=>{
-                        const c2 = COMPLETION[t.completion]||COMPLETION["Not Started"];
-                        return <span key={ti} title={(t.text||"Target "+(ti+1))+"\n"+c2.label}
-                          style={{width:8,height:8,borderRadius:"50%",background:c2.color,display:"inline-block",flexShrink:0,cursor:"default"}}/>;
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No targets linked yet</div>
-                )}
-              </div>
-
-              {/* Impact Indicators table */}
-              <div style={{flex:1,minWidth:280}}>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
-                  Impact Indicators
-                </div>
-                {po.indicators.filter(ind=>ind.text).length > 0 ? (
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                    <thead>
-                      <tr style={{borderBottom:"1.5px solid "+BORDER}}>
-                        <th style={{textAlign:"left",padding:"4px 10px 7px 0",color:TEXT_MUTED,fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>Indicator</th>
-                        <th style={{textAlign:"center",padding:"4px 8px 7px",color:TEXT_MUTED,fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:0.8,whiteSpace:"nowrap"}}>Baseline</th>
-                        <th style={{textAlign:"center",padding:"4px 8px 7px",color:TEXT_MUTED,fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:0.8,whiteSpace:"nowrap"}}>Target {CURRENT_YEAR}</th>
-                        <th style={{textAlign:"center",padding:"4px 8px 7px",color:TEXT_MUTED,fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:0.8,whiteSpace:"nowrap"}}>Actual</th>
-                        <th style={{textAlign:"center",padding:"4px 0 7px 8px",color:TEXT_MUTED,fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>{
-                        const {baseline:bv,actuals:avs,targets:tvs} = getIndData(ind);
-                        const yrIdx = YEARS.indexOf(CURRENT_YEAR);
-                        const tgt = tvs[yrIdx];
-                        const latestActualIdx = avs.reduceRight((acc,v,j)=>acc===-1&&v!==null&&v!==undefined?j:acc,-1);
-                        const actual = latestActualIdx>=0?avs[latestActualIdx]:null;
-                        const indRs = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
-                        const fmt = v => v!==null&&v!==undefined?(v>=1000000?(v/1000000).toFixed(1)+"M":v>=1000?(v/1000).toFixed(1)+"K":String(v)):"—";
-                        return (
-                          <tr key={ind.id} style={{borderBottom:"1px solid "+BORDER+"66"}}>
-                            <td style={{padding:"9px 10px 9px 0",color:TEXT,lineHeight:1.45,verticalAlign:"top",fontSize:12}}>{ind.text}</td>
-                            <td style={{padding:"9px 8px",textAlign:"center",color:TEXT_SUB,verticalAlign:"top"}}>{fmt(bv)}</td>
-                            <td style={{padding:"9px 8px",textAlign:"center",color:TEXT_SUB,verticalAlign:"top"}}>{fmt(tgt)}</td>
-                            <td style={{padding:"9px 8px",textAlign:"center",color:TEXT_SUB,verticalAlign:"top"}}>{fmt(actual)}</td>
-                            <td style={{padding:"9px 0 9px 8px",textAlign:"center",verticalAlign:"top"}}>
-                              <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"2px 9px",borderRadius:12,fontSize:11,fontWeight:700,
-                                background:indRs.pill,color:indRs.color,border:"1px solid "+indRs.color+"44",whiteSpace:"nowrap"}}>
-                                <span style={{width:5,height:5,borderRadius:"50%",background:indRs.color,display:"inline-block",flexShrink:0}}/>
-                                {indRs.label.replace(" Expectations","")}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
-                )}
-              </div>
+          {/* Inline edit panel */}
+          {editingOpen && (
+            <div style={{borderBottom:"1px solid "+BORDER}}>
+              <PortfolioOutcomePanel po={po} poIdx={activeIdx}
+                onChange={(iIdx,f,v)=>{
+                  const updPo = {...po, indicators: po.indicators.map((ind,j)=>j!==iIdx?ind:{...ind,[f]:v})};
+                  const updPortfolio = {...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,j)=>j!==activeIdx?p:updPo)};
+                  onChange(updPortfolio);
+                }}
+                portShortTitles={SHORT_TITLES}/>
             </div>
+          )}
 
-            {/* Contributing BOW Outcomes — collapsible footer */}
-            <div>
-              <button onClick={()=>setOpenBows(v=>({...v,[po.id]:!v[po.id]}))}
-                style={{width:"100%",textAlign:"left",padding:"10px 22px",background:isBowOpen?pc.color+"06":"none",
-                  border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,
-                  borderBottom:isBowOpen?"1px solid "+BORDER:"none"}}>
-                <span style={{fontSize:11,color:pc.color}}>{isBowOpen?"▾":"▸"}</span>
-                <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>
-                  Contributing BOW Outcomes
-                </span>
-                <span style={{fontSize:11,background:pc.color+"15",color:pc.color,borderRadius:10,padding:"1px 8px",fontWeight:700}}>
-                  {contributingBows.reduce((s,b)=>s+b.outcomes.length,0)}
-                </span>
-                <span style={{marginLeft:"auto",fontSize:11,color:TEXT_MUTED,fontStyle:"italic",fontWeight:400}}>
-                  {isBowOpen?"collapse":"expand"}
-                </span>
-              </button>
-              {isBowOpen && (
-                <div style={{padding:"4px 22px 18px",display:"flex",flexDirection:"column",gap:12}}>
-                  {contributingBows.length === 0
-                    ? <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:10}}>No linked BOW outcomes.</div>
-                    : contributingBows.map(b=>(
-                        <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
-                          <div style={{padding:"8px 14px",background:pc.color+"07",borderBottom:"1px solid "+BORDER}}>
-                            <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2}}>{b.name}</div>
-                          </div>
-                          <div style={{display:"flex",flexDirection:"column"}}>
-                            {b.outcomes.map((o,oi)=>{
-                              const oExec = execAutoStatus(o,CURRENT_YEAR);
-                              const oImpact = impactAutoStatus({impactIndicators:o.impactIndicators||[]});
-                              const isLast = oi===b.outcomes.length-1;
-                              return (
-                                <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:isLast?"none":"1px solid "+BORDER}}>
-                                  <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
-                                  <div style={{flex:1,fontSize:12,color:TEXT,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
-                                  <div style={{display:"flex",gap:12,flexShrink:0,alignItems:"center",paddingTop:1}}>
-                                    <div style={{textAlign:"right"}}>
-                                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec</div>
-                                      {oExec
-                                        ? <div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.complete+oExec.onTrack}/{oExec.total}</span></div>
-                                        : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                                    </div>
-                                    <div style={{textAlign:"right"}}>
-                                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Impact</div>
-                                      {oImpact
-                                        ? <div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oImpact.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oImpact.color}}>{oImpact.label.replace(" Expectations","")}</span></div>
-                                        : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))
-                  }
-                </div>
+          {/* Impact Indicators — chart tiles */}
+          <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
+            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:14}}>
+              Impact Indicators
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+              {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
+                <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR}/>
+              ))}
+              {po.indicators.filter(ind=>ind.text).length===0&&(
+                <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
               )}
             </div>
-
           </div>
-        );
-      })}
+
+          {/* 2030 Goals */}
+          {(PORT_GOAL_MAP[portId]||[]).length>0&&(
+            <div style={{padding:"16px 24px",borderBottom:"1px solid "+BORDER}}>
+              <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>2030 Goals</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
+                  const g = STRATEGY_GOALS.find(x=>x.number===gNum);
+                  if(!g) return null;
+                  return (
+                    <div key={g.id} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,
+                        border:"1px solid "+g.color+"44",background:g.color+"08",
+                        cursor:onNavigateToStrategy?"pointer":"default",transition:"box-shadow .15s"}}
+                      onMouseEnter={e=>{if(onNavigateToStrategy)e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.1)";}}
+                      onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                      <span style={{width:24,height:24,borderRadius:"50%",background:g.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.number}</span>
+                      <span style={{fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
+                      {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Contributing BOW Outcomes — collapsible */}
+          <div>
+            <button onClick={()=>setBowOpen(v=>!v)}
+              style={{width:"100%",textAlign:"left",padding:"12px 24px",background:bowOpen?pc.color+"06":"none",
+                border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,
+                borderBottom:bowOpen?"1px solid "+BORDER:"none"}}>
+              <span style={{fontSize:11,color:pc.color}}>{bowOpen?"▾":"▸"}</span>
+              <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Contributing BOW Outcomes</span>
+              <span style={{fontSize:11,background:pc.color+"15",color:pc.color,borderRadius:10,padding:"1px 8px",fontWeight:700}}>{bowCount}</span>
+              <span style={{marginLeft:"auto",fontSize:11,color:TEXT_MUTED,fontStyle:"italic",fontWeight:400}}>{bowOpen?"collapse":"expand"}</span>
+            </button>
+            {bowOpen&&(
+              <div style={{padding:"4px 24px 18px",display:"flex",flexDirection:"column",gap:12}}>
+                {contributingBows.length===0
+                  ? <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:10}}>No linked BOW outcomes.</div>
+                  : contributingBows.map(b=>(
+                      <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
+                        <div style={{padding:"8px 14px",background:pc.color+"07",borderBottom:"1px solid "+BORDER}}>
+                          <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2}}>{b.name}</div>
+                        </div>
+                        <div style={{display:"flex",flexDirection:"column"}}>
+                          {b.outcomes.map((o,oi)=>{
+                            const oExec = execAutoStatus(o,CURRENT_YEAR);
+                            const oImpact = impactAutoStatus({impactIndicators:o.impactIndicators||[]});
+                            const isLast = oi===b.outcomes.length-1;
+                            return (
+                              <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:isLast?"none":"1px solid "+BORDER}}>
+                                <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                                <div style={{flex:1,fontSize:12,color:TEXT,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
+                                <div style={{display:"flex",gap:12,flexShrink:0,alignItems:"center",paddingTop:1}}>
+                                  <div style={{textAlign:"right"}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec</div>
+                                    {oExec?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.complete+oExec.onTrack}/{oExec.total}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                                  </div>
+                                  <div style={{textAlign:"right"}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Impact</div>
+                                    {oImpact?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oImpact.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oImpact.color}}>{oImpact.label.replace(" Expectations","")}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                }
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
