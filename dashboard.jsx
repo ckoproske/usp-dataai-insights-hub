@@ -1849,7 +1849,6 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
   const [bowOpen, setBowOpen] = useState(false);
   const [editingOpen, setEditingOpen] = useState(false);
 
-  // Fetch BOW-to-portfolio outcome links from DB
   const [bowLinks, setBowLinks] = useState({});
   useEffect(() => {
     if (!bows || !bows.length) return;
@@ -1864,13 +1863,10 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
       });
   }, [portId]);
 
-  // Reset panel state when switching outcomes
   const switchOutcome = (i) => { setActiveIdx(i); setBowOpen(false); setEditingOpen(false); };
-
   const bowProgress = (bows||[]).map(b => ({ id:b.id, name:b.name, outcomes:b.outcomes }));
   const po = portfolio.portfolioOutcomes[activeIdx] || portfolio.portfolioOutcomes[0];
 
-  // Contributing BOW outcomes for the active portfolio outcome
   const linkedIds = po ? bowLinks[po.id] : null;
   const contributingBows = bowProgress.map(b => {
     const visible = linkedIds
@@ -1880,32 +1876,39 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
   }).filter(b => b.outcomes.length > 0);
   const bowCount = contributingBows.reduce((s,b) => s + b.outcomes.length, 0);
 
-  return (
-    <div style={{display:"flex",border:"1px solid "+BORDER,borderRadius:14,overflow:"hidden",background:SURFACE,boxShadow:"0 2px 12px rgba(10,37,64,0.06)"}}>
+  const goals = (PORT_GOAL_MAP[portId]||[]).map(gNum => STRATEGY_GOALS.find(x=>x.number===gNum)).filter(Boolean);
 
-      {/* ── Left: vertical outcome tabs ── */}
-      <div style={{flex:"0 0 280px",borderRight:"1px solid "+BORDER,display:"flex",flexDirection:"column",background:"#FAFBFC"}}>
+  return (
+    <div style={{border:"1px solid "+BORDER,borderRadius:14,overflow:"hidden",background:SURFACE,boxShadow:"0 2px 12px rgba(10,37,64,0.06)"}}>
+
+      {/* ── Top: horizontal outcome tabs ── */}
+      <div style={{display:"flex",borderBottom:"1px solid "+BORDER,background:"#FAFBFC",overflowX:"auto"}}>
         {portfolio.portfolioOutcomes.map((p, i) => {
           const isActive = i === activeIdx;
           const pImpact = impactAutoStatus({impactIndicators: p.indicators});
           const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
           return (
             <div key={p.id} onClick={() => switchOutcome(i)}
-              style={{padding:"16px 18px",borderBottom:"1px solid "+BORDER,
-                borderLeft:"4px solid "+(isActive ? pc.color : "transparent"),
+              style={{flex:"1 1 0",minWidth:140,padding:"14px 18px 12px",
+                borderRight:"1px solid "+BORDER,
+                borderBottom:"3px solid "+(isActive ? pc.color : "transparent"),
                 background:isActive ? pc.color+"0A" : "transparent",
                 cursor:"pointer",transition:"all .15s"}}>
-              <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.4,marginBottom:6}}>
+              <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.3,marginBottom:4}}>
                 Outcome {i+1}
               </div>
-              <div style={{fontSize:13,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.4,marginBottom:6}}>
+              <div style={{fontSize:13,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35,marginBottom:isActive?8:6}}>
                 {SHORT_TITLES[i]||p.shortTitle}
               </div>
-              <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55,marginBottom:10}}>
-                {p.outcome}
-              </div>
+              {/* Full outcome text — only when active */}
+              {isActive && (
+                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.6,marginBottom:8}}>
+                  {p.outcome}
+                </div>
+              )}
+              {/* Impact status badge */}
               {pImpact
-                ? <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:12,fontWeight:700,fontSize:11,
+                ? <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 9px",borderRadius:10,fontWeight:700,fontSize:11,
                     background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
                     border:"1px solid "+(impactRs?.color||pImpact.color)+"44"}}>
                     <span style={{width:5,height:5,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
@@ -1917,194 +1920,169 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
         })}
       </div>
 
-      {/* ── Right: detail panel ── */}
-      {po && (
-        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
+      {/* ── Body: outcome detail (left) + stable goals panel (right) ── */}
+      <div style={{display:"flex"}}>
 
-          {/* Header */}
-          <div style={{padding:"20px 24px 16px",borderBottom:"1px solid "+BORDER}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>
-                  Outcome {activeIdx+1}
-                </div>
-                <div style={{fontSize:18,fontWeight:800,color:TEXT,lineHeight:1.3,marginBottom:6,letterSpacing:-0.2}}>
-                  {SHORT_TITLES[activeIdx]||po.shortTitle}
-                </div>
-                <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65}}>{po.outcome}</div>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,flexShrink:0}}>
-                {/* Impact badge */}
-                {(()=>{
-                  const pImpact = impactAutoStatus({impactIndicators:po.indicators});
-                  const impactRs = pImpact ? STATUS[pImpact.label] : null;
-                  return pImpact
-                    ? <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 16px",borderRadius:20,fontWeight:700,fontSize:13,
-                        background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
-                        border:"1.5px solid "+(impactRs?.color||pImpact.color)+"55"}}>
-                        <span style={{width:7,height:7,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
-                        {pImpact.label.replace(" Expectations","")}
-                      </span>
-                    : <span style={{display:"inline-flex",alignItems:"center",padding:"7px 16px",borderRadius:20,fontWeight:600,fontSize:13,background:"#F3F4F6",color:TEXT_MUTED,border:"1.5px solid "+BORDER}}>No data</span>;
-                })()}
-                <button onClick={()=>setEditingOpen(v=>!v)}
-                  style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:7,
-                    border:"1px solid "+(editingOpen?pc.color:BORDER),
-                    background:editingOpen?pc.color+"12":SURFACE,
-                    color:editingOpen?pc.color:TEXT_MUTED,cursor:"pointer"}}>
-                  {editingOpen?"Done Editing":"Edit"}
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Left: outcome detail — changes per tab */}
+        {po && (
+          <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
 
-          {/* Inline edit panel */}
-          {editingOpen && (
-            <div style={{borderBottom:"1px solid "+BORDER}}>
-              <PortfolioOutcomePanel po={po} poIdx={activeIdx}
-                onChange={(iIdx,f,v)=>{
-                  const updPo = {...po, indicators: po.indicators.map((ind,j)=>j!==iIdx?ind:{...ind,[f]:v})};
-                  const updPortfolio = {...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,j)=>j!==activeIdx?p:updPo)};
-                  onChange(updPortfolio);
-                }}
-                portShortTitles={SHORT_TITLES}/>
+            {/* Edit button row */}
+            <div style={{padding:"12px 22px",borderBottom:"1px solid "+BORDER,display:"flex",justifyContent:"flex-end",alignItems:"center",gap:10}}>
+              {(()=>{
+                const pImpact = impactAutoStatus({impactIndicators:po.indicators});
+                const impactRs = pImpact ? STATUS[pImpact.label] : null;
+                return pImpact
+                  ? <span style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 14px",borderRadius:20,fontWeight:700,fontSize:12,
+                      background:impactRs?.pill||pImpact.color+"15",color:impactRs?.color||pImpact.color,
+                      border:"1.5px solid "+(impactRs?.color||pImpact.color)+"44"}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:impactRs?.color||pImpact.color,display:"inline-block",flexShrink:0}}/>
+                      Impact: {pImpact.label.replace(" Expectations","")}
+                    </span>
+                  : null;
+              })()}
+              <button onClick={()=>setEditingOpen(v=>!v)}
+                style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:7,
+                  border:"1px solid "+(editingOpen?pc.color:BORDER),
+                  background:editingOpen?pc.color+"12":SURFACE,
+                  color:editingOpen?pc.color:TEXT_MUTED,cursor:"pointer"}}>
+                {editingOpen?"Done Editing":"Edit"}
+              </button>
             </div>
-          )}
 
-          {/* Leading Signals — indicator chart tiles, 3-across grid */}
-          <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
-                Leading Signals
+            {/* Inline edit panel */}
+            {editingOpen && (
+              <div style={{borderBottom:"1px solid "+BORDER}}>
+                <PortfolioOutcomePanel po={po} poIdx={activeIdx}
+                  onChange={(iIdx,f,v)=>{
+                    const updPo = {...po, indicators: po.indicators.map((ind,j)=>j!==iIdx?ind:{...ind,[f]:v})};
+                    const updPortfolio = {...portfolio, portfolioOutcomes: portfolio.portfolioOutcomes.map((p,j)=>j!==activeIdx?p:updPo)};
+                    onChange(updPortfolio);
+                  }}
+                  portShortTitles={SHORT_TITLES}/>
               </div>
-              <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>
-                These indicators are the early signals that this enabling condition is beginning to take hold.
-              </div>
-            </div>
-            {po.indicators.filter(ind=>ind.text).length > 0 ? (
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-                {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
-                  <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR} fluid/>
-                ))}
-              </div>
-            ) : (
-              <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
             )}
-          </div>
 
-          {/* 2030 Goals Enabled */}
-          {(PORT_GOAL_MAP[portId]||[]).length>0&&(
-            <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{marginBottom:14}}>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
-                  2030 Goals Enabled
-                </div>
-                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>
-                  When this enabling condition holds, it accelerates progress toward these cross-cutting strategy goals.
-                </div>
+            {/* Leading Signals — 3-column indicator grid */}
+            <div style={{padding:"18px 22px",borderBottom:"1px solid "+BORDER}}>
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:3}}>Leading Signals</div>
+                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>Early signals that this enabling condition is beginning to take hold.</div>
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
-                  const g = STRATEGY_GOALS.find(x=>x.number===gNum);
-                  if(!g) return null;
-                  const pct = g.goal2030 && g.current2026 !== undefined
-                    ? Math.round((g.current2026 / g.goal2030) * 100)
-                    : null;
-                  return (
-                    <div key={g.id} style={{borderRadius:10,border:"1px solid "+g.color+"33",background:g.color+"06",overflow:"hidden"}}>
-                      <div style={{padding:"12px 16px"}}>
-                        {/* Goal header row */}
-                        <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
-                          <span style={{width:26,height:26,borderRadius:"50%",background:g.color,color:"#fff",fontSize:12,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
-                          <div style={{flex:1}}>
-                            <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.3,marginBottom:3}}>{g.title}</div>
-                            <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{g.target}</div>
-                          </div>
-                          {onNavigateToStrategy&&(
-                            <button onClick={()=>onNavigateToStrategy(g.number)}
-                              style={{flexShrink:0,fontSize:11,fontWeight:600,color:g.color,background:g.color+"15",
-                                border:"1px solid "+g.color+"33",borderRadius:6,padding:"3px 10px",cursor:"pointer",whiteSpace:"nowrap"}}>
-                              View goal ↗
-                            </button>
-                          )}
-                        </div>
-                        {/* Progress bar */}
-                        {pct !== null && (
-                          <div>
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                              <span style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8}}>Progress toward 2030 target</span>
-                              <span style={{fontSize:11,color:TEXT_MUTED,fontStyle:"italic"}}>Directional estimate</span>
-                            </div>
-                            <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <div style={{flex:1,height:6,borderRadius:3,background:BORDER,overflow:"hidden"}}>
-                                <div style={{height:"100%",borderRadius:3,width:Math.min(pct,100)+"%",background:g.color,transition:"width .4s"}}/>
-                              </div>
-                              <span style={{fontSize:12,fontWeight:700,color:g.color,flexShrink:0,minWidth:60,textAlign:"right"}}>
-                                {g.current2026}{g.unit} <span style={{fontWeight:400,color:TEXT_MUTED}}>of {g.goal2030}{g.unit}</span>
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {po.indicators.filter(ind=>ind.text).length > 0 ? (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                  {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
+                    <IndicatorTile key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR} fluid/>
+                  ))}
+                </div>
+              ) : (
+                <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
+              )}
             </div>
-          )}
 
-          {/* Contributing BOW Outcomes — collapsible */}
-          <div>
-            <button onClick={()=>setBowOpen(v=>!v)}
-              style={{width:"100%",textAlign:"left",padding:"12px 24px",background:bowOpen?pc.color+"06":"none",
-                border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,
-                borderBottom:bowOpen?"1px solid "+BORDER:"none"}}>
-              <span style={{fontSize:11,color:pc.color}}>{bowOpen?"▾":"▸"}</span>
-              <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Contributing BOW Outcomes</span>
-              <span style={{fontSize:11,background:pc.color+"15",color:pc.color,borderRadius:10,padding:"1px 8px",fontWeight:700}}>{bowCount}</span>
-              <span style={{marginLeft:"auto",fontSize:11,color:TEXT_MUTED,fontStyle:"italic",fontWeight:400}}>{bowOpen?"collapse":"expand"}</span>
-            </button>
-            {bowOpen&&(
-              <div style={{padding:"4px 24px 18px",display:"flex",flexDirection:"column",gap:12}}>
-                {contributingBows.length===0
-                  ? <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:10}}>No linked BOW outcomes.</div>
-                  : contributingBows.map(b=>(
-                      <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
-                        <div style={{padding:"8px 14px",background:pc.color+"07",borderBottom:"1px solid "+BORDER}}>
-                          <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2}}>{b.name}</div>
-                        </div>
-                        <div style={{display:"flex",flexDirection:"column"}}>
-                          {b.outcomes.map((o,oi)=>{
-                            const oExec = execAutoStatus(o,CURRENT_YEAR);
-                            const oImpact = impactAutoStatus({impactIndicators:o.impactIndicators||[]});
-                            const isLast = oi===b.outcomes.length-1;
-                            return (
-                              <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:isLast?"none":"1px solid "+BORDER}}>
-                                <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
-                                <div style={{flex:1,fontSize:12,color:TEXT,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
-                                <div style={{display:"flex",gap:12,flexShrink:0,alignItems:"center",paddingTop:1}}>
-                                  <div style={{textAlign:"right"}}>
-                                    <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec</div>
-                                    {oExec?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.complete+oExec.onTrack}/{oExec.total}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                                  </div>
-                                  <div style={{textAlign:"right"}}>
-                                    <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Impact</div>
-                                    {oImpact?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oImpact.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oImpact.color}}>{oImpact.label.replace(" Expectations","")}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+            {/* Contributing BOW Outcomes — collapsible */}
+            <div>
+              <button onClick={()=>setBowOpen(v=>!v)}
+                style={{width:"100%",textAlign:"left",padding:"11px 22px",background:bowOpen?pc.color+"05":"none",
+                  border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,
+                  borderBottom:bowOpen?"1px solid "+BORDER:"none"}}>
+                <span style={{fontSize:11,color:pc.color}}>{bowOpen?"▾":"▸"}</span>
+                <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Contributing BOW Outcomes</span>
+                <span style={{fontSize:11,background:pc.color+"15",color:pc.color,borderRadius:10,padding:"1px 8px",fontWeight:700}}>{bowCount}</span>
+                <span style={{marginLeft:"auto",fontSize:11,color:TEXT_MUTED,fontStyle:"italic",fontWeight:400}}>{bowOpen?"collapse":"expand"}</span>
+              </button>
+              {bowOpen&&(
+                <div style={{padding:"4px 22px 18px",display:"flex",flexDirection:"column",gap:12}}>
+                  {contributingBows.length===0
+                    ? <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:10}}>No linked BOW outcomes.</div>
+                    : contributingBows.map(b=>(
+                        <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
+                          <div style={{padding:"8px 14px",background:pc.color+"07",borderBottom:"1px solid "+BORDER}}>
+                            <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2}}>{b.name}</div>
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column"}}>
+                            {b.outcomes.map((o,oi)=>{
+                              const oExec = execAutoStatus(o,CURRENT_YEAR);
+                              const oImpact = impactAutoStatus({impactIndicators:o.impactIndicators||[]});
+                              const isLast = oi===b.outcomes.length-1;
+                              return (
+                                <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:isLast?"none":"1px solid "+BORDER}}>
+                                  <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                                  <div style={{flex:1,fontSize:12,color:TEXT,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
+                                  <div style={{display:"flex",gap:12,flexShrink:0,alignItems:"center",paddingTop:1}}>
+                                    <div style={{textAlign:"right"}}>
+                                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec</div>
+                                      {oExec?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.complete+oExec.onTrack}/{oExec.total}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                                    </div>
+                                    <div style={{textAlign:"right"}}>
+                                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Impact</div>
+                                      {oImpact?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oImpact.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oImpact.color}}>{oImpact.label.replace(" Expectations","")}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))
-                }
-              </div>
-            )}
+                      ))
+                  }
+                </div>
+              )}
+            </div>
           </div>
+        )}
 
-        </div>
-      )}
+        {/* Right: stable 2030 Goals panel — does not change with tabs */}
+        {goals.length > 0 && (
+          <div style={{flex:"0 0 270px",borderLeft:"1px solid "+BORDER,background:"#FAFBFC",padding:"18px 18px 24px",display:"flex",flexDirection:"column",gap:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
+              2030 Goals Enabled
+            </div>
+            <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55,marginBottom:16}}>
+              These cross-cutting goals depend on the enabling conditions this portfolio builds.
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {goals.map(g => {
+                const pct = (g.goal2030 && g.current2026 !== undefined)
+                  ? Math.round((g.current2026 / g.goal2030) * 100) : null;
+                return (
+                  <div key={g.id} style={{borderRadius:10,border:"1px solid "+BORDER,background:SURFACE,overflow:"hidden",padding:"12px 14px"}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:9,marginBottom:pct!==null?10:0}}>
+                      <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:700,color:TEXT,lineHeight:1.3,marginBottom:3}}>{g.title}</div>
+                        <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.45}}>{g.target}</div>
+                      </div>
+                    </div>
+                    {pct !== null && (
+                      <div>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,alignItems:"center"}}>
+                          <span style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>Toward 2030</span>
+                          <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic"}}>Directional</span>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
+                          <div style={{flex:1,height:5,borderRadius:3,background:BORDER,overflow:"hidden"}}>
+                            <div style={{height:"100%",borderRadius:3,width:Math.min(pct,100)+"%",background:pc.color,transition:"width .4s"}}/>
+                          </div>
+                          <span style={{fontSize:11,fontWeight:700,color:TEXT,flexShrink:0}}>{g.current2026}{g.unit}</span>
+                          <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>/ {g.goal2030}{g.unit}</span>
+                        </div>
+                        {onNavigateToStrategy&&(
+                          <button onClick={()=>onNavigateToStrategy(g.number)}
+                            style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:3}}>
+                            View full goal ↗
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
