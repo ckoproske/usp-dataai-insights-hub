@@ -1587,20 +1587,20 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
     : actualVals[yrIdx];
 
   return (
-    <div style={{flexShrink:0,width:(fluid||ind._fluid)?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)",background:SURFACE}}>
-      <div style={{padding:"12px 16px 10px",background:sc.color+"08",borderBottom:"1px solid "+sc.color+"22"}}>
-        <div style={{fontSize:10,fontWeight:700,color:sc.color,textTransform:"uppercase",letterSpacing:1.4,marginBottom:5}}>Indicator {iIdx+1}</div>
+    <div style={{flexShrink:0,width:(fluid||ind._fluid)?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.04)",background:SURFACE}}>
+      <div style={{padding:"12px 16px 10px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
+        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:5}}>Indicator {iIdx+1}</div>
         <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:5}}>{ind.text}</div>
         <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:"1px solid "+BORDER}}>
-        <div style={{padding:"10px 12px",borderRight:"1px solid "+BORDER,textAlign:"center",background:sc.bg}}>
-          <div style={{fontSize:12,color:TEXT_SUB,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{activeYear} Target</div>
-          <div style={{fontSize:19,fontWeight:800,color:sc.color}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</div>
+        <div style={{padding:"12px 12px 10px",borderRight:"1px solid "+BORDER,textAlign:"center",background:SURFACE}}>
+          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>{activeYear} Target</div>
+          <div style={{fontSize:26,fontWeight:800,color:targetVals[yrIdx]!==null?sc.color:"#D0CBC2",lineHeight:1}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</div>
         </div>
-        <div style={{padding:"10px 12px",textAlign:"center",background:sc.bg}}>
-          <div style={{fontSize:12,color:TEXT_SUB,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{activeYear} Actual</div>
-          <div style={{fontSize:19,fontWeight:800,color:sc.color}}>{activeActual!==null?activeActual:"—"}</div>
+        <div style={{padding:"12px 12px 10px",textAlign:"center",background:SURFACE}}>
+          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>{activeYear} Actual</div>
+          <div style={{fontSize:26,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",lineHeight:1}}>{activeActual!==null?activeActual:"—"}</div>
         </div>
       </div>
       <div style={{padding:"10px 10px 8px"}}>
@@ -1842,6 +1842,16 @@ ${context}`;
 
 
 // ── PortfolioOutcomesView ─────────────────────────────────────────────────────
+function SolidBadge({ label, color }) {
+  return (
+    <span style={{display:"inline-block",padding:"2px 8px",borderRadius:6,
+      background:color||"#A49A8C",color:"#fff",fontSize:10,fontWeight:700,
+      letterSpacing:0.5,whiteSpace:"nowrap"}}>
+      {label}
+    </span>
+  );
+}
+
 function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, initialIdx, portShortTitles, onNavigateToStrategy }) {
   const pc = portColor || { color: ACCENT, light: ACCENT_LIGHT };
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
@@ -1880,40 +1890,54 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
   return (
     <div style={{border:"1px solid "+BORDER,borderRadius:14,overflow:"hidden",background:SURFACE,boxShadow:"0 2px 12px rgba(10,37,64,0.06)"}}>
 
-      {/* ── Top: horizontal outcome tabs ── */}
-      <div style={{display:"flex",borderBottom:"1px solid "+BORDER,background:"#FAFBFC",overflowX:"auto"}}>
-        {portfolio.portfolioOutcomes.map((p, i) => {
-          const isActive = i === activeIdx;
-          const pImpact = impactAutoStatus({impactIndicators: p.indicators});
-          const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
-          return (
-            <div key={p.id} onClick={() => switchOutcome(i)}
-              style={{flex:"1 1 0",minWidth:120,padding:"12px 16px",
-                borderRight:"1px solid "+BORDER,
-                borderBottom:"3px solid "+(isActive ? pc.color : "transparent"),
-                background:isActive ? pc.color+"0A" : "transparent",
-                cursor:"pointer",transition:"all .15s"}}>
-              <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.3,marginBottom:4}}>
-                Outcome {i+1}
+      {/* ── Outcomes at a Glance strip ── */}
+      <div style={{borderBottom:"3px solid "+pc.color,background:"#FAFAF8"}}>
+        <div style={{padding:"10px 18px 0",display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Outcomes at a Glance</span>
+          <span style={{fontSize:10,color:TEXT_MUTED}}>— click to explore</span>
+        </div>
+        <div style={{display:"flex",overflowX:"auto",padding:"8px 14px 0"}}>
+          {portfolio.portfolioOutcomes.map((p, i) => {
+            const isActive = i === activeIdx;
+            const pImpact = impactAutoStatus({impactIndicators: p.indicators});
+            const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
+            return (
+              <div key={p.id} onClick={() => switchOutcome(i)}
+                style={{flexShrink:0,width:180,marginRight:8,marginBottom:0,padding:"10px 12px 10px",
+                  borderRadius:"8px 8px 0 0",cursor:"pointer",transition:"all .15s",
+                  background:isActive ? SURFACE : "transparent",
+                  borderTop:isActive?"1px solid "+BORDER:"1px solid transparent",
+                  borderLeft:isActive?"1px solid "+BORDER:"1px solid transparent",
+                  borderRight:isActive?"1px solid "+BORDER:"1px solid transparent",
+                  borderBottom:isActive?"1px solid "+SURFACE:"none",
+                  marginBottom: isActive ? -1 : 0,
+                  outline:"none"}}>
+                <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:4}}>
+                  Outcome {i+1}
+                </div>
+                <div style={{fontSize:12,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35,marginBottom:6}}>
+                  {SHORT_TITLES[i]||p.shortTitle}
+                </div>
+                {impactRs
+                  ? <SolidBadge label={impactRs.label.replace(" Expectations","")} color={impactRs.color}/>
+                  : <span style={{fontSize:10,color:"#D0CBC2",fontWeight:600}}>No data</span>
+                }
               </div>
-              <div style={{fontSize:13,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35}}>
-                {SHORT_TITLES[i]||p.shortTitle}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Body: outcome detail (left) + stable goals panel (right) ── */}
       <div style={{display:"flex"}}>
 
-        {/* Left: outcome detail — changes per tab */}
+        {/* Left: outcome detail — changes per selected card */}
         {po && (
           <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
 
             {/* Full outcome text — bold, prominent */}
             <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>
                 Enabling Condition
               </div>
               <div style={{fontSize:16,fontWeight:700,color:TEXT,lineHeight:1.6}}>
@@ -1934,48 +1958,48 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                   ))}
                 </div>
               ) : (
-                <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic"}}>No indicators defined.</div>
+                <div style={{fontSize:13,color:"#C9C3BA",fontStyle:"italic"}}>No indicators defined.</div>
               )}
             </div>
 
             {/* Contributing BOW Outcomes — collapsible */}
             <div>
               <button onClick={()=>setBowOpen(v=>!v)}
-                style={{width:"100%",textAlign:"left",padding:"11px 22px",background:bowOpen?pc.color+"05":"none",
+                style={{width:"100%",textAlign:"left",padding:"11px 22px",background:"none",
                   border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,
                   borderBottom:bowOpen?"1px solid "+BORDER:"none"}}>
-                <span style={{fontSize:11,color:pc.color}}>{bowOpen?"▾":"▸"}</span>
+                <span style={{fontSize:11,color:TEXT_MUTED}}>{bowOpen?"▾":"▸"}</span>
                 <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Contributing BOW Outcomes</span>
-                <span style={{fontSize:11,background:pc.color+"15",color:pc.color,borderRadius:10,padding:"1px 8px",fontWeight:700}}>{bowCount}</span>
+                <span style={{fontSize:11,background:"#EEEBE6",color:TEXT_SUB,borderRadius:10,padding:"1px 8px",fontWeight:700}}>{bowCount}</span>
                 <span style={{marginLeft:"auto",fontSize:11,color:TEXT_MUTED,fontStyle:"italic",fontWeight:400}}>{bowOpen?"collapse":"expand"}</span>
               </button>
               {bowOpen&&(
                 <div style={{padding:"4px 22px 18px",display:"flex",flexDirection:"column",gap:12}}>
                   {contributingBows.length===0
-                    ? <div style={{fontSize:13,color:TEXT_MUTED,fontStyle:"italic",paddingTop:10}}>No linked BOW outcomes.</div>
+                    ? <div style={{fontSize:13,color:"#C9C3BA",fontStyle:"italic",paddingTop:10}}>No linked BOW outcomes.</div>
                     : contributingBows.map(b=>(
-                        <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid "+pc.color,overflow:"hidden",background:SURFACE}}>
-                          <div style={{padding:"8px 14px",background:pc.color+"07",borderBottom:"1px solid "+BORDER}}>
-                            <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2}}>{b.name}</div>
+                        <div key={b.id} style={{borderRadius:10,border:"1px solid "+BORDER,borderLeft:"3px solid #C9C3BA",overflow:"hidden",background:SURFACE}}>
+                          <div style={{padding:"8px 14px",background:"#EEEBE6",borderBottom:"1px solid "+BORDER}}>
+                            <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:1.2}}>{b.name}</div>
                           </div>
                           <div style={{display:"flex",flexDirection:"column"}}>
                             {b.outcomes.map((o,oi)=>{
                               const oExec = execAutoStatus(o,CURRENT_YEAR);
                               const oImpact = impactAutoStatus({impactIndicators:o.impactIndicators||[]});
+                              const oExecRs = oExec ? (STATUS[oExec.label]||null) : null;
                               const isLast = oi===b.outcomes.length-1;
                               return (
                                 <div key={o.id||oi} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:isLast?"none":"1px solid "+BORDER}}>
-                                  <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"15",border:"1px solid "+pc.color+"33",fontSize:9,fontWeight:700,color:pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                                  <span style={{width:18,height:18,borderRadius:"50%",background:"#EEEBE6",border:"1px solid "+BORDER,fontSize:9,fontWeight:700,color:TEXT_SUB,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
                                   <div style={{flex:1,fontSize:12,color:TEXT,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
-                                  <div style={{display:"flex",gap:12,flexShrink:0,alignItems:"center",paddingTop:1}}>
-                                    <div style={{textAlign:"right"}}>
-                                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Exec</div>
-                                      {oExec?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oExec.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oExec.color}}>{oExec.complete+oExec.onTrack}/{oExec.total}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                                    </div>
-                                    <div style={{textAlign:"right"}}>
-                                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Impact</div>
-                                      {oImpact?<div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><span style={{width:5,height:5,borderRadius:"50%",background:oImpact.color,display:"inline-block"}}/><span style={{fontSize:11,fontWeight:700,color:oImpact.color}}>{oImpact.label.replace(" Expectations","")}</span></div>:<span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                                    </div>
+                                  <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center",paddingTop:1}}>
+                                    {oExec && oExecRs && (
+                                      <SolidBadge label={"Exec: "+oExec.complete+"/"+oExec.total} color={oExecRs.color}/>
+                                    )}
+                                    {oImpact && (
+                                      <SolidBadge label={oImpact.label.replace(" Expectations","")} color={(STATUS[oImpact.label]||{color:"#A49A8C"}).color}/>
+                                    )}
+                                    {!oExec && !oImpact && <span style={{fontSize:11,color:"#D0CBC2"}}>—</span>}
                                   </div>
                                 </div>
                               );
@@ -1990,9 +2014,9 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
           </div>
         )}
 
-        {/* Right: stable 2030 Goals panel — does not change with tabs */}
+        {/* Right: stable 2030 Goals panel — neutral styling, no portfolio color in chrome */}
         {goals.length > 0 && (
-          <div style={{flex:"0 0 270px",borderLeft:"1px solid "+BORDER,background:"#FAFBFC",padding:"18px 18px 24px",display:"flex",flexDirection:"column",gap:0}}>
+          <div style={{flex:"0 0 270px",borderLeft:"1px solid "+BORDER,background:"#FAFAF8",padding:"18px 18px 24px",display:"flex",flexDirection:"column",gap:0}}>
             <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
               2030 Goals Enabled
             </div>
@@ -2004,9 +2028,9 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                 const pct = (g.goal2030 && g.current2026 !== undefined)
                   ? Math.round((g.current2026 / g.goal2030) * 100) : null;
                 return (
-                  <div key={g.id} style={{borderRadius:10,border:"1px solid "+BORDER,background:SURFACE,overflow:"hidden",padding:"12px 14px"}}>
+                  <div key={g.number} style={{borderRadius:10,border:"1px solid "+BORDER,background:SURFACE,overflow:"hidden",padding:"12px 14px"}}>
                     <div style={{display:"flex",alignItems:"flex-start",gap:9,marginBottom:pct!==null?10:0}}>
-                      <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
+                      <span style={{width:22,height:22,borderRadius:"50%",background:"#EEEBE6",border:"1px solid "+BORDER,fontSize:11,fontWeight:800,color:TEXT_SUB,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
                       <div style={{flex:1}}>
                         <div style={{fontSize:12,fontWeight:700,color:TEXT,lineHeight:1.3,marginBottom:3}}>{g.title}</div>
                         <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.45}}>{g.target}</div>
@@ -2020,7 +2044,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
                           <div style={{flex:1,height:5,borderRadius:3,background:BORDER,overflow:"hidden"}}>
-                            <div style={{height:"100%",borderRadius:3,width:Math.min(pct,100)+"%",background:pc.color,transition:"width .4s"}}/>
+                            <div style={{height:"100%",borderRadius:3,width:Math.min(pct,100)+"%",background:"#A49A8C",transition:"width .4s"}}/>
                           </div>
                           <span style={{fontSize:11,fontWeight:700,color:TEXT,flexShrink:0}}>{g.current2026}{g.unit}</span>
                           <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>/ {g.goal2030}{g.unit}</span>
