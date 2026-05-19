@@ -4578,15 +4578,13 @@ const GOAL_PORT_MAP = {
   5: ["cross-cutting"],
 };
 const PORT_GOAL_MAP = {
-  "ai-infra":       [1, 2, 5],
-  "sfl":            [3, 4, 5],
-  "cross-cutting":  [5],
-  "hub":            [5],
+  "ai-infra":       [1, 2],
+  "sfl":            [3, 4],
+  "cross-cutting":  [],
+  "hub":            [],
 };
 // Goals where portfolio-specific targets are still pending
-const GOAL_TARGETS_PENDING = {
-  "sfl": [5],
-};
+const GOAL_TARGETS_PENDING = {};
 
 function GoalExplorer({ strategyRatings }) {
   const [hovered, setHovered] = useState(null); // {type:"goal"|"port", id}
