@@ -4151,6 +4151,178 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
   );
 }
 
+// ── PortfolioOverviewToa — three-section overview: outcomes matrix, how we work, ambition ──
+function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTitles, onNavigateToStrategy }) {
+  const pc = portColor || { color: ACCENT };
+  const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
+
+  const [toa, setToa]   = useState(null);
+  const [lanes, setLanes] = useState([]);
+  const [bowContributions, setBowContributions] = useState({});
+
+  useEffect(() => {
+    apiFetch(`/api/toa/${portId}`).then(data => {
+      if (!data) return;
+      setToa(data.toa || null);
+      setLanes(data.lanes || []);
+    }).catch(() => {});
+  }, [portId]);
+
+  useEffect(() => {
+    if (!bows?.length) return;
+    Promise.all(bows.map(b => apiFetch(`/api/bow-portfolio-links/${b.id}`).catch(() => [])))
+      .then(results => {
+        const map = {};
+        results.forEach((links, bi) => {
+          map[bows[bi].id] = new Set(links.map(l => l.portfolio_outcome_id));
+        });
+        setBowContributions(map);
+      });
+  }, [portId]);
+
+  const allOutcomes = portfolio.portfolioOutcomes;
+  const goals = (PORT_GOAL_MAP[portId]||[]).map(gNum => STRATEGY_GOALS.find(x=>x.number===gNum)).filter(Boolean);
+
+  let crossIndicators = [], amb45Text = null, amb45Label = null, amb45Buckets = null;
+  if (toa) {
+    try { crossIndicators = JSON.parse(toa.cross_indicators_json || '[]'); } catch(e) {}
+    amb45Text  = toa.amb45_full_text || null;
+    amb45Label = toa.amb45_label || null;
+    try { amb45Buckets = toa.amb45_buckets_json ? JSON.parse(toa.amb45_buckets_json) : null; } catch(e) {}
+  }
+
+  const numCols = allOutcomes.length;
+  const colTemplate = `160px repeat(${numCols}, 1fr)`;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+
+      {/* ── Section 1: Portfolio Outcomes alignment matrix ── */}
+      <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+        <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
+          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Portfolio Outcomes</div>
+        </div>
+        <div style={{overflowX:"auto"}}>
+          {/* Outcome header row */}
+          <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560}}>
+            <div style={{background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER}}/>
+            {allOutcomes.map((o,i) => (
+              <div key={o.id} style={{padding:"12px 10px",background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
+                <div style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:5}}>{i+1}</div>
+                <div style={{fontSize:11,fontWeight:700,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
+              </div>
+            ))}
+          </div>
+          {/* BOW rows */}
+          {bows.map((bow,bi) => (
+            <div key={bow.id} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER}}>
+              <div style={{padding:"10px 14px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",background:bi%2===0?"transparent":"#FAFAF8"}}>
+                <span style={{fontSize:12,fontWeight:700,color:TEXT}}>{bow.name}</span>
+              </div>
+              {allOutcomes.map((o) => {
+                const contrib = bowContributions[bow.id]?.has(o.id);
+                return (
+                  <div key={o.id} style={{padding:"10px",textAlign:"center",borderRight:"1px solid "+BORDER,background:bi%2===0?"transparent":"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {contrib
+                      ? <span style={{width:22,height:22,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,color:pc.color,fontWeight:700}}>✓</span>
+                      : <span style={{width:6,height:6,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {/* Coverage footer */}
+          <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,background:"#FAFAF8",borderTop:"2px solid "+BORDER}}>
+            <div style={{padding:"8px 14px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center"}}>
+              <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Coverage</span>
+            </div>
+            {allOutcomes.map(o => {
+              const count = bows.filter(b => bowContributions[b.id]?.has(o.id)).length;
+              return (
+                <div key={o.id} style={{padding:"8px 10px",textAlign:"center",borderRight:"1px solid "+BORDER}}>
+                  <span style={{fontSize:11,fontWeight:700,color:count>0?pc.color:TEXT_MUTED}}>{count} of {bows.length}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 2: How We Work ── */}
+      {lanes.length > 0 && (
+        <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+          <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
+            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>How We Work</div>
+          </div>
+          <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(lanes.length,4)},1fr)`,gap:14}}>
+            {lanes.map(lane => {
+              const lc = lane.color || pc.color;
+              return (
+                <div key={lane.lane_id} style={{borderRadius:10,border:"1px solid "+lc+"33",borderLeft:"3px solid "+lc,padding:"14px 16px"}}>
+                  <div style={{fontSize:13,fontWeight:800,color:lc,marginBottom:8,lineHeight:1.3}}>{lane.label}</div>
+                  {(lane.activities||[]).filter(a=>a.activity_text).length > 0 ? (
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {lane.activities.filter(a=>a.activity_text).map((act,i) => (
+                        <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
+                          <div style={{width:4,height:4,borderRadius:"50%",background:lc,marginTop:6,flexShrink:0,opacity:0.6}}/>
+                          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{fontSize:11,color:"#C9C3BA",fontStyle:"italic"}}>No activities defined.</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Section 3: Longer Horizon — 2030 goals + Ambition 2045 ── */}
+      {(amb45Text || amb45Buckets || crossIndicators.length > 0 || goals.length > 0) && (
+        <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+          <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
+            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Longer Horizon</div>
+          </div>
+          <div style={{padding:"18px 22px",display:"flex",gap:28,alignItems:"flex-start"}}>
+            {(crossIndicators.length > 0 || goals.length > 0) && (
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#D97706",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>2030 Impact Goals</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {crossIndicators.map((ind,i) => (
+                    <div key={i} style={{borderLeft:"3px solid #D97706",paddingLeft:10,fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>{ind}</div>
+                  ))}
+                  {goals.map(g => (
+                    <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
+                      style={{display:"flex",alignItems:"flex-start",gap:8,cursor:onNavigateToStrategy?"pointer":"default",padding:"4px 0"}}>
+                      <span style={{width:20,height:20,borderRadius:"50%",background:g.color||"#D97706",color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
+                      <span style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5,flex:1}}>{g.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(amb45Text || amb45Buckets) && (
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#0284C7",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>
+                  Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
+                </div>
+                {amb45Buckets
+                  ? <ToaAmb45Buckets buckets={amb45Buckets} />
+                  : <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65}}>{amb45Text}</div>
+                }
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 // ── PortfolioDashboard (per-portfolio full view) ───────────────────────────────
 function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, onUpdateBows, onNavigateToOutcome, onNavigateToBow, onNavigateToStrategy, strategyRatings, onUpdateStrategyRatings }) {
   const { portfolio, bows } = portData;
@@ -4267,70 +4439,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       <div style={{padding:"28px 32px"}}>
         {activeTab==="portfolio-overview"&&(
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
-
-            {/* By the Numbers — prominent strip */}
             <PortfolioByTheNumbers portId={portId} portColor={pc} bows={bows}/>
-
-            {/* Two-column: outcomes left, goals right */}
-            <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
-
-              {/* Portfolio Outcomes — left */}
-              <div style={{flex:1,minWidth:0,background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 28px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:18}}>Portfolio Outcomes</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
-                  {OUTCOMES_FOR_PANEL.map((o,i)=>(
-                    <div key={o.id} style={{
-                      flex:"1 1 260px",minWidth:220,maxWidth:"100%",
-                      borderRadius:12,overflow:"hidden",
-                      border:"1px solid "+BORDER,
-                      display:"flex",flexDirection:"column",
-                      boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
-                      background:SURFACE,
-                    }}>
-                      <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`,flexShrink:0}}/>
-                      <div style={{padding:"18px 20px",display:"flex",flexDirection:"column",gap:10,flex:1}}>
-                        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                          <span style={{
-                            flexShrink:0,width:24,height:24,borderRadius:"50%",
-                            background:pc.color+"18",border:"1.5px solid "+pc.color+"55",
-                            fontSize:11,fontWeight:700,color:pc.color,
-                            display:"inline-flex",alignItems:"center",justifyContent:"center",
-                            marginTop:1,
-                          }}>{i+1}</span>
-                          <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.4}}>{o.shortTitle}</div>
-                        </div>
-                        <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65,paddingLeft:34}}>{o.outcome}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2030 Strategy Goals — right */}
-              <div style={{flexShrink:0,width:260,background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,padding:"22px 20px",boxShadow:"0 1px 8px rgba(0,0,0,0.04)"}}>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:14}}>2030 Strategy Goals</div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {(PORT_GOAL_MAP[portId]||[]).map(gNum=>{
-                    const g = STRATEGY_GOALS.find(x=>x.number===gNum);
-                    if(!g) return null;
-                    return (
-                      <div key={g.id}
-                        onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                        style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,
-                          border:"1px solid "+g.color+"44",background:g.color+"08",
-                          cursor:onNavigateToStrategy?"pointer":"default",transition:"box-shadow .15s"}}
-                        onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.1)";}}
-                        onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-                        <span style={{width:24,height:24,borderRadius:"50%",background:g.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.number}</span>
-                        <span style={{fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
-                        {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-            </div>
+            <PortfolioOverviewToa portId={portId} portfolio={portfolio} bows={bows} portColor={pc} portShortTitles={SHORT_TITLES} onNavigateToStrategy={onNavigateToStrategy}/>
           </div>
         )}
         {activeTab==="portfolio-progress"&&(
