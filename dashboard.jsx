@@ -1974,70 +1974,71 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
 
   const goals = (PORT_GOAL_MAP[portId]||[]).map(gNum => STRATEGY_GOALS.find(x=>x.number===gNum)).filter(Boolean);
 
-  return (
-    <div style={{border:"1px solid "+BORDER,borderRadius:14,overflow:"hidden",background:SURFACE,boxShadow:"0 2px 12px rgba(10,37,64,0.06)"}}>
+  const allOutcomes = portfolio.portfolioOutcomes;
+  let kpiOnTrack = 0, kpiWatch = 0, kpiOffTrack = 0;
+  allOutcomes.forEach(p => {
+    const s = impactAutoStatus({impactIndicators: p.indicators});
+    if (!s) return;
+    if (s.label==="Exceeds Expectations"||s.label==="Meets Expectations") kpiOnTrack++;
+    else if (s.label==="Slightly Below Expectations") kpiWatch++;
+    else if (s.label==="Below Expectations") kpiOffTrack++;
+  });
+  const totalSignals = allOutcomes.reduce((sum,p)=>sum+p.indicators.filter(i=>i.text).length, 0);
 
-      {/* ── Outcomes at a Glance strip ── */}
-      <div style={{borderBottom:"3px solid "+pc.color,background:"#FAFAF8"}}>
-        <div style={{padding:"10px 18px 0",display:"flex",alignItems:"center",gap:6}}>
-          <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Outcomes at a Glance</span>
-          <span style={{fontSize:10,color:TEXT_MUTED}}>— click to explore</span>
-        </div>
-        <div style={{display:"flex",overflowX:"auto",padding:"8px 14px 0"}}>
-          {portfolio.portfolioOutcomes.map((p, i) => {
-            const isActive = i === activeIdx;
-            const pImpact = impactAutoStatus({impactIndicators: p.indicators});
-            const impactRs = pImpact ? (STATUS[pImpact.label] || null) : null;
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+
+      {/* ── KPI strip ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        {[
+          {label:"On Track",        value:kpiOnTrack,   sub:"outcomes",          color:"#059669"},
+          {label:"Watch",           value:kpiWatch,     sub:"outcomes",          color:"#D97706"},
+          {label:"Off Track",       value:kpiOffTrack,  sub:"outcomes",          color:"#DC2626"},
+          {label:"Signals Tracked", value:totalSignals, sub:"leading indicators", color:pc.color},
+        ].map(k=>(
+          <div key={k.label} style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 20px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>{k.label}</div>
+            <div style={{fontSize:32,fontWeight:700,color:k.color,lineHeight:1,marginBottom:6}}>{k.value}</div>
+            <div style={{fontSize:12,color:TEXT_SUB}}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Outcome status overview (pipeline-style) ── */}
+      <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 22px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+        <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:14}}>Outcome Status — click to explore</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {allOutcomes.map((p,i)=>{
+            const s = impactAutoStatus({impactIndicators:p.indicators});
+            const rs = s ? (STATUS[s.label]||STATUS["No Data"]) : STATUS["No Data"];
+            const isActive = i===activeIdx;
             return (
-              <div key={p.id} onClick={() => switchOutcome(i)}
-                style={{flexShrink:0,width:180,marginRight:8,marginBottom:0,padding:"10px 12px 10px",
-                  borderRadius:"8px 8px 0 0",cursor:"pointer",transition:"all .15s",
-                  background:isActive ? SURFACE : "transparent",
-                  borderTop:isActive?"1px solid "+BORDER:"1px solid transparent",
-                  borderLeft:isActive?"1px solid "+BORDER:"1px solid transparent",
-                  borderRight:isActive?"1px solid "+BORDER:"1px solid transparent",
-                  borderBottom:isActive?"1px solid "+SURFACE:"none",
-                  marginBottom: isActive ? -1 : 0,
-                  outline:"none"}}>
-                <div style={{fontSize:10,fontWeight:700,color:isActive?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:4}}>
-                  Outcome {i+1}
+              <div key={p.id} onClick={()=>switchOutcome(i)} style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:rs.color,flexShrink:0}}/>
+                <div style={{width:160,fontSize:12,fontWeight:isActive?700:500,color:isActive?TEXT:TEXT_SUB,flexShrink:0}}>{SHORT_TITLES[i]||p.shortTitle}</div>
+                <div style={{flex:1,height:26,borderRadius:6,background:rs.color+"18",border:"1px solid "+(isActive?rs.color:rs.color+"44"),display:"flex",alignItems:"center",paddingLeft:12,transition:"all .15s",boxShadow:isActive?"0 0 0 2px "+rs.color+"55":"none"}}>
+                  <span style={{fontSize:12,fontWeight:600,color:rs.color}}>{rs.label}</span>
                 </div>
-                <div style={{fontSize:12,fontWeight:700,color:isActive?TEXT:TEXT_SUB,lineHeight:1.35,marginBottom:6}}>
-                  {SHORT_TITLES[i]||p.shortTitle}
-                </div>
-                {impactRs
-                  ? <SolidBadge label={impactRs.label.replace(" Expectations","")} color={impactRs.color}/>
-                  : <span style={{fontSize:10,color:"#D0CBC2",fontWeight:600}}>No data</span>
-                }
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── Body: outcome detail (left) + stable goals panel (right) ── */}
-      <div style={{display:"flex"}}>
+      {/* ── Outcome detail ── */}
+      {po && (
+        <div style={{display:"flex",gap:20}}>
+          <div style={{flex:1,minWidth:0,background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
 
-        {/* Left: outcome detail — changes per selected card */}
-        {po && (
-          <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
-
-            {/* Full outcome text — bold, prominent */}
-            <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>
-                Enabling Condition
-              </div>
-              <div style={{fontSize:16,fontWeight:700,color:TEXT,lineHeight:1.6}}>
-                {po.outcome}
-              </div>
+            {/* Header */}
+            <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",borderLeft:"3px solid "+pc.color}}>
+              <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>Outcome {activeIdx+1} — {SHORT_TITLES[activeIdx]||po.shortTitle}</div>
+              <div style={{fontSize:15,fontWeight:600,color:TEXT,lineHeight:1.6}}>{po.outcome}</div>
             </div>
 
-            {/* Leading Signals — 3-column indicator grid */}
-            <div style={{padding:"18px 22px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:3}}>Leading Signals</div>
-                <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>Early signals that this enabling condition is beginning to take hold.</div>
-              </div>
+            {/* Leading signals */}
+            <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER}}>
+              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>Leading Signals</div>
               {po.indicators.filter(ind=>ind.text).length > 0 ? (
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:0,borderTop:"1px solid "+BORDER}}>
                   {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
@@ -2052,9 +2053,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
             {/* Contributing BOW Outcomes — collapsible */}
             <div>
               <button onClick={()=>setBowOpen(v=>!v)}
-                style={{width:"100%",textAlign:"left",padding:"11px 22px",background:"none",
-                  border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,
-                  borderBottom:bowOpen?"1px solid "+BORDER:"none"}}>
+                style={{width:"100%",textAlign:"left",padding:"11px 22px",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderBottom:bowOpen?"1px solid "+BORDER:"none"}}>
                 <span style={{fontSize:11,color:TEXT_MUTED}}>{bowOpen?"▾":"▸"}</span>
                 <span style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Contributing BOW Outcomes</span>
                 <span style={{fontSize:11,background:"#EEEBE6",color:TEXT_SUB,borderRadius:10,padding:"1px 8px",fontWeight:700}}>{bowCount}</span>
@@ -2099,46 +2098,36 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
               )}
             </div>
           </div>
-        )}
 
-        {/* Right: stable 2030 Goals panel — neutral styling, no portfolio color in chrome */}
-        {goals.length > 0 && (
-          <div style={{flex:"0 0 270px",borderLeft:"1px solid "+BORDER,background:"#FAFAF8",padding:"18px 18px 24px",display:"flex",flexDirection:"column",gap:0}}>
-            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>
-              2030 Goals Enabled
-            </div>
-            <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.55,marginBottom:16}}>
-              These cross-cutting goals depend on the enabling conditions this portfolio builds.
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {goals.map(g => {
-                const pct = (g.goal2030 && g.current2026 !== undefined)
-                  ? Math.round((g.current2026 / g.goal2030) * 100) : null;
-                return (
-                  <div key={g.number} style={{borderRadius:10,border:"1px solid "+BORDER,background:SURFACE,overflow:"hidden",padding:"12px 14px"}}>
-                    <div style={{display:"flex",alignItems:"flex-start",gap:9,marginBottom:pct!==null?10:0}}>
-                      <span style={{width:22,height:22,borderRadius:"50%",background:"#EEEBE6",border:"1px solid "+BORDER,fontSize:11,fontWeight:800,color:TEXT_SUB,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:12,fontWeight:700,color:TEXT,lineHeight:1.3,marginBottom:3}}>{g.title}</div>
-                        <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.45}}>{g.target}</div>
+          {/* Goals panel — simplified, no individual cards */}
+          {goals.length > 0 && (
+            <div style={{flex:"0 0 240px",background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 18px 24px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:16}}>2030 Goals Enabled</div>
+              <div style={{display:"flex",flexDirection:"column",gap:18}}>
+                {goals.map(g => {
+                  const pct = (g.goal2030 && g.current2026 !== undefined)
+                    ? Math.round((g.current2026 / g.goal2030) * 100) : null;
+                  return (
+                    <div key={g.number}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:pct!==null?8:0}}>
+                        <span style={{width:20,height:20,borderRadius:"50%",background:"#EEEBE6",border:"1px solid "+BORDER,fontSize:10,fontWeight:800,color:TEXT_SUB,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:12,fontWeight:700,color:TEXT,lineHeight:1.3,marginBottom:2}}>{g.title}</div>
+                          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.4}}>{g.target}</div>
+                        </div>
                       </div>
-                    </div>
-                    {pct !== null && (
-                      <div>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,alignItems:"center"}}>
-                          <span style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>Toward 2030</span>
-                          <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic"}}>Directional</span>
-                        </div>
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
-                          <div style={{flex:1,height:5,borderRadius:3,background:BORDER,overflow:"hidden"}}>
-                            <div style={{height:"100%",borderRadius:3,width:Math.min(pct,100)+"%",background:"#A49A8C",transition:"width .4s"}}/>
+                      {pct !== null && (
+                        <div style={{paddingLeft:28}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                            <div style={{flex:1,height:4,borderRadius:2,background:BORDER,overflow:"hidden"}}>
+                              <div style={{height:"100%",borderRadius:2,width:Math.min(pct,100)+"%",background:pc.color,transition:"width .4s"}}/>
+                            </div>
+                            <span style={{fontSize:11,fontWeight:700,color:TEXT,flexShrink:0}}>{pct}%</span>
                           </div>
-                          <span style={{fontSize:11,fontWeight:700,color:TEXT,flexShrink:0}}>{g.current2026}{g.unit}</span>
-                          <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>/ {g.goal2030}{g.unit}</span>
-                        </div>
-                        {onNavigateToStrategy&&(
-                          <button onClick={()=>onNavigateToStrategy(g.number)}
-                            style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:3}}>
+                          <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:4}}>{g.current2026}{g.unit} of {g.goal2030}{g.unit}</div>
+                          {onNavigateToStrategy&&(
+                            <button onClick={()=>onNavigateToStrategy(g.number)}
+                              style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:3}}>
                             View full goal ↗
                           </button>
                         )}
@@ -2150,8 +2139,8 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
             </div>
           </div>
         )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -4238,44 +4227,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             <div style={{fontSize:10,fontWeight:600,letterSpacing:2.5,textTransform:"uppercase",color:pc.color,marginBottom:8,opacity:0.9}}>Portfolio</div>
             <div style={{fontSize:24,color:TEXT,marginBottom:10,fontWeight:400,letterSpacing:-0.3}}>{portfolio.name||pc.label}</div>
             <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,maxWidth:680}}>{portfolio.description}</div>
-          </div>
-          <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"stretch",gap:10,minWidth:260}}>
-            <div>
-              <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>Bodies of Work</div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {bows.map((bow,i)=>{
-                  const bc = BOW_COLORS_MAP[i]||BOW_COLORS_MAP[0];
-                  return (
-                    <div key={bow.id} onClick={()=>{setActiveTab("bow");setActiveBow(bow.id);setBowTab(null);setBowView("progress");setActiveBowOutcomeIdx(0);}}
-                      onMouseEnter={()=>setHoveredBow(i)} onMouseLeave={()=>setHoveredBow(null)}
-                      style={{position:"relative",display:"flex",alignItems:"center",gap:8,borderRadius:8,padding:"10px 14px",background:SURFACE,border:"1px solid "+bc.tagColor+"44",borderLeft:"3px solid "+bc.tagColor,cursor:"pointer",minHeight:52,boxSizing:"border-box",transition:"box-shadow .15s",boxShadow:hoveredBow===i?"0 2px 10px rgba(0,0,0,0.08)":"none"}}>
-                      <span style={{fontSize:13,fontWeight:700,color:TEXT,flex:1,lineHeight:1.3}}>{bow.name}</span>
-                      <span style={{fontSize:13,fontWeight:600,color:bc.tagColor,flexShrink:0}}>→</span>
-                      {hoveredBow===i&&bow.description&&(
-                        <div style={{position:"absolute",bottom:"calc(100% + 6px)",right:0,width:280,background:SURFACE,border:"1px solid "+bc.tagColor+"55",borderRadius:8,padding:"10px 12px",boxShadow:"0 4px 16px rgba(10,37,64,0.12)",zIndex:10,pointerEvents:"none"}}>
-                          <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>{bow.description.split('\n\n')[0].slice(0,160)}{bow.description.length>160?"…":""}</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {hasTeam&&(
-              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
-                <button onClick={()=>setShowTeam(v=>!v)}
-                  style={{display:"inline-flex",alignItems:"center",gap:6,background:showTeam?pc.color:SURFACE,color:showTeam?"#fff":TEXT_SUB,border:"1px solid "+(showTeam?pc.color:BORDER),borderRadius:8,padding:"7px 14px",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                  <span style={{fontSize:14}}>{showTeam?"✕":"👥"}</span>
-                  {showTeam?"Close":"Team Structure"}
-                </button>
-                {showTeam&&(
-                  <div style={{background:SURFACE,borderRadius:10,border:"1px solid "+BORDER,padding:"14px 16px",boxShadow:"0 4px 20px rgba(10,37,64,0.1)",minWidth:260}}>
-                    <div style={{fontSize:12,fontWeight:700,color:ACCENT,textTransform:"uppercase",letterSpacing:0.8,marginBottom:10}}>Team Structure</div>
-                    {isCrossC ? <OrgChart compact/> : <SFLOrgChart compact/>}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
