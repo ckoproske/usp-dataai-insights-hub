@@ -6196,7 +6196,6 @@ function AllInvestmentsView() {
             {[
               { label: "In Pipeline", value: filtered.filter(i=>i.status==="In Process").length, color: "#3086AB" },
               { label: "Active",      value: filtered.filter(i=>i.status==="Active").length,     color: "#059669" },
-              { label: "Total Value", value: fmtM(totalAmt), color: TEXT },
             ].map(({ label, value, color }, i, arr) => (
               <React.Fragment key={label}>
                 <div style={{ textAlign: "center" }}>
@@ -6258,9 +6257,6 @@ function AllInvestmentsView() {
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: countCol }}>
                   {sd.count}
-                </div>
-                <div style={{ fontSize: 9, color: amtCol, marginTop: 3 }}>
-                  {hasInvs ? fmtM(sd.amount) : "—"}
                 </div>
               </button>
             );
