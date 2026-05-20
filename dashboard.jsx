@@ -4049,7 +4049,7 @@ function PortfolioToaView({ portfolioId, portColor }) {
 }
 
 // ── Portfolio Overview — By the Numbers ──────────────────────────────────────
-function PortfolioByTheNumbers({ portId, portColor }) {
+function PortfolioByTheNumbers({ portId, portColor, bows }) {
   const pc = portColor || { color: ACCENT };
   const [stats, setStats]           = useState(null);
   const [budgetAlloc, setBudgetAlloc] = useState(null);
@@ -4101,6 +4101,7 @@ function PortfolioByTheNumbers({ portId, portColor }) {
     { label:"Active Investments", value: loading ? "…" : String(stats.count||"0"),   sub:"grants & contracts" },
     { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,    sub:"active investments with a co-funding team", teams: stats?.coFundingTeams || [] },
     { label:"Partners",           value: loading ? "…" : String(stats.partners||"0"),sub:"discrete grantees / vendors" },
+    { label:"Bodies of Work",     value: String((bows||[]).length),                   sub:"active workstreams in this portfolio" },
   ];
 
   const committed   = stats?.totalBudget || 0;
@@ -4268,7 +4269,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
           <div style={{display:"flex",flexDirection:"column",gap:20}}>
 
             {/* By the Numbers — prominent strip */}
-            <PortfolioByTheNumbers portId={portId} portColor={pc}/>
+            <PortfolioByTheNumbers portId={portId} portColor={pc} bows={bows}/>
 
             {/* Two-column: outcomes left, goals right */}
             <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
