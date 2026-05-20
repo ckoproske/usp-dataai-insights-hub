@@ -4144,29 +4144,6 @@ function PortfolioByTheNumbers({ portId, portColor }) {
               )}
             </div>
           ))}
-          {/* Budget pie tile */}
-          <div style={{padding:"4px 28px",borderLeft:"1px solid "+BORDER,display:"flex",gap:14,alignItems:"center"}}>
-            <PieChart width={90} height={90}>
-              <Pie data={pieData} cx={40} cy={40} innerRadius={26} outerRadius={42}
-                dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
-                {pieData.map((entry,i) => <Cell key={i} fill={entry.color}/>)}
-              </Pie>
-              <Tooltip formatter={(v,n)=>[`$${(v/1e6).toFixed(1)}M`, n]} contentStyle={{fontSize:11}}/>
-            </PieChart>
-            <div>
-              <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:6}}>Budget Outlook</div>
-              {[
-                {label:"4-Yr Allocation", value: budgetAlloc===null ? "…" : fmtM(allocation), color: TEXT_SUB},
-                {label:"Committed",       value: loading ? "…" : fmtM(committed),              color: pc.color},
-                ...(overBudget > 0 ? [{label:"Over Budget", value: fmtM(overBudget), color:"#DC2626"}] : []),
-              ].map(({label,value,color}) => (
-                <div key={label} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:11,marginBottom:2}}>
-                  <span style={{color:TEXT_MUTED}}>{label}</span>
-                  <span style={{fontWeight:600,color}}>{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
