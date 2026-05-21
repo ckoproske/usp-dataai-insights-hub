@@ -4239,7 +4239,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
         <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
         <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",right:16,top:-6,fontSize:80,fontWeight:900,color:pc.color,opacity:0.05,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>01</div>
+
           <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>What We're Trying to Achieve</div>
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
@@ -4291,7 +4291,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
         <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
         <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",right:140,top:-6,fontSize:80,fontWeight:900,color:pc.color,opacity:0.05,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>02</div>
+
           <div>
             <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>How We Work</div>
           </div>
@@ -4420,7 +4420,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
           <div style={{padding:"22px 28px"}}>
             <div style={{marginBottom:22,position:"relative",overflow:"hidden"}}>
-              <div style={{position:"absolute",right:0,top:-10,fontSize:80,fontWeight:900,color:pc.color,opacity:0.06,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>03</div>
+
               <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>What This All Builds Toward</div>
               <div style={{fontSize:20,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>2030 Goals</div>
             </div>
