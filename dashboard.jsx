@@ -4653,77 +4653,30 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               <div>
                 {currentBow.outcomes.length>0&&(
                   <div>
-                    <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:0}}>
+                    {/* Horizontal outcome tabs */}
+                    <div style={{display:"flex",borderBottom:"1px solid "+BORDER,marginBottom:20,overflowX:"auto"}}>
                       {currentBow.outcomes.map((o,i)=>{
                         const active=i===activeBowOutcomeIdx;
-                        const manualRs=o.manualStatus&&STATUS[o.manualStatus]?STATUS[o.manualStatus]:null;
-                        const exec=execAutoStatus(o,progressYear); const impact=impactAutoStatus(o);
                         const rawT=(o.executionTargets[progressYear]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
-                        const totalT=rawT.length; const completeT=rawT.filter(t=>t.completion==="Complete").length; const onTrackT=rawT.filter(t=>t.completion==="On Track").length;
-                        const positiveT=completeT+onTrackT;
-                        const pct=totalT>0?Math.round((positiveT/totalT)*100):null;
-                        const barC=pct===null?BORDER:pct>=80?"#059669":pct>=50?"#D97706":"#DC2626";
                         return (
-                          <div key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
-                            style={{border:"1.5px solid "+(active?"#94A3B8":manualRs?manualRs.color+"55":BORDER),borderRadius:12,overflow:"hidden",background:active?"#F8FAFC":manualRs?manualRs.bg:SURFACE,cursor:"pointer",transition:"all .15s",boxShadow:active?"0 4px 16px rgba(0,0,0,0.1)":"0 2px 8px rgba(10,37,64,0.06)"}}>
-                            <div style={{display:"flex",alignItems:"flex-start",gap:0}}>
-                              {/* Left accent bar */}
-                              <div style={{width:4,background:active?"#94A3B8":manualRs?manualRs.color:BORDER,flexShrink:0,alignSelf:"stretch"}}/>
-                              {/* Content */}
-                              <div style={{flex:1,padding:"14px 18px"}}>
-                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
-                                  <div style={{flex:1}}>
-                                    <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>Outcome {o.number}</div>
-                                    <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.35,marginBottom:4}}>{BOW_TITLES[i]||o.shortTitle||"Outcome "+(i+1)}</div>
-                                    <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6}}>{o.title}</div>
-                                  </div>
-                                  {/* Impact badge */}
-                                  <div style={{flexShrink:0,textAlign:"right"}}>
-                                    <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>Impact</div>
-                                    {impact
-                                      ? <span style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:12,fontSize:11,fontWeight:700,
-                                          background:(STATUS[impact.label]?.pill||impact.color+"15"),color:(STATUS[impact.label]?.color||impact.color),
-                                          border:"1px solid "+(STATUS[impact.label]?.color||impact.color)+"44"}}>
-                                          <span style={{width:5,height:5,borderRadius:"50%",background:STATUS[impact.label]?.color||impact.color,display:"inline-block",flexShrink:0}}/>
-                                          {impact.label.replace(" Expectations","")}
-                                        </span>
-                                      : <span style={{fontSize:11,color:TEXT_MUTED}}>—</span>}
-                                  </div>
-                                </div>
-                                {/* Execution progress bar */}
-                                <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid "+BORDER}}>
-                                  <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:6}}>Execution {progressYear}</div>
-                                  {totalT > 0 ? (
-                                    <div>
-                                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                                        <div style={{flex:1,height:6,borderRadius:3,background:BORDER,overflow:"hidden"}}>
-                                          <div style={{height:"100%",borderRadius:3,width:pct+"%",background:barC,transition:"width .4s"}}/>
-                                        </div>
-                                        <span style={{fontSize:12,fontWeight:700,color:barC,flexShrink:0,minWidth:32}}>{pct}%</span>
-                                      </div>
-                                      <div style={{fontSize:11,color:TEXT_SUB}}>
-                                        {completeT>0&&<span style={{fontWeight:600,color:"#059669"}}>{completeT} complete</span>}
-                                        {completeT>0&&onTrackT>0&&<span>, </span>}
-                                        {onTrackT>0&&<span style={{fontWeight:600,color:"#D97706"}}>{onTrackT} on track</span>}
-                                        <span style={{color:TEXT_MUTED}}> of {totalT}</span>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span style={{fontSize:12,color:TEXT_MUTED}}>No targets</span>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Expand chevron */}
-                              <div style={{padding:"14px 14px 0",flexShrink:0}}>
-                                <span style={{fontSize:14,color:TEXT_MUTED,fontWeight:600}}>{active?"▴":"▾"}</span>
-                              </div>
+                          <button key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
+                            style={{padding:"12px 20px",border:"none",background:active?SURFACE:"transparent",borderBottom:active?"2px solid "+TEXT:"2px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:7,alignItems:"flex-start",marginBottom:-1,transition:"all .15s",minWidth:160,flexShrink:0}}>
+                            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Outcome {o.number||i+1}</div>
+                            <div style={{fontSize:13,fontWeight:active?700:500,color:active?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{BOW_TITLES[i]||o.shortTitle||"Outcome "+(i+1)}</div>
+                            <div style={{display:"flex",gap:4,flexWrap:"wrap",minHeight:10}}>
+                              {rawT.length>0
+                                ? rawT.map((t,ti)=>{
+                                    const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
+                                    return <span key={ti} title={(t.text||"Target "+(ti+1))+" — "+c.label} style={{width:9,height:9,borderRadius:"50%",background:c.color,display:"inline-block",flexShrink:0}}/>;
+                                  })
+                                : <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic"}}>no targets</span>}
                             </div>
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
                     {activeBowOutcomeIdx>=0&&activeBowOutcomeIdx<currentBow.outcomes.length&&(
-                      <div style={{marginTop:16,border:"1.5px solid "+BORDER,borderRadius:12,overflow:"hidden",boxShadow:"0 2px 12px rgba(10,37,64,0.08)"}}>
+                      <div style={{border:"1.5px solid "+BORDER,borderRadius:12,overflow:"hidden",boxShadow:"0 2px 12px rgba(10,37,64,0.08)"}}>
                         <BowOutcomePanel outcome={currentBow.outcomes[activeBowOutcomeIdx]} onUpdate={u=>updateBowOutcome(activeBow,currentBow.outcomes[activeBowOutcomeIdx].id,u)}/>
                       </div>
                     )}
