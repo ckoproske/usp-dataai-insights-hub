@@ -4156,15 +4156,15 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   const pc = portColor || { color: ACCENT };
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
 
-  const [toa, setToa]   = useState(null);
-  const [lanes, setLanes] = useState([]);
+  const [toa, setToa] = useState(null);
   const [bowContributions, setBowContributions] = useState({});
+  const [expandedOutcomes, setExpandedOutcomes] = useState({});
+  const [showMatrix, setShowMatrix] = useState(false);
 
   useEffect(() => {
     apiFetch(`/api/toa/${portId}`).then(data => {
       if (!data) return;
       setToa(data.toa || null);
-      setLanes(data.lanes || []);
     }).catch(() => {});
   }, [portId]);
 
@@ -4193,128 +4193,170 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
   const numCols = allOutcomes.length;
   const colTemplate = `160px repeat(${numCols}, 1fr)`;
+  const problemStatement = toa?.problem_statement || null;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
 
-      {/* ── Section 1: Portfolio Outcomes alignment matrix ── */}
+      {/* ── Problem / Gap statement ── */}
+      {problemStatement && (
+        <div style={{borderLeft:"4px solid "+pc.color,borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"4px solid "+pc.color,background:pc.color+"07",padding:"14px 20px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>Problem / Gap</div>
+          <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.75,fontStyle:"italic"}}>{problemStatement}</div>
+        </div>
+      )}
+
+      {/* ── Section 1: What We're Trying to Achieve ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
         <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
-          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Portfolio Outcomes</div>
+          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>What We're Trying to Achieve</div>
         </div>
-        <div style={{overflowX:"auto"}}>
-          {/* Outcome header row */}
-          <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560}}>
-            <div style={{background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER}}/>
-            {allOutcomes.map((o,i) => (
-              <div key={o.id} style={{padding:"12px 10px",background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
-                <div style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:5}}>{i+1}</div>
-                <div style={{fontSize:11,fontWeight:700,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
-              </div>
-            ))}
-          </div>
-          {/* BOW rows */}
-          {bows.map((bow,bi) => (
-            <div key={bow.id} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER}}>
-              <div style={{padding:"10px 14px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",background:bi%2===0?"transparent":"#FAFAF8"}}>
-                <span style={{fontSize:12,fontWeight:700,color:TEXT}}>{bow.name}</span>
-              </div>
-              {allOutcomes.map((o) => {
-                const contrib = bowContributions[bow.id]?.has(o.id);
-                return (
-                  <div key={o.id} style={{padding:"10px",textAlign:"center",borderRight:"1px solid "+BORDER,background:bi%2===0?"transparent":"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    {contrib
-                      ? <span style={{width:22,height:22,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,color:pc.color,fontWeight:700}}>✓</span>
-                      : <span style={{width:6,height:6,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
-                    }
+        <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
+          {allOutcomes.map((o,i) => {
+            const isExpanded = !!expandedOutcomes[o.id];
+            const contributingBows = bows.filter(b => bowContributions[b.id]?.has(o.id));
+            return (
+              <div key={o.id} style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,display:"flex",flexDirection:"column"}}>
+                <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
+                <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                    <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
+                    <div style={{fontSize:14,fontWeight:800,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
                   </div>
-                );
-              })}
-            </div>
-          ))}
-          {/* Coverage footer */}
-          <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,background:"#FAFAF8",borderTop:"2px solid "+BORDER}}>
-            <div style={{padding:"8px 14px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center"}}>
-              <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Coverage</span>
-            </div>
-            {allOutcomes.map(o => {
-              const count = bows.filter(b => bowContributions[b.id]?.has(o.id)).length;
-              return (
-                <div key={o.id} style={{padding:"8px 10px",textAlign:"center",borderRight:"1px solid "+BORDER}}>
-                  <span style={{fontSize:11,fontWeight:700,color:count>0?pc.color:TEXT_MUTED}}>{count} of {bows.length}</span>
+                  {isExpanded && (
+                    <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32}}>{o.outcome}</div>
+                  )}
+                  <button onClick={()=>setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}))}
+                    style={{background:"none",border:"none",cursor:"pointer",padding:"0 0 0 32px",fontSize:11,color:pc.color,fontWeight:600,display:"flex",alignItems:"center",gap:4,textAlign:"left"}}>
+                    {isExpanded ? "▴ less" : "▾ full outcome"}
+                  </button>
+                  {contributingBows.length > 0 && (
+                    <div style={{paddingLeft:32}}>
+                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>Investments & Inputs</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                        {contributingBows.map(b => (
+                          <span key={b.id} style={{fontSize:10,fontWeight:600,color:pc.color,background:pc.color+"12",border:"1px solid "+pc.color+"30",borderRadius:5,padding:"2px 8px"}}>{b.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* ── Section 2: How We Work ── */}
-      {lanes.length > 0 && (
-        <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-          <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
-            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>How We Work</div>
-          </div>
-          <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(lanes.length,4)},1fr)`,gap:14}}>
-            {lanes.map(lane => {
-              const lc = lane.color || pc.color;
-              return (
-                <div key={lane.lane_id} style={{borderRadius:10,border:"1px solid "+lc+"33",borderLeft:"3px solid "+lc,padding:"14px 16px"}}>
-                  <div style={{fontSize:13,fontWeight:800,color:lc,marginBottom:8,lineHeight:1.3}}>{lane.label}</div>
-                  {(lane.activities||[]).filter(a=>a.activity_text).length > 0 ? (
-                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                      {lane.activities.filter(a=>a.activity_text).map((act,i) => (
-                        <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
-                          <div style={{width:4,height:4,borderRadius:"50%",background:lc,marginTop:6,flexShrink:0,opacity:0.6}}/>
-                          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{fontSize:11,color:"#C9C3BA",fontStyle:"italic"}}>No activities defined.</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+        <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>How We Work</div>
+          <button onClick={()=>setShowMatrix(v=>!v)}
+            style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"1px solid "+pc.color+"44",borderRadius:6,padding:"4px 12px",cursor:"pointer",transition:"all .15s"}}>
+            {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
+          </button>
         </div>
-      )}
-
-      {/* ── Section 3: Longer Horizon — 2030 goals + Ambition 2045 ── */}
-      {(amb45Text || amb45Buckets || crossIndicators.length > 0 || goals.length > 0) && (
-        <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-          <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
-            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>Longer Horizon</div>
+        <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(bows.length,4)},1fr)`,gap:14}}>
+          {bows.map(bow => (
+            <div key={bow.id} style={{borderRadius:10,border:"1px solid "+BORDER,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{fontSize:13,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
+              {bow.delegate && (
+                <div style={{fontSize:10,color:TEXT_MUTED}}>Led by: <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span></div>
+              )}
+              {bow.description && (
+                <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.6}}>
+                  {bow.description.split('\n\n')[0].slice(0,220)}{bow.description.length>220?"…":""}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {showMatrix && (
+          <div style={{borderTop:"1px solid "+BORDER,overflowX:"auto"}}>
+            <div style={{padding:"14px 22px 4px",fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>BOW → Outcome Alignment</div>
+            <div style={{padding:"0 22px 18px"}}>
+              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560}}>
+                <div style={{background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER,padding:"8px"}}/>
+                {allOutcomes.map((o,i) => (
+                  <div key={o.id} style={{padding:"10px",background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
+                    <div style={{width:20,height:20,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:4}}>{i+1}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
+                  </div>
+                ))}
+              </div>
+              {bows.map((bow,bi) => (
+                <div key={bow.id} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER}}>
+                  <div style={{padding:"8px 12px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",background:bi%2===0?"transparent":"#FAFAF8"}}>
+                    <span style={{fontSize:11,fontWeight:700,color:TEXT}}>{bow.name}</span>
+                  </div>
+                  {allOutcomes.map(o => {
+                    const contrib = bowContributions[bow.id]?.has(o.id);
+                    return (
+                      <div key={o.id} style={{padding:"8px",textAlign:"center",borderRight:"1px solid "+BORDER,background:bi%2===0?"transparent":"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {contrib
+                          ? <span style={{width:20,height:20,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,color:pc.color,fontWeight:700}}>✓</span>
+                          : <span style={{width:5,height:5,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
+                        }
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,background:"#FAFAF8",borderTop:"2px solid "+BORDER}}>
+                <div style={{padding:"6px 12px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center"}}>
+                  <span style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Coverage</span>
+                </div>
+                {allOutcomes.map(o => {
+                  const count = bows.filter(b => bowContributions[b.id]?.has(o.id)).length;
+                  return (
+                    <div key={o.id} style={{padding:"6px 8px",textAlign:"center",borderRight:"1px solid "+BORDER}}>
+                      <span style={{fontSize:10,fontWeight:700,color:count>0?pc.color:TEXT_MUTED}}>{count} of {bows.length}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <div style={{padding:"18px 22px",display:"flex",gap:28,alignItems:"flex-start"}}>
-            {(crossIndicators.length > 0 || goals.length > 0) && (
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#D97706",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>2030 Impact Goals</div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        )}
+      </div>
+
+      {/* ── Section 3: 2030 Goals ── */}
+      {(crossIndicators.length > 0 || goals.length > 0 || amb45Text || amb45Buckets) && (
+        <div style={{borderRadius:12,border:"1px solid "+pc.color+"33",overflow:"hidden",background:`linear-gradient(135deg,${pc.color}08 0%,${SURFACE} 60%)`,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+          <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+          <div style={{padding:"20px 28px"}}>
+            <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:20}}>2030 Goals</div>
+            <div style={{display:"flex",gap:32,alignItems:"flex-start"}}>
+              {(crossIndicators.length > 0 || goals.length > 0) && (
+                <div style={{flex:2,minWidth:0,display:"flex",flexDirection:"column",gap:12}}>
                   {crossIndicators.map((ind,i) => (
-                    <div key={i} style={{borderLeft:"3px solid #D97706",paddingLeft:10,fontSize:12,color:TEXT_SUB,lineHeight:1.55}}>{ind}</div>
+                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                      <span style={{width:20,height:20,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
+                      <div style={{fontSize:13,color:TEXT,lineHeight:1.65,fontWeight:500}}>{ind}</div>
+                    </div>
                   ))}
-                  {goals.map(g => (
+                  {crossIndicators.length === 0 && goals.map(g => (
                     <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                      style={{display:"flex",alignItems:"flex-start",gap:8,cursor:onNavigateToStrategy?"pointer":"default",padding:"4px 0"}}>
-                      <span style={{width:20,height:20,borderRadius:"50%",background:g.color||"#D97706",color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{g.number}</span>
-                      <span style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5,flex:1}}>{g.title}</span>
+                      style={{display:"flex",alignItems:"flex-start",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
+                      <span style={{width:20,height:20,borderRadius:"50%",background:g.color||pc.color,color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{g.number}</span>
+                      <span style={{fontSize:13,color:TEXT,lineHeight:1.5,fontWeight:500,flex:1}}>{g.title}</span>
+                      {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-            {(amb45Text || amb45Buckets) && (
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#0284C7",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>
-                  Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
+              )}
+              {(amb45Text || amb45Buckets) && (
+                <div style={{flex:1,minWidth:0,borderLeft:"1px solid "+pc.color+"33",paddingLeft:28}}>
+                  <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
+                    Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
+                  </div>
+                  {amb45Buckets
+                    ? <ToaAmb45Buckets buckets={amb45Buckets} />
+                    : <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65}}>{amb45Text}</div>
+                  }
                 </div>
-                {amb45Buckets
-                  ? <ToaAmb45Buckets buckets={amb45Buckets} />
-                  : <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65}}>{amb45Text}</div>
-                }
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
