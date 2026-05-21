@@ -4551,21 +4551,21 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         })}
       </div>
       {inMeasurement&&(
-        <div style={{background:pc.color+"0C",borderBottom:"1px solid "+pc.color+"33",borderTop:"none",display:"flex",alignItems:"stretch",paddingLeft:0}}>
+        <div style={{background:BG,borderBottom:"1px solid "+BORDER,borderTop:"none",display:"flex",alignItems:"stretch",paddingLeft:0}}>
           {/* Portfolio Progress tab */}
           <button onClick={()=>setActiveTab("portfolio-progress")}
             style={{padding:"10px 20px",fontWeight:600,fontSize:13,border:"none",cursor:"pointer",
               background:activeTab==="portfolio-progress"?SURFACE:"transparent",
-              borderBottom:activeTab==="portfolio-progress"?"3px solid "+pc.color:"3px solid transparent",
-              borderRight:"1px solid "+pc.color+"22",
-              color:activeTab==="portfolio-progress"?pc.color:TEXT_SUB,
+              borderBottom:activeTab==="portfolio-progress"?"3px solid "+TEXT:"3px solid transparent",
+              borderRight:"1px solid "+BORDER,
+              color:activeTab==="portfolio-progress"?TEXT:TEXT_SUB,
               marginBottom:-1,whiteSpace:"nowrap",transition:"all .15s",flexShrink:0}}>
             Portfolio Progress
           </button>
           {/* Divider + BOW label */}
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 14px",borderRight:"1px solid "+pc.color+"22",flexShrink:0}}>
-            <span style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.2,opacity:0.7}}>Bodies of Work</span>
-            <span style={{fontSize:12,color:pc.color+"66"}}>→</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 14px",borderRight:"1px solid "+BORDER,flexShrink:0}}>
+            <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2}}>Bodies of Work</span>
+            <span style={{fontSize:12,color:TEXT_MUTED}}>→</span>
           </div>
           {/* BOW tabs */}
           <div style={{display:"flex",alignItems:"stretch",flex:1}}>
@@ -4575,9 +4575,9 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 <button key={b.id} onClick={()=>{setActiveTab("bow");setActiveBow(b.id);setBowView("progress");setActiveBowOutcomeIdx(0);}}
                   style={{padding:"10px 18px",fontWeight:active?700:500,fontSize:13,cursor:"pointer",
                     background:active?SURFACE:"transparent",border:"none",
-                    borderBottom:active?"3px solid "+pc.color:"3px solid transparent",
-                    borderRight:"1px solid "+pc.color+"22",
-                    color:active?pc.color:TEXT_SUB,marginBottom:-1,whiteSpace:"nowrap",transition:"all .15s"}}>
+                    borderBottom:active?"3px solid "+TEXT:"3px solid transparent",
+                    borderRight:"1px solid "+BORDER,
+                    color:active?TEXT:TEXT_SUB,marginBottom:-1,whiteSpace:"nowrap",transition:"all .15s"}}>
                   {b.name}
                 </button>
               );
@@ -4645,8 +4645,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,whiteSpace:"nowrap"}}>Budget</span>
                   {currentBow.editingBudget
-                    ? <input value={currentBow.budget||""} onChange={e=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,budget:e.target.value}))} placeholder="e.g. $2,000,000" autoFocus style={{border:"1px solid "+pc.color,borderRadius:5,padding:"3px 8px",fontSize:12,fontFamily:"inherit",outline:"none",color:TEXT,width:140}}/>
-                    : <span style={{fontSize:13,fontWeight:600,color:currentBow.budget?pc.color:TEXT_MUTED,fontStyle:currentBow.budget?"normal":"italic"}}>{currentBow.budget||"Not set"}</span>
+                    ? <input value={currentBow.budget||""} onChange={e=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,budget:e.target.value}))} placeholder="e.g. $2,000,000" autoFocus style={{border:"1px solid "+BORDER,borderRadius:5,padding:"3px 8px",fontSize:12,fontFamily:"inherit",outline:"none",color:TEXT,width:140}}/>
+                    : <span style={{fontSize:13,fontWeight:600,color:currentBow.budget?TEXT:TEXT_MUTED,fontStyle:currentBow.budget?"normal":"italic"}}>{currentBow.budget||"Not set"}</span>
                   }
                   <button onClick={()=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,editingBudget:!b.editingBudget}))}
                     style={{fontSize:11,cursor:"pointer",borderRadius:5,padding:"2px 8px",border:"1px solid "+BORDER,background:"transparent",color:TEXT_MUTED}}>
@@ -4658,7 +4658,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,whiteSpace:"nowrap"}}>Delegate</span>
                   {currentBow.editingDelegate
-                    ? <input value={currentBow.delegate||""} onChange={e=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,delegate:e.target.value}))} placeholder="Name and role" autoFocus style={{border:"1px solid "+pc.color,borderRadius:5,padding:"3px 8px",fontSize:12,fontFamily:"inherit",outline:"none",color:TEXT,width:160}}/>
+                    ? <input value={currentBow.delegate||""} onChange={e=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,delegate:e.target.value}))} placeholder="Name and role" autoFocus style={{border:"1px solid "+BORDER,borderRadius:5,padding:"3px 8px",fontSize:12,fontFamily:"inherit",outline:"none",color:TEXT,width:160}}/>
                     : <span style={{fontSize:13,fontWeight:600,color:currentBow.delegate?TEXT:TEXT_MUTED,fontStyle:currentBow.delegate?"normal":"italic"}}>{currentBow.delegate||"Not assigned"}</span>
                   }
                   <button onClick={()=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,editingDelegate:!b.editingDelegate}))}
@@ -4673,8 +4673,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               {[["progress","Progress"]].map(([v,label])=>(
                 <button key={v} onClick={()=>setBowView(v)}
                   style={{padding:"10px 18px",fontSize:13,fontWeight:bowView===v?600:400,border:"none",background:"none",cursor:"pointer",
-                    borderBottom:bowView===v?"2px solid "+pc.color:"2px solid transparent",
-                    color:bowView===v?pc.color:TEXT_MUTED,marginBottom:-1,transition:"color .15s",letterSpacing:0.1}}>
+                    borderBottom:bowView===v?"2px solid "+TEXT:"2px solid transparent",
+                    color:bowView===v?TEXT:TEXT_MUTED,marginBottom:-1,transition:"color .15s",letterSpacing:0.1}}>
                   {label}
                 </button>
               ))}
@@ -4695,15 +4695,15 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                         const barC=pct===null?BORDER:pct>=80?"#059669":pct>=50?"#D97706":"#DC2626";
                         return (
                           <div key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
-                            style={{border:"1.5px solid "+(active?pc.color:manualRs?manualRs.color+"55":BORDER),borderRadius:12,overflow:"hidden",background:active?pc.light:manualRs?manualRs.bg:SURFACE,cursor:"pointer",transition:"all .15s",boxShadow:active?"0 4px 16px rgba(0,0,0,0.1)":"0 2px 8px rgba(10,37,64,0.06)"}}>
+                            style={{border:"1.5px solid "+(active?"#94A3B8":manualRs?manualRs.color+"55":BORDER),borderRadius:12,overflow:"hidden",background:active?"#F8FAFC":manualRs?manualRs.bg:SURFACE,cursor:"pointer",transition:"all .15s",boxShadow:active?"0 4px 16px rgba(0,0,0,0.1)":"0 2px 8px rgba(10,37,64,0.06)"}}>
                             <div style={{display:"flex",alignItems:"flex-start",gap:0}}>
                               {/* Left accent bar */}
-                              <div style={{width:4,background:active?pc.color:manualRs?manualRs.color:pc.color+"33",flexShrink:0,alignSelf:"stretch"}}/>
+                              <div style={{width:4,background:active?"#94A3B8":manualRs?manualRs.color:BORDER,flexShrink:0,alignSelf:"stretch"}}/>
                               {/* Content */}
                               <div style={{flex:1,padding:"14px 18px"}}>
                                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
                                   <div style={{flex:1}}>
-                                    <div style={{fontSize:11,fontWeight:700,color:active?pc.color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>Outcome {o.number}</div>
+                                    <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>Outcome {o.number}</div>
                                     <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.35,marginBottom:4}}>{BOW_TITLES[i]||o.shortTitle||"Outcome "+(i+1)}</div>
                                     <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6}}>{o.title}</div>
                                   </div>
@@ -4721,7 +4721,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                                   </div>
                                 </div>
                                 {/* Execution progress bar */}
-                                <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid "+(active?pc.color+"22":BORDER)}}>
+                                <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid "+BORDER}}>
                                   <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:6}}>Execution {progressYear}</div>
                                   {totalT > 0 ? (
                                     <div>
@@ -4745,7 +4745,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                               </div>
                               {/* Expand chevron */}
                               <div style={{padding:"14px 14px 0",flexShrink:0}}>
-                                <span style={{fontSize:14,color:active?pc.color:TEXT_MUTED,fontWeight:600}}>{active?"▴":"▾"}</span>
+                                <span style={{fontSize:14,color:TEXT_MUTED,fontWeight:600}}>{active?"▴":"▾"}</span>
                               </div>
                             </div>
                           </div>
