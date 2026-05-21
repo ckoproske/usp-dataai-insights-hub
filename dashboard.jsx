@@ -1731,11 +1731,32 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
 function BowOutcomePanel({ outcome, onUpdate }) {
   const [activeYear,setActiveYear] = useState(2026);
   const [editingInd,setEditingInd] = useState(null);
+  const [saveState,setSaveState] = useState("idle"); // "idle"|"saving"|"saved"|"error"
   const manualRs = outcome.manualStatus&&STATUS[outcome.manualStatus] ? STATUS[outcome.manualStatus] : null;
   const updInd = (iIdx,f,v) => onUpdate({...outcome,impactIndicators:outcome.impactIndicators.map((ind,i)=>i!==iIdx?ind:{...ind,[f]:v})});
   const targets = (outcome.executionTargets[activeYear]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
-  const updExec = (tIdx,f,v) => { const arr=targets.map((t,i)=>i!==tIdx?t:{...t,[f]:v}); onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:arr}}); };
+  const updExec = (tIdx,f,v) => { const arr=targets.map((t,i)=>i!==tIdx?t:{...t,[f]:v}); onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:arr}}); setSaveState("idle"); };
   const addExec = () => onUpdate({...outcome,executionTargets:{...outcome.executionTargets,[activeYear]:[...targets,{text:"",completion:"Not Started"}]}});
+
+  const saveTargets = async () => {
+    const saveable = targets.filter(t => t.target_id);
+    if (!saveable.length) return;
+    setSaveState("saving");
+    try {
+      await Promise.all(saveable.map(t =>
+        fetch(`/api/targets/${t.target_id}/status`, {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ year: activeYear, completion: t.completion, notes: t.notes||"" })
+        }).then(r => { if (!r.ok) throw new Error("HTTP "+r.status); })
+      ));
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2500);
+    } catch(e) {
+      setSaveState("error");
+      setTimeout(() => setSaveState("idle"), 3000);
+    }
+  };
 
   // Detect placeholder content — true when DB hasn't populated this section yet
   const isPlaceholderTarget = t => t.text && t.text.startsWith("[Placeholder]");
@@ -1772,7 +1793,13 @@ function BowOutcomePanel({ outcome, onUpdate }) {
               </button>;
             })}
           </div>
-          <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Execution Targets — {activeYear}</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8}}>Execution Targets — {activeYear}</div>
+            <button onClick={saveTargets} disabled={saveState==="saving"||saveState==="saved"}
+              style={{fontSize:11,fontWeight:600,padding:"4px 12px",borderRadius:6,border:"1px solid "+(saveState==="saved"?"#059669":saveState==="error"?"#DC2626":BORDER),background:saveState==="saved"?"#ECFDF5":saveState==="error"?"#FEF2F2":SURFACE,color:saveState==="saved"?"#059669":saveState==="error"?"#DC2626":TEXT_MUTED,cursor:saveState==="saving"||saveState==="saved"?"default":"pointer",transition:"all .2s"}}>
+              {saveState==="saving"?"Saving…":saveState==="saved"?"✓ Saved":saveState==="error"?"Error — retry":"Save"}
+            </button>
+          </div>
           {targetsArePlaceholder ? (
             <NotYetLoaded label="Execution targets"/>
           ) : (
