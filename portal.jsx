@@ -1769,10 +1769,22 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                       padding: "12px 14px",
                       borderBottom: isEditing ? `1px solid ${BORDER}` : "none" }}>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: TEXT,
-                          lineHeight: 1.4, marginBottom: 4 }}>
-                          {ind.name || ind.text}
-                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, margin: 0 }}>
+                            {ind.name || ind.text}
+                          </p>
+                          {ind.status && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                              background: ind.status === "active" ? "#d4f0e0" : "#f5f0e0",
+                              color:      ind.status === "active" ? "#186030" : "#a05000",
+                              border:     `1px solid ${ind.status === "active" ? "#a0d8b8" : "#e0c878"}`,
+                              textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0,
+                            }}>
+                              {ind.status}
+                            </span>
+                          )}
+                        </div>
                         {ind.name && ind.text && ind.text !== ind.name && (
                           <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
                             {ind.text}
