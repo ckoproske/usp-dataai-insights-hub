@@ -2967,6 +2967,82 @@ def get_activity_feed():
 #     tracking_notes STRING
 #   );
 
+@app.route("/api/indicators/all")
+def get_all_indicators():
+    """Returns every indicator (BOW + portfolio) with entity context, source details, and targets."""
+    try:
+        bow_rows = query(f"""
+            SELECT
+                i.indicator_id,
+                i.bow_id        AS entity_id,
+                'bow'           AS entity_type,
+                b.title         AS entity_name,
+                b.portfolio_id,
+                p.label         AS portfolio_name,
+                COALESCE(i.name, i.text)  AS name,
+                i.text          AS description,
+                i.source_id,
+                i.collection_frequency,
+                i.unit,
+                i.baseline,
+                i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                COALESCE(i.status, 'draft') AS status
+            FROM {SCHEMA}.bow_indicators i
+            JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
+            LEFT JOIN {SCHEMA}.portfolios p ON p.portfolio_id = b.portfolio_id
+            WHERE COALESCE(i.is_active, true) = true
+        """)
+    except Exception:
+        bow_rows = []
+
+    try:
+        port_rows = query(f"""
+            SELECT
+                i.indicator_id,
+                i.portfolio_id  AS entity_id,
+                'portfolio'     AS entity_type,
+                p.label         AS entity_name,
+                i.portfolio_id,
+                p.label         AS portfolio_name,
+                COALESCE(b.name, i.name, i.text)  AS name,
+                COALESCE(b.text, i.text)           AS description,
+                COALESCE(b.source_id, i.source_id) AS source_id,
+                COALESCE(b.collection_frequency, i.collection_frequency) AS collection_frequency,
+                COALESCE(b.unit, i.unit)            AS unit,
+                i.baseline,
+                i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                COALESCE(b.status, i.status, 'draft') AS status
+            FROM {SCHEMA}.portfolio_indicators i
+            LEFT JOIN {SCHEMA}.bow_indicators b ON b.indicator_id = i.bow_indicator_id
+            JOIN {SCHEMA}.portfolios p ON p.portfolio_id = i.portfolio_id
+        """)
+    except Exception:
+        port_rows = []
+
+    all_rows = bow_rows + port_rows
+
+    # Attach source_name + source_url
+    source_ids = list({r["source_id"] for r in all_rows if r.get("source_id")})
+    source_map = {}
+    if source_ids:
+        try:
+            ph = ",".join(["?" for _ in source_ids])
+            src_rows = query(
+                f"SELECT source_id, source_name, source_url FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
+                source_ids
+            )
+            source_map = {r["source_id"]: r for r in src_rows}
+        except Exception:
+            pass
+
+    for row in all_rows:
+        src = source_map.get(row.get("source_id"), {})
+        row["source_name"] = src.get("source_name", "") if src else ""
+        row["source_url"]  = src.get("source_url", "")  if src else ""
+
+    return jsonify(all_rows)
+
+
 @app.route("/api/sources")
 def list_sources():
     try:

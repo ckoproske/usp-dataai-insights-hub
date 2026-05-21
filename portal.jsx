@@ -1,4 +1,4 @@
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
 // ─── Design system — matches main dashboard ───────────────────────────────────
 const BRAND        = "#303A44";
@@ -3919,6 +3919,278 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
   );
 }
 
+// ─── Indicator Catalog View ────────────────────────────────────────────────────
+function IndicatorCatalogView() {
+  const [rows, setRows]             = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [search, setSearch]         = useState("");
+  const [filterSource, setFSrc]     = useState("all");
+  const [filterEntity, setFEntity]  = useState("all");
+  const [filterStatus, setFStatus]  = useState("all");
+  const [expanded, setExpanded]     = useState(new Set());
+
+  useEffect(() => {
+    api("/api/indicators/all")
+      .then(d => { setRows(d); setLoading(false); })
+      .catch(() => { setError("Failed to load indicators."); setLoading(false); });
+  }, []);
+
+  const toggle = id => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  // Build filter option lists
+  const sources = useMemo(() => {
+    const seen = new Map();
+    rows.forEach(r => { if (r.source_id && !seen.has(r.source_id)) seen.set(r.source_id, r.source_name || r.source_id); });
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [rows]);
+
+  const entities = useMemo(() => {
+    const seen = new Map();
+    rows.forEach(r => { if (r.entity_id && !seen.has(r.entity_id)) seen.set(r.entity_id, `${r.entity_name} (${r.entity_type})`); });
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return rows.filter(r => {
+      if (filterSource !== "all" && r.source_id !== filterSource) return false;
+      if (filterEntity !== "all" && r.entity_id !== filterEntity) return false;
+      if (filterStatus !== "all" && (r.status || "draft") !== filterStatus) return false;
+      if (q && !((r.name || r.description || "").toLowerCase().includes(q)) &&
+               !(r.entity_name || "").toLowerCase().includes(q) &&
+               !(r.source_name || "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, search, filterSource, filterEntity, filterStatus]);
+
+  if (loading) return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
+      {[1,2,3,4].map(i => <Skeleton key={i} height={72} />)}
+    </div>
+  );
+  if (error) return <p style={{ color: DANGER, marginTop: 24 }}>{error}</p>;
+
+  const selectStyle = { ...inputStyle, appearance: "auto", fontSize: 13, padding: "7px 10px" };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
+          Indicator Catalog
+        </h1>
+        <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
+          Browse all indicators across BOWs and portfolios — view source details, collection schedules, and targets.
+        </p>
+      </div>
+
+      {/* Filter bar */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, alignItems: "center" }}>
+        <input
+          type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search indicators, sources, entities..."
+          style={{ ...inputStyle, fontSize: 13, padding: "7px 10px", minWidth: 240, flex: 1 }} />
+        <select value={filterSource} onChange={e => setFSrc(e.target.value)} style={selectStyle}>
+          <option value="all">All sources</option>
+          {sources.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        </select>
+        <select value={filterEntity} onChange={e => setFEntity(e.target.value)} style={selectStyle}>
+          <option value="all">All BOWs & portfolios</option>
+          {entities.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFStatus(e.target.value)} style={selectStyle}>
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="draft">Draft</option>
+        </select>
+        <span style={{ fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
+          {filtered.length} of {rows.length}
+        </span>
+      </div>
+
+      {/* Indicator rows */}
+      {filtered.length === 0 && (
+        <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 32, textAlign: "center" }}>
+          No indicators match the current filters.
+        </p>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {filtered.map(ind => {
+          const isOpen = expanded.has(ind.indicator_id);
+          const status = ind.status || "draft";
+          const targets = [2026,2027,2028,2029,2030]
+            .map(y => ({ year: y, val: ind[`target_${y}`] }))
+            .filter(t => t.val != null);
+          const unit = ind.unit ? ` ${ind.unit}` : "";
+
+          return (
+            <div key={ind.indicator_id}
+              style={{ border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE,
+                borderLeft: `4px solid ${status === "active" ? "#059669" : "#D97706"}` }}>
+
+              {/* Summary row — always visible */}
+              <button onClick={() => toggle(ind.indicator_id)}
+                style={{ width: "100%", textAlign: "left", background: "none", border: "none",
+                  cursor: "pointer", padding: "12px 14px", fontFamily: "inherit",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 180px 180px 90px 28px",
+                  gap: 12, alignItems: "center" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{ind.name}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 8,
+                      background: status === "active" ? "#D1FAE5" : "#FEF3C7",
+                      color: status === "active" ? "#065F46" : "#92400E" }}>
+                      {status}
+                    </span>
+                  </div>
+                  {ind.collection_frequency && (
+                    <span style={{ fontSize: 11, color: TEXT_MUTED }}>{ind.collection_frequency}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: TEXT_SUB }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>
+                    {ind.entity_type === "bow" ? "BOW" : "Portfolio"}
+                  </div>
+                  {ind.entity_name}
+                </div>
+                <div style={{ fontSize: 12, color: TEXT_SUB }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Source</div>
+                  {ind.source_url
+                    ? <a href={ind.source_url} target="_blank" rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{ color: ACCENT }}>{ind.source_name || ind.source_id || "—"}</a>
+                    : (ind.source_name || ind.source_id || <span style={{ color: TEXT_MUTED }}>—</span>)}
+                </div>
+                <div style={{ fontSize: 12, color: TEXT_SUB }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Baseline</div>
+                  {ind.baseline != null
+                    ? <strong>{ind.baseline}{unit}</strong>
+                    : <span style={{ color: TEXT_MUTED }}>—</span>}
+                </div>
+                <span style={{ color: TEXT_MUTED, fontSize: 16, lineHeight: 1 }}>
+                  {isOpen ? "▲" : "▼"}
+                </span>
+              </button>
+
+              {/* Expanded detail panel */}
+              {isOpen && (
+                <div style={{ borderTop: `1px solid ${BORDER}`, padding: "14px 16px",
+                  display: "flex", flexDirection: "column", gap: 12 }}>
+
+                  {/* Description */}
+                  {ind.description && ind.description !== ind.name && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
+                        Description
+                      </div>
+                      <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>{ind.description}</p>
+                    </div>
+                  )}
+
+                  {/* Meta grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
+                        Portfolio
+                      </div>
+                      <span style={{ fontSize: 13, color: TEXT }}>{ind.portfolio_name || "—"}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
+                        {ind.entity_type === "bow" ? "Body of Work" : "Portfolio"}
+                      </div>
+                      <span style={{ fontSize: 13, color: TEXT }}>{ind.entity_name || "—"}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
+                        Collection Frequency
+                      </div>
+                      <span style={{ fontSize: 13, color: TEXT }}>{ind.collection_frequency || "—"}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
+                        Unit
+                      </div>
+                      <span style={{ fontSize: 13, color: TEXT }}>{ind.unit || "—"}</span>
+                    </div>
+                  </div>
+
+                  {/* Source details */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                      textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+                      Source
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 12px", background: BG, borderRadius: 6,
+                      border: `1px solid ${BORDER}` }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, flex: 1 }}>
+                        {ind.source_name || ind.source_id || "No source registered"}
+                      </span>
+                      {ind.source_url && (
+                        <a href={ind.source_url} target="_blank" rel="noreferrer"
+                          style={{ fontSize: 12, color: ACCENT, fontWeight: 600,
+                            textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          Open source ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Targets */}
+                  {(ind.baseline != null || targets.length > 0) && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+                        Baseline & Targets
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {ind.baseline != null && (
+                          <span style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6,
+                            background: "#EFF6FF", color: "#1E40AF", fontWeight: 600 }}>
+                            Baseline: {ind.baseline}{unit}
+                          </span>
+                        )}
+                        {targets.map(t => (
+                          <span key={t.year} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6,
+                            background: ACCENT_LIGHT, color: ACCENT, fontWeight: 600 }}>
+                            {t.year}: {t.val}{unit}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Indicator ID for support */}
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                    ID: <code style={{ fontFamily: "monospace", userSelect: "all" }}>{ind.indicator_id}</code>
+                    {ind.source_id && (
+                      <> &nbsp;·&nbsp; Source ID: <code style={{ fontFamily: "monospace", userSelect: "all" }}>{ind.source_id}</code></>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── BOW + Portfolio List ──────────────────────────────────────────────────────
 function BowPortfolioList({ bows, portfolios, onSelectBow, onSelectPortfolio }) {
   const [view, setView] = useState("bows");
@@ -5387,6 +5659,8 @@ function PortalApp() {
         { id: "content", label: "Indicators" },
         ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
       ]
+    : mode === "catalog"
+    ? [{ id: "content", label: "Indicator Catalog" }]
     : [
         { id: "content", label: "BOWs & Portfolios" },
         { id: "insight", label: "Share an Insight" },
@@ -5469,7 +5743,7 @@ function PortalApp() {
               marginBottom: 40, lineHeight: 1.6 }}>
               Choose a path below to get started.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
               {/* Edit Content */}
               <button onClick={() => { setMode("edit"); setTab("content"); }}
                 style={{ background: SURFACE, border: `2px solid ${BORDER}`,
@@ -5501,6 +5775,23 @@ function PortalApp() {
                 </div>
                 <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.65 }}>
                   Submit new actuals for indicators — report the latest numbers for a specific collection round or time period.
+                </div>
+              </button>
+
+              {/* Browse Indicators */}
+              <button onClick={() => { setMode("catalog"); setTab("content"); }}
+                style={{ background: SURFACE, border: `2px solid ${BORDER}`,
+                  borderRadius: 14, padding: "32px 28px", cursor: "pointer",
+                  textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
+                  fontFamily: "inherit" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = "0 4px 20px rgba(248,92,2,0.10)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
+                  Browse Indicators
+                </div>
+                <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.65 }}>
+                  Explore all indicators across BOWs and portfolios — filter by source, review collection details, and access linked documentation.
                 </div>
               </button>
             </div>
@@ -5573,6 +5864,10 @@ function PortalApp() {
         {tab === "content" && mode === "data" && (
           <DataUpdateView
             bows={bows} portfolios={portfolios} user={user} loading={loadingData} />
+        )}
+
+        {tab === "content" && mode === "catalog" && (
+          <IndicatorCatalogView />
         )}
 
         {tab === "insight" && (
