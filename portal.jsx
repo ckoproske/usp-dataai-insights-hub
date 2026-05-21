@@ -1248,9 +1248,8 @@ function OutcomeCard({ outcome: initOutcome, index, bow, user, onDeleted }) {
             )}
 
             {indicators.length === 0 && !addingInd && (
-              <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 12 }}>
-                No indicators added yet.
-              </p>
+              <EmptyState message="No indicators added to this outcome yet."
+                action="Add indicator" onAction={() => setAddingInd(true)} />
             )}
 
             {indicators.map(ind => (
@@ -1609,9 +1608,8 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
       )}
 
       {outcomes.length === 0 && !addingOutcome && (
-        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-          No outcomes added yet.
-        </p>
+        <EmptyState message="No outcomes added yet."
+          action="Add outcome" onAction={() => setAddingOutcome(true)} />
       )}
 
       {outcomes.length > 0 && (
@@ -2862,14 +2860,8 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
                 color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
           </div>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", flex: 1 }}>
-              No content yet.
-            </p>
-            <button onClick={openIIEdit}
-              style={{ background: "none", border: "none", cursor: "pointer",
-                color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
-          </div>
+          <EmptyState message="No investments & inputs defined yet."
+            action="Add content" onAction={openIIEdit} />
         )}
       </div>
 
@@ -2895,9 +2887,8 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
       )}
 
       {inds.length === 0 && !addingInd && (
-        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 20 }}>
-          No indicators yet.
-        </p>
+        <EmptyState message="No indicators for this outcome yet."
+          action="Add indicator" onAction={() => setAddingInd(true)} />
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
@@ -3680,9 +3671,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
       )}
 
       {activeTab === "outcome" && !activeOutcome && outcomes.length === 0 && (
-        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-          No outcomes yet. Use "+ Add outcome" above to get started.
-        </p>
+        <EmptyState message='No outcomes yet — use "+ Add outcome" in the tab strip above to get started.' />
       )}
     </div>
   );
@@ -3837,9 +3826,7 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
       )}
 
       {!loadingData && allInds.length === 0 && (
-        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-          No indicators found for this {selected.type === "bow" ? "Body of Work" : "Portfolio"}.
-        </p>
+        <EmptyState message={`No indicators found for this ${selected.type === "bow" ? "Body of Work" : "Portfolio"}. Indicators must be added in Edit Content before data can be submitted.`} />
       )}
 
       {!loadingData && outcomes.map(out => {
