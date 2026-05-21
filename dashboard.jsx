@@ -4237,7 +4237,6 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
         <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
         <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",right:16,top:-6,fontSize:80,fontWeight:900,color:pc.color,opacity:0.05,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>01</div>
-          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>Theory of Action</div>
           <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>What We're Trying to Achieve</div>
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
@@ -4306,7 +4305,6 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
         <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",right:140,top:-6,fontSize:80,fontWeight:900,color:pc.color,opacity:0.05,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>02</div>
           <div>
-            <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>Investments & Strategy</div>
             <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>How We Work</div>
           </div>
           <button onClick={()=>setShowMatrix(v=>!v)}
