@@ -310,37 +310,32 @@ const TARGET_YEARS = [2026, 2027, 2028, 2029, 2030];
 function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
   const freq = indicator.collection_frequency || "annual";
   const periodOptions = PERIOD_OPTIONS[freq] || [];
+  const presetSource = indicator.source_name || "";
 
-  const [value, setValue]          = useState("");
-  const [year, setYear]            = useState(String(CURRENT_YEAR));
-  const [period, setPeriod]        = useState("");
-  const [readingDate, setDate]     = useState(TODAY);
-  const [sourceName, setSrcName]   = useState("");
-  const [sourceType, setSrcType]   = useState("");
-  const [sourceOther, setSrcOther] = useState("");
-  const [sourceUrl, setSrcUrl]     = useState("");
-  const [notes, setNotes]          = useState("");
-  const [submitting, setSubmitting]= useState(false);
-  const [error, setError]          = useState(null);
+  const [value, setValue]             = useState("");
+  const [year, setYear]               = useState(String(CURRENT_YEAR));
+  const [period, setPeriod]           = useState("");
+  const [readingDate, setDate]        = useState(TODAY);
+  const [collectionDetail, setDetail] = useState("");
+  const [manualSource, setManualSrc]  = useState("");
+  const [notes, setNotes]             = useState("");
+  const [submitting, setSubmitting]   = useState(false);
+  const [error, setError]             = useState(null);
 
-  const canSubmit = value && year && sourceName.trim() && sourceType && readingDate
+  const effectiveSource = presetSource || manualSource.trim();
+  const canSubmit = value && year && effectiveSource && readingDate
     && (periodOptions.length === 0 || period);
 
   const submit = async () => {
     setSubmitting(true); setError(null);
     try {
-      const typeLabel  = sourceType === "other"
-        ? (sourceOther.trim() || "Other")
-        : SOURCE_TYPES.find(t => t.value === sourceType)?.label || sourceType;
-      const sourceText = [
-        `${sourceName.trim()} · ${typeLabel}`,
-        sourceUrl ? `Link: ${sourceUrl}` : "",
-      ].filter(Boolean).join(" — ");
+      const sourceText = [effectiveSource, collectionDetail.trim()]
+        .filter(Boolean).join(" — ");
       await api("/api/pending-actuals/submit", {
         method: "POST",
         body: JSON.stringify({
           indicator_id: indicator.indicator_id,
-          level: bow.portfolio_id ? "bow" : "portfolio",
+          level: bow.bow_id ? "bow" : "portfolio",
           entity_id: bow.bow_id || bow.portfolio_id,
           year: parseInt(year, 10), period: period || null,
           submitted_value: parseFloat(value),
@@ -358,16 +353,11 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
   return (
     <div className="fade-in" style={{ marginTop: 10, padding: "18px 20px", background: ACCENT_LIGHT,
       borderRadius: 8, border: `1px solid ${ACCENT_MID}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: BRAND }}>Submit actual — {indicator.text}</p>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer",
-          fontSize: 18, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
-      </div>
 
-      {/* Reporting year + period + value on one row */}
+      {/* Value + year + period */}
       <div style={{ display: "grid",
         gridTemplateColumns: periodOptions.length ? "1fr 1fr 1fr" : "1fr 1fr",
-        gap: 12, marginBottom: 4 }}>
+        gap: 12, marginBottom: 12 }}>
         <Field label="Reporting year" required
           helper="Which strategy year does this data count toward?">
           <select value={year} onChange={e => setYear(e.target.value)}
@@ -386,46 +376,45 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
         )}
         <Field label={`Value${indicator.unit ? ` (${indicator.unit})` : ""}`} required>
           <input type="number" value={value} onChange={e => setValue(e.target.value)}
-            placeholder="Enter value..." style={inputStyle} />
+            placeholder="Enter value..." style={inputStyle} autoFocus />
         </Field>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
-        <Field label="Data date" required helper="When was this data collected or published?">
-          <input type="date" value={readingDate} onChange={e => setDate(e.target.value)} style={inputStyle} />
-        </Field>
-        <Field label="Source type" required>
-          <select value={sourceType} onChange={e => setSrcType(e.target.value)}
-            style={{ ...inputStyle, appearance: "auto" }}>
-            <option value="">Select...</option>
-            {SOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </Field>
-      </div>
-
-      <Field label="Source name" required helper="Report, dataset, or document this came from.">
-        <input type="text" value={sourceName} onChange={e => setSrcName(e.target.value)}
-          placeholder="e.g. Q1 2026 Partner Report..." style={inputStyle} />
+      <Field label="Data date" required helper="When was this data collected or published?">
+        <input type="date" value={readingDate} onChange={e => setDate(e.target.value)} style={inputStyle} />
       </Field>
-      {sourceType === "other" && (
-        <Field label="Describe the source">
-          <input type="text" value={sourceOther} onChange={e => setSrcOther(e.target.value)}
-            placeholder="Briefly describe..." style={inputStyle} />
-        </Field>
-      )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Source link">
-          <input type="url" value={sourceUrl} onChange={e => setSrcUrl(e.target.value)}
-            placeholder="https://..." style={inputStyle} />
-        </Field>
-        <Field label="Notes">
-          <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
-            placeholder="Any caveats for the reviewer..." style={inputStyle} />
-        </Field>
+
+      {/* Source — pre-populated from indicator, or manual entry if not set */}
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_SUB,
+          textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 5 }}>
+          Source
+        </label>
+        {presetSource ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+            background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 6 }}>
+            <span style={{ fontSize: 13, color: TEXT, flex: 1 }}>{presetSource}</span>
+            <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>from indicator</span>
+          </div>
+        ) : (
+          <input type="text" value={manualSource} onChange={e => setManualSrc(e.target.value)}
+            placeholder="Source name or document..." style={inputStyle} />
+        )}
       </div>
+
+      <Field label="Collection details"
+        helper="Specific report, page, round, or document for this data point.">
+        <input type="text" value={collectionDetail} onChange={e => setDetail(e.target.value)}
+          placeholder={`e.g. Q1 2026 partner report, p.12`} style={inputStyle} />
+      </Field>
+
+      <Field label="Notes">
+        <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Any caveats for the reviewer..." style={inputStyle} />
+      </Field>
 
       {error && <p style={{ color: DANGER, fontSize: 13, marginTop: 6, marginBottom: 4 }}>{error}</p>}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
         <Btn variant="secondary" size="sm" onClick={onClose}>Cancel</Btn>
         <Btn size="sm" onClick={submit} disabled={!canSubmit || submitting}>
           {submitting ? "Submitting..." : "Submit for review"}
