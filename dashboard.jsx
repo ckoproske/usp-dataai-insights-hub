@@ -4129,14 +4129,14 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0}}>
           {STATS.map((stat,i) => (
             <div key={i} style={{padding:"4px 28px 4px"+(i===0?"0":""),borderLeft:i===0?"none":"1px solid "+BORDER}}>
-              <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginBottom:8}}>
-                <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1}}>{stat.value}</div>
+              <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8}}>
+                <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1,flexShrink:0}}>{stat.value}</div>
                 {stat.teams && stat.teams.length > 0 && (
-                  <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:3,paddingTop:6}}>
                     {stat.teams.map(t => (
                       <span key={t} style={{fontSize:10,fontWeight:600,color:TEXT_SUB,
                         background:SURFACE_2,border:"1px solid "+BORDER,
-                        borderRadius:4,padding:"2px 7px",display:"inline-block"}}>
+                        borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>
                         {t}
                       </span>
                     ))}
