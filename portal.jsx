@@ -2735,7 +2735,7 @@ const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
 
 // ─── Portfolio Outcome Pane (single outcome, shown when tab is active) ──────────
-function PortfolioOutcomePane({ outcome, portfolio, user, onRefresh, onOutcomeChange, onDeleted }) {
+function PortfolioOutcomePane({ outcome, portfolio, user, toaLane, onRefresh, onOutcomeChange, onDeleted }) {
   const p = PORT_COLORS[portfolio.portfolio_id];
   const [editingOutcome,  setEditingOutcome]  = useState(false);
   const [editingII,       setEditingII]       = useState(false);
@@ -2806,32 +2806,66 @@ function PortfolioOutcomePane({ outcome, portfolio, user, onRefresh, onOutcomeCh
 
       {/* ── Investments & Inputs ── */}
       <div style={{ marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-          marginBottom: 8 }}>
-          <SectionLabel>Investments & Inputs</SectionLabel>
-          {!editingII && (
-            <button onClick={() => { setIIDraft(outcome.investments_inputs || ""); setEditingII(true); }}
-              style={{ background: "none", border: "none", cursor: "pointer",
-                color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
-          )}
-        </div>
-        {editingII ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <textarea value={iiDraft} onChange={e => setIIDraft(e.target.value)} rows={4}
-              autoFocus style={{ ...inputStyle, resize: "vertical" }}
-              placeholder="Describe the investments, resources, and inputs associated with this outcome…" />
-            <div style={{ display: "flex", gap: 8 }}>
-              <Btn size="sm" onClick={saveII} disabled={iiSaving}>{iiSaving ? "Saving…" : "Save"}</Btn>
-              <Btn variant="secondary" size="sm" onClick={() => setEditingII(false)}>Cancel</Btn>
+        <SectionLabel style={{ marginBottom: 10 }}>Investments & Inputs</SectionLabel>
+
+        {/* TOA activities (read-only, sourced from Theory of Action) */}
+        {toaLane && (toaLane.activities || []).length > 0 && (
+          <div style={{ marginBottom: outcome.investments_inputs || editingII ? 14 : 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+              textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              From Theory of Action
             </div>
+            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
+              {(toaLane.activities || []).map(a => (
+                <li key={a.activity_id}
+                  style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>
+                  {a.activity_text}
+                </li>
+              ))}
+            </ul>
           </div>
-        ) : (
-          <p style={{ fontSize: 13, lineHeight: 1.7,
-            color: outcome.investments_inputs ? TEXT : TEXT_MUTED,
-            fontStyle: outcome.investments_inputs ? "normal" : "italic" }}>
-            {outcome.investments_inputs || "No investments & inputs added yet."}
+        )}
+
+        {!toaLane && !outcome.investments_inputs && !editingII && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 8 }}>
+            No investments & inputs content yet.
           </p>
         )}
+
+        {/* Editable additional notes */}
+        <div style={{ marginTop: toaLane && (toaLane.activities || []).length > 0 ? 12 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+              textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Additional Notes
+            </span>
+            {!editingII && (
+              <button onClick={() => { setIIDraft(outcome.investments_inputs || ""); setEditingII(true); }}
+                style={{ background: "none", border: "none", cursor: "pointer",
+                  color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
+            )}
+          </div>
+          {editingII ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <textarea value={iiDraft} onChange={e => setIIDraft(e.target.value)} rows={3}
+                autoFocus style={{ ...inputStyle, resize: "vertical" }}
+                placeholder="Add supplemental notes or context…" />
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn size="sm" onClick={saveII} disabled={iiSaving}>{iiSaving ? "Saving…" : "Save"}</Btn>
+                <Btn variant="secondary" size="sm" onClick={() => setEditingII(false)}>Cancel</Btn>
+              </div>
+            </div>
+          ) : outcome.investments_inputs ? (
+            <p style={{ fontSize: 13, lineHeight: 1.7, color: TEXT }}>
+              {outcome.investments_inputs}
+            </p>
+          ) : (
+            <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+              No additional notes.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* ── Impact Indicators ── */}
@@ -3460,6 +3494,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [outcomes, setOutcomes]     = useState([]);
+  const [toaLanes, setToaLanes]     = useState([]);
   const [activeOId, setActiveOId]   = useState(null);
   const [activeTab, setActiveTab]   = useState("toa");
   const [addingOut, setAddingOut]   = useState(false);
@@ -3470,14 +3505,16 @@ function PortfolioPanel({ portfolio, user, onBack }) {
 
   const load = () => {
     setLoading(true);
-    api(`/api/portfolio/${portfolio.portfolio_id}/full`)
-      .then(d => {
-        const outs = d.outcomes || [];
-        setData(d);
-        setOutcomes(outs);
-        setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      api(`/api/portfolio/${portfolio.portfolio_id}/full`),
+      api(`/api/toa/${portfolio.portfolio_id}`),
+    ]).then(([d, toa]) => {
+      const outs = d.outcomes || [];
+      setData(d);
+      setOutcomes(outs);
+      setToaLanes(toa?.lanes || []);
+      setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, [portfolio.portfolio_id]);
@@ -3633,6 +3670,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
           outcome={activeOutcome}
           portfolio={portfolio}
           user={user}
+          toaLane={toaLanes.find(l => l.lane_id === activeOutcome.outcome_id) || null}
           onRefresh={load}
           onOutcomeChange={updated => setOutcomes(prev =>
             prev.map(o => o.outcome_id === updated.outcome_id ? updated : o)
