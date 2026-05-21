@@ -335,74 +335,43 @@ def debug_portfolio_outcomes(portfolio_id):
 
 @app.route("/api/admin/seed-sfl-links", methods=["POST"])
 def seed_sfl_links():
-    """One-time seed: upserts sfl-po6 into portfolio_outcomes and populates
-    bow_portfolio_outcome_links for all SFL BOW outcomes per the April 2026
-    Portfolio-BOW Outcome Alignment slide."""
-
-    # sfl-po6 row to upsert into portfolio_outcomes
-    po6 = {
-        "outcome_id":  "sfl-po6",
-        "portfolio_id": "sfl",
-        "sort_order":  6,
-        "short_title": "Shared Agreement & Alignment",
-        "activity":    "Build shared agreement and alignment across key stakeholders",
-        "outcome_text": "Shared agreement and alignment across key stakeholders.",
-    }
+    """Seed/re-seed bow_portfolio_outcome_links for all SFL BOW outcomes.
+    Uses the actual portfolio_outcome_id values from the portfolio_outcomes table."""
 
     # Full mapping: (bow_outcome_id, portfolio_outcome_id, sort_order)
+    # portfolio_outcome_ids match portfolio_outcomes.outcome_id in the DB
     links = [
-        # CSGA (sfl-bow3)
-        ("sfl-bow3-o1", "sfl-po2", 1),
-        ("sfl-bow3-o1", "sfl-po4", 2),
-        ("sfl-bow3-o1", "sfl-po6", 3),
-        ("sfl-bow3-o2", "sfl-po2", 1),
-        ("sfl-bow3-o3", "sfl-po1", 1),
-        ("sfl-bow3-o3", "sfl-po3", 2),
-        ("sfl-bow3-o3", "sfl-po5", 3),
         # EDU-Net (sfl-bow1)
-        ("sfl-bow1-o1", "sfl-po2", 1),
-        ("sfl-bow1-o1", "sfl-po4", 2),
-        ("sfl-bow1-o1", "sfl-po6", 3),
-        ("sfl-bow1-o2", "sfl-po1", 1),
-        ("sfl-bow1-o2", "sfl-po2", 2),
-        ("sfl-bow1-o3", "sfl-po3", 1),
-        ("sfl-bow1-o3", "sfl-po5", 2),
+        ("sfl-bow1-o1", "sfl-data-util",    1),
+        ("sfl-bow1-o1", "sfl-governance",   2),
+        ("sfl-bow1-o1", "sfl-ecosystem",    3),
+        ("sfl-bow1-o2", "sfl-data-avail",   1),
+        ("sfl-bow1-o2", "sfl-data-util",    2),
+        ("sfl-bow1-o3", "sfl-sensemaking",  1),
+        ("sfl-bow1-o3", "sfl-inplace",      2),
         # DAIP / Data in Place (sfl-bow2)
-        ("sfl-bow2-o1", "sfl-po1", 1),
-        ("sfl-bow2-o1", "sfl-po2", 2),
-        ("sfl-bow2-o1", "sfl-po3", 3),
-        ("sfl-bow2-o1", "sfl-po6", 4),
-        ("sfl-bow2-o2", "sfl-po4", 1),
-        ("sfl-bow2-o2", "sfl-po5", 2),
-        ("sfl-bow2-o3", "sfl-po5", 1),
-        ("sfl-bow2-o3", "sfl-po6", 2),
-        ("sfl-bow2-o4", "sfl-po1", 1),
-        ("sfl-bow2-o4", "sfl-po2", 2),
-        ("sfl-bow2-o4", "sfl-po5", 3),
+        ("sfl-bow2-o1", "sfl-data-avail",   1),
+        ("sfl-bow2-o1", "sfl-data-util",    2),
+        ("sfl-bow2-o1", "sfl-sensemaking",  3),
+        ("sfl-bow2-o1", "sfl-ecosystem",    4),
+        ("sfl-bow2-o2", "sfl-governance",   1),
+        ("sfl-bow2-o2", "sfl-inplace",      2),
+        ("sfl-bow2-o3", "sfl-inplace",      1),
+        ("sfl-bow2-o3", "sfl-ecosystem",    2),
+        ("sfl-bow2-o4", "sfl-data-avail",   1),
+        ("sfl-bow2-o4", "sfl-data-util",    2),
+        ("sfl-bow2-o4", "sfl-inplace",      3),
+        # CSGA (sfl-bow3)
+        ("sfl-bow3-o1", "sfl-data-util",    1),
+        ("sfl-bow3-o1", "sfl-governance",   2),
+        ("sfl-bow3-o1", "sfl-ecosystem",    3),
+        ("sfl-bow3-o2", "sfl-data-util",    1),
+        ("sfl-bow3-o3", "sfl-data-avail",   1),
+        ("sfl-bow3-o3", "sfl-sensemaking",  2),
+        ("sfl-bow3-o3", "sfl-inplace",      3),
     ]
 
     try:
-        # Upsert sfl-po6
-        execute(
-            f"""MERGE INTO {SCHEMA}.portfolio_outcomes AS t
-                USING (SELECT
-                  '{po6["outcome_id"]}'  AS outcome_id,
-                  '{po6["portfolio_id"]}' AS portfolio_id,
-                  {po6["sort_order"]}    AS sort_order,
-                  '{po6["short_title"]}' AS short_title,
-                  '{po6["activity"]}'    AS activity,
-                  '{po6["outcome_text"]}' AS outcome_text
-                ) AS s ON t.outcome_id = s.outcome_id
-                WHEN MATCHED THEN UPDATE SET
-                  t.sort_order  = s.sort_order,
-                  t.short_title = s.short_title,
-                  t.activity    = s.activity,
-                  t.outcome_text = s.outcome_text
-                WHEN NOT MATCHED THEN INSERT
-                  (outcome_id, portfolio_id, sort_order, short_title, activity, outcome_text)
-                VALUES (s.outcome_id, s.portfolio_id, s.sort_order, s.short_title, s.activity, s.outcome_text)"""
-        )
-
         # Replace all SFL bow_portfolio_outcome_links
         sfl_bow_outcome_ids = [
             "sfl-bow1-o1","sfl-bow1-o2","sfl-bow1-o3",

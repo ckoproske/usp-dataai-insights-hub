@@ -520,7 +520,7 @@ const DEFAULT_DATA = {
         teamMembers:[], budget:"", budget2026:"", budget2027:"", budget2028:"", budget2029:"",
         portfolioOutcomes:[
           {
-            id:"sfl-po1", shortTitle:"New & Expanded AI-Ready Data",
+            id:"sfl-data-avail", shortTitle:"New & Expanded AI-Ready Data",
             activity:"Increase data availability",
             outcome:"New and expanded education and workforce AI-ready data focused on priority questions is accessed and linked across systems.",
             manualStatus:null,
@@ -530,7 +530,7 @@ const DEFAULT_DATA = {
             ],
           },
           {
-            id:"sfl-po2", shortTitle:"Timely & Personalized Feedback Infrastructure",
+            id:"sfl-data-util", shortTitle:"Timely & Personalized Feedback Infrastructure",
             activity:"Build and expand data utilities",
             outcome:"Infrastructure in place to enable more timely and personalized data feedback loops that inform and strengthen decisionmaking.",
             manualStatus:null,
@@ -541,7 +541,7 @@ const DEFAULT_DATA = {
             ],
           },
           {
-            id:"sfl-po3", shortTitle:"Actionable Insights via AI Sensemaking",
+            id:"sfl-sensemaking", shortTitle:"Actionable Insights via AI Sensemaking",
             activity:"Accelerate sensemaking using digital public good integration",
             outcome:"Data & analytics is translated in actionable insights, leveraging AI, that decisionmakers can understand and use, supported by sufficient capacity and tools to act on insights.",
             manualStatus:null,
@@ -551,7 +551,7 @@ const DEFAULT_DATA = {
             ],
           },
           {
-            id:"sfl-po4", shortTitle:"Governance & Standards for Reliable Data Use",
+            id:"sfl-governance", shortTitle:"Governance & Standards for Reliable Data Use",
             activity:"Standardize governance and standards w/ systems open by default",
             outcome:"Data sharing agreements, privacy protections, and norms of use enable repeated, reliable use of data across institutions and over time.",
             manualStatus:null,
@@ -561,7 +561,7 @@ const DEFAULT_DATA = {
             ],
           },
           {
-            id:"sfl-po5", shortTitle:"In-Place Coordination for Learning & Scale",
+            id:"sfl-inplace", shortTitle:"In-Place Coordination for Learning & Scale",
             activity:"Leverage In-Place Coordination to Accelerate Learning & Scale",
             outcome:"Regional or state contexts provide the coordination needed to test, refine, and scale feedback loops in ways that align with local decision needs.",
             manualStatus:null,
@@ -571,7 +571,7 @@ const DEFAULT_DATA = {
             ],
           },
           {
-            id:"sfl-po6", shortTitle:"Shared Agreement & Alignment",
+            id:"sfl-ecosystem", shortTitle:"Shared Agreement & Alignment",
             activity:"Build shared agreement and alignment across key stakeholders",
             outcome:"Shared agreement and alignment across key stakeholders.",
             manualStatus:null,
