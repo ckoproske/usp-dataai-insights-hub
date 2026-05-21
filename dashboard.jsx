@@ -4474,6 +4474,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
   const { portfolio, bows } = portData;
   const pc = PORT_COLORS[portId] || PORT_COLORS["cross-cutting"];
   const [activeTab,setActiveTab] = useState("portfolio-overview");
+  const [showToaModal,setShowToaModal] = useState(false);
   const [activeBow,setActiveBow] = useState(bows[0]?.id||null);
   const [bowTab,setBowTab] = useState(null);
   const [bowView,setBowView] = useState('progress'); // 'progress' | 'planning' | 'reporting'
@@ -4485,7 +4486,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
   const [expandedOutcomePanel,setExpandedOutcomePanel] = useState(null); // {idx, panel} | null
 
   const currentBow = bows.find(b=>b.id===activeBow);
-  const inMeasurement = activeTab!=="portfolio-overview"&&activeTab!=="investments"&&activeTab!=="partners"&&activeTab!=="theory-of-action"&&activeTab!=="decision-insights";
+  const inMeasurement = activeTab!=="portfolio-overview"&&activeTab!=="investments"&&activeTab!=="partners"&&activeTab!=="decision-insights";
 
   const updateBowOutcome = (bowId,outcomeId,updated) => onUpdateBows(bows.map(b=>b.id!==bowId?b:{...b,outcomes:b.outcomes.map(o=>o.id!==outcomeId?o:updated)}));
   const updateBowOutcomeByIdx = (bowId,oIdx,updated) => onUpdateBows(bows.map(b=>b.id!==bowId?b:{...b,outcomes:b.outcomes.map((o,i)=>i!==oIdx?o:updated)}));
@@ -4524,20 +4525,22 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             <div style={{fontSize:24,color:TEXT,marginBottom:10,fontWeight:400,letterSpacing:-0.3}}>{portfolio.name||pc.label}</div>
             <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,maxWidth:680}}>{portfolio.description}</div>
           </div>
+          <button onClick={()=>setShowToaModal(true)}
+            style={{flexShrink:0,marginTop:4,padding:"9px 18px",fontSize:13,fontWeight:600,color:pc.dark,background:pc.light,border:"1.5px solid "+pc.color+"55",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .15s",whiteSpace:"nowrap"}}>
+            <span style={{fontSize:15}}>⤢</span> View Theory of Action
+          </button>
         </div>
       </div>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"theory-of-action",label:"Theory of Action"},{id:"measurement",label:"Measurement & Reporting"},{id:"partners",label:"Partners"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"measurement",label:"Measurement & Reporting"},{id:"partners",label:"Partners"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
             :tab.id==="partners"?activeTab==="partners"
-            :tab.id==="theory-of-action"?activeTab==="theory-of-action"
             :inMeasurement;
           return <button key={tab.id}
             onClick={()=>{
               if(tab.id==="portfolio-overview") setActiveTab("portfolio-overview");
               else if(tab.id==="partners") setActiveTab("partners");
-              else if(tab.id==="theory-of-action") setActiveTab("theory-of-action");
               else if(!inMeasurement) setActiveTab("portfolio-progress");
             }}
             style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
@@ -4595,9 +4598,22 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         {activeTab==="partners"&&(
           <PortfolioPartnersView portId={portId} portColor={pc}/>
         )}
-        {activeTab==="theory-of-action"&&(
-          <div style={{margin:"0 -32px",overflowX:"auto"}}>
-            <PortfolioToaView portfolioId={portId} portColor={pc} />
+        {showToaModal&&(
+          <div onClick={e=>{if(e.target===e.currentTarget)setShowToaModal(false)}}
+            style={{position:"fixed",inset:0,background:"rgba(10,20,40,0.55)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"40px 24px"}}>
+            <div style={{background:BG,borderRadius:16,width:"100%",maxWidth:1140,boxShadow:"0 8px 40px rgba(0,0,0,0.22)",overflow:"hidden",position:"relative"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 28px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:4,opacity:0.85}}>{pc.label}</div>
+                  <div style={{fontSize:18,fontWeight:800,color:TEXT,letterSpacing:-0.3}}>Theory of Action</div>
+                </div>
+                <button onClick={()=>setShowToaModal(false)}
+                  style={{width:32,height:32,borderRadius:"50%",border:"1px solid "+BORDER,background:SURFACE,color:TEXT_MUTED,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
+              </div>
+              <div style={{overflowX:"auto"}}>
+                <PortfolioToaView portfolioId={portId} portColor={pc} />
+              </div>
+            </div>
           </div>
         )}
         {activeTab==="bow"&&currentBow&&(
