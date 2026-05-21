@@ -2325,10 +2325,25 @@ def get_portfolio_full(portfolio_id):
         return jsonify({"error": "not found"}), 404
     portfolio = port_rows[0]
 
-    outcomes = query(
-        f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
-        [portfolio_id]
-    )
+    try:
+        outcomes = query(
+            f"""SELECT outcome_id, portfolio_id, title, short_title,
+                       COALESCE(text, outcome) AS text,
+                       sort_order, investments_inputs
+                FROM {SCHEMA}.portfolio_outcomes
+                WHERE portfolio_id = ?
+                ORDER BY sort_order""",
+            [portfolio_id]
+        )
+    except Exception:
+        # Fallback if one of the columns doesn't exist
+        outcomes = query(
+            f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
+            [portfolio_id]
+        )
+        for o in outcomes:
+            if not o.get("text") and o.get("outcome"):
+                o["text"] = o["outcome"]
 
     try:
         indicators = query(
@@ -2626,7 +2641,7 @@ def delete_execution_target(target_id):
 
 # ── Portfolio outcomes CRUD ────────────────────────────────────────────────────
 
-PORT_OUTCOME_EDITABLE = {"title", "short_title", "text", "investments_inputs"}
+PORT_OUTCOME_EDITABLE = {"title", "short_title", "text", "outcome", "investments_inputs"}
 
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["PATCH"])
 def update_portfolio_outcome(outcome_id):

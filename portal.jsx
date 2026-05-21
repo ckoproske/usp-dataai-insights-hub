@@ -439,13 +439,14 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
 function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
   const [title, setTitle]         = useState(outcome.title || "");
   const [shortTitle, setShort]    = useState(outcome.short_title || "");
-  const [text, setText]           = useState(outcome.text || "");
+  const initText = outcome.text || outcome.outcome || "";
+  const [text, setText]           = useState(initText);
   const [rationale, setRationale] = useState("");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
 
   const titleChanged   = title !== (outcome.title || "");
-  const textChanged    = text  !== (outcome.text  || "");
+  const textChanged    = text  !== initText;
   const needsRationale = titleChanged || textChanged;
   const canSave        = title.trim() && (!needsRationale || rationale.trim());
 
@@ -457,7 +458,7 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
     try {
       const res = await api(endpoint, {
         method: "PATCH",
-        body: JSON.stringify({ title, short_title: shortTitle, text,
+        body: JSON.stringify({ title, short_title: shortTitle, text, outcome: text,
           rationale: rationale || undefined, edited_by: user?.email }),
       });
       if (res.error) { setError(res.error); return; }
@@ -2780,9 +2781,9 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
                   Short title: {outcome.short_title}
                 </p>
               )}
-              {outcome.text ? (
+              {(outcome.text || outcome.outcome) ? (
                 <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7 }}>
-                  {outcome.text}
+                  {outcome.text || outcome.outcome}
                 </p>
               ) : (
                 <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
