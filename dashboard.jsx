@@ -1522,7 +1522,7 @@ function DataMeta({ source, lastUpdated, updateFreq, style }) {
         <span style={{color:TEXT_SUB,opacity:0.4}}>No source</span>
       )}
       {/* Divider + last updated */}
-      {lastUpdated && <><span style={{opacity:0.25}}>·</span><span style={{opacity:0.65}}>Updated {(()=>{try{return new Date(lastUpdated).toLocaleDateString("en-US",{month:"short",day:"2-digit",year:"numeric"});}catch{return lastUpdated;}})()}</span></>}
+      {lastUpdated && <><span style={{opacity:0.25}}>·</span><span style={{opacity:0.65}}>Updated {(()=>{try{return new Date(lastUpdated).toLocaleDateString("en-US",{month:"2-digit",day:"2-digit",year:"2-digit"});}catch{return lastUpdated;}})()}</span></>}
       {/* Divider + frequency */}
       {updateFreq && <><span style={{opacity:0.25}}>·</span><span style={{opacity:0.65}}>{updateFreq}</span></>}
     </div>
@@ -1828,9 +1828,9 @@ function BowOutcomePanel({ outcome, onUpdate }) {
           {indsArePlaceholder ? (
             <NotYetLoaded label="Impact indicators"/>
           ) : (
-            <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
               {visibleInds.map((ind,i)=>(
-                <IndicatorTile key={ind.id} ind={ind} iIdx={i} activeYear={activeYear}
+                <IndicatorTile key={ind.id} ind={ind} iIdx={i} activeYear={activeYear} fluid
                   editingInd={editingInd} setEditingInd={setEditingInd}
                   onChangeManualStatus={v=>updInd(outcome.impactIndicators.indexOf(ind),"manualStatus",v)}
                   onChangeBaseline={v=>updInd(outcome.impactIndicators.indexOf(ind),"baseline",v)}
