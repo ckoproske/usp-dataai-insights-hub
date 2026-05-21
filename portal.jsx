@@ -311,6 +311,7 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
   const freq = indicator.collection_frequency || "annual";
   const periodOptions = PERIOD_OPTIONS[freq] || [];
   const presetSource = indicator.source_name || "";
+  const presetSourceUrl = indicator.source_url || "";
 
   const [value, setValue]             = useState("");
   const [year, setYear]               = useState(String(CURRENT_YEAR));
@@ -396,7 +397,12 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
         {presetSource ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
             background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 6 }}>
-            <span style={{ fontSize: 13, color: TEXT, flex: 1 }}>{presetSource}</span>
+            <span style={{ fontSize: 13, color: TEXT, flex: 1 }}>
+              {presetSourceUrl
+                ? <a href={presetSourceUrl} target="_blank" rel="noreferrer"
+                    style={{ color: ACCENT }}>{presetSource}</a>
+                : presetSource}
+            </span>
             <span style={{ fontSize: 10, color: TEXT_MUTED, fontStyle: "italic" }}>from indicator</span>
           </div>
         ) : (
@@ -1799,7 +1805,11 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                           )}
                           {(ind.source_name || ind.source_id) && (
                             <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                              <strong>Source:</strong> {ind.source_name || ind.source_id}
+                              <strong>Source:</strong>{" "}
+                              {ind.source_url
+                                ? <a href={ind.source_url} target="_blank" rel="noreferrer"
+                                    style={{ color: ACCENT }}>{ind.source_name || ind.source_id}</a>
+                                : (ind.source_name || ind.source_id)}
                             </span>
                           )}
                         </div>
@@ -2878,9 +2888,13 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
                         <strong>Frequency:</strong> {ind.collection_frequency}
                       </span>
                     )}
-                    {ind.source_id && (
+                    {(ind.source_name || ind.source_id) && (
                       <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                        <strong>Source:</strong> {ind.source_id}
+                        <strong>Source:</strong>{" "}
+                        {ind.source_url
+                          ? <a href={ind.source_url} target="_blank" rel="noreferrer"
+                              style={{ color: ACCENT }}>{ind.source_name || ind.source_id}</a>
+                          : (ind.source_name || ind.source_id)}
                       </span>
                     )}
                   </div>
