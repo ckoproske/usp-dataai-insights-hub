@@ -1717,204 +1717,131 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
     </div>
   );
 
-  // ── Impact Indicators table ──────────────────────────────────────────────────
-  const renderIndicatorsTable = () => {
-    const allIndicators = outcomes.flatMap(o =>
-      (o.indicators || []).map(i => ({ ...i, outcome_title: o.short_title || o.title,
-        outcome_id: o.outcome_id }))
-    );
-    const hasIndicators = allIndicators.length > 0;
-
-    return (
-      <div>
-        <div style={{ marginBottom: 10 }}>
-          <SectionLabel>Impact Indicators</SectionLabel>
-        </div>
-
-        {!hasIndicators && (
-          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 8 }}>
-            No indicators added yet.
-          </p>
-        )}
-
-        {hasIndicators && (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse",
-              tableLayout: "fixed", border: `1px solid ${BORDER}` }}>
-              <colgroup>
-                <col style={{ width: "22%" }} />
-                {TARGET_YEARS.map(y => <col key={y} style={{ width: yearColW }} />)}
-              </colgroup>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Impact Indicators</th>
-                  {TARGET_YEARS.map(y => (
-                    <th key={y} style={{ ...thStyle, textAlign: "center" }}>
-                      {y}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {outcomes.map(out => {
-                  const inds = out.indicators || [];
-                  if (inds.length === 0 && addingIndFor !== out.outcome_id) return null;
-                  return (
-                    <React.Fragment key={out.outcome_id}>
-                      {/* Outcome sub-header */}
-                      <tr>
-                        <td colSpan={TARGET_YEARS.length + 1}
-                          style={{ ...tdStyle, background: BG, padding: "6px 14px",
-                            borderRight: "none" }}>
-                          <div style={{ display: "flex", alignItems: "center",
-                            justifyContent: "space-between" }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                              textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                              {out.short_title || out.title}
-                            </span>
-                            <button
-                              onClick={() => setAddingIndFor(
-                                addingIndFor === out.outcome_id ? null : out.outcome_id)}
-                              style={{ background: "none", border: "none", cursor: "pointer",
-                                fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
-                              + Add indicator
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Indicator rows */}
-                      {inds.map(ind => {
-                        const isEditing  = editIndId  === ind.indicator_id;
-                        return (
-                          <React.Fragment key={ind.indicator_id}>
-                            <tr>
-                              {/* Left cell — indicator name */}
-                              <td style={{ ...tdStyle,
-                                background: p?.light || ACCENT_LIGHT,
-                                borderRight: `2px solid ${BORDER}` }}>
-                                <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND,
-                                  lineHeight: 1.4, marginBottom: 5 }}>
-                                  {ind.name || ind.text}
-                                </p>
-                                {ind.baseline != null && (
-                                  <p style={{ fontSize: 11, color: TEXT_MUTED }}>
-                                    Baseline: {ind.baseline}
-                                    {ind.unit ? ` ${ind.unit}` : ""}
-                                  </p>
-                                )}
-                                <div style={{ marginTop: 6 }}>
-                                  <button
-                                    onClick={() => setEditIndId(
-                                      editIndId === ind.indicator_id ? null : ind.indicator_id)}
-                                    style={{ fontSize: 11, fontWeight: 600, cursor: "pointer",
-                                      background: SURFACE, color: TEXT_SUB,
-                                      border: `1px solid ${BORDER}`,
-                                      borderRadius: 4, padding: "3px 8px" }}>
-                                    Edit Indicator
-                                  </button>
-                                </div>
-                              </td>
-
-                              {/* Year cells — T: target, A: actual(s) */}
-                              {TARGET_YEARS.map(year => {
-                                const tval = ind[`target_${year}`];
-                                // All approved actuals for this year, sorted by period
-                                const yearActuals = (ind.actuals || [])
-                                  .filter(a => a.year === year)
-                                  .sort((a, b) => (a.period || "").localeCompare(b.period || ""));
-                                return (
-                                  <td key={year} style={{ ...tdStyle, textAlign: "center",
-                                    background: SURFACE }}>
-                                    {tval != null ? (
-                                      <div style={{ marginBottom: yearActuals.length ? 4 : 0 }}>
-                                        <span style={{ fontSize: 10, fontWeight: 700,
-                                          color: TEXT_MUTED }}>T: </span>
-                                        <span style={{ fontSize: 13, fontWeight: 700,
-                                          color: TEXT }}>
-                                          {tval}{ind.unit ? ` ${ind.unit}` : ""}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
-                                    )}
-                                    {yearActuals.map((a, ai) => (
-                                      <div key={ai} style={{ marginTop: ai === 0 ? 0 : 3 }}>
-                                        {a.period && (
-                                          <span style={{ fontSize: 10, fontWeight: 700,
-                                            color: TEXT_MUTED, display: "block" }}>
-                                            {a.period}
-                                          </span>
-                                        )}
-                                        <span style={{ fontSize: 10, fontWeight: 700,
-                                          color: SUCCESS }}>A: </span>
-                                        <span style={{ fontSize: 13, fontWeight: 700,
-                                          color: SUCCESS }}>
-                                          {a.actual_value}{ind.unit ? ` ${ind.unit}` : ""}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-
-                            {/* Expanded edit row */}
-                            {isEditing && (
-                              <tr>
-                                <td colSpan={TARGET_YEARS.length + 1}
-                                  style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
-                                  <div style={{ padding: "16px 20px", background: BG }}>
-                                    <InlineEditIndicator
-                                      indicator={ind} user={user}
-                                      onSave={() => { setEditIndId(null); onRefresh(); }}
-                                      onCancel={() => setEditIndId(null)}
-                                      onDeleted={() => { setEditIndId(null); onRefresh(); }}
-                                    />
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-
-                      {/* Add indicator row */}
-                      {addingIndFor === out.outcome_id && (
-                        <tr>
-                          <td colSpan={TARGET_YEARS.length + 1}
-                            style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
-                            <div style={{ padding: "14px 20px", background: BG }}>
-                              <AddIndicatorInline
-                                bow={bow} outcomeId={out.outcome_id} user={user}
-                                onSaved={() => { setAddingIndFor(null); onRefresh(); }}
-                                onCancel={() => setAddingIndFor(null)} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Add indicator for outcomes with no indicators yet */}
-        {outcomes.filter(o => (o.indicators || []).length === 0 &&
-          addingIndFor !== o.outcome_id).map(o => (
-          <div key={o.outcome_id} style={{ marginTop: 8 }}>
-            <Btn variant="ghost" size="sm"
-              onClick={() => setAddingIndFor(o.outcome_id)}
-              style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
-              + Add indicator to {o.short_title || o.title}
-            </Btn>
-          </div>
-        ))}
+  // ── Impact Indicators cards ──────────────────────────────────────────────────
+  const renderIndicatorsTable = () => (
+    <div>
+      <div style={{ marginBottom: 10 }}>
+        <SectionLabel>Impact Indicators</SectionLabel>
       </div>
-    );
-  };
+
+      {outcomes.map(out => {
+        const inds = out.indicators || [];
+        if (inds.length === 0 && addingIndFor !== out.outcome_id) return null;
+        return (
+          <div key={out.outcome_id} style={{ marginBottom: 20 }}>
+            {/* Outcome group header */}
+            <div style={{ display: "flex", alignItems: "center",
+              justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {out.short_title || out.title}
+              </span>
+              <button
+                onClick={() => setAddingIndFor(addingIndFor === out.outcome_id ? null : out.outcome_id)}
+                style={{ background: "none", border: "none", cursor: "pointer",
+                  fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
+                {addingIndFor === out.outcome_id ? "Cancel" : "+ Add indicator"}
+              </button>
+            </div>
+
+            {addingIndFor === out.outcome_id && (
+              <div style={{ marginBottom: 10, padding: "14px 16px", background: BG,
+                border: `1px solid ${BORDER}`, borderRadius: 6 }}>
+                <AddIndicatorInline bow={bow} outcomeId={out.outcome_id} user={user}
+                  onSaved={() => { setAddingIndFor(null); onRefresh(); }}
+                  onCancel={() => setAddingIndFor(null)} />
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {inds.map(ind => {
+                const isEditing = editIndId === ind.indicator_id;
+                const unit = ind.unit ? ` ${ind.unit}` : "";
+                const targets = TARGET_YEARS.map(y => ({ year: y, val: ind[`target_${y}`] }))
+                  .filter(t => t.val != null);
+                return (
+                  <div key={ind.indicator_id}
+                    style={{ border: `1px solid ${BORDER}`, borderRadius: 8,
+                      borderLeft: `4px solid ${p?.color || ACCENT}`,
+                      background: SURFACE, overflow: "hidden" }}>
+
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
+                      padding: "12px 14px",
+                      borderBottom: isEditing ? `1px solid ${BORDER}` : "none" }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: TEXT,
+                          lineHeight: 1.4, marginBottom: 4 }}>
+                          {ind.name || ind.text}
+                        </p>
+                        {ind.name && ind.text && ind.text !== ind.name && (
+                          <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
+                            {ind.text}
+                          </p>
+                        )}
+                        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+                          {ind.collection_frequency && (
+                            <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                              <strong>Frequency:</strong> {ind.collection_frequency}
+                            </span>
+                          )}
+                          {ind.source_id && (
+                            <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                              <strong>Source:</strong> {ind.source_id}
+                            </span>
+                          )}
+                        </div>
+                        {(ind.baseline != null || targets.length > 0) && (
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {ind.baseline != null && (
+                              <span style={{ fontSize: 11, background: BG,
+                                border: `1px solid ${BORDER}`, borderRadius: 4,
+                                padding: "2px 8px", color: TEXT_SUB }}>
+                                Baseline: <strong>{ind.baseline}{unit}</strong>
+                              </span>
+                            )}
+                            {targets.map(t => (
+                              <span key={t.year} style={{ fontSize: 11, background: BG,
+                                border: `1px solid ${BORDER}`, borderRadius: 4,
+                                padding: "2px 8px", color: TEXT_SUB }}>
+                                {t.year}: <strong>{t.val}{unit}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                        style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                          background: SURFACE, color: TEXT_SUB, border: `1px solid ${BORDER}`,
+                          borderRadius: 4, padding: "3px 8px", marginTop: 2 }}>
+                        {isEditing ? "Cancel" : "Edit"}
+                      </button>
+                    </div>
+
+                    {isEditing && (
+                      <div style={{ padding: "16px 20px", background: BG }}>
+                        <InlineEditIndicator indicator={ind} user={user}
+                          onSave={() => { setEditIndId(null); onRefresh(); }}
+                          onCancel={() => setEditIndId(null)}
+                          onDeleted={() => { setEditIndId(null); onRefresh(); }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {outcomes.every(o => (o.indicators || []).length === 0) &&
+        outcomes.every(o => addingIndFor !== o.outcome_id) && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+          No indicators added yet.
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div>
