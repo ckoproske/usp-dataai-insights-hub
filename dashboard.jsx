@@ -4526,8 +4526,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,maxWidth:680}}>{portfolio.description}</div>
           </div>
           <button onClick={()=>setShowToaModal(true)}
-            style={{flexShrink:0,marginTop:4,padding:"9px 18px",fontSize:13,fontWeight:600,color:pc.dark,background:pc.light,border:"1.5px solid "+pc.color+"55",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .15s",whiteSpace:"nowrap"}}>
-            <span style={{fontSize:15}}>⤢</span> View Theory of Action
+            style={{flexShrink:0,marginTop:4,padding:"6px 14px",fontSize:12,fontWeight:500,color:TEXT_MUTED,background:"none",border:"1px solid "+BORDER,borderRadius:6,cursor:"pointer",display:"flex",alignItems:"center",gap:6,transition:"all .15s",whiteSpace:"nowrap"}}>
+            <span style={{fontSize:12,opacity:0.6}}>⤢</span> View Theory of Action
           </button>
         </div>
       </div>
