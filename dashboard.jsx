@@ -4408,20 +4408,6 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   </React.Fragment>
                 );
               })}
-              {/* Coverage footer */}
-              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,background:"#FAFAF8"}}>
-                <div style={{padding:"5px 10px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center"}}>
-                  <span style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Coverage</span>
-                </div>
-                {allOutcomes.map(o => {
-                  const count = bows.filter(b => bowLinksToOutcome(b, o.id)).length;
-                  return (
-                    <div key={o.id} style={{padding:"5px 6px",textAlign:"center",borderRight:"1px solid "+BORDER}}>
-                      <span style={{fontSize:9,fontWeight:700,color:count>0?pc.color:TEXT_MUTED}}>{count} of {bows.length}</span>
-                    </div>
-                  );
-                })}
-              </div>
               {/* Empty state — shown after links have loaded and none exist */}
               {linksLoaded && Object.keys(outcomeLinks).length === 0 && (
                 <div style={{padding:"20px 22px",textAlign:"center",color:TEXT_MUTED,fontSize:12,fontStyle:"italic"}}>
