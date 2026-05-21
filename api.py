@@ -291,17 +291,36 @@ def get_bow_portfolio_links(bow_id):
               l.bow_outcome_id,
               l.portfolio_outcome_id,
               l.contribution_type,
-              po.short_title AS portfolio_outcome_title
+              bo.outcome_text  AS bow_outcome_title,
+              po.short_title   AS portfolio_outcome_title
             FROM {SCHEMA}.bow_portfolio_outcome_links l
-            JOIN {SCHEMA}.portfolio_outcomes po
-              ON l.portfolio_outcome_id = po.outcome_id
-            WHERE l.bow_outcome_id IN (
-              SELECT outcome_id FROM {SCHEMA}.bow_outcomes WHERE bow_id = ?
-            )
+            JOIN {SCHEMA}.bow_outcomes bo
+              ON bo.outcome_id = l.bow_outcome_id
+            LEFT JOIN {SCHEMA}.portfolio_outcomes po
+              ON po.outcome_id = l.portfolio_outcome_id
+            WHERE bo.bow_id = ?
             ORDER BY l.contribution_type, l.sort_order""",
         [bow_id]
     )
     return jsonify(rows)
+
+
+@app.route("/api/debug/bow-links/<bow_id>")
+def debug_bow_links(bow_id):
+    """Diagnostic: shows raw bow_outcomes and bow_portfolio_outcome_links for a BOW."""
+    bow_outcomes = query(
+        f"SELECT outcome_id, outcome_text FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
+        [bow_id]
+    )
+    outcome_ids = [r["outcome_id"] for r in bow_outcomes]
+    links = []
+    if outcome_ids:
+        placeholders = ",".join(["?" for _ in outcome_ids])
+        links = query(
+            f"SELECT * FROM {SCHEMA}.bow_portfolio_outcome_links WHERE bow_outcome_id IN ({placeholders})",
+            outcome_ids
+        )
+    return jsonify({"bow_outcomes": bow_outcomes, "links": links, "bow_id": bow_id})
 
 
 @app.route("/api/admin/seed-sfl-links", methods=["POST"])
