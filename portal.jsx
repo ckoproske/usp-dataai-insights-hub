@@ -2734,15 +2734,17 @@ function PortalToaView({ portfolioId, portColor }) {
 const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
 
-function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcomesChange }) {
+// ─── Portfolio Outcome Pane (single outcome, shown when tab is active) ──────────
+function PortfolioOutcomePane({ outcome, portfolio, user, onRefresh, onOutcomeChange, onDeleted }) {
   const p = PORT_COLORS[portfolio.portfolio_id];
-  const [editOutId,    setEditOutId]    = useState(null);
-  const [editIndId,    setEditIndId]    = useState(null);
-  const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
-  const [addingOut,    setAddingOut]    = useState(false);
-  const [newOutTitle,  setNewOutTitle]  = useState("");
-  const [saving,       setSaving]       = useState(false);
-  const [confirmDelOut, setConfirmDelOut] = useState(null);
+  const [editingOutcome,  setEditingOutcome]  = useState(false);
+  const [editingII,       setEditingII]       = useState(false);
+  const [iiDraft,         setIIDraft]         = useState(outcome.investments_inputs || "");
+  const [iiSaving,        setIISaving]        = useState(false);
+  const [editIndId,       setEditIndId]       = useState(null);
+  const [addingInd,       setAddingInd]       = useState(false);
+  const [confirmDel,      setConfirmDel]      = useState(false);
+  const [deleting,        setDeleting]        = useState(false);
 
   const thStyle = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
     textTransform: "uppercase", letterSpacing: "0.06em", background: BG,
@@ -2750,17 +2752,243 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
     textAlign: "left", whiteSpace: "nowrap" };
   const tdStyle = { padding: "10px 12px", borderBottom: `1px solid ${BORDER}`,
     borderRight: `1px solid ${BORDER}`, verticalAlign: "top" };
+  const yearColW = `${Math.floor(70 / PORT_TABLE_YEARS.length)}%`;
 
-  const addOutcome = async () => {
-    if (!newOutTitle.trim()) return;
-    setSaving(true);
-    const res = await api("/api/portfolio-outcomes", {
-      method: "POST",
-      body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, title: newOutTitle }),
+  const saveII = async () => {
+    setIISaving(true);
+    await api(`/api/portfolio-outcomes/${outcome.outcome_id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ investments_inputs: iiDraft, edited_by: user?.email }),
     });
-    if (!res.error) { onRefresh(); setAddingOut(false); setNewOutTitle(""); }
-    setSaving(false);
+    onOutcomeChange({ ...outcome, investments_inputs: iiDraft });
+    setEditingII(false);
+    setIISaving(false);
   };
+
+  const deleteOutcome = async () => {
+    setDeleting(true);
+    await api(`/api/portfolio-outcomes/${outcome.outcome_id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (onDeleted) onDeleted(outcome.outcome_id);
+  };
+
+  const inds = outcome.indicators || [];
+
+  return (
+    <div className="fade-in">
+
+      {/* ── Outcome text ── */}
+      <div style={{ marginBottom: 24 }}>
+        {editingOutcome ? (
+          <InlineEditOutcome outcome={outcome} user={user} isPortfolio
+            onSave={updated => { onOutcomeChange({ ...outcome, ...updated }); setEditingOutcome(false); }}
+            onCancel={() => setEditingOutcome(false)} />
+        ) : (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              {outcome.text && (
+                <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.7, marginBottom: 6 }}>
+                  {outcome.text}
+                </p>
+              )}
+              {!outcome.text && (
+                <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+                  No outcome description yet.
+                </p>
+              )}
+            </div>
+            <button onClick={() => setEditingOutcome(true)}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Investments & Inputs ── */}
+      <div style={{ marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginBottom: 8 }}>
+          <SectionLabel>Investments & Inputs</SectionLabel>
+          {!editingII && (
+            <button onClick={() => { setIIDraft(outcome.investments_inputs || ""); setEditingII(true); }}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
+          )}
+        </div>
+        {editingII ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <textarea value={iiDraft} onChange={e => setIIDraft(e.target.value)} rows={4}
+              autoFocus style={{ ...inputStyle, resize: "vertical" }}
+              placeholder="Describe the investments, resources, and inputs associated with this outcome…" />
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn size="sm" onClick={saveII} disabled={iiSaving}>{iiSaving ? "Saving…" : "Save"}</Btn>
+              <Btn variant="secondary" size="sm" onClick={() => setEditingII(false)}>Cancel</Btn>
+            </div>
+          </div>
+        ) : (
+          <p style={{ fontSize: 13, lineHeight: 1.7,
+            color: outcome.investments_inputs ? TEXT : TEXT_MUTED,
+            fontStyle: outcome.investments_inputs ? "normal" : "italic" }}>
+            {outcome.investments_inputs || "No investments & inputs added yet."}
+          </p>
+        )}
+      </div>
+
+      {/* ── Impact Indicators ── */}
+      <div style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "center", marginBottom: 10 }}>
+        <SectionLabel>Impact Indicators</SectionLabel>
+        <button onClick={() => setAddingInd(v => !v)}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 12, color: ACCENT, fontWeight: 700 }}>
+          {addingInd ? "Cancel" : "+ Add indicator"}
+        </button>
+      </div>
+
+      {addingInd && (
+        <div style={{ marginBottom: 12, padding: "14px 16px", background: BG,
+          border: `1px solid ${BORDER}`, borderRadius: 6 }}>
+          <AddPortfolioIndicatorInline portfolio={portfolio} outcomeId={outcome.outcome_id}
+            user={user}
+            onSaved={() => { setAddingInd(false); onRefresh(); }}
+            onCancel={() => setAddingInd(false)} />
+        </div>
+      )}
+
+      <div style={{ overflowX: "auto", marginBottom: 28 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse",
+          border: `1px solid ${BORDER}`, tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "30%" }} />
+            {PORT_TABLE_YEARS.map(y => <col key={y} style={{ width: yearColW }} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={thStyle}>Indicator</th>
+              {PORT_TABLE_YEARS.map(y => (
+                <th key={y} style={{ ...thStyle, textAlign: "center" }}>{y}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {inds.length === 0 && !addingInd && (
+              <tr>
+                <td colSpan={PORT_TABLE_YEARS.length + 1}
+                  style={{ ...tdStyle, color: TEXT_MUTED, fontStyle: "italic",
+                    textAlign: "center", borderRight: "none" }}>
+                  No indicators yet.
+                </td>
+              </tr>
+            )}
+            {inds.map(ind => {
+              const isEditing = editIndId === ind.indicator_id;
+              return (
+                <React.Fragment key={ind.indicator_id}>
+                  <tr>
+                    <td style={{ ...tdStyle, background: p?.light || ACCENT_LIGHT,
+                      borderRight: `2px solid ${BORDER}` }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND,
+                        lineHeight: 1.4, marginBottom: 5 }}>
+                        {ind.name || ind.text}
+                      </p>
+                      {ind.baseline != null && (
+                        <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 5 }}>
+                          Baseline: {ind.baseline}{ind.unit ? ` ${ind.unit}` : ""}
+                        </p>
+                      )}
+                      <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                        style={{ fontSize: 11, fontWeight: 600, cursor: "pointer",
+                          background: SURFACE, color: TEXT_SUB,
+                          border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
+                        {isEditing ? "Cancel" : "Edit Indicator"}
+                      </button>
+                    </td>
+                    {PORT_TABLE_YEARS.map(year => {
+                      const tval = ind[`target_${year}`];
+                      const yearActuals = (ind.actuals || [])
+                        .filter(a => a.year === year)
+                        .sort((a, b) => (a.period || "").localeCompare(b.period || ""));
+                      return (
+                        <td key={year} style={{ ...tdStyle, textAlign: "center", background: SURFACE }}>
+                          {tval != null ? (
+                            <div style={{ marginBottom: yearActuals.length ? 4 : 0 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>T: </span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
+                                {tval}{ind.unit ? ` ${ind.unit}` : ""}
+                              </span>
+                            </div>
+                          ) : <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>}
+                          {yearActuals.map((a, ai) => (
+                            <div key={ai} style={{ marginTop: ai === 0 ? 0 : 3 }}>
+                              {a.period && (
+                                <span style={{ fontSize: 10, fontWeight: 700,
+                                  color: TEXT_MUTED, display: "block" }}>{a.period}</span>
+                              )}
+                              <span style={{ fontSize: 10, fontWeight: 700, color: SUCCESS }}>A: </span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: SUCCESS }}>
+                                {a.actual_value}{ind.unit ? ` ${ind.unit}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  {isEditing && (
+                    <tr>
+                      <td colSpan={PORT_TABLE_YEARS.length + 1}
+                        style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
+                        <div style={{ padding: "16px 20px", background: BG }}>
+                          <InlineEditIndicator indicator={ind} user={user} isPortfolio
+                            onSave={updated => {
+                              onOutcomeChange({ ...outcome, indicators: inds.map(i =>
+                                i.indicator_id === ind.indicator_id ? { ...i, ...updated } : i) });
+                              setEditIndId(null);
+                            }}
+                            onCancel={() => setEditIndId(null)}
+                            onDeleted={() => {
+                              onOutcomeChange({ ...outcome,
+                                indicators: inds.filter(i => i.indicator_id !== ind.indicator_id) });
+                              setEditIndId(null);
+                            }} />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Remove outcome ── */}
+      <div style={{ paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+        {confirmDel ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: DANGER, flex: 1 }}>
+              Remove this outcome and all its indicators?
+            </span>
+            <Btn size="sm" onClick={deleteOutcome} disabled={deleting}
+              style={{ background: DANGER, color: "#fff", border: "none" }}>
+              {deleting ? "Removing…" : "✓ Remove"}
+            </Btn>
+            <Btn variant="secondary" size="sm" onClick={() => setConfirmDel(false)}>✕ Cancel</Btn>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDel(true)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 12, color: TEXT_MUTED, padding: 0, textDecoration: "underline" }}>
+            Remove outcome
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Legacy name kept so any remaining references don't break at parse time
+function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcomesChange }) {
 
   return (
     <div style={{ marginBottom: 32 }}>
@@ -3232,18 +3460,23 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [outcomes, setOutcomes]     = useState([]);
+  const [activeOId, setActiveOId]   = useState(null);
+  const [activeTab, setActiveTab]   = useState("toa");
   const [addingOut, setAddingOut]   = useState(false);
-  const [editOutId, setEditOutId]   = useState(null);
   const [newOutTitle, setNewOutTitle] = useState("");
   const [saving, setSaving]         = useState(false);
-  const [portTab, setPortTab]       = useState("toa");
 
   const p = PORT_COLORS[portfolio.portfolio_id];
 
   const load = () => {
     setLoading(true);
     api(`/api/portfolio/${portfolio.portfolio_id}/full`)
-      .then(d => { setData(d); setOutcomes(d.outcomes || []); })
+      .then(d => {
+        const outs = d.outcomes || [];
+        setData(d);
+        setOutcomes(outs);
+        setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
+      })
       .finally(() => setLoading(false));
   };
 
@@ -3266,17 +3499,37 @@ function PortfolioPanel({ portfolio, user, onBack }) {
     </div>
   );
 
+  const activeOutcome = outcomes.find(o => o.outcome_id === activeOId) || outcomes[0] || null;
+
+  const tabBase = {
+    padding: "9px 18px",
+    fontSize: 13,
+    border: "none",
+    cursor: "pointer",
+    borderRadius: "6px 6px 0 0",
+    marginBottom: -2,
+    transition: "color 0.12s, background 0.12s",
+    maxWidth: 220,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  };
+
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
         <button onClick={onBack}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
             textDecoration: "underline" }}>
           ← All portfolios
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>
             {p?.label || portfolio.title}
           </h2>
           {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
@@ -3284,28 +3537,119 @@ function PortfolioPanel({ portfolio, user, onBack }) {
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display:"flex", gap:4, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[{id:"toa",label:"Theory of Action"},{id:"outcomes",label:"Outcomes & Indicators"}].map(t => (
-          <button key={t.id} onClick={()=>setPortTab(t.id)}
-            style={{ background:"none", border:"none", borderBottom:`2px solid ${portTab===t.id?ACCENT:"transparent"}`, padding:"8px 14px", fontSize:13, fontWeight:portTab===t.id?700:500, color:portTab===t.id?ACCENT:TEXT_SUB, cursor:"pointer", fontFamily:"inherit", marginBottom:-1 }}>
-            {t.label}
+      {/* ── Tab strip: TOA + outcome tabs ── */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 2,
+        borderBottom: `2px solid ${BORDER}`, marginBottom: 24, flexWrap: "wrap" }}>
+
+        {/* Theory of Action tab */}
+        {(() => {
+          const isActive = activeTab === "toa";
+          return (
+            <button
+              onClick={() => setActiveTab("toa")}
+              style={{
+                ...tabBase,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? (p?.dark || ACCENT) : TEXT_MUTED,
+                background: isActive ? (p?.light || ACCENT_LIGHT) : "transparent",
+                borderBottom: isActive
+                  ? `2px solid ${p?.color || ACCENT}`
+                  : "2px solid transparent",
+              }}>
+              Theory of Action
+            </button>
+          );
+        })()}
+
+        {/* Outcome tabs */}
+        {outcomes.map((out, i) => {
+          const isActive = activeTab === "outcome" && out.outcome_id === activeOutcome?.outcome_id;
+          return (
+            <button key={out.outcome_id}
+              onClick={() => { setActiveTab("outcome"); setActiveOId(out.outcome_id); }}
+              style={{
+                ...tabBase,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? (p?.dark || ACCENT) : TEXT_MUTED,
+                background: isActive ? (p?.light || ACCENT_LIGHT) : "transparent",
+                borderBottom: isActive
+                  ? `2px solid ${p?.color || ACCENT}`
+                  : "2px solid transparent",
+              }}>
+              <span style={{
+                fontSize: 10, fontWeight: 800, flexShrink: 0,
+                background: isActive ? (p?.color || ACCENT) : BORDER,
+                color: isActive ? "#fff" : TEXT_MUTED,
+                borderRadius: 3, padding: "1px 5px",
+              }}>
+                PO{i + 1}
+              </span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {out.short_title || out.title}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* Add outcome */}
+        {addingOut ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
+            <input
+              autoFocus
+              value={newOutTitle}
+              onChange={e => setNewOutTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") addOutcome(); if (e.key === "Escape") { setAddingOut(false); setNewOutTitle(""); } }}
+              placeholder="Outcome title…"
+              style={{ fontSize: 13, padding: "4px 8px", border: `1px solid ${BORDER}`,
+                borderRadius: 5, fontFamily: "inherit", width: 200 }}
+            />
+            <Btn size="sm" onClick={addOutcome} disabled={saving}>
+              {saving ? "…" : "Add"}
+            </Btn>
+            <Btn variant="secondary" size="sm" onClick={() => { setAddingOut(false); setNewOutTitle(""); }}>
+              Cancel
+            </Btn>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingOut(true)}
+            style={{ ...tabBase, color: TEXT_MUTED, background: "transparent",
+              borderBottom: "2px solid transparent", fontSize: 12 }}>
+            + Add outcome
           </button>
-        ))}
+        )}
       </div>
 
-      {portTab==="toa" && (
-        <div style={{ overflowX:"auto" }}>
-          <PortalToaView portfolioId={portfolio.portfolio_id} portColor={p}/>
+      {/* ── Tab content ── */}
+      {activeTab === "toa" && (
+        <div style={{ overflowX: "auto" }}>
+          <PortalToaView portfolioId={portfolio.portfolio_id} portColor={p} />
         </div>
       )}
 
-      {portTab==="outcomes" && (
-        <PortfolioContentTable
-          outcomes={outcomes} portfolio={portfolio} user={user}
+      {activeTab === "outcome" && activeOutcome && (
+        <PortfolioOutcomePane
+          key={activeOutcome.outcome_id}
+          outcome={activeOutcome}
+          portfolio={portfolio}
+          user={user}
           onRefresh={load}
-          onOutcomesChange={setOutcomes}
+          onOutcomeChange={updated => setOutcomes(prev =>
+            prev.map(o => o.outcome_id === updated.outcome_id ? updated : o)
+          )}
+          onDeleted={() => {
+            const remaining = outcomes.filter(o => o.outcome_id !== activeOutcome.outcome_id);
+            setOutcomes(remaining);
+            setActiveOId(remaining[0]?.outcome_id ?? null);
+            if (remaining.length === 0) setActiveTab("toa");
+          }}
         />
+      )}
+
+      {activeTab === "outcome" && !activeOutcome && outcomes.length === 0 && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+          No outcomes yet. Use "+ Add outcome" above to get started.
+        </p>
       )}
     </div>
   );

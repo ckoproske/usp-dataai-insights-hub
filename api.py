@@ -2597,7 +2597,7 @@ def delete_execution_target(target_id):
 
 # ── Portfolio outcomes CRUD ────────────────────────────────────────────────────
 
-PORT_OUTCOME_EDITABLE = {"title", "short_title", "text"}
+PORT_OUTCOME_EDITABLE = {"title", "short_title", "text", "investments_inputs"}
 
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["PATCH"])
 def update_portfolio_outcome(outcome_id):
