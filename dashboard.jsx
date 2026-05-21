@@ -4129,20 +4129,22 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0}}>
           {STATS.map((stat,i) => (
             <div key={i} style={{padding:"4px 28px 4px"+(i===0?"0":""),borderLeft:i===0?"none":"1px solid "+BORDER}}>
-              <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1,marginBottom:8}}>{stat.value}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginBottom:8}}>
+                <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1}}>{stat.value}</div>
+                {stat.teams && stat.teams.length > 0 && (
+                  <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                    {stat.teams.map(t => (
+                      <span key={t} style={{fontSize:10,fontWeight:600,color:TEXT_SUB,
+                        background:SURFACE_2,border:"1px solid "+BORDER,
+                        borderRadius:4,padding:"2px 7px",display:"inline-block"}}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div style={{fontSize:13,fontWeight:700,color:TEXT,marginBottom:3}}>{stat.label}</div>
               <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
-              {stat.teams && stat.teams.length > 0 && (
-                <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:3}}>
-                  {stat.teams.map(t => (
-                    <span key={t} style={{fontSize:10,fontWeight:600,color:TEXT_SUB,
-                      background:SURFACE_2,border:"1px solid "+BORDER,
-                      borderRadius:4,padding:"2px 7px",display:"inline-block",alignSelf:"flex-start"}}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -4161,6 +4163,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   const [outcomeLinks, setOutcomeLinks] = useState({});
   const [expandedOutcomes, setExpandedOutcomes] = useState({});
   const [expandedInputs, setExpandedInputs] = useState({});
+  const [expandedBows, setExpandedBows] = useState({});
   const [showMatrix, setShowMatrix] = useState(false);
 
   useEffect(() => {
@@ -4295,19 +4298,41 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           </button>
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(bows.length,4)},1fr)`,gap:14}}>
-          {bows.map(bow => (
-            <div key={bow.id} style={{borderRadius:10,border:"1px solid "+BORDER,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
-              <div style={{fontSize:13,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
-              {bow.delegate && (
-                <div style={{fontSize:10,color:TEXT_MUTED}}>Led by: <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span></div>
-              )}
-              {bow.description && (
-                <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.6}}>
-                  {bow.description.split('\n\n')[0].slice(0,220)}{bow.description.length>220?"…":""}
+          {bows.map(bow => {
+            const bowOpen = !!expandedBows[bow.id];
+            const bowOutcomes = (bow.outcomes||[]).filter(o => o.title||o.shortTitle);
+            return (
+              <div key={bow.id} style={{borderRadius:10,border:"1px solid "+(bowOpen?pc.color+"55":BORDER),overflow:"hidden",display:"flex",flexDirection:"column",transition:"border-color .15s"}}>
+                <div style={{height:3,background:bowOpen?pc.color:BORDER,transition:"background .15s"}}/>
+                <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,flex:1}}>
+                  <div style={{fontSize:13,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
+                  {bow.delegate && (
+                    <div style={{fontSize:10,color:TEXT_MUTED}}>Led by: <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span></div>
+                  )}
+                  {bow.description && (
+                    <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.6}}>{bow.description}</div>
+                  )}
+                  {bowOutcomes.length > 0 && (
+                    <button onClick={()=>setExpandedBows(v=>({...v,[bow.id]:!v[bow.id]}))}
+                      style={{background:"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"4px 10px",fontSize:11,color:pc.color,fontWeight:600,display:"flex",alignItems:"center",gap:4,alignSelf:"flex-start",marginTop:4}}>
+                      {bowOpen ? "▴ hide outcomes" : `▾ outcomes (${bowOutcomes.length})`}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+                {bowOpen && bowOutcomes.length > 0 && (
+                  <div style={{borderTop:"1px solid "+pc.color+"22",background:pc.color+"06",padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{fontSize:9,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>BOW Outcomes</div>
+                    {bowOutcomes.map((o,oi) => (
+                      <div key={o.id||oi} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                        <span style={{width:18,height:18,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                        <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{o.title||o.shortTitle}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Alignment map: BOW outcomes as rows, portfolio outcomes as columns ── */}
@@ -4392,9 +4417,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
       {/* ── Section 3: 2030 Goals ── */}
       {(crossIndicators.length > 0 || goals.length > 0 || amb45Text || amb45Buckets) && (
         <div style={{borderRadius:12,border:"1px solid "+pc.color+"33",overflow:"hidden",background:`linear-gradient(135deg,${pc.color}08 0%,${SURFACE} 60%)`,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-          <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
-          <div style={{padding:"20px 28px"}}>
-            <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:20}}>2030 Goals</div>
+          <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+          <div style={{padding:"22px 28px"}}>
+            <div style={{marginBottom:22}}>
+              <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>What This All Builds Toward</div>
+              <div style={{fontSize:20,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>2030 Goals</div>
+            </div>
             <div style={{display:"flex",gap:32,alignItems:"flex-start"}}>
               {(crossIndicators.length > 0 || goals.length > 0) && (
                 <div style={{flex:2,minWidth:0,display:"flex",flexDirection:"column",gap:12}}>
