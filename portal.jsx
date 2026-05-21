@@ -1131,6 +1131,7 @@ function IndicatorRow({ indicator, bow, user, isPortfolio, onDeleted, onUpdated 
                 {indicator.unit ? ` ${indicator.unit}` : ""}
               </span>
             )}
+          </div>
           <LastEdited by={indicator.last_edited_by} at={indicator.last_edited_at}
             style={{ marginTop: 6 }} />
         </div>
