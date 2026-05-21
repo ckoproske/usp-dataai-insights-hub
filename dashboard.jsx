@@ -4157,8 +4157,10 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
 
   const [toa, setToa] = useState(null);
-  const [bowContributions, setBowContributions] = useState({});
+  // outcomeLinks: bowOutcomeId -> Set<portfolioOutcomeId>
+  const [outcomeLinks, setOutcomeLinks] = useState({});
   const [expandedOutcomes, setExpandedOutcomes] = useState({});
+  const [expandedInputs, setExpandedInputs] = useState({});
   const [showMatrix, setShowMatrix] = useState(false);
 
   useEffect(() => {
@@ -4173,10 +4175,13 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
     Promise.all(bows.map(b => apiFetch(`/api/bow-portfolio-links/${b.id}`).catch(() => [])))
       .then(results => {
         const map = {};
-        results.forEach((links, bi) => {
-          map[bows[bi].id] = new Set(links.map(l => l.portfolio_outcome_id));
+        results.forEach(links => {
+          links.forEach(link => {
+            if (!map[link.bow_outcome_id]) map[link.bow_outcome_id] = new Set();
+            map[link.bow_outcome_id].add(link.portfolio_outcome_id);
+          });
         });
-        setBowContributions(map);
+        setOutcomeLinks(map);
       });
   }, [portId]);
 
@@ -4192,15 +4197,27 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   }
 
   const numCols = allOutcomes.length;
-  const colTemplate = `160px repeat(${numCols}, 1fr)`;
+  // left label col + one col per portfolio outcome
+  const colTemplate = `200px repeat(${numCols}, 1fr)`;
   const problemStatement = toa?.problem_statement || null;
+
+  // For a portfolio outcome, return [{bow, bowOutcomes:[]}] that link to it
+  const getContributors = (portOutcomeId) =>
+    bows.map(bow => {
+      const linked = (bow.outcomes||[]).filter(o => outcomeLinks[o.id]?.has(portOutcomeId));
+      return linked.length ? { bow, bowOutcomes: linked } : null;
+    }).filter(Boolean);
+
+  // Does any bow outcome of this bow link to this portfolio outcome?
+  const bowLinksToOutcome = (bow, portOutcomeId) =>
+    (bow.outcomes||[]).some(o => outcomeLinks[o.id]?.has(portOutcomeId));
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
 
       {/* ── Problem / Gap statement ── */}
       {problemStatement && (
-        <div style={{borderLeft:"4px solid "+pc.color,borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"4px solid "+pc.color,background:pc.color+"07",padding:"14px 20px"}}>
+        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"4px solid "+pc.color,background:pc.color+"07",padding:"14px 20px"}}>
           <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>Problem / Gap</div>
           <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.75,fontStyle:"italic"}}>{problemStatement}</div>
         </div>
@@ -4213,31 +4230,52 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
           {allOutcomes.map((o,i) => {
-            const isExpanded = !!expandedOutcomes[o.id];
-            const contributingBows = bows.filter(b => bowContributions[b.id]?.has(o.id));
+            const outcomeOpen = !!expandedOutcomes[o.id];
+            const inputsOpen  = !!expandedInputs[o.id];
+            const contributors = getContributors(o.id);
             return (
               <div key={o.id} style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,display:"flex",flexDirection:"column"}}>
                 <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
-                <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
+                  {/* Number + short title */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                     <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
                     <div style={{fontSize:14,fontWeight:800,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
                   </div>
-                  {isExpanded && (
-                    <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32}}>{o.outcome}</div>
+                  {/* Full outcome text — expandable */}
+                  {outcomeOpen && (
+                    <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+pc.color+"33",marginLeft:11}}>{o.outcome}</div>
                   )}
-                  <button onClick={()=>setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}))}
-                    style={{background:"none",border:"none",cursor:"pointer",padding:"0 0 0 32px",fontSize:11,color:pc.color,fontWeight:600,display:"flex",alignItems:"center",gap:4,textAlign:"left"}}>
-                    {isExpanded ? "▴ less" : "▾ full outcome"}
-                  </button>
-                  {contributingBows.length > 0 && (
-                    <div style={{paddingLeft:32}}>
-                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>Investments & Inputs</div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                        {contributingBows.map(b => (
-                          <span key={b.id} style={{fontSize:10,fontWeight:600,color:pc.color,background:pc.color+"12",border:"1px solid "+pc.color+"30",borderRadius:5,padding:"2px 8px"}}>{b.name}</span>
-                        ))}
-                      </div>
+                  {/* Two toggle buttons side by side */}
+                  <div style={{display:"flex",gap:8,paddingLeft:32,flexWrap:"wrap"}}>
+                    <button onClick={()=>setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}))}
+                      style={{background:"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
+                      {outcomeOpen ? "▴ less" : "▾ full outcome"}
+                    </button>
+                    {contributors.length > 0 && (
+                      <button onClick={()=>setExpandedInputs(v=>({...v,[o.id]:!v[o.id]}))}
+                        style={{background:inputsOpen?pc.color+"12":"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
+                        {inputsOpen ? "▴ inputs" : "▾ investments & inputs"}
+                      </button>
+                    )}
+                  </div>
+                  {/* Investments & Inputs panel */}
+                  {inputsOpen && contributors.length > 0 && (
+                    <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:10,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
+                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Investments & Inputs</div>
+                      {contributors.map(({bow, bowOutcomes}) => (
+                        <div key={bow.id}>
+                          <div style={{fontSize:11,fontWeight:700,color:pc.color,marginBottom:4}}>{bow.name}</div>
+                          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                            {bowOutcomes.map((bo,j) => (
+                              <div key={bo.id||j} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
+                                <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.6}}/>
+                                <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{bo.title||bo.shortTitle}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -4252,7 +4290,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
         <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>How We Work</div>
           <button onClick={()=>setShowMatrix(v=>!v)}
-            style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"1px solid "+pc.color+"44",borderRadius:6,padding:"4px 12px",cursor:"pointer",transition:"all .15s"}}>
+            style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"1px solid "+pc.color+"44",borderRadius:6,padding:"4px 12px",cursor:"pointer"}}>
             {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
           </button>
         </div>
@@ -4271,45 +4309,76 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
             </div>
           ))}
         </div>
+
+        {/* ── Alignment map: BOW outcomes as rows, portfolio outcomes as columns ── */}
         {showMatrix && (
           <div style={{borderTop:"1px solid "+BORDER,overflowX:"auto"}}>
-            <div style={{padding:"14px 22px 4px",fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>BOW → Outcome Alignment</div>
+            <div style={{padding:"14px 22px 6px",fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>BOW Outcome → Portfolio Outcome Alignment</div>
             <div style={{padding:"0 22px 18px"}}>
-              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560}}>
-                <div style={{background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER,padding:"8px"}}/>
+              {/* Header: portfolio outcome columns */}
+              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:640}}>
+                <div style={{background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,padding:"10px 12px"}}>
+                  <span style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>BOW / Outcome</span>
+                </div>
                 {allOutcomes.map((o,i) => (
-                  <div key={o.id} style={{padding:"10px",background:"#FAFAF8",borderBottom:"1px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
+                  <div key={o.id} style={{padding:"10px 8px",background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
                     <div style={{width:20,height:20,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:4}}>{i+1}</div>
                     <div style={{fontSize:10,fontWeight:700,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
                   </div>
                 ))}
               </div>
-              {bows.map((bow,bi) => (
-                <div key={bow.id} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER}}>
-                  <div style={{padding:"8px 12px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",background:bi%2===0?"transparent":"#FAFAF8"}}>
-                    <span style={{fontSize:11,fontWeight:700,color:TEXT}}>{bow.name}</span>
-                  </div>
-                  {allOutcomes.map(o => {
-                    const contrib = bowContributions[bow.id]?.has(o.id);
-                    return (
-                      <div key={o.id} style={{padding:"8px",textAlign:"center",borderRight:"1px solid "+BORDER,background:bi%2===0?"transparent":"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {contrib
-                          ? <span style={{width:20,height:20,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,color:pc.color,fontWeight:700}}>✓</span>
-                          : <span style={{width:5,height:5,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
-                        }
+              {/* BOW groups with their outcomes as rows */}
+              {bows.map((bow, bi) => {
+                const bowOutcomes = (bow.outcomes||[]).filter(o => o.title||o.shortTitle);
+                if (!bowOutcomes.length) return null;
+                const bgBase = bi%2===0 ? "transparent" : "#FAFAF8";
+                return (
+                  <React.Fragment key={bow.id}>
+                    {/* BOW header row */}
+                    <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:640,borderBottom:"1px solid "+BORDER,background:pc.color+"0A"}}>
+                      <div style={{padding:"6px 12px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{width:3,height:14,borderRadius:2,background:pc.color,flexShrink:0}}/>
+                        <span style={{fontSize:11,fontWeight:800,color:pc.color}}>{bow.name}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ))}
-              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,background:"#FAFAF8",borderTop:"2px solid "+BORDER}}>
-                <div style={{padding:"6px 12px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center"}}>
+                      {allOutcomes.map(o => (
+                        <div key={o.id} style={{borderRight:"1px solid "+BORDER,background:pc.color+"0A"}}/>
+                      ))}
+                    </div>
+                    {/* BOW outcome rows */}
+                    {bowOutcomes.map((bo, oi) => {
+                      const isLast = oi === bowOutcomes.length - 1;
+                      return (
+                        <div key={bo.id||oi} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:640,borderBottom:isLast?"2px solid "+BORDER:"1px solid "+BORDER}}>
+                          <div style={{padding:"8px 12px 8px 20px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"flex-start",gap:6,background:bgBase}}>
+                            <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.5}}/>
+                            <span style={{fontSize:11,color:TEXT_SUB,lineHeight:1.45}}>{bo.title||bo.shortTitle}</span>
+                          </div>
+                          {allOutcomes.map(o => {
+                            const linked = outcomeLinks[bo.id]?.has(o.id);
+                            return (
+                              <div key={o.id} style={{padding:"8px",borderRight:"1px solid "+BORDER,background:bgBase,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                {linked
+                                  ? <span style={{width:20,height:20,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,color:pc.color,fontWeight:700}}>✓</span>
+                                  : <span style={{width:5,height:5,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
+                                }
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+              {/* Coverage footer */}
+              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:640,background:"#FAFAF8"}}>
+                <div style={{padding:"7px 12px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center"}}>
                   <span style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Coverage</span>
                 </div>
                 {allOutcomes.map(o => {
-                  const count = bows.filter(b => bowContributions[b.id]?.has(o.id)).length;
+                  const count = bows.filter(b => bowLinksToOutcome(b, o.id)).length;
                   return (
-                    <div key={o.id} style={{padding:"6px 8px",textAlign:"center",borderRight:"1px solid "+BORDER}}>
+                    <div key={o.id} style={{padding:"7px 8px",textAlign:"center",borderRight:"1px solid "+BORDER}}>
                       <span style={{fontSize:10,fontWeight:700,color:count>0?pc.color:TEXT_MUTED}}>{count} of {bows.length}</span>
                     </div>
                   );
