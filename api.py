@@ -2017,7 +2017,7 @@ def upsert_portfolio_notes(portfolio_id):
 
 import json as _json
 
-MAJOR_TEXT_FIELDS = {"title", "text"}
+MAJOR_TEXT_FIELDS = {"title", "text", "name"}
 TARGET_FIELDS     = {"target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
 
 def _actor(body=None):
@@ -2414,8 +2414,12 @@ def delete_bow_outcome(outcome_id):
 
 # ── BOW indicators CRUD ────────────────────────────────────────────────────────
 
-BOW_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline", "data_source",
-                    "target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
+BOW_IND_EDITABLE = {
+    "name", "text", "purpose", "unit", "collection_frequency", "baseline", "data_source",
+    "source_id", "measurement_level", "thematic_tags", "status", "data_quality_notes",
+    "indicator_owner", "last_reviewed_date",
+    "target_2026", "target_2027", "target_2028", "target_2029", "target_2030",
+}
 
 @app.route("/api/bow-indicators/<indicator_id>", methods=["PATCH"])
 def update_bow_indicator(indicator_id):
@@ -2458,18 +2462,25 @@ def add_bow_indicator():
     iid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.bow_indicators
-            (indicator_id, bow_id, outcome_id, text, unit, collection_frequency,
-             baseline, target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)""",
-        [iid, bow_id, outcome_id or None, text,
+            (indicator_id, bow_id, outcome_id, name, text, purpose, unit, collection_frequency,
+             baseline, source_id, measurement_level, thematic_tags, status,
+             data_quality_notes, indicator_owner, last_reviewed_date,
+             target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)""",
+        [iid, bow_id, outcome_id or None,
+         data.get("name") or None, text, data.get("purpose") or None,
          data.get("unit") or None, data.get("collection_frequency") or None,
-         data.get("baseline") or None,
+         data.get("baseline") or None, data.get("source_id") or None,
+         data.get("measurement_level") or None, data.get("thematic_tags") or None,
+         data.get("status") or "active",
+         data.get("data_quality_notes") or None, data.get("indicator_owner") or None,
+         data.get("last_reviewed_date") or None,
          data.get("target_2026") or None, data.get("target_2027") or None,
          data.get("target_2028") or None, data.get("target_2029") or None,
          data.get("target_2030") or None]
     )
     _log_edit("bow_indicator", iid, bow_id, None,
-              {"text": {"old": None, "new": text}}, "New indicator added", None, user)
+              {"name": {"old": None, "new": data.get("name") or text}}, "New indicator added", None, user)
     return jsonify({"status": "ok", "indicator_id": iid})
 
 
@@ -2613,8 +2624,12 @@ def delete_portfolio_outcome(outcome_id):
 
 # ── Portfolio indicators CRUD ──────────────────────────────────────────────────
 
-PORT_IND_EDITABLE = {"text", "unit", "collection_frequency", "baseline", "data_source",
-                     "target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
+PORT_IND_EDITABLE = {
+    "name", "text", "purpose", "unit", "collection_frequency", "baseline", "data_source",
+    "source_id", "measurement_level", "thematic_tags", "status", "data_quality_notes",
+    "indicator_owner", "last_reviewed_date",
+    "target_2026", "target_2027", "target_2028", "target_2029", "target_2030",
+}
 
 @app.route("/api/portfolio-indicators/<indicator_id>", methods=["PATCH"])
 def update_portfolio_indicator(indicator_id):
@@ -2654,18 +2669,28 @@ def add_portfolio_indicator():
     if not portfolio_id or not text:
         return jsonify({"error": "portfolio_id and text required"}), 400
     iid = new_id()
+    user = _actor(data)
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_indicators
-            (indicator_id, portfolio_id, outcome_id, text, unit, collection_frequency,
-             baseline, target_2026, target_2027, target_2028, target_2029, target_2030)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        [iid, portfolio_id, outcome_id or None, text,
+            (indicator_id, portfolio_id, outcome_id, name, text, purpose, unit, collection_frequency,
+             baseline, source_id, measurement_level, thematic_tags, status,
+             data_quality_notes, indicator_owner, last_reviewed_date,
+             target_2026, target_2027, target_2028, target_2029, target_2030)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [iid, portfolio_id, outcome_id or None,
+         data.get("name") or None, text, data.get("purpose") or None,
          data.get("unit") or None, data.get("collection_frequency") or None,
-         data.get("baseline") or None,
+         data.get("baseline") or None, data.get("source_id") or None,
+         data.get("measurement_level") or None, data.get("thematic_tags") or None,
+         data.get("status") or "active",
+         data.get("data_quality_notes") or None, data.get("indicator_owner") or None,
+         data.get("last_reviewed_date") or None,
          data.get("target_2026") or None, data.get("target_2027") or None,
          data.get("target_2028") or None, data.get("target_2029") or None,
          data.get("target_2030") or None]
     )
+    _log_edit("portfolio_indicator", iid, None, portfolio_id,
+              {"name": {"old": None, "new": data.get("name") or text}}, "New indicator added", None, user)
     return jsonify({"status": "ok", "indicator_id": iid})
 
 
@@ -2770,6 +2795,116 @@ def get_activity_feed():
 
     combined = sorted(edits + subs, key=lambda r: r.get("ts") or "", reverse=True)[:limit]
     return jsonify(combined)
+
+
+# ── Sources registry ──────────────────────────────────────────────────────────
+# Schema (run once in Databricks):
+#   CREATE TABLE usp_data.usp_strategy.sources (
+#     source_id STRING, source_name STRING, source_type STRING,
+#     source_url STRING, owner STRING, coverage_notes STRING,
+#     created_at TIMESTAMP, created_by STRING
+#   );
+#   CREATE TABLE usp_data.usp_strategy.source_rounds (
+#     round_id STRING, source_id STRING, round_label STRING,
+#     collection_date DATE, document_url STRING, notes STRING,
+#     created_at TIMESTAMP, created_by STRING
+#   );
+# Indicator table additions (run once):
+#   ALTER TABLE usp_data.usp_strategy.bow_indicators ADD COLUMNS (
+#     name STRING, purpose STRING, source_id STRING, measurement_level STRING,
+#     thematic_tags STRING, status STRING, data_quality_notes STRING,
+#     indicator_owner STRING, last_reviewed_date DATE
+#   );
+#   ALTER TABLE usp_data.usp_strategy.portfolio_indicators ADD COLUMNS (
+#     name STRING, purpose STRING, source_id STRING, measurement_level STRING,
+#     thematic_tags STRING, status STRING, data_quality_notes STRING,
+#     indicator_owner STRING, last_reviewed_date DATE
+#   );
+
+@app.route("/api/sources")
+def list_sources():
+    try:
+        rows = query(
+            f"""SELECT source_id, source_name, source_type, source_url,
+                       owner, coverage_notes, CAST(created_at AS STRING) AS created_at
+                FROM {SCHEMA}.sources
+                ORDER BY source_name"""
+        )
+    except Exception:
+        rows = []
+    return jsonify(rows)
+
+
+@app.route("/api/sources", methods=["POST"])
+def create_source():
+    data        = request.json
+    source_name = (data.get("source_name") or "").strip()
+    if not source_name:
+        return jsonify({"error": "source_name required"}), 400
+    sid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.sources
+            (source_id, source_name, source_type, source_url, owner, coverage_notes,
+             created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, current_timestamp(), ?)""",
+        [sid, source_name,
+         data.get("source_type") or None, data.get("source_url") or None,
+         data.get("owner") or None, data.get("coverage_notes") or None,
+         data.get("created_by") or None]
+    )
+    return jsonify({"status": "ok", "source_id": sid})
+
+
+@app.route("/api/sources/<source_id>", methods=["PATCH"])
+def update_source(source_id):
+    data    = request.json
+    EDITABLE = {"source_name", "source_type", "source_url", "owner", "coverage_notes"}
+    rows    = query(f"SELECT * FROM {SCHEMA}.sources WHERE source_id = ?", [source_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    changes = _build_changes(rows[0], data, EDITABLE)
+    if not changes:
+        return jsonify({"status": "no_change"})
+    sets = ", ".join(f"{f} = ?" for f in changes)
+    vals = [changes[f]["new"] for f in changes] + [source_id]
+    execute(f"UPDATE {SCHEMA}.sources SET {sets} WHERE source_id = ?", vals)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/sources/<source_id>/rounds")
+def list_source_rounds(source_id):
+    try:
+        rows = query(
+            f"""SELECT round_id, source_id, round_label,
+                       CAST(collection_date AS STRING) AS collection_date,
+                       document_url, notes, CAST(created_at AS STRING) AS created_at
+                FROM {SCHEMA}.source_rounds
+                WHERE source_id = ?
+                ORDER BY collection_date DESC, round_label""",
+            [source_id]
+        )
+    except Exception:
+        rows = []
+    return jsonify(rows)
+
+
+@app.route("/api/sources/<source_id>/rounds", methods=["POST"])
+def create_source_round(source_id):
+    data        = request.json
+    round_label = (data.get("round_label") or "").strip()
+    if not round_label:
+        return jsonify({"error": "round_label required"}), 400
+    rid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.source_rounds
+            (round_id, source_id, round_label, collection_date, document_url, notes,
+             created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, current_timestamp(), ?)""",
+        [rid, source_id, round_label,
+         data.get("collection_date") or None, data.get("document_url") or None,
+         data.get("notes") or None, data.get("created_by") or None]
+    )
+    return jsonify({"status": "ok", "round_id": rid})
 
 
 # ─────────────────────────────────────────────────────────────────────────────

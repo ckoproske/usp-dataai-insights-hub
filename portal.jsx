@@ -64,6 +64,18 @@ const INSIGHT_TYPES = [
   { value: "general_note",      label: "General note" },
 ];
 
+const MEASUREMENT_LEVELS = [
+  { value: "output",  label: "Output" },
+  { value: "outcome", label: "Outcome" },
+  { value: "impact",  label: "Impact" },
+  { value: "process", label: "Process" },
+];
+
+const INDICATOR_STATUSES = [
+  { value: "active", label: "Active" },
+  { value: "draft",  label: "Draft" },
+];
+
 const TODAY       = new Date().toISOString().split("T")[0];
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -488,27 +500,220 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
   );
 }
 
+// ─── Source Picker (with inline create) ────────────────────────────────────────
+function SourcePickerInline({ sourceId, roundId, onChange, user }) {
+  const [sources, setSources]           = useState([]);
+  const [rounds, setRounds]             = useState([]);
+  const [creating, setCreating]         = useState(false);
+  const [creatingRound, setCreatingRound] = useState(false);
+  const [saving, setSaving]             = useState(false);
+
+  const [newName, setNewName]           = useState("");
+  const [newType, setNewType]           = useState("");
+  const [newUrl, setNewUrl]             = useState("");
+  const [newOwner, setNewOwner]         = useState("");
+  const [newCoverage, setNewCoverage]   = useState("");
+
+  const [newRoundLabel, setNewRoundLabel]   = useState("");
+  const [newRoundDate, setNewRoundDate]     = useState("");
+  const [newRoundDocUrl, setNewRoundDocUrl] = useState("");
+  const [newRoundNotes, setNewRoundNotes]   = useState("");
+
+  useEffect(() => {
+    api("/api/sources").then(d => setSources(Array.isArray(d) ? d : []));
+  }, []);
+
+  useEffect(() => {
+    if (sourceId) {
+      api(`/api/sources/${sourceId}/rounds`).then(d => setRounds(Array.isArray(d) ? d : []));
+    } else {
+      setRounds([]);
+    }
+  }, [sourceId]);
+
+  const handleSourceSel = (val) => {
+    if (val === "__new__") { setCreating(true); return; }
+    onChange(val || null, null);
+  };
+
+  const createSource = async () => {
+    if (!newName.trim()) return;
+    setSaving(true);
+    const res = await api("/api/sources", {
+      method: "POST",
+      body: JSON.stringify({ source_name: newName, source_type: newType || null,
+        source_url: newUrl || null, owner: newOwner || null,
+        coverage_notes: newCoverage || null, created_by: user?.email }),
+    });
+    if (!res.error) {
+      const added = { source_id: res.source_id, source_name: newName, source_type: newType };
+      setSources(prev => [...prev, added]);
+      onChange(res.source_id, null);
+      setCreating(false);
+      setNewName(""); setNewType(""); setNewUrl(""); setNewOwner(""); setNewCoverage("");
+    }
+    setSaving(false);
+  };
+
+  const createRound = async () => {
+    if (!newRoundLabel.trim()) return;
+    setSaving(true);
+    const res = await api(`/api/sources/${sourceId}/rounds`, {
+      method: "POST",
+      body: JSON.stringify({ round_label: newRoundLabel, collection_date: newRoundDate || null,
+        document_url: newRoundDocUrl || null, notes: newRoundNotes || null,
+        created_by: user?.email }),
+    });
+    if (!res.error) {
+      const added = { round_id: res.round_id, round_label: newRoundLabel, collection_date: newRoundDate };
+      setRounds(prev => [...prev, added]);
+      onChange(sourceId, res.round_id);
+      setCreatingRound(false);
+      setNewRoundLabel(""); setNewRoundDate(""); setNewRoundDocUrl(""); setNewRoundNotes("");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      {!creating ? (
+        <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
+          style={{ ...inputStyle, appearance: "auto" }}>
+          <option value="">No source linked</option>
+          {sources.map(s => (
+            <option key={s.source_id} value={s.source_id}>{s.source_name}
+              {s.source_type ? ` — ${SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}` : ""}
+            </option>
+          ))}
+          <option value="__new__">+ Create new source…</option>
+        </select>
+      ) : (
+        <div style={{ padding: 12, background: BG, border: `1px solid ${BORDER}`,
+          borderRadius: 6, marginTop: 4 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: ACCENT, marginBottom: 8,
+            textTransform: "uppercase", letterSpacing: 0.5 }}>New Source</p>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+            <Field label="Source name" required>
+              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="e.g. Annual Team Survey 2025" style={inputStyle} />
+            </Field>
+            <Field label="Type">
+              <select value={newType} onChange={e => setNewType(e.target.value)}
+                style={{ ...inputStyle, appearance: "auto" }}>
+                <option value="">Select…</option>
+                {SOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <Field label="URL / file link">
+              <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)}
+                placeholder="https://…" style={inputStyle} />
+            </Field>
+            <Field label="Owner / contact">
+              <input type="text" value={newOwner} onChange={e => setNewOwner(e.target.value)}
+                style={inputStyle} />
+            </Field>
+          </div>
+          <Field label="Coverage notes">
+            <input type="text" value={newCoverage} onChange={e => setNewCoverage(e.target.value)}
+              placeholder="e.g. Covers grantees in SSA, 2023–present" style={inputStyle} />
+          </Field>
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <Btn size="sm" onClick={createSource} disabled={!newName.trim() || saving}>
+              {saving ? "Saving…" : "Save source"}
+            </Btn>
+            <Btn variant="secondary" size="sm" onClick={() => setCreating(false)}>Cancel</Btn>
+          </div>
+        </div>
+      )}
+
+      {sourceId && !creating && (
+        <div style={{ marginTop: 8 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+            display: "block", marginBottom: 3 }}>Round / collection event</label>
+          {!creatingRound ? (
+            <select value={roundId || ""} onChange={e => {
+                if (e.target.value === "__new__") { setCreatingRound(true); return; }
+                onChange(sourceId, e.target.value || null);
+              }} style={{ ...inputStyle, appearance: "auto" }}>
+              <option value="">No specific round</option>
+              {rounds.map(r => (
+                <option key={r.round_id} value={r.round_id}>
+                  {r.round_label}{r.collection_date ? ` (${r.collection_date})` : ""}
+                </option>
+              ))}
+              <option value="__new__">+ Add new round…</option>
+            </select>
+          ) : (
+            <div style={{ padding: 12, background: BG, border: `1px solid ${BORDER}`,
+              borderRadius: 6, marginTop: 4 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: ACCENT, marginBottom: 8,
+                textTransform: "uppercase", letterSpacing: 0.5 }}>New Collection Round</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <Field label="Round label" required>
+                  <input type="text" value={newRoundLabel} onChange={e => setNewRoundLabel(e.target.value)}
+                    placeholder="e.g. 2025 Annual, Q3 2025" style={inputStyle} />
+                </Field>
+                <Field label="Collection date">
+                  <input type="date" value={newRoundDate} onChange={e => setNewRoundDate(e.target.value)}
+                    style={inputStyle} />
+                </Field>
+              </div>
+              <Field label="Document URL">
+                <input type="text" value={newRoundDocUrl} onChange={e => setNewRoundDocUrl(e.target.value)}
+                  placeholder="Link to PDF, spreadsheet, etc." style={inputStyle} />
+              </Field>
+              <Field label="Notes">
+                <input type="text" value={newRoundNotes} onChange={e => setNewRoundNotes(e.target.value)}
+                  style={inputStyle} />
+              </Field>
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <Btn size="sm" onClick={createRound} disabled={!newRoundLabel.trim() || saving}>
+                  {saving ? "Saving…" : "Save round"}
+                </Btn>
+                <Btn variant="secondary" size="sm" onClick={() => setCreatingRound(false)}>Cancel</Btn>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Inline Edit Indicator ─────────────────────────────────────────────────────
 function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isPortfolio }) {
-  const [itext, setItext]     = useState(indicator.text || "");
-  const [source, setSource]   = useState(indicator.data_source || "");
-  const [unit, setUnit]       = useState(indicator.unit || "");
-  const [freq, setFreq]       = useState(indicator.collection_frequency || "");
-  const [baseline, setBase]   = useState(String(indicator.baseline ?? ""));
-  const [targets, setTargets] = useState(
+  const [iname, setIname]         = useState(indicator.name || "");
+  const [itext, setItext]         = useState(indicator.text || "");
+  const [purpose, setPurpose]     = useState(indicator.purpose || "");
+  const [measureLevel, setML]     = useState(indicator.measurement_level || "");
+  const [tags, setTags]           = useState(indicator.thematic_tags || "");
+  const [indStatus, setStatus]    = useState(indicator.status || "active");
+  const [qualityNotes, setQN]     = useState(indicator.data_quality_notes || "");
+  const [owner, setOwner]         = useState(indicator.indicator_owner || "");
+  const [reviewDate, setReviewDate] = useState(indicator.last_reviewed_date || "");
+  const [sourceId, setSourceId]   = useState(indicator.source_id || null);
+  const [roundId, setRoundId]     = useState(indicator.round_id || null);
+  const [unit, setUnit]           = useState(indicator.unit || "");
+  const [freq, setFreq]           = useState(indicator.collection_frequency || "");
+  const [baseline, setBase]       = useState(String(indicator.baseline ?? ""));
+  const [targets, setTargets]     = useState(
     TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: String(indicator[`target_${y}`] ?? "") }), {})
   );
-  const [rationale, setRationale]   = useState("");
-  const [revReason, setRevReason]   = useState("");
-  const [saving, setSaving]         = useState(false);
-  const [error, setError]           = useState(null);
+  const [rationale, setRationale]       = useState("");
+  const [revReason, setRevReason]       = useState("");
+  const [saving, setSaving]             = useState(false);
+  const [error, setError]               = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting]     = useState(false);
+  const [deleting, setDeleting]         = useState(false);
 
+  const nameChanged    = iname !== (indicator.name || "");
   const textChanged    = itext !== (indicator.text || "");
   const targetsChanged = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
-  const canSave = itext.trim()
-    && (!textChanged    || rationale.trim())
+  const majorChanged   = nameChanged || textChanged;
+  const canSave = (iname.trim() || itext.trim())
+    && (!majorChanged   || rationale.trim())
     && (!targetsChanged || revReason);
 
   const save = async () => {
@@ -517,8 +722,16 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       ? `/api/portfolio-indicators/${indicator.indicator_id}`
       : `/api/bow-indicators/${indicator.indicator_id}`;
     const body = {
-      text: itext, data_source: source || null, unit,
-      collection_frequency: freq, baseline: baseline || null,
+      name: iname || null,
+      text: itext, purpose: purpose || null,
+      measurement_level: measureLevel || null,
+      thematic_tags: tags || null,
+      status: indStatus,
+      data_quality_notes: qualityNotes || null,
+      indicator_owner: owner || null,
+      last_reviewed_date: reviewDate || null,
+      source_id: sourceId || null,
+      unit, collection_frequency: freq, baseline: baseline || null,
       ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
       rationale: rationale || undefined,
       revision_reason: revReason || undefined,
@@ -545,18 +758,73 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
     if (onDeleted) onDeleted();
   };
 
+  const SectionHead = ({ label }) => (
+    <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+      letterSpacing: 0.6, marginBottom: 8, marginTop: 16, paddingTop: 12,
+      borderTop: `1px solid ${BORDER}` }}>{label}</p>
+  );
+
   return (
     <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
       border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
-      <Field label="Indicator" required>
+
+      {/* ── Core identification ── */}
+      <Field label="Indicator name" required
+        helper="Short, clear name used to identify this indicator across the platform.">
+        <input type="text" value={iname} onChange={e => setIname(e.target.value)}
+          placeholder="e.g. % of grantees with AI-ready data infrastructure" style={inputStyle} />
+      </Field>
+      <Field label="Description"
+        helper="What exactly is being measured — full definition, methodology, scope.">
         <textarea value={itext} onChange={e => setItext(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
-      <Field label="Data source" helper="Report, dataset, or system where this indicator is tracked — shown on the dashboard tile.">
-        <input type="text" value={source} onChange={e => setSource(e.target.value)}
-          placeholder="e.g. Annual team survey, GitHub API, Partner report..."
-          style={inputStyle} />
+      <Field label="Purpose"
+        helper="Why this indicator matters — what decision or learning it informs.">
+        <textarea value={purpose} onChange={e => setPurpose(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
+
+      {/* ── Classification ── */}
+      <SectionHead label="Classification" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <Field label="Measurement level">
+          <select value={measureLevel} onChange={e => setML(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select…</option>
+            {MEASUREMENT_LEVELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Status">
+          <select value={indStatus} onChange={e => setStatus(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            {INDICATOR_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Owner / responsible person">
+          <input type="text" value={owner} onChange={e => setOwner(e.target.value)}
+            style={inputStyle} />
+        </Field>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginBottom: 12 }}>
+        <Field label="Thematic tags" helper="Comma-separated, e.g. equity, data infrastructure, AI readiness">
+          <input type="text" value={tags} onChange={e => setTags(e.target.value)}
+            placeholder="e.g. equity, data infrastructure" style={inputStyle} />
+        </Field>
+        <Field label="Last reviewed">
+          <input type="date" value={reviewDate} onChange={e => setReviewDate(e.target.value)}
+            style={inputStyle} />
+        </Field>
+      </div>
+
+      {/* ── Source ── */}
+      <SectionHead label="Source" />
+      <SourcePickerInline sourceId={sourceId} roundId={roundId}
+        onChange={(sid, rid) => { setSourceId(sid); setRoundId(rid); }}
+        user={user} />
+
+      {/* ── Data ── */}
+      <SectionHead label="Unit & Collection" />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <Field label="Unit">
           <select value={unit} onChange={e => setUnit(e.target.value)}
@@ -568,7 +836,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         <Field label="Collection frequency">
           <select value={freq} onChange={e => setFreq(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
-            <option value="">Select...</option>
+            <option value="">Select…</option>
             {Object.keys(PERIOD_OPTIONS).map(f =>
               <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
           </select>
@@ -577,19 +845,17 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
 
       <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>Baseline & Targets</p>
       <div style={{ display: "grid",
-        gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 16 }}>
+        gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 8 }}>
         <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, display: "block", marginBottom: 3 }}>
-            Baseline
-          </label>
+          <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+            display: "block", marginBottom: 3 }}>Baseline</label>
           <input type="number" value={baseline} onChange={e => setBase(e.target.value)}
             style={{ ...inputStyle, textAlign: "right" }} />
         </div>
         {TARGET_YEARS.map(y => (
           <div key={y}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, display: "block", marginBottom: 3 }}>
-              {y}
-            </label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+              display: "block", marginBottom: 3 }}>{y}</label>
             <input type="number" value={targets[y]}
               onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
               style={{ ...inputStyle, textAlign: "right" }} />
@@ -597,10 +863,18 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         ))}
       </div>
 
-      {textChanged && (
-        <Field label="Rationale for indicator text change" required>
+      {/* ── Data quality ── */}
+      <SectionHead label="Data Quality" />
+      <Field label="Quality notes" helper="Known limitations, caveats, or issues with this indicator's data.">
+        <textarea value={qualityNotes} onChange={e => setQN(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+
+      {/* ── Change rationale (conditional) ── */}
+      {majorChanged && (
+        <Field label="Rationale for change" required>
           <textarea value={rationale} onChange={e => setRationale(e.target.value)}
-            placeholder="Why is the indicator wording changing?"
+            placeholder="Why is the indicator name or description changing?"
             rows={2} style={{ ...inputStyle, resize: "vertical", borderColor: ACCENT }} />
         </Field>
       )}
@@ -608,21 +882,21 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         <Field label="Reason for target revision" required>
           <select value={revReason} onChange={e => setRevReason(e.target.value)}
             style={{ ...inputStyle, appearance: "auto", borderColor: ACCENT }}>
-            <option value="">Select reason...</option>
+            <option value="">Select reason…</option>
             {REVISION_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </Field>
       )}
 
       {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
         <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
         <Btn size="sm" onClick={save} disabled={!canSave || saving}>
-          {saving ? "Saving..." : "Save indicator"}
+          {saving ? "Saving…" : "Save indicator"}
         </Btn>
       </div>
 
-      {/* Delete section */}
+      {/* ── Delete ── */}
       <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
         {confirmDelete ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1665,18 +1939,22 @@ function AddTargetInline({ bow, outcomeId, year, user, onSaved, onCancel }) {
 }
 
 function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
-  const [text, setText]   = useState("");
-  const [unit, setUnit]   = useState("");
-  const [freq, setFreq]   = useState("");
+  const [name, setName]     = useState("");
+  const [text, setText]     = useState("");
+  const [unit, setUnit]     = useState("");
+  const [freq, setFreq]     = useState("");
+  const [sourceId, setSId]  = useState(null);
+  const [roundId, setRId]   = useState(null);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!text.trim()) return;
+    if (!name.trim()) return;
     setSaving(true);
     const res = await api("/api/bow-indicators", {
       method: "POST",
       body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId,
-        text, unit: unit || null, collection_frequency: freq || null,
+        name, text: text || null, unit: unit || null,
+        collection_frequency: freq || null, source_id: sourceId || null,
         edited_by: user?.email }),
     });
     if (!res.error) onSaved();
@@ -1686,10 +1964,9 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
-        <Field label="Indicator" required>
-          <textarea value={text} onChange={e => setText(e.target.value)}
-            placeholder="Describe what this indicator measures..."
-            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        <Field label="Indicator name" required>
+          <input type="text" value={name} onChange={e => setName(e.target.value)}
+            placeholder="Short name, e.g. % grantees with AI-ready data" style={inputStyle} />
         </Field>
         <Field label="Unit">
           <select value={unit} onChange={e => setUnit(e.target.value)}
@@ -1701,15 +1978,24 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
         <Field label="Frequency">
           <select value={freq} onChange={e => setFreq(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
-            <option value="">Select...</option>
+            <option value="">Select…</option>
             {Object.keys(PERIOD_OPTIONS).map(f =>
               <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
           </select>
         </Field>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Btn size="sm" onClick={save} disabled={!text.trim() || saving}>
-          {saving ? "Adding..." : "Add indicator"}
+      <Field label="Description" helper="Optional — full definition can be filled in after saving.">
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          placeholder="What exactly is being measured…"
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <Field label="Source">
+        <SourcePickerInline sourceId={sourceId} roundId={roundId}
+          onChange={(sid, rid) => { setSId(sid); setRId(rid); }} user={user} />
+      </Field>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <Btn size="sm" onClick={save} disabled={!name.trim() || saving}>
+          {saving ? "Adding…" : "Add indicator"}
         </Btn>
         <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
       </div>
@@ -2678,18 +2964,23 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
 }
 
 function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCancel }) {
-  const [text, setText] = useState("");
-  const [unit, setUnit] = useState("");
-  const [freq, setFreq] = useState("");
+  const [name, setName]     = useState("");
+  const [text, setText]     = useState("");
+  const [unit, setUnit]     = useState("");
+  const [freq, setFreq]     = useState("");
+  const [sourceId, setSId]  = useState(null);
+  const [roundId, setRId]   = useState(null);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!text.trim()) return;
+    if (!name.trim()) return;
     setSaving(true);
     const res = await api("/api/portfolio-indicators", {
       method: "POST",
       body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, outcome_id: outcomeId,
-        text, unit: unit || null, collection_frequency: freq || null, edited_by: user?.email }),
+        name, text: text || null, unit: unit || null,
+        collection_frequency: freq || null, source_id: sourceId || null,
+        edited_by: user?.email }),
     });
     if (!res.error) onSaved();
     setSaving(false);
@@ -2698,10 +2989,9 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
-        <Field label="Indicator" required>
-          <textarea value={text} onChange={e => setText(e.target.value)}
-            placeholder="Describe what this indicator measures…"
-            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        <Field label="Indicator name" required>
+          <input type="text" value={name} onChange={e => setName(e.target.value)}
+            placeholder="Short name, e.g. % grantees with AI-ready data" style={inputStyle} />
         </Field>
         <Field label="Unit">
           <select value={unit} onChange={e => setUnit(e.target.value)}
@@ -2719,8 +3009,17 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
           </select>
         </Field>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Btn size="sm" onClick={save} disabled={!text.trim() || saving}>{saving ? "Adding…" : "Add indicator"}</Btn>
+      <Field label="Description" helper="Optional — full definition can be filled in after saving.">
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          placeholder="What exactly is being measured…"
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <Field label="Source">
+        <SourcePickerInline sourceId={sourceId} roundId={roundId}
+          onChange={(sid, rid) => { setSId(sid); setRId(rid); }} user={user} />
+      </Field>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <Btn size="sm" onClick={save} disabled={!name.trim() || saving}>{saving ? "Adding…" : "Add indicator"}</Btn>
         <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
       </div>
     </div>
