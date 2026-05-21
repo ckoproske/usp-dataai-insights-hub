@@ -4228,8 +4228,10 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Section 1: What We're Trying to Achieve ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
-          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>What We're Trying to Achieve</div>
+        <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
+          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>Theory of Action</div>
+          <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>What We're Trying to Achieve</div>
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
           {allOutcomes.map((o,i) => {
@@ -4290,8 +4292,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Section 2: How We Work ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{padding:"14px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>How We Work</div>
+        <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>Investments & Strategy</div>
+            <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>How We Work</div>
+          </div>
           <button onClick={()=>setShowMatrix(v=>!v)}
             style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"1px solid "+pc.color+"44",borderRadius:6,padding:"4px 12px",cursor:"pointer"}}>
             {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
