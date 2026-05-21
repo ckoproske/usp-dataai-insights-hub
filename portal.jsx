@@ -1167,7 +1167,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
   const [editOutId, setEditOutId]       = useState(null);
   const [editTargetId, setEditTargetId] = useState(null);
   const [editIndId, setEditIndId]       = useState(null);
-  const [submitIndId, setSubmitIndId]   = useState(null);
   const [addingOutcome, setAddingOutcome] = useState(false);
   const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
   const [addingTargetFor, setAddingTargetFor] = useState(null); // {outcome_id, year}
@@ -1461,7 +1460,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                       {/* Indicator rows */}
                       {inds.map(ind => {
                         const isEditing  = editIndId  === ind.indicator_id;
-                        const isSubmitting = submitIndId === ind.indicator_id;
                         return (
                           <React.Fragment key={ind.indicator_id}>
                             <tr>
@@ -1479,8 +1477,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                     {ind.unit ? ` ${ind.unit}` : ""}
                                   </p>
                                 )}
-                                <div style={{ display: "flex", alignItems: "center",
-                                  justifyContent: "space-between", marginTop: 6 }}>
+                                <div style={{ marginTop: 6 }}>
                                   <button
                                     onClick={() => setEditIndId(
                                       editIndId === ind.indicator_id ? null : ind.indicator_id)}
@@ -1489,14 +1486,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                       border: `1px solid ${BORDER}`,
                                       borderRadius: 4, padding: "3px 8px" }}>
                                     Edit Indicator
-                                  </button>
-                                  <button
-                                    onClick={() => setSubmitIndId(
-                                      submitIndId === ind.indicator_id ? null : ind.indicator_id)}
-                                    style={{ fontSize: 11, fontWeight: 700, cursor: "pointer",
-                                      background: ACCENT, color: SURFACE, border: "none",
-                                      borderRadius: 4, padding: "3px 8px" }}>
-                                    Submit New Data
                                   </button>
                                 </div>
                               </td>
@@ -1543,22 +1532,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                 );
                               })}
                             </tr>
-
-                            {/* Expanded submit row */}
-                            {isSubmitting && (
-                              <tr>
-                                <td colSpan={TARGET_YEARS.length + 1}
-                                  style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
-                                  <div style={{ padding: "16px 20px", background: ACCENT_LIGHT }}>
-                                    <InlineSubmitForm
-                                      indicator={ind} bow={bow}
-                                      onClose={() => setSubmitIndId(null)}
-                                      onSubmitted={() => setSubmitIndId(null)}
-                                    />
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
 
                             {/* Expanded edit row */}
                             {isEditing && (
@@ -2420,6 +2393,340 @@ function PortalToaView({ portfolioId, portColor }) {
 }
 
 // ─── Portfolio Panel ────────────────────────────────────────────────────────────
+// ─── Portfolio Content Table ───────────────────────────────────────────────────
+const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
+const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
+
+function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcomesChange }) {
+  const p = PORT_COLORS[portfolio.portfolio_id];
+  const [editOutId,    setEditOutId]    = useState(null);
+  const [editIndId,    setEditIndId]    = useState(null);
+  const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
+  const [addingOut,    setAddingOut]    = useState(false);
+  const [newOutTitle,  setNewOutTitle]  = useState("");
+  const [saving,       setSaving]       = useState(false);
+  const [confirmDelOut, setConfirmDelOut] = useState(null);
+
+  const thStyle = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+    textTransform: "uppercase", letterSpacing: "0.06em", background: BG,
+    borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`,
+    textAlign: "left", whiteSpace: "nowrap" };
+  const tdStyle = { padding: "10px 12px", borderBottom: `1px solid ${BORDER}`,
+    borderRight: `1px solid ${BORDER}`, verticalAlign: "top" };
+
+  const addOutcome = async () => {
+    if (!newOutTitle.trim()) return;
+    setSaving(true);
+    const res = await api("/api/portfolio-outcomes", {
+      method: "POST",
+      body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, title: newOutTitle }),
+    });
+    if (!res.error) { onRefresh(); setAddingOut(false); setNewOutTitle(""); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+
+      {/* ── Outcomes table ───────────────────────────────── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <SectionLabel>Portfolio Outcomes</SectionLabel>
+        <Btn variant="ghost" size="sm" onClick={() => setAddingOut(v => !v)}
+          style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
+          {addingOut ? "Cancel" : "+ Add outcome"}
+        </Btn>
+      </div>
+
+      {addingOut && (
+        <Card className="fade-in" style={{ border: `1px dashed ${BORDER}`, marginBottom: 14 }}>
+          <Field label="Outcome title" required>
+            <input type="text" value={newOutTitle} onChange={e => setNewOutTitle(e.target.value)}
+              placeholder="e.g. Improved data system access…" style={inputStyle} />
+          </Field>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+            <Btn variant="secondary" size="sm" onClick={() => { setAddingOut(false); setNewOutTitle(""); }}>Cancel</Btn>
+            <Btn size="sm" onClick={addOutcome} disabled={!newOutTitle.trim() || saving}>
+              {saving ? "Adding…" : "Add outcome"}
+            </Btn>
+          </div>
+        </Card>
+      )}
+
+      <div style={{ overflowX: "auto", marginBottom: 28 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "25%" }} />
+            <col style={{ width: "55%" }} />
+            <col style={{ width: "15%" }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={thStyle}>#</th>
+              <th style={thStyle}>Short Title</th>
+              <th style={thStyle}>Outcome Text</th>
+              <th style={{ ...thStyle, borderRight: "none" }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {outcomes.length === 0 && (
+              <tr><td colSpan={4} style={{ ...tdStyle, color: TEXT_MUTED, fontStyle: "italic", textAlign: "center", borderRight: "none" }}>No outcomes yet.</td></tr>
+            )}
+            {outcomes.map((out, i) => (
+              <React.Fragment key={out.outcome_id}>
+                <tr style={{ background: editOutId === out.outcome_id ? BG : SURFACE }}>
+                  <td style={{ ...tdStyle, textAlign: "center" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, background: p?.light || ACCENT_LIGHT,
+                      color: p?.dark || ACCENT, borderRadius: 4, padding: "2px 7px" }}>
+                      PO{i + 1}
+                    </span>
+                  </td>
+                  <td style={{ ...tdStyle, fontWeight: 700, fontSize: 13, color: TEXT }}>
+                    {out.short_title || out.title}
+                  </td>
+                  <td style={{ ...tdStyle, fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>
+                    {out.outcome || out.title}
+                  </td>
+                  <td style={{ ...tdStyle, borderRight: "none" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <Btn variant="secondary" size="sm"
+                        onClick={() => setEditOutId(editOutId === out.outcome_id ? null : out.outcome_id)}>
+                        {editOutId === out.outcome_id ? "Cancel" : "Edit"}
+                      </Btn>
+                      {confirmDelOut === out.outcome_id ? (
+                        <>
+                          <Btn size="sm" onClick={async () => {
+                            await api(`/api/portfolio-outcomes/${out.outcome_id}`, { method: "DELETE" });
+                            onOutcomesChange(prev => prev.filter(o => o.outcome_id !== out.outcome_id));
+                            setConfirmDelOut(null);
+                          }} style={{ background: DANGER, color: "#fff", border: "none" }}>✓ Remove</Btn>
+                          <Btn variant="secondary" size="sm" onClick={() => setConfirmDelOut(null)}>✕</Btn>
+                        </>
+                      ) : (
+                        <Btn variant="ghost" size="sm" onClick={() => setConfirmDelOut(out.outcome_id)}
+                          style={{ color: DANGER }}>Remove</Btn>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+                {editOutId === out.outcome_id && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: "16px 20px", background: BG, borderBottom: `1px solid ${BORDER}` }}>
+                      <InlineEditOutcome
+                        outcome={out} user={user} isPortfolio
+                        onSave={updated => {
+                          onOutcomesChange(prev => prev.map(o =>
+                            o.outcome_id === out.outcome_id ? { ...o, ...updated } : o));
+                          setEditOutId(null);
+                        }}
+                        onCancel={() => setEditOutId(null)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Indicators table ─────────────────────────────── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <SectionLabel>Impact Indicators</SectionLabel>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "22%" }} />
+            {PORT_TABLE_YEARS.map(y => <col key={y} style={{ width: yearColW }} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={thStyle}>Indicator</th>
+              {PORT_TABLE_YEARS.map(y => <th key={y} style={{ ...thStyle, textAlign: "center" }}>{y}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {outcomes.map(out => {
+              const inds = out.indicators || [];
+              if (inds.length === 0 && addingIndFor !== out.outcome_id) return null;
+              return (
+                <React.Fragment key={out.outcome_id}>
+                  {/* Outcome sub-header */}
+                  <tr>
+                    <td colSpan={PORT_TABLE_YEARS.length + 1}
+                      style={{ ...tdStyle, background: BG, padding: "6px 14px", borderRight: "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                          textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          {out.short_title || out.title}
+                        </span>
+                        <button onClick={() => setAddingIndFor(addingIndFor === out.outcome_id ? null : out.outcome_id)}
+                          style={{ background: "none", border: "none", cursor: "pointer",
+                            fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
+                          + Add indicator
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Add indicator form */}
+                  {addingIndFor === out.outcome_id && (
+                    <tr>
+                      <td colSpan={PORT_TABLE_YEARS.length + 1}
+                        style={{ padding: "14px 16px", background: BG, borderBottom: `1px solid ${BORDER}` }}>
+                        <AddPortfolioIndicatorInline
+                          portfolio={portfolio} outcomeId={out.outcome_id} user={user}
+                          onSaved={() => { onRefresh(); setAddingIndFor(null); }}
+                          onCancel={() => setAddingIndFor(null)}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  {/* Indicator rows */}
+                  {inds.map(ind => {
+                    const isEditing = editIndId === ind.indicator_id;
+                    return (
+                      <React.Fragment key={ind.indicator_id}>
+                        <tr>
+                          <td style={{ ...tdStyle, background: p?.light || ACCENT_LIGHT, borderRight: `2px solid ${BORDER}` }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND, lineHeight: 1.4, marginBottom: 5 }}>
+                              {ind.text}
+                            </p>
+                            {ind.baseline != null && (
+                              <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 5 }}>
+                                Baseline: {ind.baseline}{ind.unit ? ` ${ind.unit}` : ""}
+                              </p>
+                            )}
+                            <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                              style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", background: SURFACE,
+                                color: TEXT_SUB, border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
+                              Edit Indicator
+                            </button>
+                          </td>
+                          {PORT_TABLE_YEARS.map(year => {
+                            const tval = ind[`target_${year}`];
+                            const yearActuals = (ind.actuals || [])
+                              .filter(a => a.year === year)
+                              .sort((a, b) => (a.period || "").localeCompare(b.period || ""));
+                            return (
+                              <td key={year} style={{ ...tdStyle, textAlign: "center", background: SURFACE }}>
+                                {tval != null ? (
+                                  <div style={{ marginBottom: yearActuals.length ? 4 : 0 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>T: </span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
+                                      {tval}{ind.unit ? ` ${ind.unit}` : ""}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>
+                                )}
+                                {yearActuals.map((a, ai) => (
+                                  <div key={ai} style={{ marginTop: ai === 0 ? 0 : 3 }}>
+                                    {a.period && <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, display: "block" }}>{a.period}</span>}
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: SUCCESS }}>A: </span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: SUCCESS }}>
+                                      {a.actual_value}{ind.unit ? ` ${ind.unit}` : ""}
+                                    </span>
+                                  </div>
+                                ))}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        {isEditing && (
+                          <tr>
+                            <td colSpan={PORT_TABLE_YEARS.length + 1}
+                              style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
+                              <div style={{ padding: "16px 20px", background: BG }}>
+                                <InlineEditIndicator
+                                  indicator={ind} user={user} isPortfolio
+                                  onSave={updated => {
+                                    onOutcomesChange(prev => prev.map(o =>
+                                      o.outcome_id === out.outcome_id
+                                        ? { ...o, indicators: o.indicators.map(i =>
+                                            i.indicator_id === ind.indicator_id ? { ...i, ...updated } : i) }
+                                        : o));
+                                    setEditIndId(null);
+                                  }}
+                                  onCancel={() => setEditIndId(null)}
+                                  onDeleted={() => {
+                                    onOutcomesChange(prev => prev.map(o =>
+                                      o.outcome_id === out.outcome_id
+                                        ? { ...o, indicators: o.indicators.filter(i => i.indicator_id !== ind.indicator_id) }
+                                        : o));
+                                    setEditIndId(null);
+                                  }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+            {outcomes.every(o => (o.indicators||[]).length === 0) && !outcomes.some(o => addingIndFor === o.outcome_id) && (
+              <tr><td colSpan={PORT_TABLE_YEARS.length + 1} style={{ ...tdStyle, color: TEXT_MUTED, fontStyle: "italic", textAlign: "center", borderRight: "none" }}>No indicators yet. Use "+ Add indicator" on an outcome above.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCancel }) {
+  const [text, setText] = useState("");
+  const [unit, setUnit] = useState("");
+  const [freq, setFreq] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!text.trim()) return;
+    setSaving(true);
+    const res = await api("/api/portfolio-indicators", {
+      method: "POST",
+      body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, outcome_id: outcomeId,
+        text, unit: unit || null, collection_frequency: freq || null, edited_by: user?.email }),
+    });
+    if (!res.error) onSaved();
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
+        <Field label="Indicator" required>
+          <textarea value={text} onChange={e => setText(e.target.value)}
+            placeholder="Describe what this indicator measures…"
+            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+        <Field label="Unit">
+          <select value={unit} onChange={e => setUnit(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">None</option>
+            {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Frequency">
+          <select value={freq} onChange={e => setFreq(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select…</option>
+            {Object.keys(PERIOD_OPTIONS).map(f =>
+              <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" onClick={save} disabled={!text.trim() || saving}>{saving ? "Adding…" : "Add indicator"}</Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
 function PortfolioPanel({ portfolio, user, onBack }) {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
@@ -2492,126 +2799,13 @@ function PortfolioPanel({ portfolio, user, onBack }) {
         </div>
       )}
 
-      {portTab==="outcomes" && <div style={{ marginBottom: 32 }}>
-        <div style={{ display: "flex", justifyContent: "space-between",
-          alignItems: "center", marginBottom: 14 }}>
-          <SectionLabel>Portfolio Outcomes & Indicators</SectionLabel>
-          {!addingOut && (
-            <Btn variant="ghost" size="sm" onClick={() => setAddingOut(true)}
-              style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
-              + Add outcome
-            </Btn>
-          )}
-        </div>
-
-        {addingOut && (
-          <Card className="fade-in" style={{ border: `1px dashed ${BORDER}`, marginBottom: 16 }}>
-            <Field label="Outcome title" required>
-              <input type="text" value={newOutTitle} onChange={e => setNewOutTitle(e.target.value)}
-                placeholder="e.g. Improved data system access..." style={inputStyle} />
-            </Field>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <Btn variant="secondary" size="sm"
-                onClick={() => { setAddingOut(false); setNewOutTitle(""); }}>Cancel</Btn>
-              <Btn size="sm" onClick={addOutcome} disabled={!newOutTitle.trim() || saving}>
-                {saving ? "Adding..." : "Add outcome"}
-              </Btn>
-            </div>
-          </Card>
-        )}
-
-        {outcomes.length === 0 && !addingOut && (
-          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-            No outcomes added yet.
-          </p>
-        )}
-
-        {outcomes.map((out, i) => {
-          const indicators = out.indicators || [];
-          return (
-            <Card key={out.outcome_id} style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
-              <div style={{ padding: "12px 18px", background: BG,
-                borderBottom: `1px solid ${BORDER}`,
-                display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 800,
-                  background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
-                  borderRadius: 4, padding: "2px 7px" }}>
-                  PO{i + 1}
-                </span>
-                <p style={{ flex: 1, fontSize: 14, fontWeight: 700, color: TEXT }}>
-                  {out.title}
-                </p>
-                <Btn variant="secondary" size="sm"
-                  onClick={() => setEditOutId(editOutId === out.outcome_id ? null : out.outcome_id)}>
-                  {editOutId === out.outcome_id ? "Cancel" : "Edit"}
-                </Btn>
-                <Btn variant="ghost" size="sm"
-                  onClick={async () => {
-                    await api(`/api/portfolio-outcomes/${out.outcome_id}`, { method: "DELETE" });
-                    setOutcomes(prev => prev.filter(o => o.outcome_id !== out.outcome_id));
-                  }}
-                  style={{ color: DANGER, fontSize: 12 }}>Remove</Btn>
-              </div>
-
-              {editOutId === out.outcome_id && (
-                <div style={{ padding: 18 }}>
-                  <InlineEditOutcome
-                    outcome={out} user={user} isPortfolio
-                    onSave={updated => {
-                      setOutcomes(prev => prev.map(o =>
-                        o.outcome_id === out.outcome_id ? { ...o, ...updated } : o));
-                      setEditOutId(null);
-                    }}
-                    onCancel={() => setEditOutId(null)}
-                  />
-                </div>
-              )}
-
-              <div style={{ padding: "12px 18px" }}>
-                {indicators.length === 0 && (
-                  <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 10 }}>
-                    No indicators yet.
-                  </p>
-                )}
-                {indicators.map(ind => (
-                  <IndicatorRow key={ind.indicator_id}
-                    indicator={{ ...ind, portfolio_id: portfolio.portfolio_id }}
-                    bow={{ bow_id: portfolio.portfolio_id, portfolio_id: null }}
-                    user={user} isPortfolio
-                    onDeleted={id => setOutcomes(prev => prev.map(o =>
-                      o.outcome_id === out.outcome_id
-                        ? { ...o, indicators: o.indicators.filter(i => i.indicator_id !== id) }
-                        : o
-                    ))}
-                    onUpdated={upd => setOutcomes(prev => prev.map(o =>
-                      o.outcome_id === out.outcome_id
-                        ? { ...o, indicators: o.indicators.map(i =>
-                            i.indicator_id === upd.indicator_id ? { ...i, ...upd } : i) }
-                        : o
-                    ))}
-                  />
-                ))}
-                <div style={{ marginTop: 10 }}>
-                  <Btn variant="ghost" size="sm"
-                    onClick={async () => {
-                      const text = window.prompt("New indicator:");
-                      if (!text?.trim()) return;
-                      await api("/api/portfolio-indicators", {
-                        method: "POST",
-                        body: JSON.stringify({ portfolio_id: portfolio.portfolio_id,
-                          outcome_id: out.outcome_id, text: text.trim() }),
-                      });
-                      load();
-                    }}
-                    style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
-                    + Add indicator
-                  </Btn>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>}
+      {portTab==="outcomes" && (
+        <PortfolioContentTable
+          outcomes={outcomes} portfolio={portfolio} user={user}
+          onRefresh={load}
+          onOutcomesChange={setOutcomes}
+        />
+      )}
     </div>
   );
 }
