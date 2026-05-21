@@ -323,6 +323,16 @@ def debug_bow_links(bow_id):
     return jsonify({"bow_outcomes": bow_outcomes, "links": links, "bow_id": bow_id})
 
 
+@app.route("/api/debug/portfolio-outcomes/<portfolio_id>")
+def debug_portfolio_outcomes(portfolio_id):
+    """Diagnostic: shows outcome_id values stored in portfolio_outcomes for this portfolio."""
+    rows = query(
+        f"SELECT outcome_id, short_title, sort_order FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
+        [portfolio_id]
+    )
+    return jsonify({"portfolio_id": portfolio_id, "outcomes": rows})
+
+
 @app.route("/api/admin/seed-sfl-links", methods=["POST"])
 def seed_sfl_links():
     """One-time seed: upserts sfl-po6 into portfolio_outcomes and populates
