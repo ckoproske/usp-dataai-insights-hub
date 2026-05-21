@@ -65,10 +65,10 @@ const INSIGHT_TYPES = [
 ];
 
 const MEASUREMENT_LEVELS = [
-  { value: "output",  label: "Output" },
-  { value: "outcome", label: "Outcome" },
-  { value: "impact",  label: "Impact" },
-  { value: "process", label: "Process" },
+  { value: "bow",       label: "BOW" },
+  { value: "portfolio", label: "Portfolio" },
+  { value: "strategy",  label: "Strategy" },
+  { value: "other",     label: "Other" },
 ];
 
 const INDICATOR_STATUSES = [
@@ -501,7 +501,7 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
 }
 
 // ─── Source Picker (with inline create) ────────────────────────────────────────
-function SourcePickerInline({ sourceId, roundId, onChange, user }) {
+function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = false }) {
   const [sources, setSources]           = useState([]);
   const [rounds, setRounds]             = useState([]);
   const [creating, setCreating]         = useState(false);
@@ -628,7 +628,7 @@ function SourcePickerInline({ sourceId, roundId, onChange, user }) {
         </div>
       )}
 
-      {sourceId && !creating && (
+      {sourceId && !creating && showRounds && (
         <div style={{ marginTop: 8 }}>
           <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
             display: "block", marginBottom: 3 }}>Round / collection event</label>
@@ -689,12 +689,11 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
   const [purpose, setPurpose]     = useState(indicator.purpose || "");
   const [measureLevel, setML]     = useState(indicator.measurement_level || "");
   const [tags, setTags]           = useState(indicator.thematic_tags || "");
-  const [indStatus, setStatus]    = useState(indicator.status || "active");
-  const [qualityNotes, setQN]     = useState(indicator.data_quality_notes || "");
-  const [owner, setOwner]         = useState(indicator.indicator_owner || "");
+  const [indStatus, setStatus]      = useState(indicator.status || "active");
+  const [qualityNotes, setQN]       = useState(indicator.data_quality_notes || "");
+  const [trackingNotes, setTN]      = useState(indicator.tracking_notes || "");
   const [reviewDate, setReviewDate] = useState(indicator.last_reviewed_date || "");
-  const [sourceId, setSourceId]   = useState(indicator.source_id || null);
-  const [roundId, setRoundId]     = useState(indicator.round_id || null);
+  const [sourceId, setSourceId]     = useState(indicator.source_id || null);
   const [unit, setUnit]           = useState(indicator.unit || "");
   const [freq, setFreq]           = useState(indicator.collection_frequency || "");
   const [baseline, setBase]       = useState(String(indicator.baseline ?? ""));
@@ -728,7 +727,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       thematic_tags: tags || null,
       status: indStatus,
       data_quality_notes: qualityNotes || null,
-      indicator_owner: owner || null,
+      tracking_notes: trackingNotes || null,
       last_reviewed_date: reviewDate || null,
       source_id: sourceId || null,
       unit, collection_frequency: freq, baseline: baseline || null,
@@ -801,26 +800,20 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
             {INDICATOR_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </Field>
-        <Field label="Owner / responsible person">
-          <input type="text" value={owner} onChange={e => setOwner(e.target.value)}
-            style={inputStyle} />
-        </Field>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginBottom: 12 }}>
-        <Field label="Thematic tags" helper="Comma-separated, e.g. equity, data infrastructure, AI readiness">
-          <input type="text" value={tags} onChange={e => setTags(e.target.value)}
-            placeholder="e.g. equity, data infrastructure" style={inputStyle} />
-        </Field>
         <Field label="Last reviewed">
           <input type="date" value={reviewDate} onChange={e => setReviewDate(e.target.value)}
             style={inputStyle} />
         </Field>
       </div>
+      <Field label="Thematic tags" helper="Comma-separated, e.g. equity, data infrastructure, AI readiness">
+        <input type="text" value={tags} onChange={e => setTags(e.target.value)}
+          placeholder="e.g. equity, data infrastructure" style={inputStyle} />
+      </Field>
 
       {/* ── Source ── */}
       <SectionHead label="Source" />
-      <SourcePickerInline sourceId={sourceId} roundId={roundId}
-        onChange={(sid, rid) => { setSourceId(sid); setRoundId(rid); }}
+      <SourcePickerInline sourceId={sourceId} roundId={null}
+        onChange={(sid) => setSourceId(sid)}
         user={user} />
 
       {/* ── Data ── */}
@@ -863,10 +856,14 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         ))}
       </div>
 
-      {/* ── Data quality ── */}
-      <SectionHead label="Data Quality" />
-      <Field label="Quality notes" helper="Known limitations, caveats, or issues with this indicator's data.">
+      {/* ── Notes ── */}
+      <SectionHead label="Notes" />
+      <Field label="Data quality notes" helper="Known limitations, caveats, or gaps with this indicator's data.">
         <textarea value={qualityNotes} onChange={e => setQN(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <Field label="Tracking details" helper="How and where this indicator is tracked, any context for the team.">
+        <textarea value={trackingNotes} onChange={e => setTN(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
 
@@ -1743,7 +1740,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                                 borderRight: `2px solid ${BORDER}` }}>
                                 <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND,
                                   lineHeight: 1.4, marginBottom: 5 }}>
-                                  {ind.text}
+                                  {ind.name || ind.text}
                                 </p>
                                 {ind.baseline != null && (
                                   <p style={{ fontSize: 11, color: TEXT_MUTED }}>
@@ -2876,7 +2873,7 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
                         <tr>
                           <td style={{ ...tdStyle, background: p?.light || ACCENT_LIGHT, borderRight: `2px solid ${BORDER}` }}>
                             <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND, lineHeight: 1.4, marginBottom: 5 }}>
-                              {ind.text}
+                              {ind.name || ind.text}
                             </p>
                             {ind.baseline != null && (
                               <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 5 }}>
@@ -3579,7 +3576,7 @@ function SubmitForm({ user, bows, goals, portfolios, indicators, portfolioIndica
                                       {/* Line 1: indicator text */}
                                       <p style={{ fontSize: 14, fontWeight: 600, color: isSelected ? BRAND : TEXT,
                                         marginBottom: 8, lineHeight: 1.4 }}>
-                                        {ind.text}
+                                        {ind.name || ind.text}
                                       </p>
                                       {/* Line 2: metadata pills */}
                                       {(() => {

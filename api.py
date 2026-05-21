@@ -2417,7 +2417,7 @@ def delete_bow_outcome(outcome_id):
 BOW_IND_EDITABLE = {
     "name", "text", "purpose", "unit", "collection_frequency", "baseline", "data_source",
     "source_id", "measurement_level", "thematic_tags", "status", "data_quality_notes",
-    "indicator_owner", "last_reviewed_date",
+    "tracking_notes", "last_reviewed_date",
     "target_2026", "target_2027", "target_2028", "target_2029", "target_2030",
 }
 
@@ -2464,7 +2464,7 @@ def add_bow_indicator():
         f"""INSERT INTO {SCHEMA}.bow_indicators
             (indicator_id, bow_id, outcome_id, name, text, purpose, unit, collection_frequency,
              baseline, source_id, measurement_level, thematic_tags, status,
-             data_quality_notes, indicator_owner, last_reviewed_date,
+             data_quality_notes, tracking_notes, last_reviewed_date,
              target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)""",
         [iid, bow_id, outcome_id or None,
@@ -2473,7 +2473,7 @@ def add_bow_indicator():
          data.get("baseline") or None, data.get("source_id") or None,
          data.get("measurement_level") or None, data.get("thematic_tags") or None,
          data.get("status") or "active",
-         data.get("data_quality_notes") or None, data.get("indicator_owner") or None,
+         data.get("data_quality_notes") or None, data.get("tracking_notes") or None,
          data.get("last_reviewed_date") or None,
          data.get("target_2026") or None, data.get("target_2027") or None,
          data.get("target_2028") or None, data.get("target_2029") or None,
@@ -2627,7 +2627,7 @@ def delete_portfolio_outcome(outcome_id):
 PORT_IND_EDITABLE = {
     "name", "text", "purpose", "unit", "collection_frequency", "baseline", "data_source",
     "source_id", "measurement_level", "thematic_tags", "status", "data_quality_notes",
-    "indicator_owner", "last_reviewed_date",
+    "tracking_notes", "last_reviewed_date",
     "target_2026", "target_2027", "target_2028", "target_2029", "target_2030",
 }
 
@@ -2674,7 +2674,7 @@ def add_portfolio_indicator():
         f"""INSERT INTO {SCHEMA}.portfolio_indicators
             (indicator_id, portfolio_id, outcome_id, name, text, purpose, unit, collection_frequency,
              baseline, source_id, measurement_level, thematic_tags, status,
-             data_quality_notes, indicator_owner, last_reviewed_date,
+             data_quality_notes, tracking_notes, last_reviewed_date,
              target_2026, target_2027, target_2028, target_2029, target_2030)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [iid, portfolio_id, outcome_id or None,
@@ -2683,7 +2683,7 @@ def add_portfolio_indicator():
          data.get("baseline") or None, data.get("source_id") or None,
          data.get("measurement_level") or None, data.get("thematic_tags") or None,
          data.get("status") or "active",
-         data.get("data_quality_notes") or None, data.get("indicator_owner") or None,
+         data.get("data_quality_notes") or None, data.get("tracking_notes") or None,
          data.get("last_reviewed_date") or None,
          data.get("target_2026") or None, data.get("target_2027") or None,
          data.get("target_2028") or None, data.get("target_2029") or None,
@@ -2813,12 +2813,12 @@ def get_activity_feed():
 #   ALTER TABLE usp_data.usp_strategy.bow_indicators ADD COLUMNS (
 #     name STRING, purpose STRING, source_id STRING, measurement_level STRING,
 #     thematic_tags STRING, status STRING, data_quality_notes STRING,
-#     indicator_owner STRING, last_reviewed_date DATE
+#     tracking_notes STRING, last_reviewed_date DATE
 #   );
 #   ALTER TABLE usp_data.usp_strategy.portfolio_indicators ADD COLUMNS (
 #     name STRING, purpose STRING, source_id STRING, measurement_level STRING,
 #     thematic_tags STRING, status STRING, data_quality_notes STRING,
-#     indicator_owner STRING, last_reviewed_date DATE
+#     tracking_notes STRING, last_reviewed_date DATE
 #   );
 
 @app.route("/api/sources")
