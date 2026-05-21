@@ -4167,6 +4167,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   const [expandedBows, setExpandedBows] = useState({});
   const [showMatrix, setShowMatrix] = useState(false);
   const [hoveredBow, setHoveredBow] = useState(null);
+  const [hoveredOutcome, setHoveredOutcome] = useState(null);
   const [linksLoaded, setLinksLoaded] = useState(false);
 
   useEffect(() => {
@@ -4243,47 +4244,41 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
           {allOutcomes.map((o,i) => {
-            const outcomeOpen = !!expandedOutcomes[o.id];
-            const inputsOpen  = !!expandedInputs[o.id];
+            const isOpen = !!expandedOutcomes[o.id];
+            const isHov  = hoveredOutcome === o.id;
             const lane = toaLanes[i];
             const activities = lane?.activities || [];
+            const toggle = () => setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}));
             return (
-              <div key={o.id} style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:pc.color+"04",display:"flex",flexDirection:"column"}}>
+              <div key={o.id}
+                onClick={toggle}
+                onMouseEnter={()=>setHoveredOutcome(o.id)}
+                onMouseLeave={()=>setHoveredOutcome(null)}
+                style={{borderRadius:10,border:"1px solid "+(isOpen?pc.color+"55":isHov?pc.color+"33":BORDER),overflow:"hidden",background:isHov||isOpen?pc.color+"07":pc.color+"04",display:"flex",flexDirection:"column",cursor:"pointer",transition:"border-color .15s, background .15s, box-shadow .15s",boxShadow:isHov||isOpen?"0 4px 14px rgba(10,37,64,0.09)":"0 1px 3px rgba(10,37,64,0.04)"}}>
                 <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
                 <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
-                  {/* Number + short title */}
+                  {/* Number + short title + chevron */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                     <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
-                    <div style={{fontSize:14,fontWeight:800,color:TEXT,lineHeight:1.3}}>{SHORT_TITLES[i]||o.shortTitle}</div>
+                    <div style={{fontSize:14,fontWeight:800,color:TEXT,lineHeight:1.3,flex:1}}>{SHORT_TITLES[i]||o.shortTitle}</div>
+                    <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,marginTop:3,transition:"transform .15s",display:"inline-block",transform:isOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
                   </div>
-                  {/* Full outcome text — expandable */}
-                  {outcomeOpen && (
-                    <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+pc.color+"33",marginLeft:11}}>{o.outcome}</div>
-                  )}
-                  {/* Toggle buttons */}
-                  <div style={{display:"flex",gap:8,paddingLeft:32,flexWrap:"wrap"}}>
-                    <button onClick={()=>setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}))}
-                      style={{background:"none",border:"1px solid "+BORDER,borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:10,color:TEXT_MUTED,fontWeight:400}}>
-                      {outcomeOpen ? "▴ less" : "▾ full outcome"}
-                    </button>
-                    {activities.length > 0 && (
-                      <button onClick={()=>setExpandedInputs(v=>({...v,[o.id]:!v[o.id]}))}
-                        style={{background:"none",border:"1px solid "+BORDER,borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:10,color:TEXT_MUTED,fontWeight:400}}>
-                        {inputsOpen ? "▴ inputs" : "▾ investments & inputs"}
-                      </button>
-                    )}
-                  </div>
-                  {/* Investments & Inputs panel — TOA lane activities */}
-                  {inputsOpen && activities.length > 0 && (
-                    <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:6,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
-                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Investments & Inputs</div>
-                      {activities.map((act, ai) => (
-                        <div key={act.activity_id||ai} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
-                          <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.7}}/>
-                          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
+                  {/* Full outcome text + investments — expand together */}
+                  {isOpen && (
+                    <>
+                      <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+pc.color+"33",marginLeft:11}}>{o.outcome}</div>
+                      {activities.length > 0 && (
+                        <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:6,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
+                          <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Investments & Inputs</div>
+                          {activities.map((act, ai) => (
+                            <div key={act.activity_id||ai} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
+                              <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.7}}/>
+                              <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
