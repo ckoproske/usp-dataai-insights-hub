@@ -683,38 +683,9 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
 }
 
 // ─── Inline Edit Indicator ─────────────────────────────────────────────────────
-function InlineEditIndicatorLinked({ indicator, onSave, onCancel, onDeleted, user }) {
-  // Read-only metadata view for portfolio indicators linked to a BOW indicator.
-  // Only baseline + targets are editable here.
-  const [baseline, setBase]       = useState(String(indicator.baseline ?? ""));
-  const [targets, setTargets]     = useState(
-    TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: String(indicator[`target_${y}`] ?? "") }), {})
-  );
-  const [revReason, setRevReason] = useState("");
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState(null);
+function InlineEditIndicatorLinked({ indicator, onCancel, onDeleted }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting]   = useState(false);
-
-  const targetsChanged = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
-  const canSave = !targetsChanged || revReason;
-
-  const save = async () => {
-    setSaving(true); setError(null);
-    const body = {
-      baseline: baseline || null,
-      ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
-      revision_reason: revReason || undefined,
-      edited_by: user?.email,
-    };
-    try {
-      const res = await api(`/api/portfolio-indicators/${indicator.indicator_id}`,
-        { method: "PATCH", body: JSON.stringify(body) });
-      if (res.error) { setError(res.error); return; }
-      onSave({ ...indicator, ...body });
-    } catch { setError("Save failed — please try again."); }
-    finally { setSaving(false); }
-  };
+  const [deleting, setDeleting]           = useState(false);
 
   const doDelete = async () => {
     setDeleting(true);
@@ -726,61 +697,23 @@ function InlineEditIndicatorLinked({ indicator, onSave, onCancel, onDeleted, use
   return (
     <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
       border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
-      {/* Read-only BOW indicator info */}
       <div style={{ padding: "10px 14px", background: BG, border: `1px solid ${BORDER}`,
-        borderRadius: 6, marginBottom: 16 }}>
+        borderRadius: 6, marginBottom: 12 }}>
         <p style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
           textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
-          Linked BOW indicator — edit metadata on the BOW page
+          Linked BOW indicator — edit name, targets, and metadata on the BOW page
         </p>
-        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: indicator.text && indicator.name ? 4 : 0 }}>
           {indicator.name || indicator.text}
         </p>
         {indicator.text && indicator.name && (
           <p style={{ fontSize: 12, color: TEXT_SUB }}>{indicator.text}</p>
         )}
       </div>
-
-      <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>
-        Portfolio Baseline & Targets
-      </p>
-      <div style={{ display: "grid",
-        gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 16 }}>
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-            display: "block", marginBottom: 3 }}>Baseline</label>
-          <input type="number" value={baseline} onChange={e => setBase(e.target.value)}
-            style={{ ...inputStyle, textAlign: "right" }} />
-        </div>
-        {TARGET_YEARS.map(y => (
-          <div key={y}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-              display: "block", marginBottom: 3 }}>{y}</label>
-            <input type="number" value={targets[y]}
-              onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
-              style={{ ...inputStyle, textAlign: "right" }} />
-          </div>
-        ))}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginBottom: 12 }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Close</Btn>
       </div>
-
-      {targetsChanged && (
-        <Field label="Reason for target revision" required>
-          <select value={revReason} onChange={e => setRevReason(e.target.value)}
-            style={{ ...inputStyle, appearance: "auto", borderColor: ACCENT }}>
-            <option value="">Select reason…</option>
-            {REVISION_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
-        </Field>
-      )}
-
-      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
-        <Btn size="sm" onClick={save} disabled={!canSave || saving}>
-          {saving ? "Saving…" : "Save targets"}
-        </Btn>
-      </div>
-      <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+      <div style={{ paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
         {confirmDelete ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 12, color: DANGER, flexGrow: 1 }}>
@@ -912,9 +845,16 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
 
+      {/* ── Source ── */}
+      <Field label="Source">
+        <SourcePickerInline sourceId={sourceId} roundId={null}
+          onChange={(sid) => setSourceId(sid)}
+          user={user} />
+      </Field>
+
       {/* ── Classification ── */}
       <SectionHead label="Classification" />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <Field label="Measurement level">
           <select value={measureLevel} onChange={e => setML(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
@@ -929,12 +869,6 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
           </select>
         </Field>
       </div>
-
-      {/* ── Source ── */}
-      <SectionHead label="Source" />
-      <SourcePickerInline sourceId={sourceId} roundId={null}
-        onChange={(sid) => setSourceId(sid)}
-        user={user} />
 
       {/* ── Data ── */}
       <SectionHead label="Unit & Collection" />
