@@ -4229,7 +4229,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Problem / Gap statement ── */}
       {problemStatement && (
-        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+BORDER,borderLeft:"4px solid "+pc.color,background:SURFACE,padding:"16px 22px"}}>
+        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+BORDER,borderLeft:"4px solid "+pc.color+"88",background:SURFACE,padding:"16px 22px"}}>
           <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>The Problem We're Addressing</div>
           <div style={{fontSize:14,color:TEXT,lineHeight:1.7,fontWeight:500}}>{problemStatement}</div>
         </div>
@@ -4237,7 +4237,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Section 1: What We're Trying to Achieve ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+        <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
         <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",position:"relative",overflow:"hidden"}}>
 
           <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>What We're Trying to Achieve</div>
@@ -4258,7 +4258,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 onMouseEnter={()=>setHoveredOutcome(o.id)}
                 onMouseLeave={()=>setHoveredOutcome(null)}
                 style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,display:"flex",flexDirection:"column",cursor:"pointer",transition:"box-shadow .15s",boxShadow:isHov||isOpen?"0 4px 14px rgba(10,37,64,0.09)":"0 1px 3px rgba(10,37,64,0.04)"}}>
-                <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
+                <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
                 <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
                   {/* Number + short title + chevron */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
@@ -4292,7 +4292,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Section 2: How We Work ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+        <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
         <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative",overflow:"hidden"}}>
 
           <div>
@@ -4316,7 +4316,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 onMouseEnter={()=>setHoveredBow(bow.id)}
                 onMouseLeave={()=>setHoveredBow(null)}
                 style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",display:"flex",flexDirection:"column",transition:"box-shadow .15s",boxShadow:isHovered?"0 4px 14px rgba(10,37,64,0.10)":"0 1px 3px rgba(10,37,64,0.04)"}}>
-                <div style={{height:4,background:pc.color,transition:"background .15s"}}/>
+                <div style={{height:4,background:pc.color+"88",transition:"background .15s"}}/>
                 <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,flex:1}}>
                   <div style={{fontSize:13,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
                   {bow.delegate && (
@@ -4363,7 +4363,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 </div>
                 {allOutcomes.map((o,i) => (
                   <div key={o.id} style={{padding:"6px 6px",background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
-                    <div style={{width:18,height:18,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:3}}>{i+1}</div>
+                    <div style={{width:18,height:18,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:3}}>{i+1}</div>
                     <div style={{fontSize:9,fontWeight:700,color:TEXT,lineHeight:1.2}}>{SHORT_TITLES[i]||o.shortTitle}</div>
                   </div>
                 ))}
@@ -4423,7 +4423,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
       {/* ── Section 3: 2030 Goals ── */}
       {(crossIndicators.length > 0 || goals.length > 0 || amb45Text || amb45Buckets) && (
         <div style={{borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-          <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+          <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
           <div style={{padding:"22px 28px"}}>
             <div style={{marginBottom:22,position:"relative",overflow:"hidden"}}>
 
@@ -4435,14 +4435,14 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 <div style={{flex:2,minWidth:0,display:"flex",flexDirection:"column",gap:12}}>
                   {crossIndicators.map((ind,i) => (
                     <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                      <span style={{width:20,height:20,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
+                      <span style={{width:20,height:20,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
                       <div style={{fontSize:13,color:TEXT,lineHeight:1.65,fontWeight:500}}>{ind}</div>
                     </div>
                   ))}
                   {crossIndicators.length === 0 && goals.map(g => (
                     <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
                       style={{display:"flex",alignItems:"flex-start",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
-                      <span style={{width:20,height:20,borderRadius:"50%",background:g.color||pc.color,color:"#fff",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{g.number}</span>
+                      <span style={{width:20,height:20,borderRadius:"50%",background:g.color?(g.color+"22"):pc.light,color:g.color||pc.dark,border:"1px solid "+(g.color||pc.color)+"55",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{g.number}</span>
                       <span style={{fontSize:13,color:TEXT,lineHeight:1.5,fontWeight:500,flex:1}}>{g.title}</span>
                       {onNavigateToStrategy&&<span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
                     </div>
@@ -4517,7 +4517,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
     <div style={{display:"flex",flexDirection:"column",gap:0}}>
       {/* Persistent portfolio banner — always visible */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER}}>
-        <div style={{height:4,background:`linear-gradient(90deg, ${pc.color}, ${pc.color}88)`}}/>
+        <div style={{height:4,background:`linear-gradient(90deg, ${pc.color}88, ${pc.color}22)`}}/>
         <div style={{padding:"20px 28px 18px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:28}}>
           <div style={{flex:1}}>
             <div style={{fontSize:10,fontWeight:600,letterSpacing:2.5,textTransform:"uppercase",color:pc.color,marginBottom:8,opacity:0.9}}>Portfolio</div>
