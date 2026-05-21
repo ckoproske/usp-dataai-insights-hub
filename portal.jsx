@@ -5047,6 +5047,7 @@ function PortalApp() {
   injectStyle();
 
   const [user, setUser]             = useState(null);
+  const [mode, setMode]             = useState(null); // null = landing, "edit", "data"
   const [tab, setTab]               = useState("content");
   const [bows, setBows]             = useState([]);
   const [portfolios, setPortfolios] = useState([]);
@@ -5164,9 +5165,68 @@ function PortalApp() {
         )}
       </div>
 
-      {/* Tab nav */}
+      {/* Landing screen */}
+      {mode === null && (
+        <div style={{ minHeight: "calc(100vh - 56px)", background: BG,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 32px" }}>
+          <div style={{ width: "100%", maxWidth: 680 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: TEXT,
+              marginBottom: 8, textAlign: "center" }}>
+              What would you like to do?
+            </h1>
+            <p style={{ fontSize: 14, color: TEXT_SUB, textAlign: "center",
+              marginBottom: 40, lineHeight: 1.6 }}>
+              Choose a path below to get started.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              {/* Edit Content */}
+              <button onClick={() => { setMode("edit"); setTab("content"); }}
+                style={{ background: SURFACE, border: `2px solid ${BORDER}`,
+                  borderRadius: 14, padding: "32px 28px", cursor: "pointer",
+                  textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
+                  fontFamily: "inherit" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = "0 4px 20px rgba(248,92,2,0.10)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>✏️</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
+                  Edit Content
+                </div>
+                <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.65 }}>
+                  Update strategy content across BOWs and portfolios — outcomes, indicator definitions, targets, sources, and narrative text.
+                </div>
+              </button>
+
+              {/* Update Data */}
+              <button onClick={() => { setMode("data"); setTab("content"); }}
+                style={{ background: SURFACE, border: `2px solid ${BORDER}`,
+                  borderRadius: 14, padding: "32px 28px", cursor: "pointer",
+                  textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
+                  fontFamily: "inherit" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = "0 4px 20px rgba(248,92,2,0.10)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>📊</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
+                  Update Data
+                </div>
+                <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.65 }}>
+                  Submit new actuals for indicators — report the latest numbers for a specific collection round or time period.
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab nav — only shown after mode is chosen */}
+      {mode !== null && (
       <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`,
-        padding: "0 32px", display: "flex", gap: 2 }}>
+        padding: "0 32px", display: "flex", gap: 2, alignItems: "center" }}>
+        <button onClick={() => { setMode(null); setSelectedBow(null); setSelectedPortfolio(null); }}
+          style={{ fontSize: 12, color: TEXT_MUTED, background: "none", border: "none",
+            cursor: "pointer", padding: "13px 10px 13px 0", fontWeight: 600,
+            borderBottom: "3px solid transparent", marginRight: 6, fontFamily: "inherit" }}>
+          ← Home
+        </button>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: "13px 18px", fontSize: 14, fontWeight: 600,
@@ -5178,8 +5238,10 @@ function PortalApp() {
           </button>
         ))}
       </div>
+      )}
 
       {/* Page content — full width for portfolio ToA, wider for BOW panels */}
+      {mode !== null && (
       <div style={{ padding: "36px 32px", maxWidth: selectedPortfolio ? 1600 : 980, margin: "0 auto" }}>
 
         {tab === "content" && (
@@ -5259,6 +5321,7 @@ function PortalApp() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
