@@ -683,7 +683,139 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
 }
 
 // ─── Inline Edit Indicator ─────────────────────────────────────────────────────
+function InlineEditIndicatorLinked({ indicator, onSave, onCancel, onDeleted, user }) {
+  // Read-only metadata view for portfolio indicators linked to a BOW indicator.
+  // Only baseline + targets are editable here.
+  const [baseline, setBase]       = useState(String(indicator.baseline ?? ""));
+  const [targets, setTargets]     = useState(
+    TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: String(indicator[`target_${y}`] ?? "") }), {})
+  );
+  const [revReason, setRevReason] = useState("");
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting]   = useState(false);
+
+  const targetsChanged = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
+  const canSave = !targetsChanged || revReason;
+
+  const save = async () => {
+    setSaving(true); setError(null);
+    const body = {
+      baseline: baseline || null,
+      ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
+      revision_reason: revReason || undefined,
+      edited_by: user?.email,
+    };
+    try {
+      const res = await api(`/api/portfolio-indicators/${indicator.indicator_id}`,
+        { method: "PATCH", body: JSON.stringify(body) });
+      if (res.error) { setError(res.error); return; }
+      onSave({ ...indicator, ...body });
+    } catch { setError("Save failed — please try again."); }
+    finally { setSaving(false); }
+  };
+
+  const doDelete = async () => {
+    setDeleting(true);
+    await api(`/api/portfolio-indicators/${indicator.indicator_id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (onDeleted) onDeleted();
+  };
+
+  return (
+    <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
+      border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
+      {/* Read-only BOW indicator info */}
+      <div style={{ padding: "10px 14px", background: BG, border: `1px solid ${BORDER}`,
+        borderRadius: 6, marginBottom: 16 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+          textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+          Linked BOW indicator — edit metadata on the BOW page
+        </p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>
+          {indicator.name || indicator.text}
+        </p>
+        {indicator.text && indicator.name && (
+          <p style={{ fontSize: 12, color: TEXT_SUB }}>{indicator.text}</p>
+        )}
+      </div>
+
+      <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>
+        Portfolio Baseline & Targets
+      </p>
+      <div style={{ display: "grid",
+        gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 16 }}>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+            display: "block", marginBottom: 3 }}>Baseline</label>
+          <input type="number" value={baseline} onChange={e => setBase(e.target.value)}
+            style={{ ...inputStyle, textAlign: "right" }} />
+        </div>
+        {TARGET_YEARS.map(y => (
+          <div key={y}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+              display: "block", marginBottom: 3 }}>{y}</label>
+            <input type="number" value={targets[y]}
+              onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
+              style={{ ...inputStyle, textAlign: "right" }} />
+          </div>
+        ))}
+      </div>
+
+      {targetsChanged && (
+        <Field label="Reason for target revision" required>
+          <select value={revReason} onChange={e => setRevReason(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto", borderColor: ACCENT }}>
+            <option value="">Select reason…</option>
+            {REVISION_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+        </Field>
+      )}
+
+      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        <Btn size="sm" onClick={save} disabled={!canSave || saving}>
+          {saving ? "Saving…" : "Save targets"}
+        </Btn>
+      </div>
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+        {confirmDelete ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: DANGER, flexGrow: 1 }}>
+              Remove this indicator from the portfolio?
+            </span>
+            <button onClick={doDelete} disabled={deleting}
+              style={{ fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: DANGER, color: SURFACE, border: "none",
+                borderRadius: 4, padding: "3px 10px" }}>
+              {deleting ? "Removing…" : "Yes, remove"}
+            </button>
+            <button onClick={() => setConfirmDelete(false)}
+              style={{ fontSize: 12, cursor: "pointer", background: "none",
+                border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px",
+                color: TEXT_SUB }}>Cancel</button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 12, color: TEXT_MUTED, padding: 0, textDecoration: "underline" }}>
+            Remove from portfolio
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isPortfolio }) {
+  // For linked portfolio indicators, use the simplified targets-only form
+  if (isPortfolio && indicator.bow_indicator_id) {
+    return <InlineEditIndicatorLinked indicator={indicator} onSave={onSave}
+      onCancel={onCancel} onDeleted={onDeleted} user={user} />;
+  }
+
   const [iname, setIname]         = useState(indicator.name || "");
   const [itext, setItext]         = useState(indicator.text || "");
   const [purpose, setPurpose]     = useState(indicator.purpose || "");
@@ -2948,16 +3080,106 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
   );
 }
 
-function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCancel }) {
-  const [name, setName]     = useState("");
-  const [text, setText]     = useState("");
-  const [unit, setUnit]     = useState("");
-  const [freq, setFreq]     = useState("");
-  const [sourceId, setSId]  = useState(null);
-  const [roundId, setRId]   = useState(null);
-  const [saving, setSaving] = useState(false);
+// ─── BOW Indicator Picker (for linking to portfolio) ───────────────────────────
+function BowIndicatorPicker({ portfolioId, onSelect, onCancel }) {
+  const [all, setAll]       = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const save = async () => {
+  useEffect(() => {
+    api("/api/indicators/all")
+      .then(d => {
+        const rows = Array.isArray(d) ? d : [];
+        setAll(rows.filter(r => r.portfolio_id === portfolioId));
+      })
+      .finally(() => setLoading(false));
+  }, [portfolioId]);
+
+  const filtered = all.filter(r => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (r.name || r.text || "").toLowerCase().includes(q)
+      || (r.bow_title || "").toLowerCase().includes(q)
+      || (r.outcome_title || "").toLowerCase().includes(q);
+  });
+
+  // Group by bow_title
+  const grouped = filtered.reduce((acc, r) => {
+    const key = r.bow_title || "Unknown BOW";
+    (acc[key] = acc[key] || []).push(r);
+    return acc;
+  }, {});
+
+  return (
+    <div>
+      <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="Search BOW indicators…" autoFocus
+        style={{ ...inputStyle, marginBottom: 8 }} />
+      {loading && <p style={{ fontSize: 12, color: TEXT_MUTED }}>Loading…</p>}
+      {!loading && filtered.length === 0 && (
+        <p style={{ fontSize: 12, color: TEXT_MUTED }}>No indicators found.</p>
+      )}
+      <div style={{ maxHeight: 280, overflowY: "auto", border: `1px solid ${BORDER}`,
+        borderRadius: 6, background: SURFACE }}>
+        {Object.entries(grouped).map(([bowTitle, inds]) => (
+          <div key={bowTitle}>
+            <div style={{ padding: "6px 12px", background: BG, fontSize: 10,
+              fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+              letterSpacing: 0.6, borderBottom: `1px solid ${BORDER}` }}>
+              {bowTitle}
+            </div>
+            {inds.map(ind => (
+              <button key={ind.indicator_id} onClick={() => onSelect(ind)}
+                style={{ display: "block", width: "100%", textAlign: "left",
+                  padding: "8px 12px", border: "none", borderBottom: `1px solid ${BORDER}`,
+                  background: "none", cursor: "pointer", fontSize: 13 }}
+                onMouseOver={e => e.currentTarget.style.background = BG}
+                onMouseOut={e => e.currentTarget.style.background = "none"}>
+                <span style={{ fontWeight: 600, color: TEXT }}>
+                  {ind.name || ind.text}
+                </span>
+                {ind.outcome_title && (
+                  <span style={{ fontSize: 11, color: TEXT_MUTED, marginLeft: 6 }}>
+                    — {ind.outcome_title}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCancel }) {
+  const [mode, setMode]         = useState("pick"); // "pick" | "standalone"
+  const [selected, setSelected] = useState(null);   // chosen BOW indicator
+  const [saving, setSaving]     = useState(false);
+
+  // Standalone fields
+  const [name, setName]   = useState("");
+  const [text, setText]   = useState("");
+  const [unit, setUnit]   = useState("");
+  const [freq, setFreq]   = useState("");
+  const [sourceId, setSId] = useState(null);
+
+  const saveLinked = async () => {
+    if (!selected) return;
+    setSaving(true);
+    const res = await api("/api/portfolio-indicators", {
+      method: "POST",
+      body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, outcome_id: outcomeId,
+        bow_indicator_id: selected.indicator_id, edited_by: user?.email }),
+    });
+    if (!res.error) onSaved();
+    setSaving(false);
+  };
+
+  const saveStandalone = async () => {
     if (!name.trim()) return;
     setSaving(true);
     const res = await api("/api/portfolio-indicators", {
@@ -2971,12 +3193,72 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
     setSaving(false);
   };
 
+  if (mode === "pick" && !selected) {
+    return (
+      <div>
+        <p style={{ fontSize: 12, color: TEXT_SUB, marginBottom: 8 }}>
+          Select a BOW indicator to include in this portfolio view.
+          <button onClick={() => setMode("standalone")}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 12, color: ACCENT, marginLeft: 6, textDecoration: "underline" }}>
+            Add standalone indicator instead
+          </button>
+        </p>
+        <BowIndicatorPicker portfolioId={portfolio.portfolio_id}
+          onSelect={ind => setSelected(ind)} onCancel={onCancel} />
+      </div>
+    );
+  }
+
+  if (mode === "pick" && selected) {
+    return (
+      <div>
+        <div style={{ padding: "10px 14px", background: BG, border: `1px solid ${BORDER}`,
+          borderRadius: 6, marginBottom: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>
+            Selected BOW indicator
+          </p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 2 }}>
+            {selected.name || selected.text}
+          </p>
+          {selected.bow_title && (
+            <p style={{ fontSize: 11, color: TEXT_MUTED }}>{selected.bow_title}
+              {selected.outcome_title ? ` — ${selected.outcome_title}` : ""}
+            </p>
+          )}
+          <button onClick={() => setSelected(null)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 11, color: TEXT_MUTED, padding: 0, marginTop: 4,
+              textDecoration: "underline" }}>
+            Choose different indicator
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn size="sm" onClick={saveLinked} disabled={saving}>
+            {saving ? "Adding…" : "Add to portfolio"}
+          </Btn>
+          <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        </div>
+      </div>
+    );
+  }
+
+  // Standalone mode
   return (
     <div>
+      <p style={{ fontSize: 12, color: TEXT_SUB, marginBottom: 8 }}>
+        Standalone indicator (no BOW counterpart).
+        <button onClick={() => setMode("pick")}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 12, color: ACCENT, marginLeft: 6, textDecoration: "underline" }}>
+          Link to a BOW indicator instead
+        </button>
+      </p>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
         <Field label="Indicator name" required>
           <input type="text" value={name} onChange={e => setName(e.target.value)}
-            placeholder="Short name, e.g. % grantees with AI-ready data" style={inputStyle} />
+            placeholder="Short name" style={inputStyle} />
         </Field>
         <Field label="Unit">
           <select value={unit} onChange={e => setUnit(e.target.value)}
@@ -2994,17 +3276,18 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
           </select>
         </Field>
       </div>
-      <Field label="Description" helper="Optional — full definition can be filled in after saving.">
+      <Field label="Description">
         <textarea value={text} onChange={e => setText(e.target.value)}
-          placeholder="What exactly is being measured…"
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
       <Field label="Source">
-        <SourcePickerInline sourceId={sourceId} roundId={roundId}
-          onChange={(sid, rid) => { setSId(sid); setRId(rid); }} user={user} />
+        <SourcePickerInline sourceId={sourceId} roundId={null}
+          onChange={(sid) => setSId(sid)} user={user} />
       </Field>
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <Btn size="sm" onClick={save} disabled={!name.trim() || saving}>{saving ? "Adding…" : "Add indicator"}</Btn>
+        <Btn size="sm" onClick={saveStandalone} disabled={!name.trim() || saving}>
+          {saving ? "Adding…" : "Add indicator"}
+        </Btn>
         <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
       </div>
     </div>

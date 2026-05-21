@@ -265,12 +265,30 @@ def get_portfolio_outcomes(portfolio_id):
 
 @app.route("/api/portfolio-indicators/<portfolio_id>")
 def get_portfolio_indicators(portfolio_id):
-    rows = query(
-        f"""SELECT * FROM {SCHEMA}.portfolio_indicators
-            WHERE portfolio_id = ?
-            ORDER BY outcome_id, indicator_id""",
-        [portfolio_id]
-    )
+    try:
+        rows = query(
+            f"""SELECT
+                    i.indicator_id, i.portfolio_id, i.outcome_id, i.bow_indicator_id,
+                    i.baseline,
+                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                    COALESCE(b.name,  i.name)  AS name,
+                    COALESCE(b.text,  i.text)  AS text,
+                    COALESCE(b.unit,  i.unit)  AS unit,
+                    COALESCE(b.collection_frequency, i.collection_frequency) AS collection_frequency,
+                    COALESCE(b.source_id, i.source_id) AS source_id,
+                    COALESCE(b.measurement_level, i.measurement_level) AS measurement_level,
+                    COALESCE(b.status, i.status) AS status
+                FROM {SCHEMA}.portfolio_indicators i
+                LEFT JOIN {SCHEMA}.bow_indicators b ON i.bow_indicator_id = b.indicator_id
+                WHERE i.portfolio_id = ?
+                ORDER BY i.outcome_id, i.indicator_id""",
+            [portfolio_id]
+        )
+    except Exception:
+        rows = query(
+            f"SELECT * FROM {SCHEMA}.portfolio_indicators WHERE portfolio_id = ? ORDER BY outcome_id, indicator_id",
+            [portfolio_id]
+        )
     return jsonify(rows)
 
 @app.route("/api/bow-outcomes/<bow_id>")
@@ -1420,10 +1438,12 @@ def get_all_indicators():
                   i.indicator_id,
                   i.bow_id,
                   i.outcome_id,
+                  i.name,
                   i.text,
                   i.unit,
                   i.data_source,
                   i.collection_frequency,
+                  i.measurement_level,
                   i.baseline,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   b.title        AS bow_title,
@@ -2312,10 +2332,25 @@ def get_portfolio_full(portfolio_id):
 
     try:
         indicators = query(
-            f"""SELECT i.*,
-                       a.actual_value AS latest_actual,
-                       a.year         AS latest_actual_year
+            f"""SELECT
+                    i.indicator_id, i.portfolio_id, i.outcome_id, i.bow_indicator_id,
+                    i.baseline,
+                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                    COALESCE(b.name,  i.name)  AS name,
+                    COALESCE(b.text,  i.text)  AS text,
+                    COALESCE(b.purpose, i.purpose) AS purpose,
+                    COALESCE(b.unit,  i.unit)  AS unit,
+                    COALESCE(b.collection_frequency, i.collection_frequency) AS collection_frequency,
+                    COALESCE(b.source_id, i.source_id) AS source_id,
+                    COALESCE(b.measurement_level, i.measurement_level) AS measurement_level,
+                    COALESCE(b.status, i.status) AS status,
+                    COALESCE(b.data_quality_notes, i.data_quality_notes) AS data_quality_notes,
+                    COALESCE(b.tracking_notes, i.tracking_notes) AS tracking_notes,
+                    b.bow_id, b.outcome_id AS bow_outcome_id,
+                    a.actual_value AS latest_actual,
+                    a.year         AS latest_actual_year
                 FROM {SCHEMA}.portfolio_indicators i
+                LEFT JOIN {SCHEMA}.bow_indicators b ON i.bow_indicator_id = b.indicator_id
                 LEFT JOIN (
                     SELECT indicator_id, actual_value, year,
                            ROW_NUMBER() OVER (
@@ -2636,8 +2671,11 @@ def update_portfolio_indicator(indicator_id):
     rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?", [indicator_id])
     if not rows:
         return jsonify({"error": "not found"}), 404
-    old     = rows[0]
-    changes = _build_changes(old, data, PORT_IND_EDITABLE)
+    old = rows[0]
+    # When linked to a BOW indicator, only targets/baseline are editable here;
+    # metadata edits go to the BOW indicator record directly.
+    editable = ({"baseline"} | TARGET_FIELDS) if old.get("bow_indicator_id") else PORT_IND_EDITABLE
+    changes = _build_changes(old, data, editable)
     if not changes:
         return jsonify({"status": "no_change"})
 
@@ -2660,14 +2698,47 @@ def update_portfolio_indicator(indicator_id):
 
 @app.route("/api/portfolio-indicators", methods=["POST"])
 def add_portfolio_indicator():
-    data         = request.json
-    portfolio_id = data.get("portfolio_id")
-    outcome_id   = data.get("outcome_id")
-    text         = (data.get("text") or "").strip()
-    if not portfolio_id or not text:
-        return jsonify({"error": "portfolio_id and text required"}), 400
+    data             = request.json
+    portfolio_id     = data.get("portfolio_id")
+    outcome_id       = data.get("outcome_id")
+    bow_indicator_id = data.get("bow_indicator_id")
+    user             = _actor(data)
+
+    if not portfolio_id:
+        return jsonify({"error": "portfolio_id required"}), 400
+
+    if bow_indicator_id:
+        # Linked case — only store the FK + outcome/targets; metadata lives on the BOW indicator
+        bow_rows = query(
+            f"SELECT name, text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?",
+            [bow_indicator_id]
+        )
+        if not bow_rows:
+            return jsonify({"error": "bow_indicator_id not found"}), 404
+        iid = new_id()
+        execute(
+            f"""INSERT INTO {SCHEMA}.portfolio_indicators
+                (indicator_id, portfolio_id, outcome_id, bow_indicator_id,
+                 baseline, target_2026, target_2027, target_2028, target_2029, target_2030)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [iid, portfolio_id, outcome_id or None, bow_indicator_id,
+             data.get("baseline") or None,
+             data.get("target_2026") or None, data.get("target_2027") or None,
+             data.get("target_2028") or None, data.get("target_2029") or None,
+             data.get("target_2030") or None]
+        )
+        label = bow_rows[0].get("name") or bow_rows[0].get("text") or bow_indicator_id
+        _log_edit("portfolio_indicator", iid, None, portfolio_id,
+                  {"bow_indicator_id": {"old": None, "new": bow_indicator_id},
+                   "name": {"old": None, "new": label}},
+                  "Linked BOW indicator added to portfolio", None, user)
+        return jsonify({"status": "ok", "indicator_id": iid})
+
+    # Standalone case
+    text = (data.get("text") or data.get("name") or "").strip()
+    if not text:
+        return jsonify({"error": "bow_indicator_id or name/text required"}), 400
     iid = new_id()
-    user = _actor(data)
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_indicators
             (indicator_id, portfolio_id, outcome_id, name, text, purpose, unit, collection_frequency,
@@ -2686,7 +2757,7 @@ def add_portfolio_indicator():
          data.get("target_2030") or None]
     )
     _log_edit("portfolio_indicator", iid, None, portfolio_id,
-              {"name": {"old": None, "new": data.get("name") or text}}, "New indicator added", None, user)
+              {"name": {"old": None, "new": data.get("name") or text}}, "New standalone indicator added", None, user)
     return jsonify({"status": "ok", "indicator_id": iid})
 
 
