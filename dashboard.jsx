@@ -66,10 +66,10 @@ function cleanTeam(name) {
 
 // Portfolio colors — muted tonal family per GF brand
 const PORT_COLORS = {
-  "cross-cutting": { color:"#A49A8C", light:"#F5F3ED", label:"Cross Cutting Supports",  dark:"#7A7068" },
-  "ai-infra":      { color:"#3086AB", light:"#EBF4F9", label:"AI Infrastructure",        dark:"#1F5F80" },
-  "sfl":           { color:"#4EAB9A", light:"#ECF7F5", label:"System Feedback Loops",    dark:"#337A6C" },
-  "hub":           { color:"#FBAE40", light:"#FEF5E7", label:"Data & AI Enablement Hub", dark:"#C07D10" },
+  "cross-cutting": { color:"#64748B", light:"#F1F5F9", label:"Cross Cutting Supports",  dark:"#475569" },
+  "ai-infra":      { color:"#0C4A6E", light:"#DBEAFE", label:"AI Infrastructure",        dark:"#0A3B5C" },
+  "sfl":           { color:"#0369A1", light:"#E0F2FE", label:"System Feedback Loops",    dark:"#025580" },
+  "hub":           { color:"#9333EA", light:"#F3E8FF", label:"Data & AI Enablement Hub", dark:"#7E22CE" },
 };
 
 const STATUS = {
@@ -4262,7 +4262,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
                   {/* Number + short title + chevron */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                    <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
+                    <span style={{width:22,height:22,borderRadius:"50%",background:"#64748B",color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
                     <div style={{fontSize:14,fontWeight:800,color:TEXT,lineHeight:1.3,flex:1}}>{SHORT_TITLES[i]||o.shortTitle}</div>
                     <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,marginTop:3,transition:"transform .15s",display:"inline-block",transform:isOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
                   </div>
@@ -4340,7 +4340,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                     <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>BOW Outcomes</div>
                     {bowOutcomes.map((o,oi) => (
                       <div key={o.id||oi} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                        <span style={{width:18,height:18,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                        <span style={{width:18,height:18,borderRadius:"50%",background:"#64748B",color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
                         <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{o.title||o.shortTitle}</div>
                       </div>
                     ))}
