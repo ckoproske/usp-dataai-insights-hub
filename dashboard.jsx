@@ -4229,8 +4229,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Problem / Gap statement ── */}
       {problemStatement && (
-        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"5px solid "+pc.color,background:pc.color+"07",padding:"16px 22px"}}>
-          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>The Problem We're Addressing</div>
+        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+BORDER,borderLeft:"4px solid "+pc.color,background:SURFACE,padding:"16px 22px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>The Problem We're Addressing</div>
           <div style={{fontSize:14,color:TEXT,lineHeight:1.7,fontWeight:500}}>{problemStatement}</div>
         </div>
       )}
@@ -4254,7 +4254,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 onClick={toggle}
                 onMouseEnter={()=>setHoveredOutcome(o.id)}
                 onMouseLeave={()=>setHoveredOutcome(null)}
-                style={{borderRadius:10,border:"1px solid "+(isOpen?pc.color+"55":isHov?pc.color+"33":BORDER),overflow:"hidden",background:isHov||isOpen?pc.color+"07":pc.color+"04",display:"flex",flexDirection:"column",cursor:"pointer",transition:"border-color .15s, background .15s, box-shadow .15s",boxShadow:isHov||isOpen?"0 4px 14px rgba(10,37,64,0.09)":"0 1px 3px rgba(10,37,64,0.04)"}}>
+                style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,display:"flex",flexDirection:"column",cursor:"pointer",transition:"box-shadow .15s",boxShadow:isHov||isOpen?"0 4px 14px rgba(10,37,64,0.09)":"0 1px 3px rgba(10,37,64,0.04)"}}>
                 <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
                 <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
                   {/* Number + short title + chevron */}
@@ -4266,13 +4266,13 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   {/* Full outcome text + investments — expand together */}
                   {isOpen && (
                     <>
-                      <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+pc.color+"33",marginLeft:11}}>{o.outcome}</div>
+                      <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+BORDER,marginLeft:11}}>{o.outcome}</div>
                       {activities.length > 0 && (
                         <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:6,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
                           <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Investments & Inputs</div>
                           {activities.map((act, ai) => (
                             <div key={act.activity_id||ai} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
-                              <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.7}}/>
+                              <div style={{width:4,height:4,borderRadius:"50%",background:TEXT_MUTED,marginTop:5,flexShrink:0,opacity:0.5}}/>
                               <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
                             </div>
                           ))}
@@ -4296,7 +4296,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
             <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>How We Work</div>
           </div>
           <button onClick={()=>setShowMatrix(v=>!v)}
-            style={{fontSize:11,fontWeight:600,color:pc.color,background:pc.color+"15",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",flexShrink:0}}>
+            style={{fontSize:11,fontWeight:500,color:TEXT_SUB,background:SURFACE,border:"1px solid "+BORDER,borderRadius:6,padding:"6px 14px",cursor:"pointer",flexShrink:0}}>
             {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
           </button>
         </div>
@@ -4309,13 +4309,13 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
               <div key={bow.id}
                 onMouseEnter={()=>setHoveredBow(bow.id)}
                 onMouseLeave={()=>setHoveredBow(null)}
-                style={{borderRadius:10,border:"1px solid "+(bowOpen?pc.color+"55":isHovered?pc.color+"33":BORDER),overflow:"hidden",display:"flex",flexDirection:"column",transition:"border-color .15s, box-shadow .15s",boxShadow:isHovered?"0 4px 14px rgba(10,37,64,0.10)":"0 1px 3px rgba(10,37,64,0.04)"}}>
-                <div style={{height:4,background:bowOpen||isHovered?pc.color:BORDER,transition:"background .15s"}}/>
+                style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",display:"flex",flexDirection:"column",transition:"box-shadow .15s",boxShadow:isHovered?"0 4px 14px rgba(10,37,64,0.10)":"0 1px 3px rgba(10,37,64,0.04)"}}>
+                <div style={{height:4,background:pc.color,transition:"background .15s"}}/>
                 <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,flex:1}}>
                   <div style={{fontSize:13,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
                   {bow.delegate && (
                     <div style={{fontSize:10,color:TEXT_MUTED,display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"22",color:pc.color,fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(bow.delegate||"").charAt(0)}</span>
+                      <span style={{width:18,height:18,borderRadius:"50%",background:BORDER,color:TEXT_SUB,fontSize:9,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(bow.delegate||"").charAt(0)}</span>
                       <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span>
                     </div>
                   )}
@@ -4330,8 +4330,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   )}
                 </div>
                 {bowOpen && bowOutcomes.length > 0 && (
-                  <div style={{borderTop:"1px solid "+pc.color+"22",background:pc.color+"06",padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
-                    <div style={{fontSize:9,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>BOW Outcomes</div>
+                  <div style={{borderTop:"1px solid "+BORDER,background:"#FAFAF8",padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>BOW Outcomes</div>
                     {bowOutcomes.map((o,oi) => (
                       <div key={o.id||oi} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                         <span style={{width:18,height:18,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
@@ -4371,10 +4371,10 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 const bgBase = bi%2===0 ? "transparent" : "#FAFAF8";
                 return (
                   <React.Fragment key={bow.id}>
-                    <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER,background:pc.color+"0A"}}>
+                    <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER,background:"#F3F2EF"}}>
                       <div style={{padding:"4px 10px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:5}}>
-                        <div style={{width:3,height:12,borderRadius:2,background:pc.color,flexShrink:0}}/>
-                        <span style={{fontSize:10,fontWeight:800,color:pc.color}}>{bow.name}</span>
+                        <div style={{width:3,height:12,borderRadius:2,background:TEXT_MUTED,flexShrink:0}}/>
+                        <span style={{fontSize:10,fontWeight:700,color:TEXT_SUB}}>{bow.name}</span>
                       </div>
                       {allOutcomes.map(o => <div key={o.id} style={{borderRight:"1px solid "+BORDER}}/>)}
                     </div>
@@ -4383,7 +4383,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                       return (
                         <div key={bo.id||oi} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:isLast?"2px solid "+BORDER:"1px solid "+BORDER}}>
                           <div style={{padding:"5px 10px 5px 18px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"flex-start",gap:5,background:bgBase}}>
-                            <div style={{width:3,height:3,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.5}}/>
+                            <div style={{width:3,height:3,borderRadius:"50%",background:TEXT_MUTED,marginTop:5,flexShrink:0,opacity:0.5}}/>
                             <span style={{fontSize:10,color:TEXT_SUB,lineHeight:1.35}}>{bo.title||bo.shortTitle}</span>
                           </div>
                           {allOutcomes.map(o => {
@@ -4416,12 +4416,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Section 3: 2030 Goals ── */}
       {(crossIndicators.length > 0 || goals.length > 0 || amb45Text || amb45Buckets) && (
-        <div style={{borderRadius:12,border:"1px solid "+pc.color+"33",overflow:"hidden",background:`linear-gradient(135deg,${pc.color}08 0%,${SURFACE} 60%)`,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+        <div style={{borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
           <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
           <div style={{padding:"22px 28px"}}>
             <div style={{marginBottom:22,position:"relative",overflow:"hidden"}}>
 
-              <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>What This All Builds Toward</div>
+              <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>What This All Builds Toward</div>
               <div style={{fontSize:20,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>2030 Goals</div>
             </div>
             <div style={{display:"flex",gap:32,alignItems:"flex-start"}}>
