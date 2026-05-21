@@ -4263,12 +4263,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   {/* Toggle buttons */}
                   <div style={{display:"flex",gap:8,paddingLeft:32,flexWrap:"wrap"}}>
                     <button onClick={()=>setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}))}
-                      style={{background:"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
+                      style={{background:"none",border:"1px solid "+BORDER,borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:10,color:TEXT_MUTED,fontWeight:400}}>
                       {outcomeOpen ? "▴ less" : "▾ full outcome"}
                     </button>
                     {activities.length > 0 && (
                       <button onClick={()=>setExpandedInputs(v=>({...v,[o.id]:!v[o.id]}))}
-                        style={{background:inputsOpen?pc.color+"12":"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
+                        style={{background:"none",border:"1px solid "+BORDER,borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:10,color:TEXT_MUTED,fontWeight:400}}>
                         {inputsOpen ? "▴ inputs" : "▾ investments & inputs"}
                       </button>
                     )}
@@ -4329,7 +4329,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   )}
                   {bowOutcomes.length > 0 && (
                     <button onClick={()=>setExpandedBows(v=>({...v,[bow.id]:!v[bow.id]}))}
-                      style={{background:bowOpen?pc.color+"12":"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"4px 10px",fontSize:11,color:pc.color,fontWeight:600,display:"flex",alignItems:"center",gap:4,alignSelf:"flex-start",marginTop:4}}>
+                      style={{background:"none",border:"1px solid "+BORDER,borderRadius:5,cursor:"pointer",padding:"4px 10px",fontSize:10,color:TEXT_MUTED,fontWeight:400,display:"flex",alignItems:"center",gap:4,alignSelf:"flex-start",marginTop:4}}>
                       {bowOpen ? "▴ hide outcomes" : "▾ outcomes"}
                     </button>
                   )}
