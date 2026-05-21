@@ -3633,6 +3633,281 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   );
 }
 
+// ─── Update Data View ─────────────────────────────────────────────────────────
+function DataUpdateView({ bows, portfolios, user, loading }) {
+  const [view, setView]               = useState("bows");
+  const [selected, setSelected]       = useState(null); // { type: "bow"|"portfolio", entity }
+  const [data, setData]               = useState(null);
+  const [loadingData, setLoadingData] = useState(false);
+  const [submitIndId, setSubmitIndId] = useState(null);
+  const [submitted, setSubmitted]     = useState(new Set());
+
+  useEffect(() => {
+    if (!selected) { setData(null); return; }
+    setLoadingData(true);
+    setSubmitIndId(null);
+    const url = selected.type === "bow"
+      ? `/api/bow/${selected.entity.bow_id}/full`
+      : `/api/portfolio/${selected.entity.portfolio_id}/full`;
+    api(url).then(setData).finally(() => setLoadingData(false));
+  }, [selected]);
+
+  const bowsByPortfolio = portfolios.map(p => ({
+    portfolio: p,
+    bows: bows.filter(b => b.portfolio_id === p.portfolio_id),
+  }));
+
+  // ── Entity picker ──
+  if (!selected) {
+    return (
+      <div>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Update Data</h1>
+          <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
+            Select a Body of Work or Portfolio to submit new indicator actuals.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+          {[{ id: "bows", label: "Bodies of Work" }, { id: "portfolios", label: "Portfolios" }].map(v => (
+            <button key={v.id} onClick={() => setView(v.id)}
+              style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600,
+                cursor: "pointer", border: `1px solid ${view === v.id ? ACCENT : BORDER}`,
+                background: view === v.id ? ACCENT_LIGHT : SURFACE,
+                color: view === v.id ? ACCENT : TEXT_SUB }}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        {loading && <Skeleton height={52} />}
+
+        {!loading && view === "bows" && bowsByPortfolio.map(({ portfolio, bows: pbows }) => {
+          const p = PORT_COLORS[portfolio.portfolio_id];
+          return (
+            <div key={portfolio.portfolio_id} style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
+                  background: p.color, display: "inline-block" }} />}
+                <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                  {p?.label || portfolio.portfolio_id}
+                </p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {pbows.map(bow => (
+                  <div key={bow.bow_id}
+                    onClick={() => setSelected({ type: "bow", entity: bow })}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 18px", background: SURFACE, borderRadius: 9,
+                      border: `1px solid ${BORDER}`, cursor: "pointer",
+                      borderLeft: `4px solid ${p?.color || BRAND}`,
+                      transition: "box-shadow 0.15s" }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{bow.title}</p>
+                    <span style={{ fontSize: 12, color: TEXT_MUTED }}>Submit data →</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        {!loading && view === "portfolios" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {portfolios.map(portfolio => {
+              const p = PORT_COLORS[portfolio.portfolio_id];
+              return (
+                <div key={portfolio.portfolio_id}
+                  onClick={() => setSelected({ type: "portfolio", entity: portfolio })}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "14px 18px", background: SURFACE, borderRadius: 9,
+                    border: `1px solid ${BORDER}`, cursor: "pointer",
+                    borderLeft: `4px solid ${p?.color || BRAND}`,
+                    transition: "box-shadow 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
+                      background: p.color, display: "inline-block" }} />}
+                    <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
+                      {p?.label || portfolio.title}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>Submit data →</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Indicator data-entry view ──
+  const entity = selected.entity;
+  const p = PORT_COLORS[entity.portfolio_id || entity.portfolio_id];
+  const portColor = PORT_COLORS[
+    selected.type === "bow" ? entity.portfolio_id : entity.portfolio_id
+  ];
+  const outcomes = data?.outcomes || [];
+  const allInds = outcomes.flatMap(o =>
+    (o.indicators || []).map(i => ({ ...i, outcome_title: o.short_title || o.title, outcome_id: o.outcome_id }))
+  );
+
+  return (
+    <div className="fade-in">
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+        <button onClick={() => { setSelected(null); setData(null); }}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
+            textDecoration: "underline" }}>
+          ← Back
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {portColor && <span style={{ width: 10, height: 10, borderRadius: "50%",
+            background: portColor.color, display: "inline-block" }} />}
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>
+            {entity.title || portColor?.label || entity.portfolio_id}
+          </h2>
+        </div>
+      </div>
+
+      {loadingData && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Skeleton height={80} /><Skeleton height={80} /><Skeleton height={80} />
+        </div>
+      )}
+
+      {!loadingData && allInds.length === 0 && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+          No indicators found for this {selected.type === "bow" ? "Body of Work" : "Portfolio"}.
+        </p>
+      )}
+
+      {!loadingData && outcomes.map(out => {
+        const inds = (out.indicators || []);
+        if (inds.length === 0) return null;
+        return (
+          <div key={out.outcome_id} style={{ marginBottom: 28 }}>
+            {/* Outcome header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12,
+              paddingBottom: 8, borderBottom: `2px solid ${portColor?.color || BORDER}` }}>
+              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 4,
+                background: portColor?.color || ACCENT, color: "#fff" }}>
+                {selected.type === "bow" ? "O" : "PO"}{outcomes.indexOf(out) + 1}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
+                {out.short_title || out.title}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {inds.map(ind => {
+                const isSubmitting = submitIndId === ind.indicator_id;
+                const wasSubmitted = submitted.has(ind.indicator_id);
+                const unit = ind.unit ? ` ${ind.unit}` : "";
+                const currentTarget = ind[`target_${CURRENT_YEAR}`];
+
+                return (
+                  <div key={ind.indicator_id}
+                    style={{ border: `1px solid ${wasSubmitted ? "#a0d8b8" : BORDER}`,
+                      borderRadius: 8, background: wasSubmitted ? "#f0faf5" : SURFACE,
+                      borderLeft: `4px solid ${wasSubmitted ? SUCCESS : (portColor?.color || ACCENT)}`,
+                      overflow: "hidden" }}>
+
+                    {/* Card header */}
+                    <div style={{ padding: "12px 14px",
+                      borderBottom: isSubmitting ? `1px solid ${BORDER}` : "none" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, margin: 0 }}>
+                              {ind.name || ind.text}
+                            </p>
+                            {(() => {
+                              const s = ind.status || "draft";
+                              const isActive = s === "active";
+                              return (
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px",
+                                  borderRadius: 10, flexShrink: 0,
+                                  background: isActive ? "#d4f0e0" : "#f5f0e0",
+                                  color: isActive ? "#186030" : "#a05000",
+                                  border: `1px solid ${isActive ? "#a0d8b8" : "#e0c878"}`,
+                                  textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  {s}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          {ind.name && ind.text && ind.text !== ind.name && (
+                            <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
+                              {ind.text}
+                            </p>
+                          )}
+                          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                            {ind.collection_frequency && (
+                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                                <strong>Frequency:</strong> {ind.collection_frequency}
+                              </span>
+                            )}
+                            {currentTarget != null && (
+                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                                <strong>{CURRENT_YEAR} target:</strong> {currentTarget}{unit}
+                              </span>
+                            )}
+                            {ind.baseline != null && (
+                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                                <strong>Baseline:</strong> {ind.baseline}{unit}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {wasSubmitted ? (
+                          <span style={{ fontSize: 12, color: SUCCESS, fontWeight: 700,
+                            flexShrink: 0, paddingTop: 2 }}>✓ Submitted</span>
+                        ) : (
+                          <button
+                            onClick={() => setSubmitIndId(isSubmitting ? null : ind.indicator_id)}
+                            style={{ fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0,
+                              background: isSubmitting ? SURFACE : ACCENT,
+                              color: isSubmitting ? TEXT_SUB : "#fff",
+                              border: `1px solid ${isSubmitting ? BORDER : ACCENT}`,
+                              borderRadius: 6, padding: "5px 14px", marginTop: 2,
+                              fontFamily: "inherit" }}>
+                            {isSubmitting ? "Cancel" : "Submit Data"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isSubmitting && (
+                      <div style={{ padding: "0 14px 14px" }}>
+                        <InlineSubmitForm
+                          indicator={ind}
+                          bow={selected.type === "bow" ? entity : { portfolio_id: entity.portfolio_id }}
+                          onClose={() => setSubmitIndId(null)}
+                          onSubmitted={() => {
+                            setSubmitted(prev => new Set([...prev, ind.indicator_id]));
+                            setSubmitIndId(null);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── BOW + Portfolio List ──────────────────────────────────────────────────────
 function BowPortfolioList({ bows, portfolios, onSelectBow, onSelectPortfolio }) {
   const [view, setView] = useState("bows");
@@ -5096,12 +5371,17 @@ function PortalApp() {
 
   const canReview = user?.permission_level === "MLE" || user?.permission_level === "Leadership";
 
-  const tabs = [
-    { id: "content", label: "BOWs & Portfolios" },
-    { id: "insight", label: "Share an Insight" },
-    { id: "activity", label: "Activity" },
-    ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
-  ];
+  const tabs = mode === "data"
+    ? [
+        { id: "content", label: "Indicators" },
+        ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
+      ]
+    : [
+        { id: "content", label: "BOWs & Portfolios" },
+        { id: "insight", label: "Share an Insight" },
+        { id: "activity", label: "Activity" },
+        ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
+      ];
 
   const handleSelectBow = bow => {
     setSelectedBow(bow);
@@ -5244,7 +5524,7 @@ function PortalApp() {
       {mode !== null && (
       <div style={{ padding: "36px 32px", maxWidth: selectedPortfolio ? 1600 : 980, margin: "0 auto" }}>
 
-        {tab === "content" && (
+        {tab === "content" && mode === "edit" && (
           <>
             {!selectedBow && !selectedPortfolio && (
               <>
@@ -5253,8 +5533,7 @@ function PortalApp() {
                     BOWs & Portfolios
                   </h1>
                   <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
-                    Select a Body of Work or Portfolio to view its outcomes, indicators, and
-                    execution targets — submit data or edit content directly from here.
+                    Select a Body of Work or Portfolio to edit its outcomes, indicators, and content.
                   </p>
                 </div>
                 {loadingData ? (
@@ -5270,17 +5549,19 @@ function PortalApp() {
                 )}
               </>
             )}
-
             {selectedBow && (
-              <BowPanel bow={selectedBow} user={user}
-                onBack={() => setSelectedBow(null)} />
+              <BowPanel bow={selectedBow} user={user} onBack={() => setSelectedBow(null)} />
             )}
-
             {selectedPortfolio && (
               <PortfolioPanel portfolio={selectedPortfolio} user={user}
                 onBack={() => setSelectedPortfolio(null)} />
             )}
           </>
+        )}
+
+        {tab === "content" && mode === "data" && (
+          <DataUpdateView
+            bows={bows} portfolios={portfolios} user={user} loading={loadingData} />
         )}
 
         {tab === "insight" && (
