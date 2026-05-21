@@ -67,8 +67,8 @@ function cleanTeam(name) {
 // Portfolio colors — muted tonal family per GF brand
 const PORT_COLORS = {
   "cross-cutting": { color:"#64748B", light:"#F1F5F9", label:"Cross Cutting Supports",  dark:"#475569" },
-  "ai-infra":      { color:"#0C4A6E", light:"#DBEAFE", label:"AI Infrastructure",        dark:"#0A3B5C" },
-  "sfl":           { color:"#0369A1", light:"#E0F2FE", label:"System Feedback Loops",    dark:"#025580" },
+  "ai-infra":      { color:"#0891B2", light:"#CFFAFE", label:"AI Infrastructure",        dark:"#0E7490" },
+  "sfl":           { color:"#EC4899", light:"#FCE7F3", label:"System Feedback Loops",    dark:"#BE185D" },
   "hub":           { color:"#9333EA", light:"#F3E8FF", label:"Data & AI Enablement Hub", dark:"#7E22CE" },
 };
 
