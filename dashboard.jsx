@@ -4165,6 +4165,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   const [expandedInputs, setExpandedInputs] = useState({});
   const [expandedBows, setExpandedBows] = useState({});
   const [showMatrix, setShowMatrix] = useState(false);
+  const [hoveredBow, setHoveredBow] = useState(null);
+  const [linksLoaded, setLinksLoaded] = useState(false);
 
   useEffect(() => {
     apiFetch(`/api/toa/${portId}`).then(data => {
@@ -4173,8 +4175,11 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
     }).catch(() => {});
   }, [portId]);
 
+  // stable key so effect re-fires if bows finish loading after first mount
+  const bowIdsKey = (bows||[]).map(b=>b.id).join(',');
   useEffect(() => {
     if (!bows?.length) return;
+    setLinksLoaded(false);
     Promise.all(bows.map(b => apiFetch(`/api/bow-portfolio-links/${b.id}`).catch(() => [])))
       .then(results => {
         const map = {};
@@ -4185,8 +4190,9 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           });
         });
         setOutcomeLinks(map);
+        setLinksLoaded(true);
       });
-  }, [portId]);
+  }, [portId, bowIdsKey]);
 
   const allOutcomes = portfolio.portfolioOutcomes;
   const goals = (PORT_GOAL_MAP[portId]||[]).map(gNum => STRATEGY_GOALS.find(x=>x.number===gNum)).filter(Boolean);
@@ -4220,16 +4226,17 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Problem / Gap statement ── */}
       {problemStatement && (
-        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"4px solid "+pc.color,background:pc.color+"07",padding:"14px 20px"}}>
-          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>Problem / Gap</div>
-          <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.75,fontStyle:"italic"}}>{problemStatement}</div>
+        <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"5px solid "+pc.color,background:pc.color+"07",padding:"16px 22px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>↳ This portfolio responds to</div>
+          <div style={{fontSize:14,color:TEXT,lineHeight:1.7,fontWeight:500}}>{problemStatement}</div>
         </div>
       )}
 
       {/* ── Section 1: What We're Trying to Achieve ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
-        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
+        <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",right:16,top:-6,fontSize:80,fontWeight:900,color:pc.color,opacity:0.05,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>01</div>
           <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>Theory of Action</div>
           <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>What We're Trying to Achieve</div>
         </div>
@@ -4239,8 +4246,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
             const inputsOpen  = !!expandedInputs[o.id];
             const contributors = getContributors(o.id);
             return (
-              <div key={o.id} style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,display:"flex",flexDirection:"column"}}>
-                <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
+              <div key={o.id} style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:pc.color+"04",display:"flex",flexDirection:"column"}}>
+                <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
                 <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
                   {/* Number + short title */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
@@ -4257,11 +4264,14 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                       style={{background:"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
                       {outcomeOpen ? "▴ less" : "▾ full outcome"}
                     </button>
-                    {contributors.length > 0 && (
+                    {linksLoaded && contributors.length > 0 && (
                       <button onClick={()=>setExpandedInputs(v=>({...v,[o.id]:!v[o.id]}))}
                         style={{background:inputsOpen?pc.color+"12":"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
                         {inputsOpen ? "▴ inputs" : "▾ investments & inputs"}
                       </button>
+                    )}
+                    {linksLoaded && contributors.length === 0 && (
+                      <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic",alignSelf:"center"}}>No investments linked yet</span>
                     )}
                   </div>
                   {/* Investments & Inputs panel */}
@@ -4292,35 +4302,43 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
       {/* ── Section 2: How We Work ── */}
       <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
-        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
+        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",right:140,top:-6,fontSize:80,fontWeight:900,color:pc.color,opacity:0.05,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>02</div>
           <div>
             <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>Investments & Strategy</div>
             <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>How We Work</div>
           </div>
           <button onClick={()=>setShowMatrix(v=>!v)}
-            style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"1px solid "+pc.color+"44",borderRadius:6,padding:"4px 12px",cursor:"pointer"}}>
+            style={{fontSize:11,fontWeight:600,color:pc.color,background:pc.color+"15",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",flexShrink:0}}>
             {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
           </button>
         </div>
         <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(bows.length,4)},1fr)`,gap:14}}>
           {bows.map(bow => {
             const bowOpen = !!expandedBows[bow.id];
+            const isHovered = hoveredBow === bow.id;
             const bowOutcomes = (bow.outcomes||[]).filter(o => o.title||o.shortTitle);
             return (
-              <div key={bow.id} style={{borderRadius:10,border:"1px solid "+(bowOpen?pc.color+"55":BORDER),overflow:"hidden",display:"flex",flexDirection:"column",transition:"border-color .15s"}}>
-                <div style={{height:3,background:bowOpen?pc.color:BORDER,transition:"background .15s"}}/>
+              <div key={bow.id}
+                onMouseEnter={()=>setHoveredBow(bow.id)}
+                onMouseLeave={()=>setHoveredBow(null)}
+                style={{borderRadius:10,border:"1px solid "+(bowOpen?pc.color+"55":isHovered?pc.color+"33":BORDER),overflow:"hidden",display:"flex",flexDirection:"column",transition:"border-color .15s, box-shadow .15s",boxShadow:isHovered?"0 4px 14px rgba(10,37,64,0.10)":"0 1px 3px rgba(10,37,64,0.04)"}}>
+                <div style={{height:4,background:bowOpen||isHovered?pc.color:BORDER,transition:"background .15s"}}/>
                 <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,flex:1}}>
                   <div style={{fontSize:13,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
                   {bow.delegate && (
-                    <div style={{fontSize:10,color:TEXT_MUTED}}>Led by: <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span></div>
+                    <div style={{fontSize:10,color:TEXT_MUTED,display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{width:18,height:18,borderRadius:"50%",background:pc.color+"22",color:pc.color,fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(bow.delegate||"").charAt(0)}</span>
+                      <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span>
+                    </div>
                   )}
                   {bow.description && (
                     <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.6}}>{bow.description}</div>
                   )}
                   {bowOutcomes.length > 0 && (
                     <button onClick={()=>setExpandedBows(v=>({...v,[bow.id]:!v[bow.id]}))}
-                      style={{background:"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"4px 10px",fontSize:11,color:pc.color,fontWeight:600,display:"flex",alignItems:"center",gap:4,alignSelf:"flex-start",marginTop:4}}>
+                      style={{background:bowOpen?pc.color+"12":"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"4px 10px",fontSize:11,color:pc.color,fontWeight:600,display:"flex",alignItems:"center",gap:4,alignSelf:"flex-start",marginTop:4}}>
                       {bowOpen ? "▴ hide outcomes" : "▾ outcomes"}
                     </button>
                   )}
@@ -4413,6 +4431,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   );
                 })}
               </div>
+              {/* Empty state — shown after links have loaded and none exist */}
+              {linksLoaded && Object.keys(outcomeLinks).length === 0 && (
+                <div style={{padding:"20px 22px",textAlign:"center",color:TEXT_MUTED,fontSize:12,fontStyle:"italic"}}>
+                  No BOW outcome → portfolio outcome links found. Add them via the Theory of Action editor to populate this map.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -4423,7 +4447,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
         <div style={{borderRadius:12,border:"1px solid "+pc.color+"33",overflow:"hidden",background:`linear-gradient(135deg,${pc.color}08 0%,${SURFACE} 60%)`,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
           <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}55)`}}/>
           <div style={{padding:"22px 28px"}}>
-            <div style={{marginBottom:22}}>
+            <div style={{marginBottom:22,position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",right:0,top:-10,fontSize:80,fontWeight:900,color:pc.color,opacity:0.06,lineHeight:1,letterSpacing:-3,userSelect:"none",pointerEvents:"none"}}>03</div>
               <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>What This All Builds Toward</div>
               <div style={{fontSize:20,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>2030 Goals</div>
             </div>
