@@ -4625,46 +4625,16 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                   <span style={{fontSize:16,fontWeight:700,color:TEXT}}>{currentBow.name}</span>
                   <span style={{fontSize:11,fontWeight:600,color:TEXT_MUTED,background:BG,borderRadius:5,padding:"2px 7px",border:"1px solid "+BORDER}}>Body of Work</span>
                 </div>
-                <span style={{background:"#FEF5E7",color:"#92400E",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700,border:"1px solid #FDE68A"}}>WIP</span>
                 <div style={{marginLeft:"auto"}}>
                   <BowRatingsPopover bow={currentBow} onUpdate={updated=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:updated))}/>
                 </div>
               </div>
 
               {/* Description — full width */}
-              <div style={{marginBottom:16}}>
+              <div>
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Description</div>
                 <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7}}>
                   {currentBow.description.split('\n\n').map((para,i)=><p key={i} style={{margin:i===0?"0 0 10px 0":"0"}}>{para}</p>)}
-                </div>
-              </div>
-
-              {/* Budget + Delegate — compact inline row */}
-              <div style={{display:"flex",gap:20,paddingTop:14,borderTop:"1px solid "+BORDER}}>
-                {/* Budget */}
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,whiteSpace:"nowrap"}}>Budget</span>
-                  {currentBow.editingBudget
-                    ? <input value={currentBow.budget||""} onChange={e=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,budget:e.target.value}))} placeholder="e.g. $2,000,000" autoFocus style={{border:"1px solid "+BORDER,borderRadius:5,padding:"3px 8px",fontSize:12,fontFamily:"inherit",outline:"none",color:TEXT,width:140}}/>
-                    : <span style={{fontSize:13,fontWeight:600,color:currentBow.budget?TEXT:TEXT_MUTED,fontStyle:currentBow.budget?"normal":"italic"}}>{currentBow.budget||"Not set"}</span>
-                  }
-                  <button onClick={()=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,editingBudget:!b.editingBudget}))}
-                    style={{fontSize:11,cursor:"pointer",borderRadius:5,padding:"2px 8px",border:"1px solid "+BORDER,background:"transparent",color:TEXT_MUTED}}>
-                    {currentBow.editingBudget?"Done":"Edit"}
-                  </button>
-                </div>
-                <div style={{width:1,background:BORDER}}/>
-                {/* Delegate */}
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,whiteSpace:"nowrap"}}>Delegate</span>
-                  {currentBow.editingDelegate
-                    ? <input value={currentBow.delegate||""} onChange={e=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,delegate:e.target.value}))} placeholder="Name and role" autoFocus style={{border:"1px solid "+BORDER,borderRadius:5,padding:"3px 8px",fontSize:12,fontFamily:"inherit",outline:"none",color:TEXT,width:160}}/>
-                    : <span style={{fontSize:13,fontWeight:600,color:currentBow.delegate?TEXT:TEXT_MUTED,fontStyle:currentBow.delegate?"normal":"italic"}}>{currentBow.delegate||"Not assigned"}</span>
-                  }
-                  <button onClick={()=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:{...b,editingDelegate:!b.editingDelegate}))}
-                    style={{fontSize:11,cursor:"pointer",borderRadius:5,padding:"2px 8px",border:"1px solid "+BORDER,background:"transparent",color:TEXT_MUTED}}>
-                    {currentBow.editingDelegate?"Done":"Edit"}
-                  </button>
                 </div>
               </div>
             </div>
