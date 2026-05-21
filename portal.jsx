@@ -2,9 +2,10 @@ const { useState, useEffect, useRef, useMemo } = React;
 
 // ─── Design system — matches main dashboard ───────────────────────────────────
 const BRAND        = "#303A44";
-const ACCENT       = "#F85C02";
+const ACCENT       = "#F85C02";   // interactive only — buttons, active states, links
 const ACCENT_LIGHT = "#FEF0E6";
 const ACCENT_MID   = "#FDDCCA";
+const ACCENT_SHADOW = "0 4px 20px rgba(248,92,2,0.10)";
 const BG           = "#F5F3ED";
 const SURFACE      = "#FFFFFF";
 const BORDER       = "#D7CBB2";
@@ -17,6 +18,25 @@ const DANGER       = "#DC2626";
 const DANGER_BG    = "#FEF2F2";
 const WARNING      = "#D97706";
 const WARNING_BG   = "#FEF5E7";
+
+// Informational / reference content — never interactive, never orange
+const INFO         = "#2563EB";
+const INFO_BG      = "#EFF6FF";
+
+// Status badge palette — unified across all indicator views
+const STATUS_ACTIVE_BG     = "#D4F0E0";
+const STATUS_ACTIVE_BORDER = "#A0D8B8";
+const STATUS_ACTIVE_TEXT   = "#186030";
+const STATUS_DRAFT_BG      = "#F5F0E0";
+const STATUS_DRAFT_BORDER  = "#E0C878";
+const STATUS_DRAFT_TEXT    = "#A05000";
+
+// Typography scale — 5 steps, use consistently
+const T_TITLE = 22;   // page headings
+const T_HEAD  = 16;   // section headings within panels
+const T_BODY  = 14;   // body text, form labels
+const T_LABEL = 13;   // card content, field values
+const T_META  = 11;   // metadata, tags, footnotes
 
 const PORT_COLORS = {
   "ai-infra":      { color: "#3086AB", light: "#EBF4F9", dark: "#1F5F80", label: "AI Infrastructure" },
@@ -198,6 +218,44 @@ const inputStyle = {
   border: `1px solid ${BORDER}`, fontSize: 14, background: SURFACE,
   color: TEXT, outline: "none",
 };
+
+// Unified status badge — replaces three different inline implementations
+function StatusBadge({ status }) {
+  const s = status || "draft";
+  const isActive = s === "active";
+  return (
+    <span style={{
+      fontSize: T_META, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
+      background: isActive ? STATUS_ACTIVE_BG   : STATUS_DRAFT_BG,
+      color:      isActive ? STATUS_ACTIVE_TEXT  : STATUS_DRAFT_TEXT,
+      border:     `1px solid ${isActive ? STATUS_ACTIVE_BORDER : STATUS_DRAFT_BORDER}`,
+      textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0,
+      display: "inline-block",
+    }}>
+      {s}
+    </span>
+  );
+}
+
+// Empty state for lists/sections with no content
+function EmptyState({ message, action, onAction }) {
+  return (
+    <div style={{ padding: "20px 16px", borderRadius: 8,
+      background: BG, border: `1px dashed ${BORDER}`, textAlign: "center" }}>
+      <p style={{ fontSize: T_META, color: TEXT_MUTED, lineHeight: 1.6,
+        marginBottom: action && onAction ? 8 : 0 }}>
+        {message}
+      </p>
+      {action && onAction && (
+        <button onClick={onAction} style={{ fontSize: T_META, color: ACCENT,
+          background: "none", border: "none", cursor: "pointer",
+          fontWeight: 700, fontFamily: "inherit" }}>
+          {action} →
+        </button>
+      )}
+    </div>
+  );
+}
 
 function Input({ label, value, onChange, type = "text", placeholder, required, helper }) {
   return (
@@ -1776,21 +1834,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                           <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, margin: 0 }}>
                             {ind.name || ind.text}
                           </p>
-                          {(() => {
-                            const s = ind.status || "draft";
-                            const isActive = s === "active";
-                            return (
-                              <span style={{
-                                fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
-                                background: isActive ? "#d4f0e0" : "#f5f0e0",
-                                color:      isActive ? "#186030" : "#a05000",
-                                border:     `1px solid ${isActive ? "#a0d8b8" : "#e0c878"}`,
-                                textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0,
-                              }}>
-                                {s}
-                              </span>
-                            );
-                          })()}
+                          <StatusBadge status={ind.status} />
                         </div>
                         {ind.name && ind.text && ind.text !== ind.name && (
                           <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
@@ -3839,17 +3883,8 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
                               {ind.name || ind.text}
                             </p>
                             {(() => {
-                              const s = ind.status || "draft";
-                              const isActive = s === "active";
                               return (
-                                <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px",
-                                  borderRadius: 10, flexShrink: 0,
-                                  background: isActive ? "#d4f0e0" : "#f5f0e0",
-                                  color: isActive ? "#186030" : "#a05000",
-                                  border: `1px solid ${isActive ? "#a0d8b8" : "#e0c878"}`,
-                                  textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                  {s}
-                                </span>
+                                <StatusBadge status={ind.status} />
                               );
                             })()}
                           </div>
@@ -3980,7 +4015,7 @@ function IndicatorCatalogView() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
+        <h1 style={{ fontSize: T_TITLE, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
           Indicator Catalog
         </h1>
         <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
@@ -4014,9 +4049,11 @@ function IndicatorCatalogView() {
 
       {/* Indicator rows */}
       {filtered.length === 0 && (
-        <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 32, textAlign: "center" }}>
-          No indicators match the current filters.
-        </p>
+        <EmptyState
+          message={rows.length === 0
+            ? "No indicators loaded — check that the catalog endpoint is reachable."
+            : "No indicators match the current filters. Try clearing a filter above."}
+        />
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {filtered.map(ind => {
@@ -4030,7 +4067,7 @@ function IndicatorCatalogView() {
           return (
             <div key={ind.indicator_id}
               style={{ border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE,
-                borderLeft: `4px solid ${status === "active" ? "#059669" : "#D97706"}` }}>
+                borderLeft: `4px solid ${status === "active" ? STATUS_ACTIVE_TEXT : STATUS_DRAFT_BORDER}` }}>
 
               {/* Summary row — always visible */}
               <button onClick={() => toggle(ind.indicator_id)}
@@ -4042,11 +4079,7 @@ function IndicatorCatalogView() {
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{ind.name}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 8,
-                      background: status === "active" ? "#D1FAE5" : "#FEF3C7",
-                      color: status === "active" ? "#065F46" : "#92400E" }}>
-                      {status}
-                    </span>
+                    <StatusBadge status={status} />
                   </div>
                   {ind.collection_frequency && (
                     <span style={{ fontSize: 11, color: TEXT_MUTED }}>{ind.collection_frequency}</span>
@@ -4159,14 +4192,14 @@ function IndicatorCatalogView() {
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         {ind.baseline != null && (
-                          <span style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6,
-                            background: "#EFF6FF", color: "#1E40AF", fontWeight: 600 }}>
+                          <span style={{ fontSize: T_META, padding: "3px 9px", borderRadius: 6,
+                            background: INFO_BG, color: INFO, fontWeight: 600 }}>
                             Baseline: {ind.baseline}{unit}
                           </span>
                         )}
                         {targets.map(t => (
-                          <span key={t.year} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6,
-                            background: ACCENT_LIGHT, color: ACCENT, fontWeight: 600 }}>
+                          <span key={t.year} style={{ fontSize: T_META, padding: "3px 9px", borderRadius: 6,
+                            background: INFO_BG, color: INFO, fontWeight: 600 }}>
                             {t.year}: {t.val}{unit}
                           </span>
                         ))}
@@ -5722,7 +5755,7 @@ function PortalApp() {
             <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
               {user.display_name}
             </span>
-            <span style={{ fontSize: 11, background: ACCENT_LIGHT, color: ACCENT,
+            <span style={{ fontSize: T_META, background: INFO_BG, color: INFO,
               padding: "2px 9px", borderRadius: 10, fontWeight: 700 }}>
               {user.permission_level}
             </span>
@@ -5750,7 +5783,7 @@ function PortalApp() {
                   borderRadius: 14, padding: "32px 28px", cursor: "pointer",
                   textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
                   fontFamily: "inherit" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = "0 4px 20px rgba(248,92,2,0.10)"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = ACCENT_SHADOW; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>✏️</div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
@@ -5767,7 +5800,7 @@ function PortalApp() {
                   borderRadius: 14, padding: "32px 28px", cursor: "pointer",
                   textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
                   fontFamily: "inherit" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = "0 4px 20px rgba(248,92,2,0.10)"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = ACCENT_SHADOW; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>📊</div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
@@ -5784,7 +5817,7 @@ function PortalApp() {
                   borderRadius: 14, padding: "32px 28px", cursor: "pointer",
                   textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
                   fontFamily: "inherit" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = "0 4px 20px rgba(248,92,2,0.10)"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = ACCENT_SHADOW; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
