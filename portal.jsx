@@ -257,6 +257,31 @@ function EmptyState({ message, action, onAction }) {
   );
 }
 
+// Format a last-edited timestamp + email into a human-readable hint
+function formatLastEdited(by, at) {
+  if (!by && !at) return null;
+  const name = by ? by.split("@")[0].replace(/\./g, " ") : null;
+  if (!at) return name ? `Updated by ${name}` : null;
+  const d = new Date(at);
+  if (isNaN(d)) return name ? `Updated by ${name}` : null;
+  const diffDays = Math.floor((Date.now() - d) / 86400000);
+  const when = diffDays === 0 ? "today"
+    : diffDays === 1 ? "yesterday"
+    : diffDays < 7  ? `${diffDays} days ago`
+    : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `Updated ${when}${name ? ` by ${name}` : ""}`;
+}
+
+function LastEdited({ by, at, style = {} }) {
+  const text = formatLastEdited(by, at);
+  if (!text) return null;
+  return (
+    <span style={{ fontSize: T_META, color: TEXT_MUTED, fontStyle: "italic", ...style }}>
+      {text}
+    </span>
+  );
+}
+
 function Input({ label, value, onChange, type = "text", placeholder, required, helper }) {
   return (
     <Field label={label} required={required} helper={helper}>
@@ -1106,7 +1131,8 @@ function IndicatorRow({ indicator, bow, user, isPortfolio, onDeleted, onUpdated 
                 {indicator.unit ? ` ${indicator.unit}` : ""}
               </span>
             )}
-          </div>
+          <LastEdited by={indicator.last_edited_by} at={indicator.last_edited_at}
+            style={{ marginTop: 6 }} />
         </div>
         <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
           {mode === "view" && !confirmDel && (
@@ -2814,6 +2840,8 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
                   No description yet.
                 </p>
               )}
+              <LastEdited by={outcome.last_edited_by} at={outcome.last_edited_at}
+                style={{ display: "block", marginTop: 8 }} />
             </div>
             <button onClick={() => setEditingOutcome(true)}
               title="Edit title and description"
@@ -2955,13 +2983,15 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
                   )}
                 </div>
 
-                <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
-                  style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
-                    background: SURFACE, color: TEXT_SUB,
-                    border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px",
-                    marginTop: 2 }}>
-                  {isEditing ? "Cancel" : "Edit"}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                  <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                    style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                      background: SURFACE, color: TEXT_SUB,
+                      border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
+                    {isEditing ? "Cancel" : "Edit"}
+                  </button>
+                  <LastEdited by={ind.last_edited_by} at={ind.last_edited_at} />
+                </div>
               </div>
 
               {isEditing && (

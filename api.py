@@ -2052,6 +2052,30 @@ def _actor(body=None):
         body = request.get_json(silent=True) or {}
     return (body.get("edited_by") or "").strip() or "unknown"
 
+def _attach_last_edited(entities, id_field, edit_map):
+    """Attach last_edited_by / last_edited_at from edit_map to each entity dict."""
+    for e in entities:
+        edit = edit_map.get(e.get(id_field), {})
+        e["last_edited_by"] = edit.get("edited_by", "")
+        e["last_edited_at"] = edit.get("edited_at", "")
+
+def _fetch_edit_map(entity_ids):
+    """Return {entity_id: {edited_by, edited_at}} for the most recent log entry per ID."""
+    if not entity_ids:
+        return {}
+    try:
+        ph = ",".join(["?" for _ in entity_ids])
+        rows = query(
+            f"""SELECT entity_id, edited_by, CAST(edited_at AS STRING) AS edited_at
+                FROM {SCHEMA}.content_edit_log
+                WHERE entity_id IN ({ph})
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY edited_at DESC) = 1""",
+            entity_ids
+        )
+        return {r["entity_id"]: r for r in rows}
+    except Exception:
+        return {}
+
 def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, rationale, revision_reason, edited_by):
     if not LOGGING_ENABLED:
         return
@@ -2188,6 +2212,12 @@ def get_bow_full(bow_id):
 
     for out in outcomes:
         out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
+
+    # Attach last-edited metadata from content_edit_log
+    all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in indicators]
+    edit_map = _fetch_edit_map(all_ids)
+    _attach_last_edited(outcomes, "outcome_id", edit_map)
+    _attach_last_edited(indicators, "indicator_id", edit_map)
 
     return jsonify({
         "bow": bow,
@@ -2456,6 +2486,12 @@ def get_portfolio_full(portfolio_id):
             key = (out.get("short_title") or out.get("title") or "").strip().lower()
             lane = lane_by_label.get(key)
         out["toa_activities"] = acts_by_lane.get(lane["lane_id"], []) if lane else []
+
+    # Attach last-edited metadata from content_edit_log
+    all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in indicators]
+    edit_map = _fetch_edit_map(all_ids)
+    _attach_last_edited(outcomes, "outcome_id", edit_map)
+    _attach_last_edited(indicators, "indicator_id", edit_map)
 
     return jsonify({
         "portfolio": portfolio,
