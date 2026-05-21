@@ -4159,6 +4159,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
   const SHORT_TITLES = portShortTitles || PO_SHORT_TITLES_CC;
 
   const [toa, setToa] = useState(null);
+  const [toaLanes, setToaLanes] = useState([]);
   // outcomeLinks: bowOutcomeId -> Set<portfolioOutcomeId>
   const [outcomeLinks, setOutcomeLinks] = useState({});
   const [expandedOutcomes, setExpandedOutcomes] = useState({});
@@ -4172,6 +4173,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
     apiFetch(`/api/toa/${portId}`).then(data => {
       if (!data) return;
       setToa(data.toa || null);
+      setToaLanes(data.lanes || []);
     }).catch(() => {});
   }, [portId]);
 
@@ -4243,7 +4245,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           {allOutcomes.map((o,i) => {
             const outcomeOpen = !!expandedOutcomes[o.id];
             const inputsOpen  = !!expandedInputs[o.id];
-            const contributors = getContributors(o.id);
+            const lane = toaLanes[i];
+            const activities = lane?.activities || [];
             return (
               <div key={o.id} style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:pc.color+"04",display:"flex",flexDirection:"column"}}>
                 <div style={{height:4,background:`linear-gradient(90deg,${pc.color},${pc.color}88)`}}/>
@@ -4257,37 +4260,27 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   {outcomeOpen && (
                     <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+pc.color+"33",marginLeft:11}}>{o.outcome}</div>
                   )}
-                  {/* Two toggle buttons side by side */}
+                  {/* Toggle buttons */}
                   <div style={{display:"flex",gap:8,paddingLeft:32,flexWrap:"wrap"}}>
                     <button onClick={()=>setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}))}
                       style={{background:"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
                       {outcomeOpen ? "▴ less" : "▾ full outcome"}
                     </button>
-                    {linksLoaded && contributors.length > 0 && (
+                    {activities.length > 0 && (
                       <button onClick={()=>setExpandedInputs(v=>({...v,[o.id]:!v[o.id]}))}
                         style={{background:inputsOpen?pc.color+"12":"none",border:"1px solid "+pc.color+"44",borderRadius:5,cursor:"pointer",padding:"3px 10px",fontSize:11,color:pc.color,fontWeight:600}}>
                         {inputsOpen ? "▴ inputs" : "▾ investments & inputs"}
                       </button>
                     )}
-                    {linksLoaded && contributors.length === 0 && (
-                      <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic",alignSelf:"center"}}>No investments linked yet</span>
-                    )}
                   </div>
-                  {/* Investments & Inputs panel */}
-                  {inputsOpen && contributors.length > 0 && (
-                    <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:10,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
-                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Investments & Inputs</div>
-                      {contributors.map(({bow, bowOutcomes}) => (
-                        <div key={bow.id}>
-                          <div style={{fontSize:11,fontWeight:700,color:pc.color,marginBottom:4}}>{bow.name}</div>
-                          <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                            {bowOutcomes.map((bo,j) => (
-                              <div key={bo.id||j} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
-                                <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.6}}/>
-                                <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{bo.title||bo.shortTitle}</div>
-                              </div>
-                            ))}
-                          </div>
+                  {/* Investments & Inputs panel — TOA lane activities */}
+                  {inputsOpen && activities.length > 0 && (
+                    <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:6,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
+                      <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Investments & Inputs</div>
+                      {activities.map((act, ai) => (
+                        <div key={act.activity_id||ai} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
+                          <div style={{width:4,height:4,borderRadius:"50%",background:pc.color,marginTop:5,flexShrink:0,opacity:0.7}}/>
+                          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
                         </div>
                       ))}
                     </div>
