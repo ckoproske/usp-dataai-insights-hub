@@ -317,6 +317,7 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
   const [period, setPeriod]           = useState("");
   const [readingDate, setDate]        = useState(TODAY);
   const [collectionDetail, setDetail] = useState("");
+  const [collectionUrl, setUrl]       = useState("");
   const [manualSource, setManualSrc]  = useState("");
   const [notes, setNotes]             = useState("");
   const [submitting, setSubmitting]   = useState(false);
@@ -331,6 +332,7 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
     try {
       const sourceText = [effectiveSource, collectionDetail.trim()]
         .filter(Boolean).join(" — ");
+      const sourceUrl = collectionUrl.trim() || null;
       await api("/api/pending-actuals/submit", {
         method: "POST",
         body: JSON.stringify({
@@ -339,7 +341,8 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
           entity_id: bow.bow_id || bow.portfolio_id,
           year: parseInt(year, 10), period: period || null,
           submitted_value: parseFloat(value),
-          reading_date: readingDate, source_notes: sourceText, notes,
+          reading_date: readingDate, source_notes: sourceText,
+          source_url: sourceUrl, notes,
         }),
       });
       onSubmitted();
@@ -406,6 +409,11 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
         helper="Specific report, page, round, or document for this data point.">
         <input type="text" value={collectionDetail} onChange={e => setDetail(e.target.value)}
           placeholder={`e.g. Q1 2026 partner report, p.12`} style={inputStyle} />
+      </Field>
+
+      <Field label="Collection URL" helper="Direct link to the source document or dataset.">
+        <input type="url" value={collectionUrl} onChange={e => setUrl(e.target.value)}
+          placeholder="https://..." style={inputStyle} />
       </Field>
 
       <Field label="Notes">
