@@ -2970,6 +2970,7 @@ def get_activity_feed():
 @app.route("/api/indicators/catalog")
 def get_indicators_catalog():
     """Returns every indicator (BOW + portfolio) with entity context, source details, and targets."""
+    # BOW indicators — try with optional columns, fall back to safe subset
     try:
         bow_rows = query(f"""
             SELECT
@@ -2979,22 +2980,45 @@ def get_indicators_catalog():
                 b.title         AS entity_name,
                 b.portfolio_id,
                 p.label         AS portfolio_name,
-                COALESCE(i.name, i.text)  AS name,
-                i.text          AS description,
+                COALESCE(i.name, i.text)       AS name,
+                i.text                         AS description,
                 i.source_id,
                 i.collection_frequency,
                 i.unit,
                 i.baseline,
                 i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
-                COALESCE(i.status, 'draft') AS status
+                COALESCE(i.status, 'draft')    AS status
             FROM {SCHEMA}.bow_indicators i
             JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
             LEFT JOIN {SCHEMA}.portfolios p ON p.portfolio_id = b.portfolio_id
             WHERE COALESCE(i.is_active, true) = true
         """)
     except Exception:
-        bow_rows = []
+        try:
+            bow_rows = query(f"""
+                SELECT
+                    i.indicator_id,
+                    i.bow_id        AS entity_id,
+                    'bow'           AS entity_type,
+                    b.title         AS entity_name,
+                    b.portfolio_id,
+                    p.label         AS portfolio_name,
+                    i.text          AS name,
+                    i.text          AS description,
+                    i.data_source   AS source_id,
+                    NULL            AS collection_frequency,
+                    NULL            AS unit,
+                    i.baseline,
+                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                    'draft'         AS status
+                FROM {SCHEMA}.bow_indicators i
+                JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
+                LEFT JOIN {SCHEMA}.portfolios p ON p.portfolio_id = b.portfolio_id
+            """)
+        except Exception:
+            bow_rows = []
 
+    # Portfolio indicators — try with optional columns, fall back to safe subset
     try:
         port_rows = query(f"""
             SELECT
@@ -3004,20 +3028,41 @@ def get_indicators_catalog():
                 p.label         AS entity_name,
                 i.portfolio_id,
                 p.label         AS portfolio_name,
-                COALESCE(b.name, i.name, i.text)  AS name,
-                COALESCE(b.text, i.text)           AS description,
-                COALESCE(b.source_id, i.source_id) AS source_id,
+                COALESCE(b.name, i.name, i.text)               AS name,
+                COALESCE(b.text, i.text)                        AS description,
+                COALESCE(b.source_id, i.source_id)             AS source_id,
                 COALESCE(b.collection_frequency, i.collection_frequency) AS collection_frequency,
-                COALESCE(b.unit, i.unit)            AS unit,
+                COALESCE(b.unit, i.unit)                        AS unit,
                 i.baseline,
                 i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
-                COALESCE(b.status, i.status, 'draft') AS status
+                COALESCE(b.status, i.status, 'draft')           AS status
             FROM {SCHEMA}.portfolio_indicators i
             LEFT JOIN {SCHEMA}.bow_indicators b ON b.indicator_id = i.bow_indicator_id
             JOIN {SCHEMA}.portfolios p ON p.portfolio_id = i.portfolio_id
         """)
     except Exception:
-        port_rows = []
+        try:
+            port_rows = query(f"""
+                SELECT
+                    i.indicator_id,
+                    i.portfolio_id  AS entity_id,
+                    'portfolio'     AS entity_type,
+                    p.label         AS entity_name,
+                    i.portfolio_id,
+                    p.label         AS portfolio_name,
+                    COALESCE(i.text, i.name) AS name,
+                    i.text          AS description,
+                    i.source_id,
+                    NULL            AS collection_frequency,
+                    NULL            AS unit,
+                    i.baseline,
+                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                    'draft'         AS status
+                FROM {SCHEMA}.portfolio_indicators i
+                JOIN {SCHEMA}.portfolios p ON p.portfolio_id = i.portfolio_id
+            """)
+        except Exception:
+            port_rows = []
 
     all_rows = bow_rows + port_rows
 
