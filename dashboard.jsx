@@ -4229,7 +4229,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
       {/* ── Problem / Gap statement ── */}
       {problemStatement && (
         <div style={{borderRadius:"0 10px 10px 0",border:"1px solid "+pc.color+"28",borderLeft:"5px solid "+pc.color,background:pc.color+"07",padding:"16px 22px"}}>
-          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>↳ This portfolio responds to</div>
+          <div style={{fontSize:10,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>The Problem We're Addressing</div>
           <div style={{fontSize:14,color:TEXT,lineHeight:1.7,fontWeight:500}}>{problemStatement}</div>
         </div>
       )}
