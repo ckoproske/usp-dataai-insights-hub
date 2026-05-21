@@ -2149,9 +2149,24 @@ def get_bow_full(bow_id):
             "reading_date":  a.get("reading_date"),
         })
 
+    # Attach source_name to indicators
+    source_ids = list({i["source_id"] for i in ind_rows if i.get("source_id")})
+    source_map = {}
+    if source_ids:
+        try:
+            ph = ",".join(["?" for _ in source_ids])
+            src_rows = query(
+                f"SELECT source_id, source_name FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
+                source_ids
+            )
+            source_map = {r["source_id"]: r["source_name"] for r in src_rows}
+        except Exception:
+            pass
+
     indicators = []
     for ind in ind_rows:
         ind["actuals"] = actuals_by_ind.get(ind["indicator_id"], [])
+        ind["source_name"] = source_map.get(ind.get("source_id"), "")
         indicators.append(ind)
 
     execution_targets = query(
@@ -2384,6 +2399,22 @@ def get_portfolio_full(portfolio_id):
                 ORDER BY outcome_id, indicator_id""",
             [portfolio_id]
         )
+
+    # Attach source_name to indicators
+    port_source_ids = list({i["source_id"] for i in indicators if i.get("source_id")})
+    port_source_map = {}
+    if port_source_ids:
+        try:
+            ph = ",".join(["?" for _ in port_source_ids])
+            src_rows = query(
+                f"SELECT source_id, source_name FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
+                port_source_ids
+            )
+            port_source_map = {r["source_id"]: r["source_name"] for r in src_rows}
+        except Exception:
+            pass
+    for ind in indicators:
+        ind["source_name"] = port_source_map.get(ind.get("source_id"), "")
 
     ind_by_outcome = {}
     for ind in indicators:

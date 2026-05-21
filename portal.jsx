@@ -1784,9 +1784,9 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                               <strong>Frequency:</strong> {ind.collection_frequency}
                             </span>
                           )}
-                          {ind.source_id && (
+                          {(ind.source_name || ind.source_id) && (
                             <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                              <strong>Source:</strong> {ind.source_id}
+                              <strong>Source:</strong> {ind.source_name || ind.source_id}
                             </span>
                           )}
                         </div>
