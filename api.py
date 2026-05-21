@@ -2967,8 +2967,8 @@ def get_activity_feed():
 #     tracking_notes STRING
 #   );
 
-@app.route("/api/indicators/all")
-def get_all_indicators():
+@app.route("/api/indicators/catalog")
+def get_indicators_catalog():
     """Returns every indicator (BOW + portfolio) with entity context, source details, and targets."""
     try:
         bow_rows = query(f"""

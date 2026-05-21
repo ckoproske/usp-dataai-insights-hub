@@ -3931,7 +3931,7 @@ function IndicatorCatalogView() {
   const [expanded, setExpanded]     = useState(new Set());
 
   useEffect(() => {
-    api("/api/indicators/all")
+    api("/api/indicators/catalog")
       .then(d => { setRows(d); setLoading(false); })
       .catch(() => { setError("Failed to load indicators."); setLoading(false); });
   }, []);
