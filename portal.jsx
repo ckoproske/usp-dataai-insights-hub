@@ -2890,111 +2890,100 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
         </div>
       )}
 
-      <div style={{ overflowX: "auto", marginBottom: 28 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse",
-          border: `1px solid ${BORDER}`, tableLayout: "fixed" }}>
-          <colgroup>
-            <col style={{ width: "30%" }} />
-            {PORT_TABLE_YEARS.map(y => <col key={y} style={{ width: yearColW }} />)}
-          </colgroup>
-          <thead>
-            <tr>
-              <th style={thStyle}>Indicator</th>
-              {PORT_TABLE_YEARS.map(y => (
-                <th key={y} style={{ ...thStyle, textAlign: "center" }}>{y}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {inds.length === 0 && !addingInd && (
-              <tr>
-                <td colSpan={PORT_TABLE_YEARS.length + 1}
-                  style={{ ...tdStyle, color: TEXT_MUTED, fontStyle: "italic",
-                    textAlign: "center", borderRight: "none" }}>
-                  No indicators yet.
-                </td>
-              </tr>
-            )}
-            {inds.map(ind => {
-              const isEditing = editIndId === ind.indicator_id;
-              return (
-                <React.Fragment key={ind.indicator_id}>
-                  <tr>
-                    <td style={{ ...tdStyle, background: p?.light || ACCENT_LIGHT,
-                      borderRight: `2px solid ${BORDER}` }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND,
-                        lineHeight: 1.4, marginBottom: 5 }}>
-                        {ind.name || ind.text}
-                      </p>
-                      {ind.baseline != null && (
-                        <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 5 }}>
-                          Baseline: {ind.baseline}{ind.unit ? ` ${ind.unit}` : ""}
-                        </p>
-                      )}
-                      <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
-                        style={{ fontSize: 11, fontWeight: 600, cursor: "pointer",
-                          background: SURFACE, color: TEXT_SUB,
-                          border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
-                        {isEditing ? "Cancel" : "Edit Indicator"}
-                      </button>
-                    </td>
-                    {PORT_TABLE_YEARS.map(year => {
-                      const tval = ind[`target_${year}`];
-                      const yearActuals = (ind.actuals || [])
-                        .filter(a => a.year === year)
-                        .sort((a, b) => (a.period || "").localeCompare(b.period || ""));
-                      return (
-                        <td key={year} style={{ ...tdStyle, textAlign: "center", background: SURFACE }}>
-                          {tval != null ? (
-                            <div style={{ marginBottom: yearActuals.length ? 4 : 0 }}>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED }}>T: </span>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
-                                {tval}{ind.unit ? ` ${ind.unit}` : ""}
-                              </span>
-                            </div>
-                          ) : <span style={{ fontSize: 11, color: TEXT_MUTED }}>—</span>}
-                          {yearActuals.map((a, ai) => (
-                            <div key={ai} style={{ marginTop: ai === 0 ? 0 : 3 }}>
-                              {a.period && (
-                                <span style={{ fontSize: 10, fontWeight: 700,
-                                  color: TEXT_MUTED, display: "block" }}>{a.period}</span>
-                              )}
-                              <span style={{ fontSize: 10, fontWeight: 700, color: SUCCESS }}>A: </span>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: SUCCESS }}>
-                                {a.actual_value}{ind.unit ? ` ${ind.unit}` : ""}
-                              </span>
-                            </div>
-                          ))}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                  {isEditing && (
-                    <tr>
-                      <td colSpan={PORT_TABLE_YEARS.length + 1}
-                        style={{ padding: 0, borderBottom: `1px solid ${BORDER}` }}>
-                        <div style={{ padding: "16px 20px", background: BG }}>
-                          <InlineEditIndicator indicator={ind} user={user} isPortfolio
-                            onSave={updated => {
-                              onOutcomeChange({ ...outcome, indicators: inds.map(i =>
-                                i.indicator_id === ind.indicator_id ? { ...i, ...updated } : i) });
-                              setEditIndId(null);
-                            }}
-                            onCancel={() => setEditIndId(null)}
-                            onDeleted={() => {
-                              onOutcomeChange({ ...outcome,
-                                indicators: inds.filter(i => i.indicator_id !== ind.indicator_id) });
-                              setEditIndId(null);
-                            }} />
-                        </div>
-                      </td>
-                    </tr>
+      {inds.length === 0 && !addingInd && (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 20 }}>
+          No indicators yet.
+        </p>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+        {inds.map(ind => {
+          const isEditing = editIndId === ind.indicator_id;
+          const unit = ind.unit ? ` ${ind.unit}` : "";
+          const targets = PORT_TABLE_YEARS.map(y => ({ year: y, val: ind[`target_${y}`] }))
+            .filter(t => t.val != null);
+          return (
+            <div key={ind.indicator_id}
+              style={{ border: `1px solid ${BORDER}`, borderRadius: 8,
+                borderLeft: `4px solid ${p?.color || ACCENT}`,
+                background: SURFACE, overflow: "hidden" }}>
+
+              {/* Card header */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
+                padding: "12px 14px", borderBottom: isEditing ? `1px solid ${BORDER}` : "none" }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, marginBottom: 4 }}>
+                    {ind.name || ind.text}
+                  </p>
+                  {ind.name && ind.text && ind.text !== ind.name && (
+                    <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
+                      {ind.text}
+                    </p>
                   )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+
+                  {/* Meta row */}
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+                    {ind.collection_frequency && (
+                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                        <strong>Frequency:</strong> {ind.collection_frequency}
+                      </span>
+                    )}
+                    {ind.source_id && (
+                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                        <strong>Source:</strong> {ind.source_id}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Baseline + targets */}
+                  {(ind.baseline != null || targets.length > 0) && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {ind.baseline != null && (
+                        <span style={{ fontSize: 11, background: BG,
+                          border: `1px solid ${BORDER}`, borderRadius: 4,
+                          padding: "2px 8px", color: TEXT_SUB }}>
+                          Baseline: <strong>{ind.baseline}{unit}</strong>
+                        </span>
+                      )}
+                      {targets.map(t => (
+                        <span key={t.year} style={{ fontSize: 11, background: BG,
+                          border: `1px solid ${BORDER}`, borderRadius: 4,
+                          padding: "2px 8px", color: TEXT_SUB }}>
+                          {t.year}: <strong>{t.val}{unit}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                  style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                    background: SURFACE, color: TEXT_SUB,
+                    border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px",
+                    marginTop: 2 }}>
+                  {isEditing ? "Cancel" : "Edit"}
+                </button>
+              </div>
+
+              {isEditing && (
+                <div style={{ padding: "16px 20px", background: BG }}>
+                  <InlineEditIndicator indicator={ind} user={user} isPortfolio
+                    onSave={updated => {
+                      onOutcomeChange({ ...outcome, indicators: inds.map(i =>
+                        i.indicator_id === ind.indicator_id ? { ...i, ...updated } : i) });
+                      setEditIndId(null);
+                    }}
+                    onCancel={() => setEditIndId(null)}
+                    onDeleted={() => {
+                      onOutcomeChange({ ...outcome,
+                        indicators: inds.filter(i => i.indicator_id !== ind.indicator_id) });
+                      setEditIndId(null);
+                    }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Remove outcome ── */}
