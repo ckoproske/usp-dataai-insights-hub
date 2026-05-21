@@ -4684,37 +4684,11 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                     <div style={{display:"flex",borderBottom:"1px solid "+BORDER,marginBottom:20,overflowX:"auto"}}>
                       {currentBow.outcomes.map((o,i)=>{
                         const active=i===activeBowOutcomeIdx;
-                        const rawT=(o.executionTargets[progressYear]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
-                        const impact=impactAutoStatus(o);
-                        const manualRs=o.manualStatus&&STATUS[o.manualStatus]?STATUS[o.manualStatus]:null;
-                        const impactRs=manualRs||(impact?STATUS[impact.label]:null);
                         return (
                           <button key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
-                            style={{padding:"12px 20px",border:"none",borderRight:"1px solid "+BORDER,background:active?SURFACE:"transparent",borderBottom:active?"2px solid "+TEXT:"2px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:8,alignItems:"flex-start",marginBottom:-1,transition:"all .15s",minWidth:180,flexShrink:0}}>
+                            style={{padding:"12px 20px",border:"none",borderRight:"1px solid "+BORDER,background:active?SURFACE:"transparent",borderBottom:active?"2px solid "+TEXT:"2px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:6,alignItems:"flex-start",marginBottom:-1,transition:"all .15s",minWidth:140,flexShrink:0}}>
                             <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Outcome {o.number||i+1}</div>
                             <div style={{fontSize:13,fontWeight:active?700:500,color:active?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{BOW_TITLES[i]||o.shortTitle||"Outcome "+(i+1)}</div>
-                            {/* Execution dots */}
-                            <div style={{display:"flex",flexDirection:"column",gap:4,width:"100%"}}>
-                              <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Execution {progressYear}</div>
-                              <div style={{display:"flex",gap:4,flexWrap:"wrap",minHeight:9}}>
-                                {rawT.length>0
-                                  ? rawT.map((t,ti)=>{
-                                      const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
-                                      return <span key={ti} title={(t.text||"Target "+(ti+1))+" — "+c.label} style={{width:9,height:9,borderRadius:"50%",background:c.color,display:"inline-block",flexShrink:0}}/>;
-                                    })
-                                  : <span style={{fontSize:10,color:TEXT_MUTED,fontStyle:"italic"}}>no targets</span>}
-                              </div>
-                            </div>
-                            {/* Impact rating */}
-                            <div style={{display:"flex",flexDirection:"column",gap:4,width:"100%"}}>
-                              <div style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Impact</div>
-                              {impactRs
-                                ? <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,color:impactRs.color}}>
-                                    <span style={{width:8,height:8,borderRadius:"50%",background:impactRs.color,display:"inline-block",flexShrink:0}}/>
-                                    {(impactRs.label||"").replace(" Expectations","")}
-                                  </span>
-                                : <span style={{fontSize:11,color:TEXT_MUTED,fontStyle:"italic"}}>no data</span>}
-                            </div>
                           </button>
                         );
                       })}
