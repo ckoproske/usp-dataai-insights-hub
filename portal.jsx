@@ -688,7 +688,6 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
   const [itext, setItext]         = useState(indicator.text || "");
   const [purpose, setPurpose]     = useState(indicator.purpose || "");
   const [measureLevel, setML]     = useState(indicator.measurement_level || "");
-  const [tags, setTags]           = useState(indicator.thematic_tags || "");
   const [indStatus, setStatus]      = useState(indicator.status || "active");
   const [qualityNotes, setQN]       = useState(indicator.data_quality_notes || "");
   const [trackingNotes, setTN]  = useState(indicator.tracking_notes || "");
@@ -723,7 +722,6 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       name: iname || null,
       text: itext, purpose: purpose || null,
       measurement_level: measureLevel || null,
-      thematic_tags: tags || null,
       status: indStatus,
       data_quality_notes: qualityNotes || null,
       tracking_notes: trackingNotes || null,
@@ -799,10 +797,6 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
           </select>
         </Field>
       </div>
-      <Field label="Thematic tags" helper="Comma-separated, e.g. equity, data infrastructure, AI readiness">
-        <input type="text" value={tags} onChange={e => setTags(e.target.value)}
-          placeholder="e.g. equity, data infrastructure" style={inputStyle} />
-      </Field>
 
       {/* ── Source ── */}
       <SectionHead label="Source" />
