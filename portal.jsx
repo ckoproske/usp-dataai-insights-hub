@@ -2777,8 +2777,8 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaLane, onRefresh, on
   return (
     <div className="fade-in">
 
-      {/* ── Outcome text ── */}
-      <div style={{ marginBottom: 24 }}>
+      {/* ── Outcome title + text ── */}
+      <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: `1px solid ${BORDER}` }}>
         {editingOutcome ? (
           <InlineEditOutcome outcome={outcome} user={user} isPortfolio
             onSave={updated => { onOutcomeChange({ ...outcome, ...updated }); setEditingOutcome(false); }}
@@ -2786,18 +2786,26 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaLane, onRefresh, on
         ) : (
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             <div style={{ flex: 1 }}>
-              {outcome.text && (
-                <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.7, marginBottom: 6 }}>
-                  {outcome.text}
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.4 }}>
+                {outcome.title || outcome.short_title || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No title set</span>}
+              </h3>
+              {outcome.short_title && outcome.short_title !== outcome.title && (
+                <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>
+                  Short title: {outcome.short_title}
                 </p>
               )}
-              {!outcome.text && (
+              {outcome.text ? (
+                <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7 }}>
+                  {outcome.text}
+                </p>
+              ) : (
                 <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-                  No outcome description yet.
+                  No description yet.
                 </p>
               )}
             </div>
             <button onClick={() => setEditingOutcome(true)}
+              title="Edit title and description"
               style={{ background: "none", border: "none", cursor: "pointer",
                 color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
           </div>
