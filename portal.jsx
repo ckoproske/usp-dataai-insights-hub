@@ -1807,21 +1807,31 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                           )}
                         </div>
                         {(ind.baseline != null || targets.length > 0) && (
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             {ind.baseline != null && (
-                              <span style={{ fontSize: 11, background: BG,
-                                border: `1px solid ${BORDER}`, borderRadius: 4,
-                                padding: "2px 8px", color: TEXT_SUB }}>
-                                Baseline: <strong>{ind.baseline}{unit}</strong>
-                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                                  minWidth: 52 }}>Baseline</span>
+                                <span style={{ fontSize: 11, background: BG,
+                                  border: `1px solid ${BORDER}`, borderRadius: 4,
+                                  padding: "2px 8px", color: TEXT_SUB }}>
+                                  <strong>{ind.baseline}{unit}</strong>
+                                </span>
+                              </div>
                             )}
-                            {targets.map(t => (
-                              <span key={t.year} style={{ fontSize: 11, background: BG,
-                                border: `1px solid ${BORDER}`, borderRadius: 4,
-                                padding: "2px 8px", color: TEXT_SUB }}>
-                                {t.year}: <strong>{t.val}{unit}</strong>
-                              </span>
-                            ))}
+                            {targets.length > 0 && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                                  minWidth: 52 }}>Targets</span>
+                                {targets.map(t => (
+                                  <span key={t.year} style={{ fontSize: 11, background: BG,
+                                    border: `1px solid ${BORDER}`, borderRadius: 4,
+                                    padding: "2px 8px", color: TEXT_SUB }}>
+                                    {t.year}: <strong>{t.val}{unit}</strong>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
