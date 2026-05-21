@@ -2375,8 +2375,37 @@ def get_portfolio_full(portfolio_id):
         key = ind.get("outcome_id") or "__none"
         ind_by_outcome.setdefault(key, []).append(ind)
 
+    # Load TOA lanes + activities and attach to matching outcomes
+    toa_lanes = query(
+        f"""SELECT * FROM {SCHEMA}.portfolio_toa_lanes
+            WHERE portfolio_id = ? AND COALESCE(is_active, true) = true
+            ORDER BY sort_order""",
+        [portfolio_id]
+    )
+    all_acts = query(
+        f"""SELECT a.lane_id, a.activity_id, a.activity_text, a.sort_order
+            FROM {SCHEMA}.portfolio_toa_activities a
+            JOIN {SCHEMA}.portfolio_toa_lanes l ON a.lane_id = l.lane_id
+            WHERE l.portfolio_id = ?
+            ORDER BY a.sort_order""",
+        [portfolio_id]
+    )
+    acts_by_lane = {}
+    for a in all_acts:
+        acts_by_lane.setdefault(a["lane_id"], []).append(a)
+
+    # Build lookup: lane_id → activities, and label → activities (fallback)
+    lane_by_id    = {l["lane_id"]: l for l in toa_lanes}
+    lane_by_label = {(l.get("label") or "").strip().lower(): l for l in toa_lanes}
+
     for out in outcomes:
         out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
+        # Match lane by ID first, then by short_title ↔ label
+        lane = lane_by_id.get(out["outcome_id"])
+        if not lane:
+            key = (out.get("short_title") or out.get("title") or "").strip().lower()
+            lane = lane_by_label.get(key)
+        out["toa_activities"] = acts_by_lane.get(lane["lane_id"], []) if lane else []
 
     return jsonify({
         "portfolio": portfolio,

@@ -2735,7 +2735,7 @@ const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
 
 // ─── Portfolio Outcome Pane (single outcome, shown when tab is active) ──────────
-function PortfolioOutcomePane({ outcome, portfolio, user, toaLane, onRefresh, onOutcomeChange, onDeleted }) {
+function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted }) {
   const p = PORT_COLORS[portfolio.portfolio_id];
   const [editingOutcome,  setEditingOutcome]  = useState(false);
   const [editIndId,       setEditIndId]       = useState(null);
@@ -2803,9 +2803,9 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaLane, onRefresh, on
         <SectionLabel style={{ marginBottom: 10 }}>Investments & Inputs</SectionLabel>
 
         {/* TOA activities (read-only, sourced from Theory of Action) */}
-        {toaLane && (toaLane.activities || []).length > 0 ? (
+        {toaActivities && toaActivities.length > 0 ? (
           <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
-            {(toaLane.activities || []).map(a => (
+            {toaActivities.map(a => (
               <li key={a.activity_id} style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>
                 {a.activity_text}
               </li>
@@ -3444,7 +3444,6 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [outcomes, setOutcomes]     = useState([]);
-  const [toaLanes, setToaLanes]     = useState([]);
   const [activeOId, setActiveOId]   = useState(null);
   const [activeTab, setActiveTab]   = useState("toa");
   const [addingOut, setAddingOut]   = useState(false);
@@ -3455,16 +3454,14 @@ function PortfolioPanel({ portfolio, user, onBack }) {
 
   const load = () => {
     setLoading(true);
-    Promise.all([
-      api(`/api/portfolio/${portfolio.portfolio_id}/full`),
-      api(`/api/toa/${portfolio.portfolio_id}`),
-    ]).then(([d, toa]) => {
-      const outs = d.outcomes || [];
-      setData(d);
-      setOutcomes(outs);
-      setToaLanes(toa?.lanes || []);
-      setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
-    }).finally(() => setLoading(false));
+    api(`/api/portfolio/${portfolio.portfolio_id}/full`)
+      .then(d => {
+        const outs = d.outcomes || [];
+        setData(d);
+        setOutcomes(outs);
+        setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, [portfolio.portfolio_id]);
@@ -3620,7 +3617,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
           outcome={activeOutcome}
           portfolio={portfolio}
           user={user}
-          toaLane={toaLanes.find(l => l.lane_id === activeOutcome.outcome_id) || null}
+          toaActivities={activeOutcome.toa_activities || []}
           onRefresh={load}
           onOutcomeChange={updated => setOutcomes(prev =>
             prev.map(o => o.outcome_id === updated.outcome_id ? updated : o)
