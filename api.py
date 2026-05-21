@@ -291,7 +291,7 @@ def get_bow_portfolio_links(bow_id):
               l.bow_outcome_id,
               l.portfolio_outcome_id,
               l.contribution_type,
-              bo.outcome_text  AS bow_outcome_title,
+              bo.title         AS bow_outcome_title,
               po.short_title   AS portfolio_outcome_title
             FROM {SCHEMA}.bow_portfolio_outcome_links l
             JOIN {SCHEMA}.bow_outcomes bo
@@ -309,7 +309,7 @@ def get_bow_portfolio_links(bow_id):
 def debug_bow_links(bow_id):
     """Diagnostic: shows raw bow_outcomes and bow_portfolio_outcome_links for a BOW."""
     bow_outcomes = query(
-        f"SELECT outcome_id, outcome_text FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
+        f"SELECT outcome_id, title FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
         [bow_id]
     )
     outcome_ids = [r["outcome_id"] for r in bow_outcomes]
