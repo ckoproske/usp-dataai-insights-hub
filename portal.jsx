@@ -691,9 +691,8 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
   const [tags, setTags]           = useState(indicator.thematic_tags || "");
   const [indStatus, setStatus]      = useState(indicator.status || "active");
   const [qualityNotes, setQN]       = useState(indicator.data_quality_notes || "");
-  const [trackingNotes, setTN]      = useState(indicator.tracking_notes || "");
-  const [reviewDate, setReviewDate] = useState(indicator.last_reviewed_date || "");
-  const [sourceId, setSourceId]     = useState(indicator.source_id || null);
+  const [trackingNotes, setTN]  = useState(indicator.tracking_notes || "");
+  const [sourceId, setSourceId] = useState(indicator.source_id || null);
   const [unit, setUnit]           = useState(indicator.unit || "");
   const [freq, setFreq]           = useState(indicator.collection_frequency || "");
   const [baseline, setBase]       = useState(String(indicator.baseline ?? ""));
@@ -728,7 +727,6 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       status: indStatus,
       data_quality_notes: qualityNotes || null,
       tracking_notes: trackingNotes || null,
-      last_reviewed_date: reviewDate || null,
       source_id: sourceId || null,
       unit, collection_frequency: freq, baseline: baseline || null,
       ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
@@ -799,10 +797,6 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
             style={{ ...inputStyle, appearance: "auto" }}>
             {INDICATOR_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
-        </Field>
-        <Field label="Last reviewed">
-          <input type="date" value={reviewDate} onChange={e => setReviewDate(e.target.value)}
-            style={inputStyle} />
         </Field>
       </div>
       <Field label="Thematic tags" helper="Comma-separated, e.g. equity, data infrastructure, AI readiness">
