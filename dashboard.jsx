@@ -3583,7 +3583,7 @@ function ToaEditList({ items, onChange, placeholder, accent }) {
   );
 }
 
-function PortfolioToaView({ portfolioId, portColor }) {
+function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
   const [toaData, setToaData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeLane, setActiveLane] = useState(null);
@@ -3976,7 +3976,7 @@ function PortfolioToaView({ portfolioId, portColor }) {
                             <div style={{ width:18, height:18, borderRadius:"50%", background:lc, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:"#fff", flexShrink:0 }}>{li+1}</div>
                             <div style={{ fontSize:11, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase" }}>Outcome {li+1}</div>
                           </div>
-                          {hasInds && (
+                          {hasInds && !hideIndicators && (
                             <button onClick={(e) => toggleInd(lane.lane_id, e)} style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0, background:"none", border:`1px solid ${lc}40`, borderRadius:5, padding:"3px 7px", cursor:"pointer", fontFamily:"inherit" }}>
                               <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase" }}>Indicators</div>
                               <div style={{ background:`${lc}15`, borderRadius:8, padding:"1px 5px", fontSize:10, fontWeight:700, color:lc }}>{lane.indicators.length}</div>
@@ -3986,7 +3986,7 @@ function PortfolioToaView({ portfolioId, portColor }) {
                         </div>
                         <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.5, paddingRight:expandedIndicators[lane.lane_id]?0:120 }}>{lane.outcome_text}</div>
                       </div>
-                      {expandedIndicators[lane.lane_id] && (
+                      {!hideIndicators && expandedIndicators[lane.lane_id] && (
                         <div style={{ width:220, flexShrink:0, borderRadius:"0 8px 8px 0", background:`${lc}07`, border:`1.5px solid ${lc}40`, borderLeft:"none", padding:"9px 10px", display:"flex", flexDirection:"column", gap:5 }}>
                           <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>Indicators</div>
                           {(lane.indicators||[]).map((ind, i) => (
@@ -4006,7 +4006,7 @@ function PortfolioToaView({ portfolioId, portColor }) {
           </div>
           <Connector />
           <ImpactPanel num="4">
-            {crossIndicators.length > 0 && (
+            {!hideIndicators && crossIndicators.length > 0 && (
               <div>
                 <div style={{ fontSize:11, fontWeight:800, color:C.gold, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:2 }}>{crossLabel}</div>
                 <div style={{ fontSize:10, color:C.textDim, fontStyle:"italic", marginBottom:8 }}>Portfolio-level impact signals</div>
@@ -4019,7 +4019,7 @@ function PortfolioToaView({ portfolioId, portColor }) {
                 </div>
               </div>
             )}
-            {(crossIndicators.length > 0) && (toa.amb45_full_text || amb45Buckets) && <div style={{ height:1, background:C.bd }} />}
+            {!hideIndicators && (crossIndicators.length > 0) && (toa.amb45_full_text || amb45Buckets) && <div style={{ height:1, background:C.bd }} />}
             {toa.amb45_intro_text && <div style={{ fontSize:12, color:C.textMid, lineHeight:1.6, fontStyle:"italic" }}>{toa.amb45_intro_text}</div>}
             {(toa.amb45_full_text || amb45Buckets) && <BidirectionalDivider />}
             {(toa.amb45_full_text || amb45Buckets) && (
@@ -4611,7 +4611,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                   style={{width:32,height:32,borderRadius:"50%",border:"1px solid "+BORDER,background:SURFACE,color:TEXT_MUTED,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
               </div>
               <div style={{overflowX:"auto"}}>
-                <PortfolioToaView portfolioId={portId} portColor={pc} />
+                <PortfolioToaView portfolioId={portId} portColor={pc} hideIndicators={true} />
               </div>
             </div>
           </div>
