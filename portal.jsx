@@ -38,6 +38,9 @@ const T_BODY  = 16;   // body text, form labels
 const T_LABEL = 13;   // card content, field values
 const T_META  = 11;   // metadata, tags, footnotes
 
+// BOWs retired from the new structure — hide from all portal dropdowns
+const RETIRED_BOW_IDS = new Set(["ai-infra-bow3"]);
+
 const PORT_COLORS = {
   "ai-infra":      { color: "#3086AB", light: "#EBF4F9", dark: "#1F5F80", label: "AI Infrastructure" },
   "sfl":           { color: "#4EAB9A", light: "#ECF7F5", dark: "#337A6C", label: "System Feedback Loops" },
@@ -5725,7 +5728,7 @@ function PortalApp() {
       api("/api/completeness").catch(() => ({ bow: {}, portfolio: {} })),
     ]).then(([u, b, p, i, c]) => {
       if (u) setUser(u);
-      setBows(Array.isArray(b) ? b : []);
+      setBows(Array.isArray(b) ? b.filter(bow => !RETIRED_BOW_IDS.has(bow.bow_id)) : []);
       setPortfolios(Array.isArray(p) ? p : []);
       setIndicators(Array.isArray(i) ? i : []);
       setCompleteness(c && typeof c === "object" ? c : { bow: {}, portfolio: {} });

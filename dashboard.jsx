@@ -267,9 +267,9 @@ const BOW_ACRONYM = {
   "sfl-bow1": "EDU",       // Build and Sustain EDU-Net
   "sfl-bow2": "DAIP",      // Integrated Delivery
   "sfl-bow3": "CSGA",      // Launch Competencies & Skills Genome Accelerator
-  "ai-infra-bow1": "ECP",  // Enhance Context & Personalization
-  "ai-infra-bow2": "AAE",  // Accelerate AI Evaluation, Evidence, and Guardrails
-  "ai-infra-bow3": "MFL",  // Mobilize Frontier Labs for Learner Success
+  "ai-infra-bow1": "BMC",  // Build Model Capabilities & Learner Context
+  "ai-infra-bow2": "DAE",  // Develop AI Evaluation Infrastructure
+  "ai-infra-bow3": "MFL",  // Mobilize Frontier Labs for Learner Success (retired)
   "hub-bow1": "EDC",       // Enable Data & AI Capabilities for Division
 };
 function getBowAcronym(id, name) {
@@ -301,84 +301,77 @@ const DEFAULT_DATA = {
     "ai-infra": {
       portfolio: {
         id:"ai-infra", name:"AI Infrastructure",
-        description:"This portfolio aims to enable the shared infrastructure, adoption pathways, evidence practices, and alignment needed to advance AI driven personalization and ensure AI-enabled education solutions are built, adopted, and scaled responsibly.\n\nProblem/Gap: AI-enabled education solutions are advancing rapidly, but the conditions for responsible and equitable scale are fragmented or underdeveloped. Without intentional intervention, AI adoption risks reinforcing or widening existing inequities as benefits accrue unevenly across contexts.",
+        description:"This portfolio aims to build the shared model capabilities, learner context infrastructure, and evaluation infrastructure needed to ensure AI-enabled education solutions are developed, assessed, and deployed responsibly — and that learners from low-SES backgrounds are present in every decision.\n\nProblem/Gap: AI-enabled education solutions are advancing rapidly, but the technical infrastructure needed to develop, evaluate, and deploy them responsibly is fragmented or underdeveloped. Without intentional intervention, AI development will optimize for the most data-rich, well-resourced contexts — systematically underrepresenting low-SES, Black, and Latino learners in training data, evaluation standards, and product design.\n\nWe believe that: If we build shared model capabilities, learner context infrastructure, and AI evaluation infrastructure, with safety and equity embedded as conditions of investment, then solution developers, AI model/lab partners, and K-12 and Postsecondary partners have the technical public goods needed to build, assess, and improve AI solutions that are more likely to serve low-SES, Black, and Latino learners.",
         teamMembers:[], budget:"", budget2026:"", budget2027:"", budget2028:"", budget2029:"",
         portfolioOutcomes:[
           {
             id:"ai-infra-po1", shortTitle:"Shared Technical Public Goods",
             activity:"Build shared technical public goods that are usable and useful",
-            outcome:"Shared AI infrastructure (e.g., M+C, eval tooling, benchmarks) is available, interoperable, and usable in real-world education contexts.",
+            outcome:"Shared AI infrastructure — model capabilities, learner context protocols, eval tooling, and benchmarks — is available, interoperable, and demonstrably more effective for education use cases than what the market would produce without intentional investment.",
             manualStatus:null,
             indicators:[
-              {id:"ai-infra-pi1",text:"% solutions with qualifying Memory or Context components embedded",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
-              {id:"ai-infra-pi2",text:"Portability range of M + C solutions within solution ecosystems",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
-              {id:"ai-infra-pi3",text:"# downloads of public benchmark datasets & eval tech; # evaluating/using; # publishing",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi1",text:"% solutions with portable learner context components embedded",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi2",text:"# joint commitments of resources, deployments, and adoption of open infrastructure among AI Labs and solution providers that advance key division priorities",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi3",text:"# of foundation-funded open model artifacts or SLMs released and publicly available for education use cases",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
             ],
           },
           {
-            id:"ai-infra-po2", shortTitle:"Quality, Safety & Evidence in Practice",
-            activity:"Embed quality, safety, and evidence into practice",
-            outcome:"Institutions, districts, and educators are able to evaluate (or distinguish) AI-enabled tools for likely efficacy and safety, increasing their willingness to adopt and creating market incentives for responsible AI development.",
+            id:"ai-infra-po2", shortTitle:"Evidence & Safety Standards that Shift the Market",
+            activity:"Establish evidence and safety standards that reshape how AI solutions are designed, assessed, and procured",
+            outcome:"The market for AI in education shifts to reward quality, safety, and equity — rigorous evidence and infrastructure standards begin to become the basis by which AI solutions are designed, assessed, and procured, shaping what solution developers build, what institutions procure, and what AI model/lab partners prioritize in training.",
             manualStatus:null,
             indicators:[
-              {id:"ai-infra-pi4",text:"% increase in trust in AI-enabled education solutions among consumers and other key stakeholders",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
-              {id:"ai-infra-pi5",text:"% solutions that publish performance on key benchmarks and include results in marketing messages",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi4",text:"% solutions publishing performance on key benchmarks and including results in marketing messages",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi5",text:"% solutions completing pre-deployment safety testing using foundation-supported frameworks",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
             ],
           },
           {
-            id:"ai-infra-po3", shortTitle:"Evidence Shapes Product Development",
-            activity:"Ensure evidence shapes product development and procurement",
-            outcome:"Evidence of product performance and efficacy creates a reinforcing feedback loop informing how AI systems are designed, improved, assessed, and procured, so higher-quality evidence leads to higher-quality products over time.",
+            id:"ai-infra-po3", shortTitle:"Infrastructure Designed for Learners Who Need it Most",
+            activity:"Design infrastructure with low-SES, Black, and Latino learners as a required dimension",
+            outcome:"AI systems are more likely to serve low-SES, Black, and Latino learners well because the infrastructure shaping how they're built, evaluated, and deployed was designed with those populations in mind.",
             manualStatus:null,
             indicators:[
-              {id:"ai-infra-pi6",text:"% increase year-over-year in solution benchmark performance and use of advanced evaluation processes (e.g. simulations)",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
-            ],
-          },
-          {
-            id:"ai-infra-po4", shortTitle:"Aligned Actors Unlock Scale & Leverage",
-            activity:"Align actors to unlock scale and leverage",
-            outcome:"Hyperscaler, developer, and funder resources are directed toward beneficial AI deployments that strengthen underlying infrastructure to accelerate solution efficacy and expand reach.",
-            manualStatus:null,
-            indicators:[
-              {id:"ai-infra-pi7",text:"Joint commitments of resources, deployments, and adoption of open infrastructure among hyperscalers and solution providers that advance key division priorities",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi6",text:"% foundation-funded education benchmarks that include low-SES learner test cases as a required dimension",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
+              {id:"ai-infra-pi7",text:"% solutions publishing population-disaggregated performance data on shared benchmarks",source:"",baseline:"",manualStatus:null,targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""}},
             ],
           },
         ],
       },
       bows:[
         {
-          id:"ai-infra-bow1", name:"Enhance Context & Personalization",
+          id:"ai-infra-bow1", name:"Build Model Capabilities & Learner Context",
           color:"#CFFAFE", tagColor:"#0891B2", budget:"", delegate:"",
-          description:"The goal of the Enhance Context & Personalization body of work is to establish shared, safe, and reusable infrastructure that enables AI-enabled learning systems to retain and apply learner context over time, supporting more adaptive, equitable, and effective learning experiences across priority use cases.",
+          description:"Works to improve the training data, training-time benchmarks, model improvement artifacts, and learner context infrastructure that make AI systems more capable and contextually aware for education use cases. Investments span two layers: training-time work oriented toward improving what models know; and inference-time work oriented toward improving how models respond to individual learners. Safety at this layer means responsible training practices and bias detection — ensuring models perform safely before deployment.",
           outcomes:[
             {
               id:"ai-infra-bow1-o1", number:1,
-              shortTitle:"AI Integration with Contextual Data",
-              title:"AI systems can meaningfully align with curricula, standards, competencies, and the instructional technologies learners and educators already rely on through investments in middleware, Model Context Protocols (MCPs), and domain-specific knowledge graphs.",
+              shortTitle:"More Capable AI for Education",
+              title:"AI models and learner context infrastructure demonstrate measurable improvements in performance and contextual alignment for low-SES learners in priority education domains.",
               notes:"", manualStatus:null,
               executionTargets:{2026:[],2027:[],2028:[],2029:[],2030:[]},
               impactIndicators:[
-                {id:"ai-infra-bow1-o1-i1",text:"[Placeholder] Indicator 1 description",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow1-o1-i2",text:"[Placeholder] Indicator 2 description",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow1-o1-i1",text:"% solutions with portable learner context components embedded",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow1-o1-i2",text:"# joint commitments of resources, deployments, and adoption of open infrastructure among AI Labs and solution providers that advance key division priorities",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow1-o1-i3",text:"# of foundation-funded open model artifacts or SLMs released and publicly available for education use cases",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow1-o1-i4",text:"% foundation-funded education benchmarks that include low-SES learner test cases as a required dimension",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
               ],
             },
             {
               id:"ai-infra-bow1-o2", number:2,
-              shortTitle:"AI Interoperability and Personal Context",
-              title:"Portable learner memory and agent-to-agent (A2A) exchange is enabled so AI tutors, advisors, and EdTech systems can securely share learner data and intent across environments.",
+              shortTitle:"Safe by Design",
+              title:"Model capabilities are developed with bias detection and harm prevention embedded as conditions, and learner context protocols meet age-appropriate data use and privacy standards before deployment.",
               notes:"", manualStatus:null,
               executionTargets:{2026:[],2027:[],2028:[],2029:[],2030:[]},
               impactIndicators:[
-                {id:"ai-infra-bow1-o2-i1",text:"[Placeholder] Indicator 1 description",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow1-o2-i2",text:"[Placeholder] Indicator 2 description",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow1-o2-i1",text:"[Placeholder] Indicator 1",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
               ],
             },
           ],
         },
         {
-          id:"ai-infra-bow2", name:"Accelerate AI Evaluation, Evidence, and Guardrails",
+          id:"ai-infra-bow2", name:"Develop AI Evaluation Infrastructure",
           color:"#CFFAFE", tagColor:"#0891B2", budget:"", delegate:"",
-          description:"The goal of the Accelerate AI Evaluation, Evidence, and Guardrails body of work is to establish open, scalable evaluation infrastructure that enables developers and the field to assess the probable effectiveness and potential harms of AI-centric interventions before they reach learners and identify ways to improve effectiveness while mitigating harms for low-SES learners in high need contexts before and during deployment.",
+          description:"Produces the evaluation infrastructure, safety testing frameworks, and technical governance standards that K-12 and Postsecondary partners and the field use to develop, assess, and deploy AI responsibly. Safety is embedded as a design condition, not an afterthought — benchmarks surface harms alongside performance, pre-deployment red-teaming tests for bias and harm, and open-source guardrails define responsible deployment standards. Population-disaggregated reporting is a condition of investment.",
           decisions:[
             {
               id:"ai-infra-bow2-d1",
@@ -393,15 +386,15 @@ const DEFAULT_DATA = {
               timing:"~Dec 2029 (endpoint)",
               status:"upcoming",
               question:"Do we maintain a philanthropic subsidy for low-SES context? By years 3 and 4, do we: A) Transition out of the evaluation technology field because the market sustains it OR B) Clarify how it must be supported as ongoing public infrastructure",
-              signals:"Strong Signals to Transition Out:\n• High percentage of evaluations are paid by institutions / companies, who are repeat customers and renew\n• High-poverty schools / small solution providers are also able to afford evaluation\n• Evaluator network continues to grow, as does the volume of contributed tools, benchmarks and datasets; the platform effect of more partipants are increasing evaluation quality and comparability\n• Evaluation is embedded into major product evaluation stacks",
+              signals:"Strong Signals to Transition Out:\n• High percentage of evaluations are paid by institutions / companies, who are repeat customers and renew\n• High-poverty schools / small solution providers are also able to afford evaluation\n• Evaluator network continues to grow, as does the volume of contributed tools, benchmarks and datasets; the platform effect of more participants are increasing evaluation quality and comparability\n• Evaluation is embedded into major product evaluation stacks",
               outcome:"",
             },
           ],
           outcomes:[
             {
               id:"ai-infra-bow2-o1", number:1,
-              shortTitle:"Evaluation Infrastructure Becomes Operational",
-              title:"For the three USP pillars (Instruction & Tutoring, Gateway Math, Personalized Advising), independent, repeatable evaluation of AI systems is embedded into product development, procurement and implementation decisions – with measurable performance baselines and tracked lift over time.",
+              shortTitle:"Field-Wide Evidence Base",
+              title:"AI model/lab partners, EdTech developers, and K-12 and Postsecondary partners use shared benchmarks and eval standards to assess AI performance consistently across efficacy, safety, and equity dimensions.",
               notes:"", manualStatus:null,
               executionTargets:{
                 2026:[
@@ -413,59 +406,35 @@ const DEFAULT_DATA = {
                 ],
                 2028:[],2029:[],2030:[]},
               impactIndicators:[
-                {id:"ai-infra-bow2-o1-i1",text:"Demonstrated measurable improvement (\"lift\") in system performance and/or harm mitigation metrics across successive evaluation cycles",source:"",baseline:"xx",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow2-o1-i2",text:"Evidence that evaluation results influence procurement, adoption, or product iteration decisions (e.g., documented changes tied to evaluation findings)",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow2-o1-i3",text:"Field artifacts / decision-tools actively using structured evaluation data to guide strategy or funding decisions",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow2-o1-i1",text:"% solutions publishing performance on key benchmarks and including results in marketing messages",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow2-o1-i2",text:"% solutions completing pre-deployment safety testing using foundation-supported frameworks",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
               ],
             },
             {
               id:"ai-infra-bow2-o2", number:2,
-              shortTitle:"AI Systems Tested in High Need Contexts",
-              title:"AI-enabled instructional and advising tools serving high-poverty contexts are validated in realistic digital twin environments and show measurable improvements in safety, fairness, and efficacy before and during real-world deployment.",
+              shortTitle:"Responsible AI Infrastructure",
+              title:"Open-source guardrails and governance standards define the conditions AI models and EdTech developers must meet before their solutions reach learners, ensuring low-SES, Black, and Latino learners are present in every assessment.",
               notes:"", manualStatus:null,
               executionTargets:{
                 2026:[
-                  {text:"Develop high-fidelity digital twin environments and synthetic datasets representing high-poverty educational ecosystems by end of Year 1", completion:"Not Started", quarter:null, notes:""},
+                  {text:"Develop synthetic learner panels and simulated testing environments for under-resourced school contexts by end of Year 1", completion:"Not Started", quarter:null, notes:""},
                 ],
                 2027:[
-                  {text:"Incorporate digital twin-based stress testing into priority use case evaluations beginning Year 2", completion:"Not Started", quarter:null, notes:""},
+                  {text:"Publish open-source guardrail library, privacy governance frameworks, and FERPA/COPPA-aligned data protocols", completion:"Not Started", quarter:null, notes:""},
                 ],
                 2028:[
                   {text:"Publish open-access tools and methodologies for simulating and evaluating AI systems in structurally disadvantaged contexts", completion:"Not Started", quarter:null, notes:""},
                 ],
                 2029:[],2030:[]},
               impactIndicators:[
-                {id:"ai-infra-bow2-o2-i1",text:"Demonstrated reduction in risk indicators or performance disparities in digital twin testing over successive evaluation cycles",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow2-o2-i2",text:"Evidence that product teams modify models or system configurations based on digital twin findings prior to live deployment",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow2-o2-i3",text:"External adoption of digital twin evaluation methodologies by at least two major solution providers or procurement authorities",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-              ],
-            },
-            {
-              id:"ai-infra-bow2-o3", number:3,
-              shortTitle:"A Sustainable, Independent Evaluation Ecosystem Emerges",
-              title:"Education has a functioning, independent, multistakeholder evaluation ecosystem capable of generating reproducible, open, and scalable assessments of AI systems – not dependent solely on philanthropic subsidy.",
-              notes:"", manualStatus:null,
-              executionTargets:{
-                2026:[],
-                2027:[
-                  {text:"Recruit and train 300+ independent evaluators into the education marketplace by Year 2", completion:"Not Started", quarter:null, notes:""},
-                  {text:"Conduct 150+ reproducible evaluations by Year 2", completion:"Not Started", quarter:null, notes:""},
-                ],
-                2028:[
-                  {text:"Conduct 500+ cumulative evaluations by Year 3", completion:"Not Started", quarter:null, notes:""},
-                  {text:"Transition to majority fully or partially paid evaluations by Year 3", completion:"Not Started", quarter:null, notes:""},
-                ],
-                2029:[],2030:[]},
-              impactIndicators:[
-                {id:"ai-infra-bow2-o3-i1",text:"Percentage of evaluations funded by institutional or commercial partners, identifying a sustainable price point for cost per evaluation (trend toward sustainability)",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow2-o3-i2",text:"Growth in evaluator participation and tool contributions (benchmarks, datasets, taxonomies)",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
-                {id:"ai-infra-bow2-o3-i3",text:"At least one major solution builder integrates foundation catalyzed eval tech into its internal evaluation stack",source:"",baseline:"xx",targets:{2026:"NA",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow2-o2-i1",text:"% solutions publishing population-disaggregated performance data on shared benchmarks",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
+                {id:"ai-infra-bow2-o2-i2",text:"[Placeholder] Indicator 2",source:"",baseline:"",targets:{2026:"",2027:"",2028:"",2029:"",2030:""},actuals:{2026:"",2027:"",2028:"",2029:"",2030:""},manualStatus:null},
               ],
             },
           ],
         },
         {
-          id:"ai-infra-bow3", name:"Mobilize Frontier Labs for Learner Success",
+          id:"ai-infra-bow3", name:"Mobilize Frontier Labs for Learner Success", retired:true,
           color:"#CFFAFE", tagColor:"#0891B2", budget:"", delegate:"",
           description:"AI market power is rapidly concentrating among a small number of frontier labs. The technical decisions these actors make about model architecture, the datasets used to train and fine-tune models, contextual data integration, interoperability standards, evaluation methods, and embedded guardrails will shape not only how AI is deployed in education systems but how it is measured, improved, and governed over time.\n\nThis BoW engages frontier labs as upstream partners to align model development and infrastructure choices. The BoW does so by mobilizing frontier lab resources and expertise and directing them toward model and infrastructure improvements and beneficial deployments that advance learning acceleration, math course completion, personalized advising, and learning mobility in priority contexts.\n\nSpecifically, the foundation works with frontier labs to:\n• Advance interoperable, learner-centered infrastructure by supporting model capabilities and open standards (e.g., MCPs, contextual alignment with curricula, best-in-class tutoring standards, and competencies) that enable portable learner memory and coherent AI use across tools and institutions\n• Embed evaluation, evidence, and guardrails into model deployment in priority K–12 and postsecondary contexts",
           outcomes:[
@@ -4498,7 +4467,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
 
 // ── PortfolioDashboard (per-portfolio full view) ───────────────────────────────
 function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, onUpdateBows, onNavigateToOutcome, onNavigateToBow, onNavigateToStrategy, strategyRatings, onUpdateStrategyRatings }) {
-  const { portfolio, bows } = portData;
+  const { portfolio, bows: allBows } = portData;
+  const bows = allBows.filter(b => !b.retired);
   const pc = PORT_COLORS[portId] || PORT_COLORS["cross-cutting"];
   const [activeTab,setActiveTab] = useState("portfolio-overview");
   const [showToaModal,setShowToaModal] = useState(false);
@@ -5617,7 +5587,7 @@ function StrategyMap({ data, onNavigateToPortfolio }) {
     { id:"hub",           ...PORT_COLORS["hub"],           goals:[5]     },
   ];
 
-  const portBows  = (portId) => data.portfolios[portId]?.bows || [];
+  const portBows  = (portId) => (data.portfolios[portId]?.bows || []).filter(b => !b.retired);
   const portData  = (portId) => data.portfolios[portId]?.portfolio || {};
   const goalLit   = (gNum)   => hoveredGoal === gNum || (hoveredPort && PORT_GOAL_MAP[hoveredPort]?.includes(gNum));
   const goalDim   = (gNum)   => hoveredPort && !PORT_GOAL_MAP[hoveredPort]?.includes(gNum);
