@@ -133,7 +133,7 @@ def debug():
         ind_bow_ids  = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_indicators ORDER BY bow_id")
         out_bow_ids  = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_outcomes ORDER BY bow_id")
         tgt_bow_ids  = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.execution_targets ORDER BY bow_id")
-        sample_ind   = query(f"SELECT indicator_id, bow_id, outcome_id, text FROM {SCHEMA}.bow_indicators LIMIT 3")
+        sample_ind   = query(f"SELECT indicator_id, bow_id, outcome_id, `text` FROM {SCHEMA}.bow_indicators LIMIT 3")
         result["bows_table_ids"]       = [r["bow_id"] for r in bow_ids]
         result["bow_indicators_bow_ids"] = [r["bow_id"] for r in ind_bow_ids]
         result["bow_outcomes_bow_ids"]   = [r["bow_id"] for r in out_bow_ids]
@@ -1795,8 +1795,8 @@ def approve_actual(pending_id):
 
         # Look up indicator label for the email body
         ind_rows = query(
-            f"SELECT text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
-            f"SELECT text FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+            f"SELECT `text` FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
+            f"SELECT `text` FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
             [r["indicator_id"], r["indicator_id"]]
         )
         ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
@@ -1865,8 +1865,8 @@ def reject_actual(pending_id):
 
     # Look up indicator label for the email body
     ind_rows = query(
-        f"SELECT text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
-        f"SELECT text FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+        f"SELECT `text` FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
+        f"SELECT `text` FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
         [r["indicator_id"], r["indicator_id"]]
     )
     ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
@@ -2620,7 +2620,7 @@ def add_bow_outcome():
     oid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.bow_outcomes
-            (outcome_id, bow_id, title, short_title, text, sort_order)
+            (outcome_id, bow_id, title, short_title, `text`, sort_order)
             VALUES (?, ?, ?, ?, ?, ?)""",
         [oid, bow_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
     )
@@ -2692,7 +2692,7 @@ def add_bow_indicator():
     iid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.bow_indicators
-            (indicator_id, bow_id, outcome_id, name, text, purpose, unit, collection_frequency,
+            (indicator_id, bow_id, outcome_id, name, `text`, purpose, unit, collection_frequency,
              baseline, source_id, measurement_level, status,
              data_quality_notes, tracking_notes,
              target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
@@ -2766,7 +2766,7 @@ def add_execution_target():
     tid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.execution_targets
-            (target_id, bow_id, outcome_id, year, text, sort_order)
+            (target_id, bow_id, outcome_id, year, `text`, sort_order)
             VALUES (?, ?, ?, ?, ?, ?)""",
         [tid, bow_id, outcome_id or None, year, text, sort_order]
     )
@@ -2833,7 +2833,7 @@ def add_portfolio_outcome():
     oid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_outcomes
-            (outcome_id, portfolio_id, title, short_title, text, sort_order)
+            (outcome_id, portfolio_id, title, short_title, `text`, sort_order)
             VALUES (?, ?, ?, ?, ?, ?)""",
         [oid, portfolio_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
     )
@@ -2905,7 +2905,7 @@ def add_portfolio_indicator():
     if bow_indicator_id:
         # Linked case — only store the FK + outcome/targets; metadata lives on the BOW indicator
         bow_rows = query(
-            f"SELECT name, text FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?",
+            f"SELECT name, `text` FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?",
             [bow_indicator_id]
         )
         if not bow_rows:
@@ -2936,7 +2936,7 @@ def add_portfolio_indicator():
     iid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_indicators
-            (indicator_id, portfolio_id, outcome_id, name, text, purpose, unit, collection_frequency,
+            (indicator_id, portfolio_id, outcome_id, name, `text`, purpose, unit, collection_frequency,
              baseline, source_id, measurement_level, status,
              data_quality_notes, tracking_notes,
              target_2026, target_2027, target_2028, target_2029, target_2030)
