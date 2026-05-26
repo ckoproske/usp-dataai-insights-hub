@@ -25,7 +25,7 @@ const SIDEBAR_W    = 220;
 // Calibri body, Cambria headings — system fonts, no external dependency
 const FONT_CSS = `
   *, *::before, *::after { box-sizing: border-box; }
-  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; }
+  body { font-family: 'Noto Serif', Georgia, serif; }
 
   @keyframes spin { to { transform: rotate(360deg) } }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -1610,9 +1610,9 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
             <XAxis dataKey="label" tick={({x,y,payload})=>{
               const isBase = payload.value==="Base";
               const isHL   = !isBase && payload.value.includes("'"+String(activeYear).slice(2));
-              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?700:400} fill={TEXT_SUB}>{isBase?"B":payload.value}</text>;
+              return <text x={x} y={y+10} textAnchor="middle" fontSize={12} fontWeight={isHL?700:400} fill={TEXT_SUB}>{isBase?"B":payload.value}</text>;
             }}/>
-            <YAxis tick={{fontSize:9,fill:TEXT_SUB}}/>
+            <YAxis tick={{fontSize:12,fill:TEXT_SUB}}/>
             <Tooltip contentStyle={{fontSize:11,borderRadius:6,border:"1px solid "+BORDER}}
               formatter={(val,name)=>[val!==null&&val!==undefined?val:"—",name]}/>
             <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
@@ -1630,9 +1630,9 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
           </LineChart>
         </ResponsiveContainer>
         <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:2}}>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT_SUB}}><span style={{width:12,height:2,background:sc.color,display:"inline-block",borderRadius:1}}/> Actual</span>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT_SUB}}><span style={{width:12,height:2,background:BORDER,display:"inline-block",borderRadius:1}}/> Target</span>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT_SUB}}><span style={{width:6,height:6,borderRadius:"50%",background:"#94A3B8",display:"inline-block"}}/> Baseline</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:12,color:TEXT_SUB}}><span style={{width:12,height:2,background:sc.color,display:"inline-block",borderRadius:1}}/> Actual</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:12,color:TEXT_SUB}}><span style={{width:12,height:2,background:BORDER,display:"inline-block",borderRadius:1}}/> Target</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:12,color:TEXT_SUB}}><span style={{width:6,height:6,borderRadius:"50%",background:"#94A3B8",display:"inline-block"}}/> Baseline</span>
         </div>
       </div>
     </div>
@@ -1709,10 +1709,10 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
           <XAxis dataKey="label" tick={({x,y,payload})=>{
             const isHL=payload.value.includes("'"+String(activeYear).slice(2));
-            return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?9:7} fontWeight={isHL?700:400} fill={TEXT_SUB}>{payload.value==="Base"?"B":payload.value}</text>;
+            return <text x={x} y={y+10} textAnchor="middle" fontSize={12} fontWeight={isHL?700:400} fill={TEXT_SUB}>{payload.value==="Base"?"B":payload.value}</text>;
           }}/>
-          <YAxis tick={{fontSize:8,fill:TEXT_SUB}}/>
-          <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
+          <YAxis tick={{fontSize:12,fill:TEXT_SUB}}/>
+          <Tooltip contentStyle={{fontSize:12,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
           <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
             dot={({payload:d,...p})=>{
               if(d.Actual===null||d.Actual===undefined) return <circle key={p.index} r={0} cx={0} cy={0}/>;
@@ -2713,9 +2713,9 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
                           <ResponsiveContainer width="100%" height={65}>
                             <LineChart data={lineData} margin={{top:2,right:4,bottom:0,left:-24}}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
-                              <XAxis dataKey="year" tick={{fontSize:8,fill:TEXT_SUB}}/>
-                              <YAxis tick={{fontSize:8,fill:TEXT_SUB}}/>
-                              <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v)=>v!==null?v:"—"}/>
+                              <XAxis dataKey="year" tick={{fontSize:12,fill:TEXT_SUB}}/>
+                              <YAxis tick={{fontSize:12,fill:TEXT_SUB}}/>
+                              <Tooltip contentStyle={{fontSize:12,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v)=>v!==null?v:"—"}/>
                               <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} dot={{r:2,fill:sc.color,strokeWidth:1,stroke:"#fff"}} connectNulls/>
                               <Line type="monotone" dataKey="Target" stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="5 4" dot={false} connectNulls/>
                             </LineChart>

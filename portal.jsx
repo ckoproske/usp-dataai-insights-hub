@@ -34,7 +34,7 @@ const STATUS_DRAFT_TEXT    = "#A05000";
 // Typography scale — 5 steps, use consistently
 const T_TITLE = 22;   // page headings
 const T_HEAD  = 16;   // section headings within panels
-const T_BODY  = 14;   // body text, form labels
+const T_BODY  = 16;   // body text, form labels
 const T_LABEL = 13;   // card content, field values
 const T_META  = 11;   // metadata, tags, footnotes
 
@@ -114,7 +114,7 @@ function getRelevantTarget(ind) {
 // Inject brand font + animations once
 const STYLE = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; background: ${BG}; color: ${TEXT}; }
+  body { font-family: 'Noto Serif', Georgia, serif; background: ${BG}; color: ${TEXT}; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .fade-up { animation: fadeUp 0.22s cubic-bezier(.4,0,.2,1) both; }
