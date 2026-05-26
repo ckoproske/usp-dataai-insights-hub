@@ -265,7 +265,7 @@ const BOW_ACRONYM = {
   "bow1": "MLE",           // Advance Strategy Learning & Insight
   // bow2 has no acronym
   "sfl-bow1": "EDU",       // Build and Sustain EDU-Net
-  "sfl-bow2": "DAIP",      // Data in Place
+  "sfl-bow2": "DAIP",      // Integrated Delivery
   "sfl-bow3": "CSGA",      // Launch Competencies & Skills Genome Accelerator
   "ai-infra-bow1": "ECP",  // Enhance Context & Personalization
   "ai-infra-bow2": "AAE",  // Accelerate AI Evaluation, Evidence, and Guardrails
@@ -698,7 +698,7 @@ const DEFAULT_DATA = {
           ],
         },
         {
-          id:"sfl-bow2", name:"Data in Place", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
+          id:"sfl-bow2", name:"Integrated Delivery", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
           description:"This BOW focuses on strengthening the conditions required for data- and AI-enabled solutions to be adopted, used, and sustained in service of USP program strategy goals. This body of work centers on building regional and statewide system feedback loops, data and AI readiness, and governance capacity so that integrated data translates into timely insight and action for practitioners, institutions, and policymakers.\n\nThe work is anchored in TX, WA, and CA where USP has place-based strategies and where state and regional systems are at critical inflection points. Across these contexts, the BOW advances three core objectives: enable regional system feedback loops by improving access to integrated data and accelerating time from data to insight for priority users; build data and AI readiness in place, including governance, privacy safeguards, interoperability, and human capacity for responsible adoption of AI-enabled tools; and activate implementation conditions that allow USP Data investments and PST-led solutions to be tested, adopted, and scaled in real-world settings.\n\nBy strengthening these conditions in place, this BOW enables near-term program impact while generating durable learning about how state and regional systems can support effective and equitable use of data and AI. By 2030, the goal is for 50% of districts in PW and WSI regions to achieve strategic institutional adoption of AI-enabled solutions, and for 100% of regional cross-sector data tools in those regions to reach thresholds for regular use.",
           outcomes:[
             {
