@@ -2360,7 +2360,7 @@ def update_portfolio_toa(portfolio_id):
     sets, vals = [], []
     for f in allowed:
         if f in data:
-            sets.append(f"{f} = ?")
+            sets.append(f"`{f}` = ?")
             vals.append(data[f])
     if not sets:
         return jsonify({"status": "no_change"})
@@ -2376,7 +2376,7 @@ def update_toa_lane(lane_id):
     sets, vals = [], []
     for f in allowed:
         if f in data:
-            sets.append(f"{f} = ?")
+            sets.append(f"`{f}` = ?")
             vals.append(data[f])
     if not sets:
         return jsonify({"status": "no_change"})
@@ -2600,7 +2600,7 @@ def update_bow_outcome(outcome_id):
     if has_major and not rationale:
         return jsonify({"error": "rationale required for text field changes"}), 400
 
-    sets   = ", ".join(f"{f} = ?" for f in changes)
+    sets   = ", ".join(f"`{f}` = ?" for f in changes)
     vals   = [changes[f]["new"] for f in changes] + [outcome_id]
     execute(f"UPDATE {SCHEMA}.bow_outcomes SET {sets} WHERE outcome_id = ?", vals)
     _log_edit("bow_outcome", outcome_id, old["bow_id"], None, changes, rationale, None, user)
@@ -2673,7 +2673,7 @@ def update_bow_indicator(indicator_id):
     if has_target and not revision_reason:
         return jsonify({"error": "revision_reason required for target changes"}), 400
 
-    sets = ", ".join(f"{f} = ?" for f in changes)
+    sets = ", ".join(f"`{f}` = ?" for f in changes)
     vals = [changes[f]["new"] for f in changes] + [indicator_id]
     execute(f"UPDATE {SCHEMA}.bow_indicators SET {sets} WHERE indicator_id = ?", vals)
     _log_edit("bow_indicator", indicator_id, old["bow_id"], None, changes, rationale, revision_reason, user)
@@ -2811,7 +2811,7 @@ def update_portfolio_outcome(outcome_id):
     if has_major and not rationale:
         return jsonify({"error": "rationale required for text field changes"}), 400
 
-    sets = ", ".join(f"{f} = ?" for f in changes)
+    sets = ", ".join(f"`{f}` = ?" for f in changes)
     vals = [changes[f]["new"] for f in changes] + [outcome_id]
     execute(f"UPDATE {SCHEMA}.portfolio_outcomes SET {sets} WHERE outcome_id = ?", vals)
     _log_edit("portfolio_outcome", outcome_id, None, old["portfolio_id"], changes, rationale, None, user)
@@ -2884,7 +2884,7 @@ def update_portfolio_indicator(indicator_id):
     if has_target and not revision_reason:
         return jsonify({"error": "revision_reason required for target changes"}), 400
 
-    sets = ", ".join(f"{f} = ?" for f in changes)
+    sets = ", ".join(f"`{f}` = ?" for f in changes)
     vals = [changes[f]["new"] for f in changes] + [indicator_id]
     execute(f"UPDATE {SCHEMA}.portfolio_indicators SET {sets} WHERE indicator_id = ?", vals)
     _log_edit("portfolio_indicator", indicator_id, None, old["portfolio_id"], changes, rationale, revision_reason, user)
@@ -3243,7 +3243,7 @@ def update_source(source_id):
     changes = _build_changes(rows[0], data, EDITABLE)
     if not changes:
         return jsonify({"status": "no_change"})
-    sets = ", ".join(f"{f} = ?" for f in changes)
+    sets = ", ".join(f"`{f}` = ?" for f in changes)
     vals = [changes[f]["new"] for f in changes] + [source_id]
     execute(f"UPDATE {SCHEMA}.sources SET {sets} WHERE source_id = ?", vals)
     return jsonify({"status": "ok"})
