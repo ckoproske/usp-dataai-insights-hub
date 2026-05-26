@@ -528,7 +528,6 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
 // ─── Inline Edit Outcome ───────────────────────────────────────────────────────
 function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
   const [title, setTitle]         = useState(outcome.title || "");
-  const [shortTitle, setShort]    = useState(outcome.short_title || "");
   const initText = outcome.text || outcome.outcome || "";
   const [text, setText]           = useState(initText);
   const [rationale, setRationale] = useState("");
@@ -548,11 +547,11 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
     try {
       const res = await api(endpoint, {
         method: "PATCH",
-        body: JSON.stringify({ title, short_title: shortTitle, text, outcome: text,
+        body: JSON.stringify({ title, text, outcome: text,
           rationale: rationale || undefined, edited_by: user?.email }),
       });
       if (res.error) { setError(res.error); return; }
-      onSave({ ...outcome, title, short_title: shortTitle, text });
+      onSave({ ...outcome, title, text });
     } catch (e) {
       setError("Save failed — please try again.");
     } finally {
@@ -565,10 +564,7 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
       <Field label="Outcome title" required>
         <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
       </Field>
-      <Field label="Short title" helper="Abbreviated label used in compact views.">
-        <input type="text" value={shortTitle} onChange={e => setShort(e.target.value)} style={inputStyle} />
-      </Field>
-      <Field label="Description / narrative">
+      <Field label="Outcome">
         <textarea value={text} onChange={e => setText(e.target.value)}
           rows={4} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
@@ -1348,7 +1344,6 @@ function OutcomeCard({ outcome: initOutcome, index, bow, user, onDeleted }) {
 // ─── Add Outcome Form ──────────────────────────────────────────────────────────
 function AddOutcomeForm({ bow, onSaved, onCancel }) {
   const [title, setTitle]   = useState("");
-  const [short, setShort]   = useState("");
   const [text, setText]     = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
@@ -1358,7 +1353,7 @@ function AddOutcomeForm({ bow, onSaved, onCancel }) {
     try {
       const res = await api("/api/bow-outcomes", {
         method: "POST",
-        body: JSON.stringify({ bow_id: bow.bow_id, title, short_title: short, text }),
+        body: JSON.stringify({ bow_id: bow.bow_id, title, text }),
       });
       if (res.error) { setError(res.error); return; }
       onSaved();
@@ -1378,11 +1373,7 @@ function AddOutcomeForm({ bow, onSaved, onCancel }) {
         <input type="text" value={title} onChange={e => setTitle(e.target.value)}
           placeholder="e.g. Improved data infrastructure adoption..." style={inputStyle} />
       </Field>
-      <Field label="Short title" helper="Used in compact views.">
-        <input type="text" value={short} onChange={e => setShort(e.target.value)}
-          placeholder="Abbreviated label..." style={inputStyle} />
-      </Field>
-      <Field label="Description">
+      <Field label="Outcome">
         <textarea value={text} onChange={e => setText(e.target.value)}
           placeholder="Narrative description of this outcome..."
           rows={3} style={{ ...inputStyle, resize: "vertical" }} />
