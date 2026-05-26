@@ -295,14 +295,14 @@ const DEFAULT_DATA = {
         ],
       },
       bows:[
-        {id:"bow1",name:"Advance Strategy Learning & Insight",color:"#EBF4F9",tagColor:"#3086AB",
+        {id:"bow1",name:"Advance Strategy Learning & Insight",color:"#F1F5F9",tagColor:"#64748B",
           description:"The Learning & Insight Body of Work brings together measurement, learning, and evaluation (MLE) and Impact Accounting to help USP Data & AI team by supporting clear goal and target setting, tracking performance relative to expectations, timely learning, and transparent insight-sharing across BOWs, portfolios, and the broader strategy. The focus is on building practical systems that leverage an impact accounting approach to track progress toward key field goals, surface early signals, and help the data & AI team understand what is working, what is changing, and where shifts may be needed. This BoW also partners with the Data & AI Enablement Hub to ensure teams have the data and analytic tools needed to drive measurement and support stronger decision-making.\n\nOur work will strengthen the team's ability to generate and act on forward-looking insights about the data and AI ecosystem, clarifying the challenges, opportunities, and drivers of improvement that shape learner outcomes. It will deepen our understanding of where USP Data & AI has a unique role to play, illuminate the levers where philanthropy and other key actors are best positioned to accelerate progress, and highlight the assumptions and early signals that can shape our decisionmaking.",
           outcomes:[
             {id:"o1",number:1,shortTitle:"Measurement & MLE Routines",notes:"",manualStatus:null,title:"Clear measurement priorities and streamlined MLE routines equip the team with visibility into strategic progress, clarity on meaningful signals of impact, and the ability to integrate evidence into planning and decisionmaking.",executionTargets:{2026:[{text:"Establish and socialize measurement framework and reporting routines with team",completion:"On Track"},{text:"Develop MLE plans and results framework for a) strategy, b) all portfolios, and c) all BOWs",completion:"Not Started"},{text:"Launch data collection efforts and associated evaluations",completion:"Not Started"}],2027:[],2028:[],2029:[],2030:[]},impactIndicators:[{id:"i1",text:"% of team reporting high-level of clarity around measurement priorities",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"50",2027:"62",2028:"72",2029:"80",2030:"88"},actuals:{2026:"42",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i2",text:"% MLE plans completed on schedule",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"45",2027:"58",2028:"68",2029:"76",2030:"85"},actuals:{2026:"38",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i3",text:"# evaluations launched",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"40",2027:"52",2028:"63",2029:"72",2030:"82"},actuals:{2026:"30",2027:"",2028:"",2029:"",2030:""},manualStatus:null}]},
             {id:"o2",number:2,shortTitle:"AI-Enabled Analytics",notes:"",manualStatus:null,title:"The team leverages AI-enabled analytics, predictive models, and integrated dashboards to surface early signals, test assumptions, and enable faster learning cycles that inform portfolio and field strategy.",executionTargets:{2026:[{text:"Pilot Amb 45 ROI model with EDP and AI Insights KG integration",completion:"On Track"},{text:"Build Impact Forecasts and other reporting infra for all 2030 Data Goals",completion:"Not Started"},{text:"Develop Dynamic Leadership Reporting Dashboards",completion:"Not Started"}],2027:[],2028:[],2029:[],2030:[]},impactIndicators:[{id:"i4",text:"% utilization rate of TBD analytical tools",source:"",lastUpdated:"Jan 2026",updateFreq:"Quarterly",baseline:"",targets:{2026:"42",2027:"55",2028:"65",2029:"74",2030:"83"},actuals:{2026:"35",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i5",text:"% team expressing confidence in MLE data strengthening decisionmaking",source:"",lastUpdated:"Jan 2026",updateFreq:"Annual",baseline:"",targets:{2026:"55",2027:"65",2028:"74",2029:"82",2030:"88"},actuals:{2026:"50",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i6",text:"# dashboards deployed",source:"",lastUpdated:"",updateFreq:"",baseline:"",targets:{2026:"35",2027:"48",2028:"60",2029:"70",2030:"80"},actuals:{2026:"28",2027:"",2028:"",2029:"",2030:""},manualStatus:null}]},
             {id:"o3",number:3,shortTitle:"Cross-PST Collaboration",notes:"",manualStatus:null,title:"Cross-PST collaboration and a strong bias toward sharing insights and learning with the field deepen Data and AI team alignment, strengthen impact across the division in support of Amb45.",executionTargets:{2026:[{text:"Articulate a clear TOA for how Data and AI team enables each of the Amb 45 pillars",completion:"Not Started"},{text:"At least 3 learning routines established with PSTs",completion:"Not Started"},{text:"At least 2 technical assets uploaded to open GitHub repo",completion:"Complete"}],2027:[],2028:[],2029:[],2030:[]},impactIndicators:[{id:"i7",text:"# GitHub repo downloads",source:"",lastUpdated:"Mar 2026",updateFreq:"Real-time",baseline:"",targets:{2026:"15",2027:"30",2028:"48",2029:"64",2030:"78"},actuals:{2026:"10",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i8",text:"# learning routines established with PSTs",source:"",lastUpdated:"",updateFreq:"",baseline:"",targets:{2026:"50",2027:"60",2028:"70",2029:"78",2030:"86"},actuals:{2026:"45",2027:"",2028:"",2029:"",2030:""},manualStatus:null},{id:"i9",text:"# cross-PST co-funded evaluations",source:"",lastUpdated:"",updateFreq:"",baseline:"",targets:{2026:"40",2027:"52",2028:"63",2029:"72",2030:"82"},actuals:{2026:"33",2027:"",2028:"",2029:"",2030:""},manualStatus:null}]},
           ]},
-        {id:"bow2",name:"Enable Business & Strategy Execution",color:"#F5F3ED",tagColor:"#A49A8C",description:"The Enable Business & Strategy Execution Body of Work provides operational infrastructure and coordination support across the portfolio.",outcomes:[]},
+        {id:"bow2",name:"Enable Business & Strategy Execution",color:"#F1F5F9",tagColor:"#64748B",description:"The Enable Business & Strategy Execution Body of Work provides operational infrastructure and coordination support across the portfolio.",outcomes:[]},
       ],
     },
     "ai-infra": {
@@ -355,7 +355,7 @@ const DEFAULT_DATA = {
       bows:[
         {
           id:"ai-infra-bow1", name:"Enhance Context & Personalization",
-          color:"#EBF4F9", tagColor:"#3086AB", budget:"", delegate:"",
+          color:"#CFFAFE", tagColor:"#0891B2", budget:"", delegate:"",
           description:"The goal of the Enhance Context & Personalization body of work is to establish shared, safe, and reusable infrastructure that enables AI-enabled learning systems to retain and apply learner context over time, supporting more adaptive, equitable, and effective learning experiences across priority use cases.",
           outcomes:[
             {
@@ -384,7 +384,7 @@ const DEFAULT_DATA = {
         },
         {
           id:"ai-infra-bow2", name:"Accelerate AI Evaluation, Evidence, and Guardrails",
-          color:"#F5F3ED", tagColor:"#A49A8C", budget:"", delegate:"",
+          color:"#CFFAFE", tagColor:"#0891B2", budget:"", delegate:"",
           description:"The goal of the Accelerate AI Evaluation, Evidence, and Guardrails body of work is to establish open, scalable evaluation infrastructure that enables developers and the field to assess the probable effectiveness and potential harms of AI-centric interventions before they reach learners and identify ways to improve effectiveness while mitigating harms for low-SES learners in high need contexts before and during deployment.",
           decisions:[
             {
@@ -473,7 +473,7 @@ const DEFAULT_DATA = {
         },
         {
           id:"ai-infra-bow3", name:"Mobilize Frontier Labs for Learner Success",
-          color:"#FEF5E7", tagColor:"#F59E0B", budget:"", delegate:"",
+          color:"#CFFAFE", tagColor:"#0891B2", budget:"", delegate:"",
           description:"AI market power is rapidly concentrating among a small number of frontier labs. The technical decisions these actors make about model architecture, the datasets used to train and fine-tune models, contextual data integration, interoperability standards, evaluation methods, and embedded guardrails will shape not only how AI is deployed in education systems but how it is measured, improved, and governed over time.\n\nThis BoW engages frontier labs as upstream partners to align model development and infrastructure choices. The BoW does so by mobilizing frontier lab resources and expertise and directing them toward model and infrastructure improvements and beneficial deployments that advance learning acceleration, math course completion, personalized advising, and learning mobility in priority contexts.\n\nSpecifically, the foundation works with frontier labs to:\n• Advance interoperable, learner-centered infrastructure by supporting model capabilities and open standards (e.g., MCPs, contextual alignment with curricula, best-in-class tutoring standards, and competencies) that enable portable learner memory and coherent AI use across tools and institutions\n• Embed evaluation, evidence, and guardrails into model deployment in priority K–12 and postsecondary contexts",
           outcomes:[
             {
@@ -581,7 +581,7 @@ const DEFAULT_DATA = {
       },
       bows:[
         {
-          id:"sfl-bow1", name:"Build and Sustain EDU-Net", color:"#ECF7F5", tagColor:"#4EAB9A", budget:"", delegate:"",
+          id:"sfl-bow1", name:"Build and Sustain EDU-Net", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
           description:"The goal of the EDU-Net body of work is to establish a trusted, secure, and interoperable network of data enclaves that connects fragmented public cross-sector and private data systems, enabling K\u201312 district and postsecondary administrators to generate deeper, timely, and actionable insights while accelerating the development and validation of AI-powered solutions that support learner success. As a shared public good, this infrastructure is designed to address the most pressing priorities of field actors, align to the Foundation's highest-leverage education and workforce priorities, and improve outcomes for learners who face the greatest barriers to economic mobility.",
           decisions:[
             {
@@ -705,7 +705,7 @@ const DEFAULT_DATA = {
           ],
         },
         {
-          id:"sfl-bow2", name:"Data in Place", color:"#EBF4F9", tagColor:"#3086AB", budget:"", delegate:"",
+          id:"sfl-bow2", name:"Data in Place", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
           description:"This BOW focuses on strengthening the conditions required for data- and AI-enabled solutions to be adopted, used, and sustained in service of USP program strategy goals. This body of work centers on building regional and statewide system feedback loops, data and AI readiness, and governance capacity so that integrated data translates into timely insight and action for practitioners, institutions, and policymakers.\n\nThe work is anchored in TX, WA, and CA where USP has place-based strategies and where state and regional systems are at critical inflection points. Across these contexts, the BOW advances three core objectives: enable regional system feedback loops by improving access to integrated data and accelerating time from data to insight for priority users; build data and AI readiness in place, including governance, privacy safeguards, interoperability, and human capacity for responsible adoption of AI-enabled tools; and activate implementation conditions that allow USP Data investments and PST-led solutions to be tested, adopted, and scaled in real-world settings.\n\nBy strengthening these conditions in place, this BOW enables near-term program impact while generating durable learning about how state and regional systems can support effective and equitable use of data and AI. By 2030, the goal is for 50% of districts in PW and WSI regions to achieve strategic institutional adoption of AI-enabled solutions, and for 100% of regional cross-sector data tools in those regions to reach thresholds for regular use.",
           outcomes:[
             {
@@ -755,7 +755,7 @@ const DEFAULT_DATA = {
           ],
         },
         {
-          id:"sfl-bow3", name:"Launch Competencies & Skills Genome Accelerator", color:"#FEF5E7", tagColor:"#F59E0B", budget:"", delegate:"",
+          id:"sfl-bow3", name:"Launch Competencies & Skills Genome Accelerator", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
           description:"Over the next four years, this body of work will integrate key competencies and skills data and public good infrastructure into AI-enabled education solutions, enabling learners, advisors, and institutions to make better-informed decisions in a rapidly changing labor market and unlocking new approaches to advising, assessment, and learner mobility. The CSGA BOW will accomplish this by creating a dynamic, AI-native public competency and skills knowledge graph that connects education and workforce data at the competency and skill level. This work will include integration and development of new data assets (e.g., course syllabi, catalogs, curricula, assessments, and transcripts; job postings, job execution measures, and task automation data), creation and deployment of a co-developed comprehensive knowledge graph with key stakeholders, tool development and refinement through demonstration pilots, and scaled use through use case-specific implementation embedded into critical education solutions.\n\nThe foundation's role includes increasing ecosystem coordination, bringing together Frontier Labs, solution providers focused on learning, and skills taxonomy developers to reduce field duplication and accelerate shared public asset dissemination and use.",
           outcomes:[
             {
@@ -798,7 +798,7 @@ const DEFAULT_DATA = {
     "hub": {
       portfolio: makePlaceholderPortfolio("hub","Data & AI Enablement Hub","The Data & AI Enablement Hub Portfolio ensures that teams across USP have the tools, resources, and capabilities needed to leverage data and AI effectively.",3,[]),
       bows:[
-        makePlaceholderBow("hub-bow1","Enable Data & AI Capabilities for Division","#FEF5E7","#F59E0B","[Placeholder] This BOW supports teams in building the skills and knowledge needed to use data and AI tools effectively.",3),
+        makePlaceholderBow("hub-bow1","Enable Data & AI Capabilities for Division","#F3E8FF","#9333EA","[Placeholder] This BOW supports teams in building the skills and knowledge needed to use data and AI tools effectively.",3),
       ],
     },
   },
@@ -1610,9 +1610,9 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
             <XAxis dataKey="label" tick={({x,y,payload})=>{
               const isBase = payload.value==="Base";
               const isHL   = !isBase && payload.value.includes("'"+String(activeYear).slice(2));
-              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?700:400} fill={TEXT_SUB}>{isBase?"B":payload.value}</text>;
+              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?10:8} fontWeight={isHL?700:400} fill={TEXT}>{isBase?"B":payload.value}</text>;
             }}/>
-            <YAxis tick={{fontSize:9,fill:TEXT_SUB}}/>
+            <YAxis tick={{fontSize:9,fill:TEXT}}/>
             <Tooltip contentStyle={{fontSize:11,borderRadius:6,border:"1px solid "+BORDER}}
               formatter={(val,name)=>[val!==null&&val!==undefined?val:"—",name]}/>
             <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
@@ -1630,9 +1630,9 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
           </LineChart>
         </ResponsiveContainer>
         <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:2}}>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT_SUB}}><span style={{width:12,height:2,background:sc.color,display:"inline-block",borderRadius:1}}/> Actual</span>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT_SUB}}><span style={{width:12,height:2,background:BORDER,display:"inline-block",borderRadius:1}}/> Target</span>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT_SUB}}><span style={{width:6,height:6,borderRadius:"50%",background:"#94A3B8",display:"inline-block"}}/> Baseline</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:12,height:2,background:sc.color,display:"inline-block",borderRadius:1}}/> Actual</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:12,height:2,background:BORDER,display:"inline-block",borderRadius:1}}/> Target</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:6,height:6,borderRadius:"50%",background:"#94A3B8",display:"inline-block"}}/> Baseline</span>
         </div>
       </div>
     </div>
@@ -1709,9 +1709,9 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
           <XAxis dataKey="label" tick={({x,y,payload})=>{
             const isHL=payload.value.includes("'"+String(activeYear).slice(2));
-            return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?9:7} fontWeight={isHL?700:400} fill={TEXT_SUB}>{payload.value==="Base"?"B":payload.value}</text>;
+            return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?9:7} fontWeight={isHL?700:400} fill={TEXT}>{payload.value==="Base"?"B":payload.value}</text>;
           }}/>
-          <YAxis tick={{fontSize:8,fill:TEXT_SUB}}/>
+          <YAxis tick={{fontSize:8,fill:TEXT}}/>
           <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
           <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
             dot={({payload:d,...p})=>{
@@ -2713,8 +2713,8 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
                           <ResponsiveContainer width="100%" height={65}>
                             <LineChart data={lineData} margin={{top:2,right:4,bottom:0,left:-24}}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
-                              <XAxis dataKey="year" tick={{fontSize:8,fill:TEXT_SUB}}/>
-                              <YAxis tick={{fontSize:8,fill:TEXT_SUB}}/>
+                              <XAxis dataKey="year" tick={{fontSize:8,fill:TEXT}}/>
+                              <YAxis tick={{fontSize:8,fill:TEXT}}/>
                               <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v)=>v!==null?v:"—"}/>
                               <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} dot={{r:2,fill:sc.color,strokeWidth:1,stroke:"#fff"}} connectNulls/>
                               <Line type="monotone" dataKey="Target" stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="5 4" dot={false} connectNulls/>
