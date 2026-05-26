@@ -225,6 +225,57 @@ def get_all_bows():
     rows = query(f"SELECT * FROM {SCHEMA}.bows ORDER BY sort_order")
     return jsonify(rows)
 
+@app.route("/api/completeness")
+def get_completeness():
+    """Aggregate indicator completeness stats per BOW and portfolio.
+    Returns: { bow: {bow_id: {total, with_targets, with_actuals}},
+               portfolio: {portfolio_id: {total, with_targets, with_actuals}} }
+    """
+    bow_stats = {}
+    port_stats = {}
+
+    try:
+        bow_rows = query(f"""
+            SELECT
+                i.bow_id,
+                COUNT(*)                                                   AS total,
+                COUNT(CASE WHEN (
+                    i.target_2026 IS NOT NULL OR i.target_2027 IS NOT NULL OR
+                    i.target_2028 IS NOT NULL OR i.target_2029 IS NOT NULL OR
+                    i.target_2030 IS NOT NULL
+                ) THEN 1 END)                                              AS with_targets,
+                COUNT(DISTINCT a.indicator_id)                             AS with_actuals
+            FROM {SCHEMA}.bow_indicators i
+            LEFT JOIN {SCHEMA}.bow_indicator_actuals a ON a.indicator_id = i.indicator_id
+            WHERE COALESCE(i.is_active, true) = true
+            GROUP BY i.bow_id
+        """)
+        bow_stats = {r["bow_id"]: r for r in bow_rows}
+    except Exception as e:
+        print(f"[completeness] bow query failed: {e}")
+
+    try:
+        port_rows = query(f"""
+            SELECT
+                i.portfolio_id,
+                COUNT(*)                                                   AS total,
+                COUNT(CASE WHEN (
+                    i.target_2026 IS NOT NULL OR i.target_2027 IS NOT NULL OR
+                    i.target_2028 IS NOT NULL OR i.target_2029 IS NOT NULL OR
+                    i.target_2030 IS NOT NULL
+                ) THEN 1 END)                                              AS with_targets,
+                COUNT(DISTINCT a.indicator_id)                             AS with_actuals
+            FROM {SCHEMA}.portfolio_indicators i
+            LEFT JOIN {SCHEMA}.portfolio_indicator_actuals a ON a.indicator_id = i.indicator_id
+            GROUP BY i.portfolio_id
+        """)
+        port_stats = {r["portfolio_id"]: r for r in port_rows}
+    except Exception as e:
+        print(f"[completeness] portfolio query failed: {e}")
+
+    return jsonify({"bow": bow_stats, "portfolio": port_stats})
+
+
 @app.route("/api/bows/<portfolio_id>")
 def get_bows_by_portfolio(portfolio_id):
     rows = query(

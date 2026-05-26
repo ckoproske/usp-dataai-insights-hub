@@ -4242,8 +4242,40 @@ function IndicatorCatalogView() {
   );
 }
 
+// ─── Completeness chips ────────────────────────────────────────────────────────
+function CompletenessChips({ stats }) {
+  if (!stats || stats.total == null) return null;
+  const { total, with_targets, with_actuals } = stats;
+  const chips = [
+    { label: `${total} indicator${total !== 1 ? "s" : ""}`, color: TEXT_MUTED, bg: BG, border: BORDER },
+    {
+      label: `${with_targets} with targets`,
+      color: with_targets > 0 ? INFO : TEXT_MUTED,
+      bg: with_targets > 0 ? INFO_BG : BG,
+      border: with_targets > 0 ? "#BFDBFE" : BORDER,
+    },
+    {
+      label: `${with_actuals} with actuals`,
+      color: with_actuals > 0 ? SUCCESS : TEXT_MUTED,
+      bg: with_actuals > 0 ? SUCCESS_BG : BG,
+      border: with_actuals > 0 ? "#6EE7B7" : BORDER,
+    },
+  ];
+  return (
+    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5 }}>
+      {chips.map(c => (
+        <span key={c.label} style={{
+          fontSize: T_META, fontWeight: 600, padding: "2px 7px", borderRadius: 8,
+          background: c.bg, color: c.color, border: `1px solid ${c.border}`,
+          letterSpacing: "0.02em",
+        }}>{c.label}</span>
+      ))}
+    </div>
+  );
+}
+
 // ─── BOW + Portfolio List ──────────────────────────────────────────────────────
-function BowPortfolioList({ bows, portfolios, onSelectBow, onSelectPortfolio }) {
+function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfolio: {} }, onSelectBow, onSelectPortfolio }) {
   const [view, setView] = useState("bows");
 
   const bowsByPortfolio = portfolios.map(p => ({
@@ -4294,8 +4326,11 @@ function BowPortfolioList({ bows, portfolios, onSelectBow, onSelectPortfolio }) 
                     transition: "box-shadow 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{bow.title}</p>
-                  <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>Open →</span>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{bow.title}</p>
+                    <CompletenessChips stats={completeness.bow?.[bow.bow_id]} />
+                  </div>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginLeft: 12 }}>Open →</span>
                 </div>
               ))}
             </div>
@@ -4318,14 +4353,19 @@ function BowPortfolioList({ bows, portfolios, onSelectBow, onSelectPortfolio }) 
                   transition: "box-shadow 0.15s" }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {p && <span style={{ width: 12, height: 12, borderRadius: "50%",
-                    background: p.color, display: "inline-block" }} />}
-                  <p style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
-                    {p?.label || portfolio.title}
-                  </p>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 2 }}>
+                    {p && <span style={{ width: 12, height: 12, borderRadius: "50%",
+                      background: p.color, display: "inline-block", flexShrink: 0 }} />}
+                    <p style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
+                      {p?.label || portfolio.title}
+                    </p>
+                  </div>
+                  <div style={{ paddingLeft: 22 }}>
+                    <CompletenessChips stats={completeness.portfolio?.[portfolio.portfolio_id]} />
+                  </div>
                 </div>
-                <span style={{ fontSize: 12, color: TEXT_MUTED }}>Open →</span>
+                <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginLeft: 12 }}>Open →</span>
               </div>
             );
           })}
@@ -5662,6 +5702,7 @@ function PortalApp() {
   const [portfolios, setPortfolios] = useState([]);
   const [indicators, setIndicators] = useState([]);
   const [queue, setQueue]           = useState([]);
+  const [completeness, setCompleteness] = useState({ bow: {}, portfolio: {} });
   const [loadingData, setLoadingData] = useState(true);
   const [loadingQueue, setLoadingQueue] = useState(false);
   const [selectedBow, setSelectedBow]           = useState(null);
@@ -5681,11 +5722,13 @@ function PortalApp() {
       api("/api/bows").catch(() => []),
       api("/api/portfolios").catch(() => []),
       api("/api/indicators/all").catch(() => []),
-    ]).then(([u, b, p, i]) => {
+      api("/api/completeness").catch(() => ({ bow: {}, portfolio: {} })),
+    ]).then(([u, b, p, i, c]) => {
       if (u) setUser(u);
       setBows(Array.isArray(b) ? b : []);
       setPortfolios(Array.isArray(p) ? p : []);
       setIndicators(Array.isArray(i) ? i : []);
+      setCompleteness(c && typeof c === "object" ? c : { bow: {}, portfolio: {} });
       setLoadingData(false);
     });
   }, []);
@@ -5896,6 +5939,7 @@ function PortalApp() {
                 ) : (
                   <BowPortfolioList
                     bows={bows} portfolios={portfolios}
+                    completeness={completeness}
                     onSelectBow={handleSelectBow}
                     onSelectPortfolio={handleSelectPortfolio}
                   />
