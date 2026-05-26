@@ -1435,7 +1435,7 @@ function OrgChart({ compact }) {
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:compact?220:600}}>
         <OrgNode name="Natasha Fedo" role="DDSPM" compact={compact}/>
         <div style={{width:1.5,height:vline,background:BORDER}}/>
-        <div style={{background:"#EC4899",color:"#fff",borderRadius:5,padding:compact?"3px 12px":"5px 24px",fontSize:compact?9:11,fontWeight:800,letterSpacing:0.8,textTransform:"uppercase"}}>Cross-cutting Supports</div>
+        <div style={{background:PORT_COLORS["cross-cutting"].color,color:"#fff",borderRadius:5,padding:compact?"3px 12px":"5px 24px",fontSize:compact?9:11,fontWeight:800,letterSpacing:0.8,textTransform:"uppercase"}}>Cross-cutting Supports</div>
         <div style={{width:1.5,height:vline,background:BORDER}}/>
         <div style={{display:"flex",alignItems:"flex-start",position:"relative",width:"100%",justifyContent:"center"}}>
           <div style={{position:"absolute",top:0,left:"calc(16.67%)",right:"calc(16.67%)",height:1.5,background:BORDER,zIndex:0}}/>
@@ -1465,7 +1465,7 @@ function OrgChart({ compact }) {
 
 function SFLOrgChart({ compact }) {
   const vline = compact?10:16;
-  const SFL_COLOR = "#06B6D4";
+  const SFL_COLOR = PORT_COLORS["sfl"].color;
   const members = [
     {name:"OPEN SPO", role:"CSGA"},
     {name:"Brianna Moore-Trieu", role:"SPO, EDU-Net"},
@@ -8636,7 +8636,7 @@ function App() {
         </div>
 
         {/* Page content */}
-        <div style={{flex:1,padding:activeView.type==="data-model"?"0":"32px 36px",maxWidth:activeView.type==="data-model"?"100%":1600,width:"100%",boxSizing:"border-box",display:"flex",flexDirection:"column"}}>
+        <div style={{flex:1,padding:activeView.type==="data-model"?"0":"32px 36px",maxWidth:activeView.type==="data-model"?"100%":1400,width:"100%",boxSizing:"border-box",display:"flex",flexDirection:"column"}}>
           {activeView.type==="data-model"&&(
             <DataModelExplorer/>
           )}
