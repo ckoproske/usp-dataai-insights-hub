@@ -41,8 +41,11 @@ const T_META  = 11;   // metadata, tags, footnotes
 // BOWs retired from the new structure — hide from all portal dropdowns
 const RETIRED_BOW_IDS = new Set(["ai-infra-bow3"]);
 
-// Portfolio reassignments pending DB update — overrides portfolio_id from API
-const BOW_PORTFOLIO_OVERRIDES = { "bow1": "hub" };
+// Structural overrides pending DB update — merged onto each bow after API fetch
+const BOW_OVERRIDES = {
+  "bow1":     { portfolio_id: "hub" },
+  "sfl-bow2": { title: "Integrated Delivery" },
+};
 
 const PORT_COLORS = {
   "ai-infra":      { color: "#3086AB", light: "#EBF4F9", dark: "#1F5F80", label: "AI Infrastructure" },
@@ -5733,7 +5736,7 @@ function PortalApp() {
       if (u) setUser(u);
       setBows(Array.isArray(b) ? b
         .filter(bow => !RETIRED_BOW_IDS.has(bow.bow_id))
-        .map(bow => BOW_PORTFOLIO_OVERRIDES[bow.bow_id] ? { ...bow, portfolio_id: BOW_PORTFOLIO_OVERRIDES[bow.bow_id] } : bow)
+        .map(bow => BOW_OVERRIDES[bow.bow_id] ? { ...bow, ...BOW_OVERRIDES[bow.bow_id] } : bow)
         : []);
       setPortfolios(Array.isArray(p) ? p : []);
       setIndicators(Array.isArray(i) ? i : []);
