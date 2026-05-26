@@ -285,6 +285,35 @@ def get_bows_by_portfolio(portfolio_id):
     return jsonify(rows)
 
 
+@app.route("/api/bows/<bow_id>", methods=["PATCH"])
+def update_bow(bow_id):
+    """Update bow title and/or portfolio_id."""
+    data = request.json or {}
+    user = _actor(data)
+    rows = query(f"SELECT * FROM {SCHEMA}.bows WHERE bow_id = ?", [bow_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    row   = rows[0]
+    sets  = []
+    vals  = []
+    changes = {}
+    if "title" in data:
+        new_val = (data["title"] or "").strip()
+        if new_val != (row.get("title") or ""):
+            sets.append("title = ?"); vals.append(new_val)
+            changes["title"] = {"old": row.get("title"), "new": new_val}
+    if "portfolio_id" in data:
+        new_val = (data["portfolio_id"] or "").strip()
+        if new_val != (row.get("portfolio_id") or ""):
+            sets.append("portfolio_id = ?"); vals.append(new_val)
+            changes["portfolio_id"] = {"old": row.get("portfolio_id"), "new": new_val}
+    if not sets:
+        return jsonify({"status": "no_change"})
+    vals.append(bow_id)
+    execute(f"UPDATE {SCHEMA}.bows SET {', '.join(sets)} WHERE bow_id = ?", vals)
+    _log_edit("bow", bow_id, bow_id, None, changes, "BOW updated", None, user)
+    return jsonify({"status": "ok", "changes": changes})
+
 @app.route("/api/bows/<bow_id>/description", methods=["PATCH"])
 def update_bow_description(bow_id):
     data        = request.json or {}
