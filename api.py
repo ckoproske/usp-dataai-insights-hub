@@ -2742,7 +2742,7 @@ def update_execution_target(target_id):
     if not rationale:
         return jsonify({"error": "rationale required for execution target text changes"}), 400
 
-    execute(f"UPDATE {SCHEMA}.execution_targets SET text = ? WHERE target_id = ?",
+    execute(f"UPDATE {SCHEMA}.execution_targets SET `text` = ? WHERE target_id = ?",
             [changes["text"]["new"], target_id])
     _log_edit("execution_target", target_id, old["bow_id"], None, changes, rationale, None, user)
     return jsonify({"status": "ok"})
