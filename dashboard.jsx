@@ -1591,7 +1591,7 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
       <div style={{padding:"12px 16px 10px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
         <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:5}}>Indicator {iIdx+1}</div>
         <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:5}}>{ind.text}</div>
-        <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
+        <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:"1px solid "+BORDER}}>
         <div style={{padding:"12px 12px 10px",borderRight:"1px solid "+BORDER,textAlign:"center",background:SURFACE}}>
@@ -1687,7 +1687,7 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
       </div>
       {/* Indicator text */}
       <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:6}}>{ind.text}</div>
-      <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
+      <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
       {/* Numbers */}
       <div style={{display:"flex",gap:16,margin:"10px 0 6px"}}>
         <div>
@@ -2725,7 +2725,7 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
                             <span style={{fontSize:11,color:TEXT_SUB}}>No data yet</span>
                           </div>
                         )}
-                        <DataMeta source={ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq} style={{marginTop:4}}/>
+                        <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq} style={{marginTop:4}}/>
                       </div>
                     </div>
                   );
