@@ -2697,15 +2697,15 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
                         </div>
                         <div style={{display:"flex",gap:12,marginBottom:10}}>
                           <div>
-                            <div style={{fontSize:9,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.4,marginBottom:1}}>{reportYear} Actual</div>
+                            <div style={{fontSize:9,color:TEXT,textTransform:"uppercase",letterSpacing:0.4,marginBottom:1}}>{reportYear} Actual</div>
                             <div style={{fontSize:20,fontWeight:800,color:currentActual!==null?sc.color:TEXT_SUB}}>{currentActual!==null?currentActual:"—"}</div>
                           </div>
                           <div style={{borderLeft:"1px solid "+BORDER,paddingLeft:12}}>
-                            <div style={{fontSize:9,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.4,marginBottom:1}}>{reportYear} Target</div>
+                            <div style={{fontSize:9,color:TEXT,textTransform:"uppercase",letterSpacing:0.4,marginBottom:1}}>{reportYear} Target</div>
                             <div style={{fontSize:20,fontWeight:800,color:TEXT_SUB,opacity:0.5}}>{currentTarget!==null?currentTarget:"—"}</div>
                           </div>
                           {ind.baseline&&<div style={{borderLeft:"1px solid "+BORDER,paddingLeft:12}}>
-                            <div style={{fontSize:9,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.4,marginBottom:1}}>Baseline</div>
+                            <div style={{fontSize:9,color:TEXT,textTransform:"uppercase",letterSpacing:0.4,marginBottom:1}}>Baseline</div>
                             <div style={{fontSize:20,fontWeight:800,color:TEXT_SUB,opacity:0.3}}>{ind.baseline}</div>
                           </div>}
                         </div>
@@ -5055,8 +5055,8 @@ function GoalDetailChart({ g }) {
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={allRows} margin={{top:8,right:20,bottom:0,left:-16}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
-                <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT_SUB}} tickLine={false}/>
-                <YAxis domain={[0,100]} tick={{fontSize:10,fill:TEXT_SUB}} tickLine={false} tickFormatter={v=>v+"%"}/>
+                <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
+                <YAxis domain={[0,100]} tick={{fontSize:10,fill:TEXT}} tickLine={false} tickFormatter={v=>v+"%"}/>
                 <Tooltip
                   contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER,boxShadow:"0 4px 12px rgba(10,37,64,0.1)"}}
                   formatter={(v,n)=>[v!==null?v+"%":"—",n]}/>
@@ -5100,7 +5100,7 @@ function GoalDetailChart({ g }) {
                     <line x1={0} y1={4} x2={18} y2={4} stroke={x.c} strokeWidth={x.solid?2.5:1.5}
                       strokeDasharray={x.solid?"none":"5 3"} opacity={x.solid?1:0.6}/>
                   </svg>
-                  <span style={{fontSize:10,color:TEXT_SUB}}>{x.l}</span>
+                  <span style={{fontSize:10,color:TEXT}}>{x.l}</span>
                 </div>
               ))}
             </div>
@@ -5239,7 +5239,7 @@ function GoalDetailChart({ g }) {
               {/* Y-axis */}
               <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",height:"100%",marginRight:4,flexShrink:0}}>
                 {["$600M","$400M","$200M","$0"].map(v=>(
-                  <span key={v} style={{fontSize:9,color:TEXT_SUB,textAlign:"right"}}>{v}</span>
+                  <span key={v} style={{fontSize:9,color:TEXT,textAlign:"right"}}>{v}</span>
                 ))}
               </div>
               {/* Grid lines */}
@@ -5266,7 +5266,7 @@ function GoalDetailChart({ g }) {
                       })}
                     </div>
                     {/* X label */}
-                    <div style={{fontSize:10,color:TEXT_SUB,marginTop:5,textAlign:"center",whiteSpace:"pre-line",lineHeight:1.3}}>{d.period}</div>
+                    <div style={{fontSize:10,color:TEXT,marginTop:5,textAlign:"center",whiteSpace:"pre-line",lineHeight:1.3}}>{d.period}</div>
                   </div>
                 );
               })}
@@ -5276,7 +5276,7 @@ function GoalDetailChart({ g }) {
               {keys.map(k=>(
                 <div key={k} style={{display:"flex",alignItems:"center",gap:4}}>
                   <div style={{width:10,height:10,borderRadius:2,background:LEVER_COLORS[k],flexShrink:0}}/>
-                  <span style={{fontSize:10,color:TEXT_SUB}}>{LEVER_LABELS[k]}</span>
+                  <span style={{fontSize:10,color:TEXT}}>{LEVER_LABELS[k]}</span>
                 </div>
               ))}
             </div>
@@ -5334,7 +5334,7 @@ function GoalDetailChart({ g }) {
                     <div style={{position:"absolute",left:0,top:0,height:"100%",width:pt.current+"%",background:AMBER,borderRadius:5,transition:"width .4s"}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"flex-end",marginTop:2}}>
-                    <span style={{fontSize:10,color:TEXT_SUB}}>Target: {pt.target2030}%</span>
+                    <span style={{fontSize:10,color:TEXT}}>Target: {pt.target2030}%</span>
                   </div>
                 </div>
               ))}
@@ -5349,8 +5349,8 @@ function GoalDetailChart({ g }) {
                     <div style={{position:"absolute",left:0,top:0,height:"100%",width:composite.current+"%",background:BRAND,borderRadius:6,transition:"width .4s"}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-                    <span style={{fontSize:10,color:TEXT_SUB}}>Current (2026)</span>
-                    <span style={{fontSize:10,color:TEXT_SUB}}>2030 Target: {composite.target2030}%</span>
+                    <span style={{fontSize:10,color:TEXT}}>Current (2026)</span>
+                    <span style={{fontSize:10,color:TEXT}}>2030 Target: {composite.target2030}%</span>
                   </div>
                 </div>
               )}
@@ -5358,11 +5358,11 @@ function GoalDetailChart({ g }) {
             <div style={{display:"flex",gap:14,marginTop:14,paddingTop:12,borderTop:"1px solid "+BORDER}}>
               <div style={{display:"flex",alignItems:"center",gap:5}}>
                 <div style={{width:12,height:8,borderRadius:2,background:AMBER,flexShrink:0}}/>
-                <span style={{fontSize:10,color:TEXT_SUB}}>Current (2026)</span>
+                <span style={{fontSize:10,color:TEXT}}>Current (2026)</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:5}}>
                 <div style={{width:12,height:8,borderRadius:2,background:AMBER_MID,flexShrink:0}}/>
-                <span style={{fontSize:10,color:TEXT_SUB}}>2030 Target</span>
+                <span style={{fontSize:10,color:TEXT}}>2030 Target</span>
               </div>
             </div>
           </div>
@@ -5414,8 +5414,8 @@ function GoalDetailChart({ g }) {
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={yearData} margin={{top:8,right:16,bottom:0,left:-10}}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
-            <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT_SUB}}/>
-            <YAxis tick={{fontSize:10,fill:TEXT_SUB}}/>
+            <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT}}/>
+            <YAxis tick={{fontSize:10,fill:TEXT}}/>
             <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER}}
               formatter={(v,n)=>[v!==null?v+g.unit:"—",n]}/>
             <Line type="monotone" dataKey="value" name="Actual" stroke={BRAND} strokeWidth={2.5}
