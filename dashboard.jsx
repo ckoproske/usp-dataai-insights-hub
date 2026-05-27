@@ -4423,13 +4423,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           {(crossIndicators.length > 0 || goals.length > 0) && (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14,marginBottom:(amb45Text||amb45Buckets)?28:0}}>
               {crossIndicators.map((ind,i) => {
-                const m = ind.match(/^(\d+(?:\.\d+)?%|\$?\d+(?:[,.]\d+)?[MBK]?|\d+)/);
-                const val  = m ? m[1] : null;
-                const body = m ? ind.slice(m[0].length).trim() : ind;
+                const m = ind.match(/(\d+(?:\.\d+)?%|\$?\d+(?:[,.]\d+)?[MBK])/);
+                const val = m ? m[1] : null;
                 return (
                   <div key={i} style={{background:pc.light,border:"1px solid "+pc.color+"33",borderRadius:12,padding:"22px 24px",display:"flex",flexDirection:"column",gap:10}}>
-                    <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>{val || (i+1)}</div>
-                    <div style={{fontSize:14,color:TEXT,lineHeight:1.65}}>{body}</div>
+                    {val && <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>{val}</div>}
+                    <div style={{fontSize:14,color:TEXT,lineHeight:1.65}}>{ind}</div>
                   </div>
                 );
               })}
