@@ -4327,13 +4327,16 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                         {bowOpen ? "Hide outcomes" : `View ${bowOutcomes.length} outcome${bowOutcomes.length!==1?"s":""}`}
                       </button>
                       {bowOpen && (
-                        <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8}}>
-                          {bowOutcomes.map((o,oi) => (
-                            <div key={o.id||oi} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                              <div style={{width:4,height:4,borderRadius:"50%",background:TEXT_MUTED,marginTop:7,flexShrink:0,opacity:0.5}}/>
-                              <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
-                            </div>
-                          ))}
+                        <div style={{marginTop:10}}>
+                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.4,marginBottom:8}}>BOW Outcomes</div>
+                          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                            {bowOutcomes.map((o,oi) => (
+                              <div key={o.id||oi} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                                <span style={{width:22,height:22,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
+                                <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
