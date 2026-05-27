@@ -239,6 +239,22 @@ def get_portfolios():
     rows = query(f"SELECT * FROM {SCHEMA}.portfolios ORDER BY sort_order")
     return jsonify(rows)
 
+@app.route("/api/portfolios/<portfolio_id>", methods=["PATCH"])
+def update_portfolio(portfolio_id):
+    data = request.json or {}
+    user = _actor(data)
+    allowed = {"description", "name", "title"}
+    sets, vals = [], []
+    for f in allowed:
+        if f in data:
+            sets.append(f"`{f}` = ?")
+            vals.append(data[f])
+    if not sets:
+        return jsonify({"status": "no_change"})
+    vals.append(portfolio_id)
+    execute(f"UPDATE {SCHEMA}.portfolios SET {', '.join(sets)} WHERE portfolio_id = ?", vals)
+    return jsonify({"status": "ok"})
+
 @app.route("/api/portfolios/<portfolio_id>/goals")
 def get_portfolio_goals(portfolio_id):
     rows = query(
@@ -2681,6 +2697,15 @@ def get_portfolio_full(portfolio_id):
                 [portfolio_id]
             )
 
+            try:
+                toa_rows = _qc(cur,
+                    f"SELECT problem_statement FROM {SCHEMA}.portfolio_toa WHERE portfolio_id = ?",
+                    [portfolio_id]
+                )
+                problem_statement = toa_rows[0].get("problem_statement", "") if toa_rows else ""
+            except Exception:
+                problem_statement = ""
+
             all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in indicators]
             edit_map = _fetch_edit_map(all_ids, cursor=cur)
 
@@ -2716,6 +2741,7 @@ def get_portfolio_full(portfolio_id):
     return jsonify({
         "portfolio": portfolio,
         "outcomes": outcomes,
+        "problem_statement": problem_statement,
     })
 
 

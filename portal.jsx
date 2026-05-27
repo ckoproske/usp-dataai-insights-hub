@@ -3503,6 +3503,12 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [addingOut, setAddingOut]   = useState(false);
   const [newOutTitle, setNewOutTitle] = useState("");
   const [saving, setSaving]         = useState(false);
+  const [descEditing, setDescEditing]     = useState(false);
+  const [descDraft, setDescDraft]         = useState("");
+  const [descSaving, setDescSaving]       = useState(false);
+  const [problemEditing, setProblemEditing] = useState(false);
+  const [problemDraft, setProblemDraft]     = useState("");
+  const [problemSaving, setProblemSaving]   = useState(false);
 
   const p = PORT_COLORS[portfolio.portfolio_id];
 
@@ -3575,7 +3581,101 @@ function PortfolioPanel({ portfolio, user, onBack }) {
         </div>
       </div>
 
-      {/* ── Tab strip: TOA + outcome tabs ── */}
+      {/* ── Portfolio Description ── */}
+      {(() => {
+        const desc = data?.portfolio?.description ?? "";
+        const saveDesc = () => {
+          setDescSaving(true);
+          api(`/api/portfolios/${portfolio.portfolio_id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: descDraft, edited_by: user?.email }),
+          })
+            .then(() => { load(); setDescEditing(false); })
+            .finally(() => setDescSaving(false));
+        };
+        return (
+          <div style={{ marginBottom: 16 }}>
+            {descEditing ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <textarea
+                  autoFocus
+                  value={descDraft}
+                  onChange={e => setDescDraft(e.target.value)}
+                  rows={3}
+                  style={{ width: "100%", fontSize: 13, padding: "8px 10px",
+                    border: `1px solid ${BORDER}`, borderRadius: 6,
+                    fontFamily: "inherit", resize: "vertical", color: TEXT }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn size="sm" onClick={saveDesc} disabled={descSaving}>{descSaving ? "Saving…" : "Save"}</Btn>
+                  <Btn variant="secondary" size="sm" onClick={() => setDescEditing(false)}>Cancel</Btn>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <p style={{ fontSize: 13, color: desc ? TEXT : TEXT_MUTED,
+                  fontStyle: desc ? "normal" : "italic", lineHeight: 1.6, flex: 1 }}>
+                  {desc || "No description yet — click to add."}
+                </p>
+                <button title="Edit description" onClick={() => { setDescDraft(desc); setDescEditing(true); }}
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                    color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Problem / Gap Statement ── */}
+      {(() => {
+        const problem = data?.problem_statement ?? "";
+        const saveProblem = () => {
+          setProblemSaving(true);
+          api(`/api/toa/${portfolio.portfolio_id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ problem_statement: problemDraft, edited_by: user?.email }),
+          })
+            .then(() => { load(); setProblemEditing(false); })
+            .finally(() => setProblemSaving(false));
+        };
+        return (
+          <div style={{ marginBottom: 24, padding: "14px 16px", background: BG,
+            borderRadius: 8, border: `1px solid ${BORDER}` }}>
+            <SectionLabel>Problem / Gap Statement</SectionLabel>
+            {problemEditing ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <textarea
+                  autoFocus
+                  value={problemDraft}
+                  onChange={e => setProblemDraft(e.target.value)}
+                  rows={3}
+                  style={{ width: "100%", fontSize: 13, padding: "8px 10px",
+                    border: `1px solid ${BORDER}`, borderRadius: 6,
+                    fontFamily: "inherit", resize: "vertical", color: TEXT }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn size="sm" onClick={saveProblem} disabled={problemSaving}>{problemSaving ? "Saving…" : "Save"}</Btn>
+                  <Btn variant="secondary" size="sm" onClick={() => setProblemEditing(false)}>Cancel</Btn>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <p style={{ fontSize: 13, color: problem ? TEXT : TEXT_MUTED,
+                  fontStyle: problem ? "normal" : "italic", lineHeight: 1.6, flex: 1 }}>
+                  {problem || "No problem statement yet — click to add."}
+                </p>
+                <button title="Edit problem statement" onClick={() => { setProblemDraft(problem); setProblemEditing(true); }}
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                    color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Outcome tabs ── */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2,
         borderBottom: `2px solid ${BORDER}`, marginBottom: 24, flexWrap: "wrap" }}>
 
