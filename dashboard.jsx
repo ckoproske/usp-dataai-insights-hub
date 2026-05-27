@@ -1108,8 +1108,8 @@ async function loadFromAPI() {
           id:          po.outcome_id,
           shortTitle:  po.short_title  || (existing ? existing.shortTitle : ""),
           activity:    po.activity     || (existing ? existing.activity   : ""),
-          // DB column may be outcome_text or outcome depending on schema
-          outcome:     po.outcome_text || po.outcome || (existing ? existing.outcome : ""),
+          // API returns COALESCE(text, outcome) AS text — check all field aliases
+          outcome:     po.text || po.outcome_text || po.outcome || (existing ? existing.outcome : ""),
           manualStatus: existing ? existing.manualStatus : null,
           indicators,
         };
@@ -2609,6 +2609,7 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
           {/* Outcome title + rating on scale */}
           <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",justifyContent:"center",gap:6,borderLeft:"1px solid "+BORDER,minWidth:0}}>
             <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.3}}>{o.shortTitle||o.title}</div>
+            {o.desc && <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5,marginTop:2}}>{o.desc}</div>}
             {/* Rating scale bar */}
             <div style={{display:"flex",alignItems:"center",gap:0}}>
               {SCALE.map((s,i)=>{

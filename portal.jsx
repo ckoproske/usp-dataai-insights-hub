@@ -1227,11 +1227,11 @@ function OutcomeCard({ outcome: initOutcome, index, bow, user, onDeleted }) {
         </span>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.4,
-            marginBottom: outcome.short_title ? 2 : 0 }}>
-            {outcome.title || "Untitled outcome"}
+            marginBottom: outcome.title ? 2 : 0 }}>
+            {outcome.text || outcome.outcome || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No description set</span>}
           </p>
-          {outcome.short_title && (
-            <p style={{ fontSize: 12, color: TEXT_MUTED }}>{outcome.short_title}</p>
+          {outcome.title && (
+            <p style={{ fontSize: 12, color: TEXT_MUTED }}>Title: {outcome.title}</p>
           )}
         </div>
         <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
@@ -1268,12 +1268,6 @@ function OutcomeCard({ outcome: initOutcome, index, bow, user, onDeleted }) {
           />
         ) : (
           <>
-            {outcome.text && (
-              <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.6, marginBottom: 16 }}>
-                {outcome.text}
-              </p>
-            )}
-
             {indicators.length === 0 && !addingInd && (
               <EmptyState message="No indicators added to this outcome yet."
                 action="Add indicator" onAction={() => setAddingInd(true)} />
