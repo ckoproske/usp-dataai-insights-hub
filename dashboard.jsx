@@ -1617,6 +1617,7 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
   const { baseline:baselineVal, actuals:actualVals, targets:targetVals } = getIndData(ind);
   const sc = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
   const yrIdx = YEARS.indexOf(activeYear);
+  const [expanded, setExpanded] = useState(false);
 
   const rawList = (ind.actualsList || []).slice().sort((a,b)=>
     a.year!==b.year ? a.year-b.year : (a.period||"").localeCompare(b.period||""));
@@ -1651,49 +1652,122 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
     ? (rawList.filter(a=>a.year===activeYear).slice(-1)[0]?.value ?? null)
     : actualVals[yrIdx];
 
+  const chartLines = (
+    <>
+      <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
+        dot={({payload:d,...p})=>{
+          if(d.Actual===null||d.Actual===undefined) return <circle key={p.index} r={0} cx={0} cy={0}/>;
+          const isBase=d.label==="Base", inYr=!isBase&&d.year===activeYear;
+          return <circle key={p.index} cx={p.cx} cy={p.cy} r={isBase?3:inYr?4:2} fill={isBase?"#94A3B8":inYr?sc.color:"#fff"} stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
+        }}/>
+      <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
+    </>
+  );
+
   return (
-    <div style={{border:"1px solid "+BORDER,borderTop:"3px solid "+sc.color,borderRadius:12,padding:"20px 22px",display:"flex",flexDirection:"column",gap:14,background:SURFACE}}>
-      {/* Big actual + status pill + target */}
-      <div style={{display:"flex",alignItems:"flex-start",gap:18}}>
-        <div>
-          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>{activeYear} Actual</div>
-          <div style={{fontSize:44,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",letterSpacing:-1.5,lineHeight:1}}>
-            {activeActual!==null?activeActual:"—"}
+    <>
+      {/* Card */}
+      <div onClick={()=>setExpanded(true)} style={{border:"1px solid "+BORDER,borderTop:"3px solid "+sc.color,borderRadius:12,padding:"20px 22px",display:"flex",flexDirection:"column",gap:14,background:SURFACE,cursor:"pointer",transition:"box-shadow .15s"}}
+        onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(10,37,64,0.10)"}
+        onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+        {/* Big actual + status pill + target */}
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:18}}>
+            <div>
+              <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>{activeYear} Actual</div>
+              <div style={{fontSize:44,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",letterSpacing:-1.5,lineHeight:1}}>
+                {activeActual!==null?activeActual:"—"}
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:7,paddingTop:6}}>
+              <span style={{fontSize:11,fontWeight:700,color:sc.color,background:sc.color+"15",border:"1px solid "+sc.color+"44",borderRadius:20,padding:"3px 10px",whiteSpace:"nowrap"}}>
+                {(sc.label||"").replace(" Expectations","")}
+              </span>
+              <div style={{fontSize:12,color:TEXT_MUTED}}>
+                <span style={{fontWeight:700,color:TEXT_SUB}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</span>
+                <span style={{marginLeft:3}}>target</span>
+              </div>
+            </div>
           </div>
+          <span style={{fontSize:12,color:TEXT_MUTED,opacity:0.5,flexShrink:0,paddingTop:2}}>⤢</span>
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:7,paddingTop:6}}>
-          <span style={{fontSize:11,fontWeight:700,color:sc.color,background:sc.color+"15",border:"1px solid "+sc.color+"44",borderRadius:20,padding:"3px 10px",whiteSpace:"nowrap"}}>
-            {(sc.label||"").replace(" Expectations","")}
-          </span>
-          <div style={{fontSize:12,color:TEXT_MUTED}}>
-            <span style={{fontWeight:700,color:TEXT_SUB}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</span>
-            <span style={{marginLeft:3}}>target</span>
-          </div>
-        </div>
-      </div>
-      {/* Indicator text */}
-      <div style={{fontSize:14,fontWeight:600,color:TEXT,lineHeight:1.65}}>{ind.text}</div>
-      {/* Chart */}
-      <ResponsiveContainer width="100%" height={110}>
-        <LineChart data={allChartData} margin={{top:4,right:8,bottom:0,left:-22}}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
-          <XAxis dataKey="label" tick={({x,y,payload})=>{
-            const isHL=payload.value.includes("'"+String(activeYear).slice(2));
-            return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?9:7} fontWeight={isHL?700:400} fill={TEXT}>{payload.value==="Base"?"B":payload.value}</text>;
-          }}/>
-          <YAxis tick={{fontSize:8,fill:TEXT}}/>
-          <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
-          <Line type="monotone" dataKey="Actual" stroke={sc.color} strokeWidth={2} connectNulls
-            dot={({payload:d,...p})=>{
-              if(d.Actual===null||d.Actual===undefined) return <circle key={p.index} r={0} cx={0} cy={0}/>;
-              const isBase=d.label==="Base", inYr=!isBase&&d.year===activeYear;
-              return <circle key={p.index} cx={p.cx} cy={p.cy} r={isBase?3:inYr?4:2} fill={isBase?"#94A3B8":inYr?sc.color:"#fff"} stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
+        {/* Indicator text */}
+        <div style={{fontSize:14,fontWeight:600,color:TEXT,lineHeight:1.65}}>{ind.text}</div>
+        {/* Chart */}
+        <ResponsiveContainer width="100%" height={110}>
+          <LineChart data={allChartData} margin={{top:4,right:8,bottom:0,left:-22}}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+            <XAxis dataKey="label" tick={({x,y,payload})=>{
+              const isHL=payload.value.includes("'"+String(activeYear).slice(2));
+              return <text x={x} y={y+10} textAnchor="middle" fontSize={isHL?9:7} fontWeight={isHL?700:400} fill={TEXT}>{payload.value==="Base"?"B":payload.value}</text>;
             }}/>
-          <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
-        </LineChart>
-      </ResponsiveContainer>
-      <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
-    </div>
+            <YAxis tick={{fontSize:8,fill:TEXT}}/>
+            <Tooltip contentStyle={{fontSize:10,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
+            {chartLines}
+          </LineChart>
+        </ResponsiveContainer>
+        <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
+      </div>
+
+      {/* Expanded modal */}
+      {expanded && (
+        <div onClick={e=>{if(e.target===e.currentTarget)setExpanded(false)}}
+          style={{position:"fixed",inset:0,background:"rgba(10,20,40,0.55)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 24px"}}>
+          <div style={{background:BG,borderRadius:16,width:"100%",maxWidth:760,boxShadow:"0 8px 40px rgba(0,0,0,0.22)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+            {/* Modal header */}
+            <div style={{borderTop:"3px solid "+sc.color,padding:"22px 28px",borderBottom:"1px solid "+BORDER,display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>Indicator {iIdx+1}</div>
+                <div style={{fontSize:16,fontWeight:700,color:TEXT,lineHeight:1.6,maxWidth:580}}>{ind.text}</div>
+              </div>
+              <button onClick={()=>setExpanded(false)}
+                style={{width:32,height:32,borderRadius:"50%",border:"1px solid "+BORDER,background:SURFACE,color:TEXT_MUTED,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
+            </div>
+            {/* Modal body */}
+            <div style={{padding:"24px 28px",display:"flex",flexDirection:"column",gap:20}}>
+              {/* Big stats */}
+              <div style={{display:"flex",gap:32,alignItems:"flex-start"}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>{activeYear} Actual</div>
+                  <div style={{fontSize:56,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",letterSpacing:-2,lineHeight:1}}>
+                    {activeActual!==null?activeActual:"—"}
+                  </div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,paddingTop:10}}>
+                  <span style={{fontSize:12,fontWeight:700,color:sc.color,background:sc.color+"15",border:"1px solid "+sc.color+"44",borderRadius:20,padding:"4px 12px",whiteSpace:"nowrap"}}>
+                    {(sc.label||"").replace(" Expectations","")}
+                  </span>
+                  <div style={{fontSize:13,color:TEXT_MUTED}}>
+                    <span style={{fontWeight:700,color:TEXT_SUB}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</span>
+                    <span style={{marginLeft:4}}>{activeYear} target</span>
+                  </div>
+                  {ind.baseline && (
+                    <div style={{fontSize:12,color:TEXT_MUTED}}>
+                      <span style={{fontWeight:600,color:TEXT_SUB}}>{ind.baseline}</span>
+                      <span style={{marginLeft:4}}>baseline</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Taller chart */}
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={allChartData} margin={{top:4,right:12,bottom:0,left:-18}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+                  <XAxis dataKey="label" tick={({x,y,payload})=>{
+                    const isHL=payload.value.includes("'"+String(activeYear).slice(2));
+                    return <text x={x} y={y+12} textAnchor="middle" fontSize={isHL?11:9} fontWeight={isHL?700:400} fill={TEXT}>{payload.value==="Base"?"Base":payload.value}</text>;
+                  }}/>
+                  <YAxis tick={{fontSize:10,fill:TEXT}}/>
+                  <Tooltip contentStyle={{fontSize:11,borderRadius:6,border:"1px solid "+BORDER}} formatter={(v,n)=>[v!=null?v:"—",n]}/>
+                  {chartLines}
+                </LineChart>
+              </ResponsiveContainer>
+              <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq} style={{fontSize:12}}/>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
