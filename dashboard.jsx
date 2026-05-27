@@ -4133,37 +4133,26 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
 
   return (
     <div style={{
-      borderRadius:14,overflow:"hidden",
-      border:"1px solid "+BORDER,
-      background:`linear-gradient(135deg,${pc.color}12 0%,${SURFACE} 60%)`,
-      boxShadow:"0 1px 8px rgba(0,0,0,0.05)",
+      display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,
+      paddingBottom:28,marginBottom:4,
+      borderBottom:"1px solid "+BORDER,
     }}>
-      <div style={{height:3,background:`linear-gradient(90deg,${pc.color},${pc.color}66)`}}/>
-      <div style={{padding:"24px 32px"}}>
-        <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2.5,marginBottom:20,opacity:0.85}}>By the Numbers</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0}}>
-          {STATS.map((stat,i) => (
-            <div key={i} style={{padding:"4px 28px 4px"+(i===0?"0":""),borderLeft:i===0?"none":"1px solid "+BORDER}}>
-              <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8}}>
-                <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1,flexShrink:0}}>{stat.value}</div>
-                {stat.teams && stat.teams.length > 0 && (
-                  <div style={{display:"flex",flexDirection:"column",gap:3,paddingTop:6}}>
-                    {stat.teams.map(t => (
-                      <span key={t} style={{fontSize:10,fontWeight:600,color:TEXT_SUB,
-                        background:SURFACE_2,border:"1px solid "+BORDER,
-                        borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
+      {STATS.map((stat,i) => (
+        <div key={i} style={{padding:"0 28px 0"+(i===0?" 0":" 28px"),borderLeft:i===0?"none":"1px solid "+BORDER}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6}}>
+            <div style={{fontSize:44,fontWeight:800,color:stat.value==="…"?BORDER:pc.color,letterSpacing:-2,lineHeight:1,flexShrink:0}}>{stat.value}</div>
+            {stat.teams && stat.teams.length > 0 && (
+              <div style={{display:"flex",flexDirection:"column",gap:3,paddingTop:6}}>
+                {stat.teams.map(t => (
+                  <span key={t} style={{fontSize:10,fontWeight:600,color:TEXT_SUB,background:SURFACE_2,border:"1px solid "+BORDER,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{t}</span>
+                ))}
               </div>
-              <div style={{fontSize:14,fontWeight:700,color:TEXT,marginBottom:3}}>{stat.label}</div>
-              <div style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
-            </div>
-          ))}
+            )}
+          </div>
+          <div style={{fontSize:15,fontWeight:700,color:TEXT,marginBottom:3}}>{stat.label}</div>
+          <div style={{fontSize:13,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
@@ -4240,242 +4229,193 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
     (bow.outcomes||[]).some(o => outcomeLinks[o.id]?.has(portOutcomeId));
 
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+    <div style={{display:"flex",flexDirection:"column"}}>
 
-      {/* ── Problem / Gap statement ── */}
+      {/* ── Problem / Gap statement — typographic pull-quote ── */}
       {problemStatement && (
-        <div style={{borderRadius:10,border:"1px solid "+BORDER,background:SURFACE,padding:"16px 22px"}}>
-          <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>The Problem We're Addressing</div>
-          <div style={{fontSize:15,color:TEXT,lineHeight:1.7,fontWeight:500}}>{problemStatement}</div>
+        <div style={{display:"flex",gap:16,alignItems:"flex-start",paddingBottom:32,marginBottom:32,borderBottom:"1px solid "+BORDER}}>
+          <div style={{width:3,borderRadius:2,background:pc.color,alignSelf:"stretch",flexShrink:0}}/>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>The Problem We're Addressing</div>
+            <div style={{fontSize:16,color:TEXT,lineHeight:1.75,fontWeight:400}}>{problemStatement}</div>
+          </div>
         </div>
       )}
 
-      {/* ── Section 1: What We're Trying to Achieve ── */}
-      <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
-        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",position:"relative",overflow:"hidden"}}>
-
-          <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>What We're Trying to Achieve</div>
+      {/* ── Section 1: Portfolio Outcomes ── */}
+      <div style={{paddingBottom:36,marginBottom:36,borderBottom:"1px solid "+BORDER}}>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:6}}>What We're Trying to Achieve</div>
+          <div style={{fontSize:22,fontWeight:800,color:TEXT,letterSpacing:-0.4,lineHeight:1.2}}>Portfolio Outcomes</div>
         </div>
-        <div style={{padding:"14px 22px 0",borderBottom:"1px solid "+BORDER}}>
-          <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,paddingBottom:14}}>Portfolio Outcomes</div>
-        </div>
-        <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,2)},1fr)`,gap:16}}>
           {allOutcomes.map((o,i) => {
-            const isOpen = !!expandedOutcomes[o.id];
-            const isHov  = hoveredOutcome === o.id;
             const lane = toaLanes[i];
             const activities = lane?.activities || [];
-            const toggle = () => setExpandedOutcomes(v=>({...v,[o.id]:!v[o.id]}));
+            const inputsOpen = !!expandedInputs[o.id];
             return (
-              <div key={o.id}
-                onClick={toggle}
-                onMouseEnter={()=>setHoveredOutcome(o.id)}
-                onMouseLeave={()=>setHoveredOutcome(null)}
-                style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,display:"flex",flexDirection:"column",cursor:"pointer",transition:"box-shadow .15s",boxShadow:isHov||isOpen?"0 4px 14px rgba(10,37,64,0.09)":"0 1px 3px rgba(10,37,64,0.04)"}}>
-                <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
-                <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
-                  {/* Number + short title + chevron */}
-                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                    <span style={{width:22,height:22,borderRadius:"50%",background:"#64748B",color:"#fff",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
-                    <div style={{fontSize:15,fontWeight:800,color:TEXT,lineHeight:1.3,flex:1}}>{SHORT_TITLES[i]||o.shortTitle}</div>
-                    <span style={{fontSize:11,color:TEXT_MUTED,flexShrink:0,marginTop:3,transition:"transform .15s",display:"inline-block",transform:isOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
-                  </div>
-                  {/* Full outcome text + investments — expand together */}
-                  {isOpen && (
-                    <>
-                      <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65,paddingLeft:32,borderLeft:"2px solid "+BORDER,marginLeft:11}}>{o.outcome}</div>
-                      {activities.length > 0 && (
-                        <div style={{paddingLeft:32,display:"flex",flexDirection:"column",gap:6,borderTop:"1px solid "+BORDER,paddingTop:10,marginTop:2}}>
-                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Investments & Inputs</div>
-                          {activities.map((act, ai) => (
-                            <div key={act.activity_id||ai} style={{display:"flex",gap:6,alignItems:"flex-start"}}>
-                              <div style={{width:4,height:4,borderRadius:"50%",background:TEXT_MUTED,marginTop:5,flexShrink:0,opacity:0.5}}/>
-                              <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>{act.activity_text}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
+              <div key={o.id} style={{borderRadius:12,border:"1px solid "+BORDER,background:SURFACE,padding:"24px 26px",boxShadow:"0 1px 4px rgba(10,37,64,0.04)",display:"flex",flexDirection:"column",gap:14}}>
+                <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                  <span style={{width:30,height:30,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:13,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
+                  <div style={{fontSize:19,fontWeight:800,color:TEXT,lineHeight:1.3,flex:1}}>{SHORT_TITLES[i]||o.title||o.shortTitle}</div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Section 2: How We Work ── */}
-      <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
-        <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative",overflow:"hidden"}}>
-
-          <div>
-            <div style={{fontSize:17,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>How We Work</div>
-          </div>
-          <button onClick={()=>setShowMatrix(v=>!v)}
-            style={{fontSize:11,fontWeight:500,color:TEXT_SUB,background:SURFACE,border:"1px solid "+BORDER,borderRadius:6,padding:"6px 14px",cursor:"pointer",flexShrink:0}}>
-            {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
-          </button>
-        </div>
-        <div style={{padding:"14px 22px 0",borderBottom:"1px solid "+BORDER}}>
-          <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,paddingBottom:14}}>Bodies of Work</div>
-        </div>
-        <div style={{padding:"18px 22px",display:"grid",gridTemplateColumns:`repeat(${Math.min(bows.length,4)},1fr)`,gap:14}}>
-          {bows.map(bow => {
-            const bowOpen = !!expandedBows[bow.id];
-            const isHovered = hoveredBow === bow.id;
-            const bowOutcomes = (bow.outcomes||[]).filter(o => o.title||o.shortTitle);
-            return (
-              <div key={bow.id}
-                onMouseEnter={()=>setHoveredBow(bow.id)}
-                onMouseLeave={()=>setHoveredBow(null)}
-                style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"hidden",display:"flex",flexDirection:"column",transition:"box-shadow .15s",boxShadow:isHovered?"0 4px 14px rgba(10,37,64,0.10)":"0 1px 3px rgba(10,37,64,0.04)"}}>
-                <div style={{height:4,background:pc.color+"88",transition:"background .15s"}}/>
-                <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,flex:1}}>
-                  <div style={{fontSize:14,fontWeight:800,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
-                  {bow.delegate && (
-                    <div style={{fontSize:11,color:TEXT_MUTED,display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{width:18,height:18,borderRadius:"50%",background:BORDER,color:TEXT_SUB,fontSize:9,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(bow.delegate||"").charAt(0)}</span>
-                      <span style={{fontWeight:600,color:TEXT_SUB}}>{bow.delegate}</span>
-                    </div>
-                  )}
-                  {bow.description && (
-                    <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.6}}>{bow.description}</div>
-                  )}
-                  {bowOutcomes.length > 0 && (
-                    <button onClick={()=>setExpandedBows(v=>({...v,[bow.id]:!v[bow.id]}))}
-                      style={{background:"none",border:"1px solid "+BORDER,borderRadius:5,cursor:"pointer",padding:"4px 10px",fontSize:10,color:TEXT_MUTED,fontWeight:400,display:"flex",alignItems:"center",gap:4,alignSelf:"flex-start",marginTop:4}}>
-                      {bowOpen ? "▴ hide outcomes" : "▾ outcomes"}
+                {o.outcome && (
+                  <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.75,paddingLeft:44}}>{o.outcome}</div>
+                )}
+                {activities.length > 0 && (
+                  <div style={{paddingLeft:44}}>
+                    <button onClick={()=>setExpandedInputs(v=>({...v,[o.id]:!v[o.id]}))}
+                      style={{background:"none",border:"none",cursor:"pointer",padding:0,fontSize:12,color:TEXT_MUTED,display:"flex",alignItems:"center",gap:5,fontWeight:600}}>
+                      <span style={{display:"inline-block",transition:"transform .15s",transform:inputsOpen?"rotate(90deg)":"rotate(0deg)"}}>▸</span>
+                      {inputsOpen ? "Hide investments & inputs" : "View investments & inputs"}
                     </button>
-                  )}
-                </div>
-                {bowOpen && bowOutcomes.length > 0 && (
-                  <div style={{borderTop:"1px solid "+BORDER,background:"#FAFAF8",padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
-                    <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>BOW Outcomes</div>
-                    {bowOutcomes.map((o,oi) => (
-                      <div key={o.id||oi} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                        <span style={{width:18,height:18,borderRadius:"50%",background:"#64748B",color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{oi+1}</span>
-                        <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5}}>{o.title||o.shortTitle}</div>
+                    {inputsOpen && (
+                      <div style={{display:"flex",flexDirection:"column",gap:7,marginTop:10}}>
+                        {activities.map((act,ai) => (
+                          <div key={act.activity_id||ai} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                            <div style={{width:4,height:4,borderRadius:"50%",background:TEXT_MUTED,marginTop:7,flexShrink:0,opacity:0.5}}/>
+                            <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55}}>{act.activity_text}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
             );
           })}
         </div>
-
-        {/* ── Alignment map: linked BOW outcomes as rows, portfolio outcomes as columns ── */}
-        {showMatrix && (
-          <div style={{borderTop:"1px solid "+BORDER,overflowX:"auto"}}>
-            <div style={{padding:"12px 22px 4px",fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5}}>BOW Outcome → Portfolio Outcome Alignment</div>
-            <div style={{padding:"0 22px 14px"}}>
-              {/* Header */}
-              <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560}}>
-                <div style={{background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,padding:"6px 10px"}}>
-                  <span style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>BOW / Outcome</span>
-                </div>
-                {allOutcomes.map((o,i) => (
-                  <div key={o.id} style={{padding:"6px 6px",background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
-                    <div style={{width:18,height:18,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:3}}>{i+1}</div>
-                    <div style={{fontSize:9,fontWeight:700,color:TEXT,lineHeight:1.2}}>{SHORT_TITLES[i]||o.shortTitle}</div>
-                  </div>
-                ))}
-              </div>
-              {/* BOW groups — only BOW outcomes that have at least one link */}
-              {bows.map((bow, bi) => {
-                const linkedOutcomes = (bow.outcomes||[]).filter(bo =>
-                  (bo.title||bo.shortTitle) && outcomeLinks[bo.id]?.size > 0
-                );
-                if (!linkedOutcomes.length) return null;
-                const bgBase = bi%2===0 ? "transparent" : "#FAFAF8";
-                return (
-                  <React.Fragment key={bow.id}>
-                    <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER,background:"#F3F2EF"}}>
-                      <div style={{padding:"4px 10px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:5}}>
-                        <div style={{width:3,height:12,borderRadius:2,background:TEXT_MUTED,flexShrink:0}}/>
-                        <span style={{fontSize:10,fontWeight:700,color:TEXT_SUB}}>{bow.name}</span>
-                      </div>
-                      {allOutcomes.map(o => <div key={o.id} style={{borderRight:"1px solid "+BORDER}}/>)}
-                    </div>
-                    {linkedOutcomes.map((bo, oi) => {
-                      const isLast = oi === linkedOutcomes.length - 1;
-                      return (
-                        <div key={bo.id||oi} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:isLast?"2px solid "+BORDER:"1px solid "+BORDER}}>
-                          <div style={{padding:"5px 10px 5px 18px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"flex-start",gap:5,background:bgBase}}>
-                            <div style={{width:3,height:3,borderRadius:"50%",background:TEXT_MUTED,marginTop:5,flexShrink:0,opacity:0.5}}/>
-                            <span style={{fontSize:10,color:TEXT_SUB,lineHeight:1.35}}>{bo.title||bo.shortTitle}</span>
-                          </div>
-                          {allOutcomes.map(o => {
-                            const linked = outcomeLinks[bo.id]?.has(o.id);
-                            return (
-                              <div key={o.id} style={{padding:"5px",borderRight:"1px solid "+BORDER,background:bgBase,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                                {linked
-                                  ? <span style={{width:16,height:16,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,color:pc.color,fontWeight:700}}>✓</span>
-                                  : <span style={{width:4,height:4,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
-                                }
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
-              {/* Empty state — shown after links have loaded and none exist */}
-              {linksLoaded && Object.keys(outcomeLinks).length === 0 && (
-                <div style={{padding:"20px 22px",textAlign:"center",color:TEXT_MUTED,fontSize:12,fontStyle:"italic"}}>
-                  No BOW outcome → portfolio outcome links found. Add them via the Theory of Action editor to populate this map.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* ── Section 2: How We Work — BOW chips ── */}
+      {bows.length > 0 && (
+        <div style={{paddingBottom:36,marginBottom:36,borderBottom:(crossIndicators.length > 0 || goals.length > 0 || amb45Text || amb45Buckets)?"1px solid "+BORDER:"none"}}>
+          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:20,gap:16}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:6}}>How We Work</div>
+              <div style={{fontSize:22,fontWeight:800,color:TEXT,letterSpacing:-0.4,lineHeight:1.2}}>Bodies of Work</div>
+            </div>
+            <button onClick={()=>setShowMatrix(v=>!v)}
+              style={{fontSize:12,fontWeight:500,color:TEXT_SUB,background:SURFACE,border:"1px solid "+BORDER,borderRadius:6,padding:"7px 14px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+              {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
+            </button>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+            {bows.map(bow => (
+              <div key={bow.id} style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12,maxWidth:340}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:pc.color,flexShrink:0,marginTop:5}}/>
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
+                  {bow.description && (
+                    <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55,marginTop:5}}>{bow.description}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Alignment matrix */}
+          {showMatrix && (
+            <div style={{marginTop:20,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
+              <div style={{padding:"12px 18px 4px",fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,background:"#FAFAF8",borderBottom:"1px solid "+BORDER}}>BOW Outcome → Portfolio Outcome Alignment</div>
+              <div style={{overflowX:"auto",padding:"0 18px 14px"}}>
+                <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560}}>
+                  <div style={{background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,padding:"6px 10px"}}>
+                    <span style={{fontSize:9,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>BOW / Outcome</span>
+                  </div>
+                  {allOutcomes.map((o,i) => (
+                    <div key={o.id} style={{padding:"6px 6px",background:"#FAFAF8",borderBottom:"2px solid "+BORDER,borderRight:"1px solid "+BORDER,textAlign:"center"}}>
+                      <div style={{width:18,height:18,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:3}}>{i+1}</div>
+                      <div style={{fontSize:9,fontWeight:700,color:TEXT,lineHeight:1.2}}>{SHORT_TITLES[i]||o.shortTitle}</div>
+                    </div>
+                  ))}
+                </div>
+                {bows.map((bow, bi) => {
+                  const linkedOutcomes = (bow.outcomes||[]).filter(bo => (bo.title||bo.shortTitle) && outcomeLinks[bo.id]?.size > 0);
+                  if (!linkedOutcomes.length) return null;
+                  const bgBase = bi%2===0 ? "transparent" : "#FAFAF8";
+                  return (
+                    <React.Fragment key={bow.id}>
+                      <div style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:"1px solid "+BORDER,background:"#F3F2EF"}}>
+                        <div style={{padding:"4px 10px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:5}}>
+                          <div style={{width:3,height:12,borderRadius:2,background:TEXT_MUTED,flexShrink:0}}/>
+                          <span style={{fontSize:10,fontWeight:700,color:TEXT_SUB}}>{bow.name}</span>
+                        </div>
+                        {allOutcomes.map(o => <div key={o.id} style={{borderRight:"1px solid "+BORDER}}/>)}
+                      </div>
+                      {linkedOutcomes.map((bo, oi) => {
+                        const isLast = oi === linkedOutcomes.length - 1;
+                        return (
+                          <div key={bo.id||oi} style={{display:"grid",gridTemplateColumns:colTemplate,minWidth:560,borderBottom:isLast?"2px solid "+BORDER:"1px solid "+BORDER}}>
+                            <div style={{padding:"5px 10px 5px 18px",borderRight:"1px solid "+BORDER,display:"flex",alignItems:"flex-start",gap:5,background:bgBase}}>
+                              <div style={{width:3,height:3,borderRadius:"50%",background:TEXT_MUTED,marginTop:5,flexShrink:0,opacity:0.5}}/>
+                              <span style={{fontSize:10,color:TEXT_SUB,lineHeight:1.35}}>{bo.title||bo.shortTitle}</span>
+                            </div>
+                            {allOutcomes.map(o => {
+                              const linked = outcomeLinks[bo.id]?.has(o.id);
+                              return (
+                                <div key={o.id} style={{padding:"5px",borderRight:"1px solid "+BORDER,background:bgBase,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                  {linked
+                                    ? <span style={{width:16,height:16,borderRadius:"50%",background:pc.color+"18",border:"1.5px solid "+pc.color,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,color:pc.color,fontWeight:700}}>✓</span>
+                                    : <span style={{width:4,height:4,borderRadius:"50%",background:BORDER,display:"inline-block"}}/>
+                                  }
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
+                {linksLoaded && Object.keys(outcomeLinks).length === 0 && (
+                  <div style={{padding:"20px 18px",textAlign:"center",color:TEXT_MUTED,fontSize:12,fontStyle:"italic"}}>
+                    No BOW outcome → portfolio outcome links found.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Section 3: 2030 Goals ── */}
       {(crossIndicators.length > 0 || goals.length > 0 || amb45Text || amb45Buckets) && (
-        <div style={{borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",background:SURFACE,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-          <div style={{height:4,background:`linear-gradient(90deg,${pc.color}88,${pc.color}22)`}}/>
-          <div style={{padding:"22px 28px"}}>
-            <div style={{marginBottom:22,position:"relative",overflow:"hidden"}}>
-
-              <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:5}}>What This All Builds Toward</div>
-              <div style={{fontSize:20,fontWeight:800,color:TEXT,letterSpacing:-0.3,lineHeight:1.2}}>2030 Goals</div>
-            </div>
-            <div style={{display:"flex",gap:32,alignItems:"flex-start"}}>
-              {(crossIndicators.length > 0 || goals.length > 0) && (
-                <div style={{flex:2,minWidth:0,display:"flex",flexDirection:"column",gap:12}}>
-                  {crossIndicators.map((ind,i) => (
-                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                      <span style={{width:20,height:20,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
-                      <div style={{fontSize:14,color:TEXT,lineHeight:1.65,fontWeight:500}}>{ind}</div>
-                    </div>
-                  ))}
-                  {crossIndicators.length === 0 && goals.map(g => (
-                    <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                      style={{display:"flex",alignItems:"flex-start",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
-                      <span style={{width:20,height:20,borderRadius:"50%",background:g.color?(g.color+"22"):pc.light,color:g.color||pc.dark,border:"1px solid "+(g.color||pc.color)+"55",fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{g.number}</span>
-                      <span style={{fontSize:14,color:TEXT,lineHeight:1.5,fontWeight:500,flex:1}}>{g.title}</span>
-                      {onNavigateToStrategy&&<span style={{fontSize:12,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {(amb45Text || amb45Buckets) && (
-                <div style={{flex:1,minWidth:0,borderLeft:"1px solid "+BORDER,paddingLeft:28}}>
-                  <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
-                    Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
+        <div>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:6}}>What This All Builds Toward</div>
+            <div style={{fontSize:22,fontWeight:800,color:TEXT,letterSpacing:-0.4,lineHeight:1.2}}>2030 Goals</div>
+          </div>
+          <div style={{display:"flex",gap:36,alignItems:"flex-start"}}>
+            {(crossIndicators.length > 0 || goals.length > 0) && (
+              <div style={{flex:2,minWidth:0,display:"flex",flexDirection:"column",gap:14}}>
+                {crossIndicators.map((ind,i) => (
+                  <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                    <span style={{width:22,height:22,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
+                    <div style={{fontSize:15,color:TEXT,lineHeight:1.7,fontWeight:400}}>{ind}</div>
                   </div>
-                  {amb45Buckets
-                    ? <ToaAmb45Buckets buckets={amb45Buckets} />
-                    : <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.65}}>{amb45Text}</div>
-                  }
+                ))}
+                {crossIndicators.length === 0 && goals.map(g => (
+                  <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
+                    style={{display:"flex",alignItems:"flex-start",gap:12,cursor:onNavigateToStrategy?"pointer":"default"}}>
+                    <span style={{width:22,height:22,borderRadius:"50%",background:g.color?(g.color+"22"):pc.light,color:g.color||pc.dark,border:"1px solid "+(g.color||pc.color)+"55",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{g.number}</span>
+                    <span style={{fontSize:15,color:TEXT,lineHeight:1.6,fontWeight:400,flex:1}}>{g.title}</span>
+                    {onNavigateToStrategy&&<span style={{fontSize:13,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {(amb45Text || amb45Buckets) && (
+              <div style={{flex:1,minWidth:0,borderLeft:"1px solid "+BORDER,paddingLeft:28}}>
+                <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
+                  Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
                 </div>
-              )}
-            </div>
+                {amb45Buckets
+                  ? <ToaAmb45Buckets buckets={amb45Buckets} />
+                  : <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7}}>{amb45Text}</div>
+                }
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -4603,7 +4543,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       )}
       <div style={{padding:"28px 32px"}}>
         {activeTab==="portfolio-overview"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:20}}>
+          <div style={{display:"flex",flexDirection:"column",gap:0}}>
             <PortfolioByTheNumbers portId={portId} portColor={pc} bows={bows}/>
             <PortfolioOverviewToa portId={portId} portfolio={portfolio} bows={bows} portColor={pc} portShortTitles={SHORT_TITLES} onNavigateToStrategy={onNavigateToStrategy}/>
           </div>
