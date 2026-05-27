@@ -4688,6 +4688,49 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
         )}
         {activeTab==="bow"&&currentBow&&(
           <div>
+            {/* ── BOW KPI strip ── */}
+            {(()=>{
+              const yrIdx = YEARS.indexOf(CURRENT_YEAR);
+              const bowAllTargets = currentBow.outcomes.flatMap(o =>
+                (o.executionTargets[CURRENT_YEAR]||[])
+                  .map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)})
+                  .filter(t=>t.text&&!t.text.startsWith("[Placeholder]"))
+              );
+              const completedTargets = bowAllTargets.filter(t=>t.completion==="Complete").length;
+              const totalTargets = bowAllTargets.length;
+              const bowAllInds = currentBow.outcomes.flatMap(o=>
+                (o.impactIndicators||[]).filter(i=>i.text&&!i.text.startsWith("[Placeholder]"))
+              );
+              let onTrack=0,watch=0,offTrack=0,missingData=0;
+              bowAllInds.forEach(ind=>{
+                const {actuals}=getIndData(ind);
+                if(actuals[yrIdx]===null||actuals[yrIdx]===undefined){ missingData++; }
+                else {
+                  const s=ind.manualStatus||autoSuggestStatus(ind);
+                  if(s==="Exceeds Expectations"||s==="Meets Expectations") onTrack++;
+                  else if(s==="Slightly Below Expectations") watch++;
+                  else offTrack++;
+                }
+              });
+              const kpis = [
+                {label:"Targets Complete", value:`${completedTargets}/${totalTargets}`, sub:CURRENT_YEAR+" execution targets", color:"#059669"},
+                {label:"On Track",         value:onTrack,    sub:"indicators",                    color:"#059669"},
+                {label:"Watch",            value:watch,      sub:"indicators",                    color:"#D97706"},
+                {label:"Off Track",        value:offTrack,   sub:"indicators",                    color:"#DC2626"},
+                {label:"Missing Data",     value:missingData,sub:"no "+CURRENT_YEAR+" actual",    color:TEXT_MUTED},
+              ];
+              return (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:22}}>
+                  {kpis.map(k=>(
+                    <div key={k.label} style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"16px 18px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>{k.label}</div>
+                      <div style={{fontSize:32,fontWeight:800,color:k.color,lineHeight:1,marginBottom:5}}>{k.value}</div>
+                      <div style={{fontSize:12,color:TEXT_SUB}}>{k.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
               {/* BOW name row */}
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
