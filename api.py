@@ -433,7 +433,7 @@ def get_bow_portfolio_links(bow_id):
               l.portfolio_outcome_id,
               l.contribution_type,
               bo.title         AS bow_outcome_title,
-              po.short_title   AS portfolio_outcome_title
+              COALESCE(NULLIF(po.title, ''), po.short_title) AS portfolio_outcome_title
             FROM {SCHEMA}.bow_portfolio_outcome_links l
             JOIN {SCHEMA}.bow_outcomes bo
               ON bo.outcome_id = l.bow_outcome_id
@@ -1679,7 +1679,7 @@ def get_all_portfolio_indicators():
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   NULL           AS bow_id,
                   NULL           AS bow_title,
-                  po.short_title AS outcome_title
+                  COALESCE(NULLIF(po.title, ''), po.short_title) AS outcome_title
                 FROM {SCHEMA}.portfolio_indicators i
                 LEFT JOIN {SCHEMA}.portfolio_outcomes po ON i.outcome_id = po.outcome_id
                 ORDER BY i.portfolio_id, po.sort_order, i.indicator_id"""
@@ -1698,7 +1698,7 @@ def get_all_portfolio_indicators():
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   NULL           AS bow_id,
                   NULL           AS bow_title,
-                  po.short_title AS outcome_title
+                  COALESCE(NULLIF(po.title, ''), po.short_title) AS outcome_title
                 FROM {SCHEMA}.portfolio_indicators i
                 LEFT JOIN {SCHEMA}.portfolio_outcomes po ON i.outcome_id = po.outcome_id
                 ORDER BY i.portfolio_id, po.sort_order, i.indicator_id"""
@@ -2612,7 +2612,8 @@ def get_portfolio_full(portfolio_id):
 
             try:
                 outcomes = _qc(cur,
-                    f"""SELECT outcome_id, portfolio_id, title, short_title,
+                    f"""SELECT outcome_id, portfolio_id,
+                               COALESCE(NULLIF(title, ''), short_title) AS title,
                                COALESCE(text, outcome) AS text,
                                sort_order, investments_inputs
                         FROM {SCHEMA}.portfolio_outcomes
@@ -2628,6 +2629,8 @@ def get_portfolio_full(portfolio_id):
                 for o in outcomes:
                     if not o.get("text") and o.get("outcome"):
                         o["text"] = o["outcome"]
+                    if not o.get("title") and o.get("short_title"):
+                        o["title"] = o["short_title"]
 
             try:
                 indicators = _qc(cur,
@@ -3305,7 +3308,7 @@ def get_indicators_catalog():
                    i.baseline,
                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                    COALESCE(b.status, 'draft') AS status,
-                   po.short_title AS outcome_title
+                   COALESCE(NULLIF(po.title, ''), po.short_title) AS outcome_title
             FROM {SCHEMA}.portfolio_indicators i
             LEFT JOIN {SCHEMA}.bow_indicators b ON b.indicator_id = i.bow_indicator_id
             LEFT JOIN {SCHEMA}.portfolio_outcomes po ON po.outcome_id = i.outcome_id
