@@ -39,6 +39,12 @@ def dashboard():
 DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "adb-527625614048962.2.azuredatabricks.net")
 HTTP_PATH       = os.environ.get("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/0cd0e380d94af214")
 
+# L-1: warn loudly at startup if env vars are missing so hardcoded fallbacks are never silent
+if not os.environ.get("DATABRICKS_HOST"):
+    print("[WARNING] DATABRICKS_HOST env var not set — using hardcoded fallback value")
+if not os.environ.get("DATABRICKS_HTTP_PATH"):
+    print("[WARNING] DATABRICKS_HTTP_PATH env var not set — using hardcoded fallback value")
+
 CATALOG       = "usp_data"
 SCHEMA        = f"{CATALOG}.usp_strategy"
 INVEST_SCHEMA = f"{CATALOG}.invest"
@@ -117,6 +123,9 @@ def health():
 @app.route("/api/debug")
 def debug():
     """Surfaces DB connection details and any errors — use to diagnose connectivity issues."""
+    # L-2: require authenticated caller (header injected by Databricks App proxy)
+    if not request.headers.get("X-Forwarded-Email"):
+        return jsonify({"error": "Authentication required"}), 403
     token = request.headers.get("X-Forwarded-Access-Token")
     result = {
         "token_present": bool(token),
@@ -202,6 +211,8 @@ def debug():
 @app.route("/api/debug-ids")
 def debug_ids():
     """Exposes the actual bow_id values in each table — use to diagnose ID mismatches."""
+    if not request.headers.get("X-Forwarded-Email"):
+        return jsonify({"error": "Authentication required"}), 403
     try:
         bows    = query(f"SELECT bow_id FROM {SCHEMA}.bows ORDER BY sort_order")
         ind_ids = query(f"SELECT DISTINCT bow_id FROM {SCHEMA}.bow_indicators")
@@ -422,6 +433,8 @@ def get_bow_portfolio_links(bow_id):
 @app.route("/api/debug/bow-links/<bow_id>")
 def debug_bow_links(bow_id):
     """Diagnostic: shows raw bow_outcomes and bow_portfolio_outcome_links for a BOW."""
+    if not request.headers.get("X-Forwarded-Email"):
+        return jsonify({"error": "Authentication required"}), 403
     bow_outcomes = query(
         f"SELECT outcome_id, title FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
         [bow_id]
@@ -440,6 +453,8 @@ def debug_bow_links(bow_id):
 @app.route("/api/debug/portfolio-outcomes/<portfolio_id>")
 def debug_portfolio_outcomes(portfolio_id):
     """Diagnostic: shows outcome_id values stored in portfolio_outcomes for this portfolio."""
+    if not request.headers.get("X-Forwarded-Email"):
+        return jsonify({"error": "Authentication required"}), 403
     rows = query(
         f"SELECT outcome_id, short_title, sort_order FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
         [portfolio_id]
@@ -559,6 +574,13 @@ def update_target_status(target_id):
     completion = data.get("completion")
     notes      = data.get("notes")
     updated_by = _actor(data) or data.get("updated_by", "dashboard")
+    # M-1: verify parent execution_targets row exists before writing status
+    parent = query(
+        f"SELECT 1 FROM {SCHEMA}.execution_targets WHERE target_id = ? AND `year` = ?",
+        [target_id, year]
+    )
+    if not parent:
+        return jsonify({"error": "execution target not found"}), 404
     # M-6: use MERGE INTO to eliminate SELECT-then-INSERT/UPDATE race condition
     execute(
         f"""MERGE INTO {SCHEMA}.execution_target_status AS tgt
@@ -705,13 +727,26 @@ def get_goal_actuals():
 @app.route("/api/actuals/bow/add", methods=["POST"])
 def add_bow_actual():
     data = request.json or {}
+    # M-5: verify indicator exists
+    ind_id = data.get("indicator_id")
+    ind_exists = query(
+        f"SELECT 1 FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? AND COALESCE(is_active, true) = true",
+        [ind_id]
+    ) if ind_id else []
+    if not ind_exists:
+        return jsonify({"error": "indicator_id not found"}), 404
+    # L-3: cast year to int
+    try:
+        year_val = int(data["year"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "year must be a valid integer"}), 400
     execute(
         f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
             (actual_id, indicator_id, bow_id, outcome_id, `year`,
              actual_value, reading_date, source_notes, loaded_by, loaded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
-        [data.get("actual_id", new_id()), data["indicator_id"], data["bow_id"],
-         data["outcome_id"], data["year"], data["actual_value"],
+        [data.get("actual_id", new_id()), ind_id, data["bow_id"],
+         data["outcome_id"], year_val, data["actual_value"],
          data.get("reading_date"), data.get("source_notes"),
          data.get("loaded_by", "dashboard")]
     )
@@ -720,13 +755,18 @@ def add_bow_actual():
 @app.route("/api/actuals/portfolio/add", methods=["POST"])
 def add_portfolio_actual():
     data = request.json or {}
+    # L-3: cast year to int
+    try:
+        year_val = int(data["year"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "year must be a valid integer"}), 400
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
             (actual_id, indicator_id, portfolio_id, outcome_id, `year`,
              actual_value, reading_date, source_notes, loaded_by, loaded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
         [data.get("actual_id", new_id()), data["indicator_id"], data["portfolio_id"],
-         data["outcome_id"], data["year"], data["actual_value"],
+         data["outcome_id"], year_val, data["actual_value"],
          data.get("reading_date"), data.get("source_notes"),
          data.get("loaded_by", "dashboard")]
     )
@@ -735,12 +775,17 @@ def add_portfolio_actual():
 @app.route("/api/actuals/goal/add", methods=["POST"])
 def add_goal_actual():
     data = request.json or {}
+    # L-3: cast year to int
+    try:
+        year_val = int(data["year"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "year must be a valid integer"}), 400
     execute(
         f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
             (actual_id, goal_id, `year`, actual_value, reading_date,
              source_notes, loaded_by, loaded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
-        [data.get("actual_id", new_id()), data["goal_id"], data["year"],
+        [data.get("actual_id", new_id()), data["goal_id"], year_val,
          data["actual_value"], data.get("reading_date"),
          data.get("source_notes"), data.get("loaded_by", "dashboard")]
     )
@@ -933,6 +978,13 @@ def get_all_decisions():
 @app.route("/api/decisions/<decision_id>/update", methods=["POST"])
 def update_decision(decision_id):
     data = request.json or {}
+    # M-2: verify row exists so we never silently return ok on a no-op UPDATE
+    existing = query(
+        f"SELECT 1 FROM {SCHEMA}.key_decisions WHERE decision_id = ?",
+        [decision_id]
+    )
+    if not existing:
+        return jsonify({"error": "Decision not found"}), 404
     execute(
         f"""UPDATE {SCHEMA}.key_decisions
             SET signals          = ?,
@@ -1426,9 +1478,9 @@ def _build_budget_forecast_multi(years):
 
 @app.route("/api/budget-forecasts/multi-year")
 def get_budget_forecast_multi_year():
-    """Returns budget forecast for all budget years (2026–2029) in one response,
+    """Returns budget forecast for all budget years (2026–2030) in one response,
     using a single Databricks connection. Returns {year: [bow_rows]}."""
-    return jsonify(_build_budget_forecast_multi([2026, 2027, 2028, 2029]))
+    return jsonify(_build_budget_forecast_multi([2026, 2027, 2028, 2029, 2030]))
 
 
 @app.route("/api/budget-forecasts/summary")
@@ -1641,6 +1693,8 @@ def get_all_portfolio_indicators():
 @app.route("/api/portal-debug")
 def portal_debug():
     """Checks all tables the portal depends on — use to diagnose empty dropdowns."""
+    if not request.headers.get("X-Forwarded-Email"):
+        return jsonify({"error": "Authentication required"}), 403
     result = {}
     tables = [
         ("bows",             f"SELECT COUNT(*) AS n FROM {SCHEMA}.bows"),
@@ -1733,14 +1787,35 @@ def submit_actual():
     )
     submitted_by         = member[0]["display_name"] if member else email
     submitted_permission = member[0]["permission_level"] if member else None
+    # M-5: verify indicator exists before queuing the submission
+    ind_id = data.get("indicator_id")
+    if ind_id:
+        ind_exists = query(
+            f"""SELECT 1 FROM {SCHEMA}.bow_indicators
+                    WHERE indicator_id = ? AND COALESCE(is_active, true) = true
+                UNION ALL
+                SELECT 1 FROM {SCHEMA}.portfolio_indicators
+                    WHERE indicator_id = ?
+                LIMIT 1""",
+            [ind_id, ind_id]
+        )
+        if not ind_exists:
+            return jsonify({"error": "indicator_id not found"}), 404
+    # L-3: validate and cast year
+    try:
+        year_val = int(data["year"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "year must be a valid integer"}), 400
+    if not 2020 <= year_val <= 2035:
+        return jsonify({"error": "year out of valid range (2020–2035)"}), 400
     execute(
         f"""INSERT INTO {SCHEMA}.pending_actuals
             (pending_id, indicator_id, `level`, entity_id, `year`, `period`,
              submitted_value, reading_date, source_notes, notes,
              submitted_by, submitted_permission, submitted_at, `status`)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
-        [new_id(), data.get("indicator_id"), data["level"],
-         data["entity_id"], data["year"], data.get("period"),
+        [new_id(), ind_id, data["level"],
+         data["entity_id"], year_val, data.get("period"),
          data["submitted_value"], data.get("reading_date"), data.get("source_notes"),
          data.get("notes"),
          submitted_by, submitted_permission]
@@ -2217,14 +2292,18 @@ def _fetch_edit_map(entity_ids):
 def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, rationale, revision_reason, edited_by):
     if not LOGGING_ENABLED:
         return
-    execute(
-        f"""INSERT INTO {SCHEMA}.content_edit_log
-            (log_id, entity_type, entity_id, bow_id, portfolio_id,
-             changes, rationale, revision_reason, edited_by, edited_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
-        [new_id(), entity_type, entity_id, bow_id, portfolio_id,
-         _json.dumps(changes_dict), rationale or None, revision_reason or None, edited_by]
-    )
+    # L-7: wrap in try/except so a log failure never kills the parent data write
+    try:
+        execute(
+            f"""INSERT INTO {SCHEMA}.content_edit_log
+                (log_id, entity_type, entity_id, bow_id, portfolio_id,
+                 changes, rationale, revision_reason, edited_by, edited_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+            [new_id(), entity_type, entity_id, bow_id, portfolio_id,
+             _json.dumps(changes_dict), rationale or None, revision_reason or None, edited_by]
+        )
+    except Exception as e:
+        print(f"[_log_edit] WARNING: audit trail write failed for {entity_type}/{entity_id}: {e}")
 
 def _build_changes(old_row, new_data, allowed_fields):
     """Returns dict of {field: {old, new}} for fields that actually changed."""
