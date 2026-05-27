@@ -8611,7 +8611,7 @@ function App() {
         </div>
 
         {/* Page content */}
-        <div style={{flex:1,padding:activeView.type==="data-model"?"0":"32px 36px",maxWidth:activeView.type==="data-model"?"100%":1400,width:"100%",boxSizing:"border-box",display:"flex",flexDirection:"column"}}>
+        <div style={{flex:1,padding:activeView.type==="data-model"?"0":"32px 36px",width:"100%",boxSizing:"border-box",display:"flex",flexDirection:"column"}}>
           {activeView.type==="data-model"&&(
             <DataModelExplorer/>
           )}
