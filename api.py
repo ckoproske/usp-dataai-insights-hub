@@ -5,6 +5,12 @@ from email.mime.text import MIMEText
 
 app = Flask(__name__)
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    print(f"[unhandled] {traceback.format_exc()}")
+    return jsonify({"error": str(e)}), 500
+
 # ── Frontend routes ───────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -527,33 +533,28 @@ def get_targets(bow_id):
 @app.route("/api/targets/<target_id>/status", methods=["POST"])
 def update_target_status(target_id):
     """Upsert execution target status. Write to execution_target_status only — target text is read-only."""
-    data = request.json
-    year = data.get("year")
-    # Check if row exists
-    existing = query(
-        f"SELECT target_id FROM {SCHEMA}.execution_target_status WHERE target_id = ? AND year = ?",
-        [target_id, year]
+    data       = request.json or {}
+    year       = data.get("year")
+    completion = data.get("completion")
+    notes      = data.get("notes")
+    updated_by = _actor(data) or data.get("updated_by", "dashboard")
+    # M-6: use MERGE INTO to eliminate SELECT-then-INSERT/UPDATE race condition
+    execute(
+        f"""MERGE INTO {SCHEMA}.execution_target_status AS tgt
+            USING (SELECT ? AS target_id, ? AS yr, ? AS completion,
+                          ? AS notes, ? AS updated_by) AS src
+            ON tgt.target_id = src.target_id AND tgt.`year` = src.yr
+            WHEN MATCHED THEN UPDATE SET
+                tgt.completion   = src.completion,
+                tgt.notes        = src.notes,
+                tgt.last_updated = current_timestamp(),
+                tgt.updated_by   = src.updated_by
+            WHEN NOT MATCHED THEN INSERT
+                (target_id, `year`, completion, notes, last_updated, updated_by)
+                VALUES (src.target_id, src.yr, src.completion, src.notes,
+                        current_timestamp(), src.updated_by)""",
+        [target_id, year, completion, notes, updated_by]
     )
-    if existing:
-        execute(
-            f"""UPDATE {SCHEMA}.execution_target_status
-                SET completion   = ?,
-                    notes        = ?,
-                    last_updated = current_timestamp(),
-                    updated_by   = ?
-                WHERE target_id  = ?
-                  AND year       = ?""",
-            [data.get("completion"), data.get("notes"),
-             data.get("updated_by", "dashboard"), target_id, year]
-        )
-    else:
-        execute(
-            f"""INSERT INTO {SCHEMA}.execution_target_status
-                (target_id, year, completion, notes, last_updated, updated_by)
-                VALUES (?, ?, ?, ?, current_timestamp(), ?)""",
-            [target_id, year, data.get("completion"), data.get("notes"),
-             data.get("updated_by", "dashboard")]
-        )
     return jsonify({"status": "ok", "target_id": target_id})
 
 
@@ -682,10 +683,10 @@ def get_goal_actuals():
 
 @app.route("/api/actuals/bow/add", methods=["POST"])
 def add_bow_actual():
-    data = request.json
+    data = request.json or {}
     execute(
         f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
-            (actual_id, indicator_id, bow_id, outcome_id, year,
+            (actual_id, indicator_id, bow_id, outcome_id, `year`,
              actual_value, reading_date, source_notes, loaded_by, loaded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
         [data.get("actual_id", new_id()), data["indicator_id"], data["bow_id"],
@@ -697,10 +698,10 @@ def add_bow_actual():
 
 @app.route("/api/actuals/portfolio/add", methods=["POST"])
 def add_portfolio_actual():
-    data = request.json
+    data = request.json or {}
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
-            (actual_id, indicator_id, portfolio_id, outcome_id, year,
+            (actual_id, indicator_id, portfolio_id, outcome_id, `year`,
              actual_value, reading_date, source_notes, loaded_by, loaded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
         [data.get("actual_id", new_id()), data["indicator_id"], data["portfolio_id"],
@@ -712,10 +713,10 @@ def add_portfolio_actual():
 
 @app.route("/api/actuals/goal/add", methods=["POST"])
 def add_goal_actual():
-    data = request.json
+    data = request.json or {}
     execute(
         f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
-            (actual_id, goal_id, year, actual_value, reading_date,
+            (actual_id, goal_id, `year`, actual_value, reading_date,
              source_notes, loaded_by, loaded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
         [data.get("actual_id", new_id()), data["goal_id"], data["year"],
@@ -799,7 +800,17 @@ def get_goal_ratings():
 @app.route("/api/ratings/bow/<bow_id>/override", methods=["POST"])
 def override_bow_rating(bow_id):
     """Restricted. Append a human override row to bow_ratings."""
-    data = request.json
+    data  = request.json or {}
+    email = request.headers.get("X-Forwarded-Email", "unknown").strip() or "unknown"
+    if email != "unknown":
+        member = query(
+            f"SELECT permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [email]
+        )
+        if not member or member[0]["permission_level"] not in ("Leadership", "MLE"):
+            return jsonify({"error": "Insufficient permissions"}), 403
+    else:
+        return jsonify({"error": "Authentication required"}), 403
     execute(
         f"""INSERT INTO {SCHEMA}.bow_ratings
             (rating_id, bow_id, year,
@@ -899,7 +910,7 @@ def get_all_decisions():
 
 @app.route("/api/decisions/<decision_id>/update", methods=["POST"])
 def update_decision(decision_id):
-    data = request.json
+    data = request.json or {}
     execute(
         f"""UPDATE {SCHEMA}.key_decisions
             SET signals          = ?,
@@ -1445,14 +1456,15 @@ def take_budget_forecast_snapshot():
     import json as _j
     email = request.headers.get("X-Forwarded-Email", "").strip() or "unknown"
 
-    if email != "unknown":
-        member = query(
-            f"SELECT permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
-            [email]
-        )
-        level = member[0]['permission_level'] if member else None
-        if level not in ('Leadership', 'MLE'):
-            return jsonify({"error": "Insufficient permissions to take a snapshot"}), 403
+    # C-4: block unauthenticated requests — previously skipped the check when email == "unknown"
+    if email == "unknown":
+        return jsonify({"error": "Authentication required to take a snapshot"}), 403
+    member = query(
+        f"SELECT permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    if not member or member[0]['permission_level'] not in ('Leadership', 'MLE'):
+        return jsonify({"error": "Insufficient permissions to take a snapshot"}), 403
 
     data  = request.json or {}
     label = (data.get("label") or "").strip()
@@ -1688,7 +1700,7 @@ def get_pending_actuals():
 @app.route("/api/pending-actuals/submit", methods=["POST"])
 def submit_actual():
     """Submit a new actual for review. Name and role resolved from Databricks login token."""
-    data = request.json
+    data = request.json or {}
     email = request.headers.get("X-Forwarded-Email", "").strip() or None
     if not email:
         current_user = query("SELECT current_user() AS user")
@@ -1701,9 +1713,9 @@ def submit_actual():
     submitted_permission = member[0]["permission_level"] if member else None
     execute(
         f"""INSERT INTO {SCHEMA}.pending_actuals
-            (pending_id, indicator_id, level, entity_id, year, period,
+            (pending_id, indicator_id, `level`, entity_id, `year`, `period`,
              submitted_value, reading_date, source_notes, notes,
-             submitted_by, submitted_permission, submitted_at, status)
+             submitted_by, submitted_permission, submitted_at, `status`)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp(), 'pending')""",
         [new_id(), data.get("indicator_id"), data["level"],
          data["entity_id"], data["year"], data.get("period"),
@@ -1727,9 +1739,17 @@ def approve_actual(pending_id):
             return jsonify({"error": "Not found"}), 404
 
         r = row[0]
-        level    = r["level"]
+        level          = r["level"]
         reviewed_value = data.get("reviewed_value", r["submitted_value"])
-        reviewed_by    = data.get("reviewed_by", "dashboard")
+
+        # C-2: resolve reviewer server-side BEFORE any DB writes so INSERT and UPDATE
+        # both use the same identity (never trust client-supplied reviewed_by).
+        reviewer_email  = _actor()
+        reviewer_member = query(
+            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [reviewer_email]
+        ) if reviewer_email != "unknown" else []
+        reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
 
         # Look up outcome_id from the indicator row (pending_actuals doesn't store it)
         ind_meta = query(
@@ -1738,10 +1758,12 @@ def approve_actual(pending_id):
         )
         outcome_id = ind_meta[0]["outcome_id"] if ind_meta else r.get("outcome_id")
 
+        # C-1: INSERT actual first so data is written before status flips.
+        # reviewed_by is server-derived (same value used in UPDATE below).
         if level == "bow":
             execute(
                 f"""INSERT INTO {SCHEMA}.bow_indicator_actuals
-                    (actual_id, indicator_id, bow_id, outcome_id, year, period,
+                    (actual_id, indicator_id, bow_id, outcome_id, `year`, `period`,
                      actual_value, reading_date, source_notes, loaded_by, loaded_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
                 [new_id(), r["indicator_id"], r["entity_id"], outcome_id,
@@ -1756,7 +1778,7 @@ def approve_actual(pending_id):
             port_outcome_id = ind_meta_port[0]["outcome_id"] if ind_meta_port else r.get("outcome_id")
             execute(
                 f"""INSERT INTO {SCHEMA}.portfolio_indicator_actuals
-                    (actual_id, indicator_id, portfolio_id, outcome_id, year, period,
+                    (actual_id, indicator_id, portfolio_id, outcome_id, `year`, `period`,
                      actual_value, reading_date, source_notes, loaded_by, loaded_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, current_timestamp())""",
                 [new_id(), r["indicator_id"], r["entity_id"], port_outcome_id,
@@ -1766,26 +1788,19 @@ def approve_actual(pending_id):
         elif level == "goal":
             execute(
                 f"""INSERT INTO {SCHEMA}.strategy_goal_actuals
-                    (actual_id, goal_id, year, actual_value, reading_date,
+                    (actual_id, goal_id, `year`, actual_value, reading_date,
                      source_notes, loaded_by, loaded_at)
                     VALUES (?, ?, ?, ?, current_date(), ?, ?, current_timestamp())""",
                 [new_id(), r["entity_id"], r["year"], reviewed_value,
                  "pending_actuals_review", reviewed_by]
             )
 
-        reviewer_email = _actor()
-        reviewer_member = query(
-            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
-            [reviewer_email]
-        ) if reviewer_email != "unknown" else []
-        reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
-
         was_edited = (reviewed_value != r["submitted_value"])
         decision   = "approved with edit" if was_edited else "approved"
 
         execute(
             f"""UPDATE {SCHEMA}.pending_actuals
-                SET status         = 'approved',
+                SET `status`       = 'approved',
                     reviewed_value = ?,
                     reviewed_by    = ?,
                     reviewed_at    = current_timestamp()
@@ -1941,7 +1956,7 @@ def get_indicator_context(indicator_id):
 @app.route("/api/insights/submit", methods=["POST"])
 def submit_insight():
     """Submit a qualitative insight directly to bow_notes (no review queue)."""
-    data = request.json
+    data = request.json or {}
     email = request.headers.get("X-Forwarded-Email", "").strip() or None
     if not email:
         current_user_row = query("SELECT current_user() AS user")
@@ -1975,7 +1990,7 @@ def submit_insight():
 
     execute(
         f"""INSERT INTO {SCHEMA}.bow_notes
-            (note_id, bow_id, outcome_id, year, note_text, last_updated, updated_by)
+            (note_id, bow_id, outcome_id, `year`, note_text, last_updated, updated_by)
             VALUES (?, ?, NULL, ?, ?, current_timestamp(), ?)""",
         [new_id(), bow_id, year, note_text, submitted_by]
     )
@@ -2011,16 +2026,26 @@ def get_assumption_confidence():
 @app.route("/api/assumption-confidence/<assumption_id>/override", methods=["POST"])
 def override_assumption_confidence(assumption_id):
     """Restricted. Append a human override row to assumption_confidence."""
-    data = request.json
+    data  = request.json or {}
+    email = request.headers.get("X-Forwarded-Email", "unknown").strip() or "unknown"
+    if email != "unknown":
+        member = query(
+            f"SELECT permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [email]
+        )
+        if not member or member[0]["permission_level"] not in ("Leadership", "MLE"):
+            return jsonify({"error": "Insufficient permissions"}), 403
+    else:
+        return jsonify({"error": "Authentication required"}), 403
     execute(
         f"""INSERT INTO {SCHEMA}.assumption_confidence
             (confidence_id, assumption_id, confidence, rationale,
              data_considered, human_override, override_reasoning,
              assessed_by, assessed_at)
             VALUES (?, ?, ?, ?, ?, TRUE, ?, ?, current_timestamp())""",
-        [new_id(), assumption_id, data["confidence"], data.get("rationale"),
+        [new_id(), assumption_id, data.get("confidence"), data.get("rationale"),
          data.get("data_considered"), data.get("override_reasoning"),
-         data.get("assessed_by", "dashboard")]
+         email]
     )
     return jsonify({"status": "ok"})
 
@@ -2041,32 +2066,35 @@ def get_bow_notes(bow_id):
 
 @app.route("/api/notes/bow/<bow_id>/upsert", methods=["POST"])
 def upsert_bow_note(bow_id):
-    data = request.json
+    data       = request.json or {}
     outcome_id = data.get("outcome_id")
-    existing = query(
-        f"""SELECT note_id FROM {SCHEMA}.bow_notes
-            WHERE bow_id = ?
-              AND (outcome_id = ? OR (outcome_id IS NULL AND ? IS NULL))""",
-        [bow_id, outcome_id, outcome_id]
+    note_text  = data.get("note_text")
+    updated_by = _actor(data) or data.get("updated_by", "dashboard")
+    year_val   = data.get("year")
+    # M-6: MERGE INTO eliminates SELECT-then-INSERT/UPDATE race condition.
+    # Databricks MERGE requires the source to carry all columns needed for INSERT.
+    execute(
+        f"""MERGE INTO {SCHEMA}.bow_notes AS tgt
+            USING (
+                SELECT ? AS bow_id,
+                       ? AS outcome_id,
+                       ? AS note_text,
+                       ? AS updated_by,
+                       ? AS yr
+            ) AS src
+            ON tgt.bow_id = src.bow_id
+               AND (tgt.outcome_id = src.outcome_id
+                    OR (tgt.outcome_id IS NULL AND src.outcome_id IS NULL))
+            WHEN MATCHED THEN UPDATE SET
+                tgt.note_text    = src.note_text,
+                tgt.last_updated = current_timestamp(),
+                tgt.updated_by   = src.updated_by
+            WHEN NOT MATCHED THEN INSERT
+                (note_id, bow_id, outcome_id, `year`, note_text, last_updated, updated_by)
+                VALUES ('{new_id()}', src.bow_id, src.outcome_id, src.yr,
+                        src.note_text, current_timestamp(), src.updated_by)""",
+        [bow_id, outcome_id, note_text, updated_by, year_val]
     )
-    if existing:
-        execute(
-            f"""UPDATE {SCHEMA}.bow_notes
-                SET note_text    = ?,
-                    last_updated = current_timestamp(),
-                    updated_by   = ?
-                WHERE note_id    = ?""",
-            [data.get("note_text"), data.get("updated_by", "dashboard"),
-             existing[0]["note_id"]]
-        )
-    else:
-        execute(
-            f"""INSERT INTO {SCHEMA}.bow_notes
-                (note_id, bow_id, outcome_id, year, note_text, last_updated, updated_by)
-                VALUES (?, ?, ?, ?, ?, current_timestamp(), ?)""",
-            [new_id(), bow_id, outcome_id, data.get("year"),
-             data.get("note_text"), data.get("updated_by", "dashboard")]
-        )
     return jsonify({"status": "ok"})
 
 @app.route("/api/notes/portfolio/<portfolio_id>")
@@ -2081,33 +2109,31 @@ def get_portfolio_notes(portfolio_id):
 
 @app.route("/api/notes/portfolio/<portfolio_id>/upsert", methods=["POST"])
 def upsert_portfolio_notes(portfolio_id):
-    data = request.json
-    year = data.get("year")
-    existing = query(
-        f"""SELECT tracking_id FROM {SCHEMA}.portfolio_tracking
-            WHERE portfolio_id = ? AND year = ?""",
-        [portfolio_id, year]
-    )
-    if existing:
-        execute(
-            f"""UPDATE {SCHEMA}.portfolio_tracking
-                SET notes            = ?,
-                    budget_annotation = ?,
-                    last_updated     = current_timestamp(),
-                    updated_by       = ?
-                WHERE tracking_id    = ?""",
-            [data.get("notes"), data.get("budget_annotation"),
-             data.get("updated_by", "dashboard"), existing[0]["tracking_id"]]
-        )
-    else:
-        execute(
-            f"""INSERT INTO {SCHEMA}.portfolio_tracking
-                (tracking_id, portfolio_id, year, notes, budget_annotation,
+    data              = request.json or {}
+    year              = data.get("year")
+    notes             = data.get("notes")
+    budget_annotation = data.get("budget_annotation")
+    updated_by        = _actor(data) or data.get("updated_by", "dashboard")
+    # M-6: MERGE INTO eliminates SELECT-then-INSERT/UPDATE race condition
+    execute(
+        f"""MERGE INTO {SCHEMA}.portfolio_tracking AS tgt
+            USING (
+                SELECT ? AS portfolio_id, ? AS yr,
+                       ? AS notes, ? AS budget_annotation, ? AS updated_by
+            ) AS src
+            ON tgt.portfolio_id = src.portfolio_id AND tgt.`year` = src.yr
+            WHEN MATCHED THEN UPDATE SET
+                tgt.notes             = src.notes,
+                tgt.budget_annotation = src.budget_annotation,
+                tgt.last_updated      = current_timestamp(),
+                tgt.updated_by        = src.updated_by
+            WHEN NOT MATCHED THEN INSERT
+                (tracking_id, portfolio_id, `year`, notes, budget_annotation,
                  last_updated, updated_by)
-                VALUES (?, ?, ?, ?, ?, current_timestamp(), ?)""",
-            [new_id(), portfolio_id, year, data.get("notes"),
-             data.get("budget_annotation"), data.get("updated_by", "dashboard")]
-        )
+                VALUES ('{new_id()}', src.portfolio_id, src.yr, src.notes,
+                        src.budget_annotation, current_timestamp(), src.updated_by)""",
+        [portfolio_id, year, notes, budget_annotation, updated_by]
+    )
     return jsonify({"status": "ok"})
 
 
@@ -2585,7 +2611,7 @@ BOW_OUTCOME_EDITABLE = {"title", "short_title", "text"}
 
 @app.route("/api/bow-outcomes/<outcome_id>", methods=["PATCH"])
 def update_bow_outcome(outcome_id):
-    data    = request.json
+    data    = request.json or {}
     user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE outcome_id = ?", [outcome_id])
     if not rows:
@@ -2609,7 +2635,7 @@ def update_bow_outcome(outcome_id):
 
 @app.route("/api/bow-outcomes", methods=["POST"])
 def add_bow_outcome():
-    data    = request.json
+    data    = request.json or {}
     bow_id  = data.get("bow_id")
     title   = (data.get("title") or "").strip()
     user    = _actor(data)
@@ -2653,7 +2679,7 @@ BOW_IND_EDITABLE = {
 
 @app.route("/api/bow-indicators/<indicator_id>", methods=["PATCH"])
 def update_bow_indicator(indicator_id):
-    data    = request.json
+    data    = request.json or {}
     user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
     if not rows:
@@ -2682,7 +2708,7 @@ def update_bow_indicator(indicator_id):
 
 @app.route("/api/bow-indicators", methods=["POST"])
 def add_bow_indicator():
-    data        = request.json
+    data        = request.json or {}
     bow_id      = data.get("bow_id")
     outcome_id  = data.get("outcome_id")
     text        = (data.get("text") or "").strip()
@@ -2728,7 +2754,7 @@ def delete_bow_indicator(indicator_id):
 
 @app.route("/api/execution-targets/<target_id>", methods=["PATCH"])
 def update_execution_target(target_id):
-    data    = request.json
+    data    = request.json or {}
     user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
     if not rows:
@@ -2750,7 +2776,7 @@ def update_execution_target(target_id):
 
 @app.route("/api/execution-targets", methods=["POST"])
 def add_execution_target():
-    data       = request.json
+    data       = request.json or {}
     bow_id     = data.get("bow_id")
     outcome_id = data.get("outcome_id")
     year       = data.get("year")
@@ -2759,14 +2785,14 @@ def add_execution_target():
     if not bow_id or not year or not text:
         return jsonify({"error": "bow_id, year, and text required"}), 400
     max_sort = query(
-        f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.execution_targets WHERE bow_id = ? AND year = ?",
+        f"SELECT MAX(sort_order) AS m FROM {SCHEMA}.execution_targets WHERE bow_id = ? AND `year` = ?",
         [bow_id, year]
     )
     sort_order = (max_sort[0]["m"] or 0) + 1
     tid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.execution_targets
-            (target_id, bow_id, outcome_id, year, `text`, sort_order)
+            (target_id, bow_id, outcome_id, `year`, `text`, sort_order)
             VALUES (?, ?, ?, ?, ?, ?)""",
         [tid, bow_id, outcome_id or None, year, text, sort_order]
     )
@@ -2796,7 +2822,7 @@ PORT_OUTCOME_EDITABLE = {"title", "short_title", "text", "outcome", "investments
 
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["PATCH"])
 def update_portfolio_outcome(outcome_id):
-    data    = request.json
+    data    = request.json or {}
     user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE outcome_id = ?", [outcome_id])
     if not rows:
@@ -2820,7 +2846,7 @@ def update_portfolio_outcome(outcome_id):
 
 @app.route("/api/portfolio-outcomes", methods=["POST"])
 def add_portfolio_outcome():
-    data         = request.json
+    data         = request.json or {}
     portfolio_id = data.get("portfolio_id")
     title        = (data.get("title") or "").strip()
     if not portfolio_id or not title:
@@ -2861,7 +2887,7 @@ PORT_IND_EDITABLE = {
 
 @app.route("/api/portfolio-indicators/<indicator_id>", methods=["PATCH"])
 def update_portfolio_indicator(indicator_id):
-    data    = request.json
+    data    = request.json or {}
     user    = _actor(data)
     rows    = query(f"SELECT * FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?", [indicator_id])
     if not rows:
@@ -2893,7 +2919,7 @@ def update_portfolio_indicator(indicator_id):
 
 @app.route("/api/portfolio-indicators", methods=["POST"])
 def add_portfolio_indicator():
-    data             = request.json
+    data             = request.json or {}
     portfolio_id     = data.get("portfolio_id")
     outcome_id       = data.get("outcome_id")
     bow_indicator_id = data.get("bow_indicator_id")
