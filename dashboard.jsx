@@ -4696,8 +4696,13 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                   .map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)})
                   .filter(t=>t.text&&!t.text.startsWith("[Placeholder]"))
               );
-              const completedTargets = bowAllTargets.filter(t=>t.completion==="Complete").length;
               const totalTargets = bowAllTargets.length;
+              const completionCounts = {"Not Started":0,"On Track":0,"Delayed":0,"Complete":0};
+              bowAllTargets.forEach(t=>{ if(completionCounts[t.completion]!==undefined) completionCounts[t.completion]++; });
+              const pieData = totalTargets > 0
+                ? COMPLETION_ORDER.filter(s=>completionCounts[s]>0).map(s=>({name:s,value:completionCounts[s],color:COMPLETION[s].color}))
+                : [{name:"None",value:1,color:BORDER}];
+
               const bowAllInds = currentBow.outcomes.flatMap(o=>
                 (o.impactIndicators||[]).filter(i=>i.text&&!i.text.startsWith("[Placeholder]"))
               );
@@ -4712,16 +4717,39 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                   else offTrack++;
                 }
               });
-              const kpis = [
-                {label:"Targets Complete", value:`${completedTargets}/${totalTargets}`, sub:CURRENT_YEAR+" execution targets", color:"#059669"},
-                {label:"On Track",         value:onTrack,    sub:"indicators",                    color:"#059669"},
-                {label:"Watch",            value:watch,      sub:"indicators",                    color:"#D97706"},
-                {label:"Off Track",        value:offTrack,   sub:"indicators",                    color:"#DC2626"},
-                {label:"Missing Data",     value:missingData,sub:"no "+CURRENT_YEAR+" actual",    color:TEXT_MUTED},
+
+              const indKpis = [
+                {label:"On Track",     value:onTrack,    sub:"indicators", color:"#059669"},
+                {label:"Watch",        value:watch,      sub:"indicators", color:"#D97706"},
+                {label:"Off Track",    value:offTrack,   sub:"indicators", color:"#DC2626"},
+                {label:"Missing Data", value:missingData,sub:"no "+CURRENT_YEAR+" actual", color:TEXT_MUTED},
               ];
+
               return (
-                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:22}}>
-                  {kpis.map(k=>(
+                <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr 1fr 1fr 1fr",gap:14,marginBottom:22}}>
+                  {/* Targets — pie chart card */}
+                  <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"16px 18px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:12}}>Execution Targets — {CURRENT_YEAR}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:14}}>
+                      <PieChart width={80} height={80} style={{flexShrink:0}}>
+                        <Pie data={pieData} cx={40} cy={40} innerRadius={24} outerRadius={40} dataKey="value" strokeWidth={0}>
+                          {pieData.map((entry,i)=><Cell key={i} fill={entry.color}/>)}
+                        </Pie>
+                      </PieChart>
+                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                        {COMPLETION_ORDER.map(s=>(
+                          <div key={s} style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{width:8,height:8,borderRadius:"50%",background:COMPLETION[s].color,flexShrink:0}}/>
+                            <span style={{fontSize:13,fontWeight:700,color:TEXT,minWidth:18}}>{completionCounts[s]}</span>
+                            <span style={{fontSize:11,color:TEXT_MUTED}}>{s}</span>
+                          </div>
+                        ))}
+                        <div style={{fontSize:11,color:TEXT_MUTED,marginTop:2}}>{totalTargets} total</div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Indicator stat cards */}
+                  {indKpis.map(k=>(
                     <div key={k.label} style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"16px 18px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
                       <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>{k.label}</div>
                       <div style={{fontSize:32,fontWeight:800,color:k.color,lineHeight:1,marginBottom:5}}>{k.value}</div>
