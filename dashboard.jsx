@@ -4423,25 +4423,24 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           {(crossIndicators.length > 0 || goals.length > 0) && (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14,marginBottom:(amb45Text||amb45Buckets)?28:0}}>
               {crossIndicators.map((ind,i) => {
-                const m = ind.match(/^(\d+(?:\.\d+)?%|\$?\d+(?:\.\d+)?[MBK]?(?:\s*\w+)?|\d+)/);
+                const m = ind.match(/^(\d+(?:\.\d+)?%|\$?\d+(?:[,.]\d+)?[MBK]?|\d+)/);
                 const val  = m ? m[1] : null;
-                const body = m ? ind.slice(m[0].length).replace(/^\s*/,"").replace(/^of /,"of ") : ind;
+                const body = m ? ind.slice(m[0].length).trim() : ind;
                 return (
-                  <div key={i} style={{background:SURFACE,border:"1px solid "+BORDER,borderTop:"3px solid "+pc.color,borderRadius:10,padding:"20px 22px",display:"flex",flexDirection:"column",gap:8}}>
-                    {val
-                      ? <div style={{fontSize:40,fontWeight:800,color:pc.color,letterSpacing:-1.5,lineHeight:1}}>{val}</div>
-                      : <span style={{width:22,height:22,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{i+1}</span>
-                    }
+                  <div key={i} style={{background:pc.light,border:"1px solid "+pc.color+"33",borderRadius:12,padding:"22px 24px",display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>{val || (i+1)}</div>
                     <div style={{fontSize:14,color:TEXT,lineHeight:1.65}}>{body}</div>
                   </div>
                 );
               })}
               {crossIndicators.length === 0 && goals.map(g => (
                 <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                  style={{background:SURFACE,border:"1px solid "+BORDER,borderTop:"3px solid "+(g.color||pc.color),borderRadius:10,padding:"20px 22px",display:"flex",flexDirection:"column",gap:8,cursor:onNavigateToStrategy?"pointer":"default"}}>
-                  <div style={{fontSize:40,fontWeight:800,color:g.color||pc.color,letterSpacing:-1.5,lineHeight:1}}>Goal {g.number}</div>
-                  <div style={{fontSize:14,color:TEXT,lineHeight:1.65,flex:1}}>{g.title}</div>
-                  {onNavigateToStrategy && <div style={{fontSize:12,color:TEXT_MUTED,marginTop:4}}>View in strategy ↗</div>}
+                  style={{background:pc.light,border:"1px solid "+pc.color+"33",borderRadius:12,padding:"22px 24px",display:"flex",flexDirection:"column",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
+                  <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>
+                    {g.goal2030 != null ? g.goal2030+"%" : g.number}
+                  </div>
+                  <div style={{fontSize:14,color:TEXT,lineHeight:1.65,flex:1}}>{g.target || g.title}</div>
+                  {onNavigateToStrategy && <div style={{fontSize:12,color:pc.dark,marginTop:4,fontWeight:600}}>View in strategy ↗</div>}
                 </div>
               ))}
             </div>
