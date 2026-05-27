@@ -4299,10 +4299,12 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
               <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:6}}>How We Work</div>
               <div style={{fontSize:22,fontWeight:800,color:TEXT,letterSpacing:-0.4,lineHeight:1.2}}>Bodies of Work</div>
             </div>
-            <button onClick={()=>setShowMatrix(v=>!v)}
-              style={{fontSize:12,fontWeight:500,color:TEXT_SUB,background:SURFACE,border:"1px solid "+BORDER,borderRadius:6,padding:"7px 14px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
-              {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
-            </button>
+            {portId === "sfl" && (
+              <button onClick={()=>setShowMatrix(v=>!v)}
+                style={{fontSize:12,fontWeight:500,color:TEXT_SUB,background:SURFACE,border:"1px solid "+BORDER,borderRadius:6,padding:"7px 14px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
+              </button>
+            )}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
             {bows.map(bow => (
@@ -4318,8 +4320,8 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
             ))}
           </div>
 
-          {/* Alignment matrix */}
-          {showMatrix && (
+          {/* Alignment matrix — SFL only */}
+          {portId === "sfl" && showMatrix && (
             <div style={{marginTop:20,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
               <div style={{padding:"12px 18px 4px",fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,background:"#FAFAF8",borderBottom:"1px solid "+BORDER}}>BOW Outcome → Portfolio Outcome Alignment</div>
               <div style={{overflowX:"auto",padding:"0 18px 14px"}}>
