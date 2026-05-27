@@ -450,7 +450,18 @@ def debug_portfolio_outcomes(portfolio_id):
 @app.route("/api/admin/seed-sfl-links", methods=["POST"])
 def seed_sfl_links():
     """Seed/re-seed bow_portfolio_outcome_links for all SFL BOW outcomes.
-    Uses the actual portfolio_outcome_id values from the portfolio_outcomes table."""
+    Uses the actual portfolio_outcome_id values from the portfolio_outcomes table.
+    Restricted to Leadership and MLE permission levels."""
+    # L-8: require authenticated Leadership/MLE user
+    email = request.headers.get("X-Forwarded-Email", "").strip() or "unknown"
+    if email == "unknown":
+        return jsonify({"error": "Authentication required"}), 403
+    member = query(
+        f"SELECT permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    if not member or member[0]["permission_level"] not in ("Leadership", "MLE"):
+        return jsonify({"error": "Insufficient permissions"}), 403
 
     # Full mapping: (bow_outcome_id, portfolio_outcome_id, sort_order)
     # portfolio_outcome_ids match portfolio_outcomes.outcome_id in the DB
@@ -913,7 +924,8 @@ def get_all_decisions():
         f"""SELECT kd.*
             FROM {SCHEMA}.key_decisions kd
             WHERE {' AND '.join(where)}
-            ORDER BY kd.level, kd.status, kd.timing""",
+            ORDER BY kd.level, kd.status, kd.timing
+            LIMIT 500""",
         params
     )
     return jsonify(rows)
@@ -925,7 +937,7 @@ def update_decision(decision_id):
         f"""UPDATE {SCHEMA}.key_decisions
             SET signals          = ?,
                 recorded_outcome = ?,
-                status           = ?,
+                `status`         = ?,
                 last_updated     = current_timestamp(),
                 updated_by       = ?
             WHERE decision_id    = ?""",
@@ -947,12 +959,12 @@ COFUND_SUBQUERY = f"""
   SELECT
     a.Investment_ID,
     array_join(array_sort(collect_set(d.BoW_Managing_Strategy)), ', ') AS co_funding_teams
-  FROM usp_data.usp_strategy.invest_bow_allocation a
-  JOIN usp_data.usp_strategy.invest_bow_details d
+  FROM {SCHEMA}.invest_bow_allocation a
+  JOIN {SCHEMA}.invest_bow_details d
     ON a.BoW_ID = d.BoW_ID
   WHERE a.BoW_ID NOT IN (
     SELECT invest_bow_id
-    FROM usp_data.usp_strategy.bows
+    FROM {SCHEMA}.bows
     WHERE invest_bow_id IS NOT NULL
   )
     AND d.BoW_Managing_Strategy IS NOT NULL
@@ -1084,7 +1096,7 @@ def get_investment_bow_details(investment_id):
 @app.route("/api/investments/<investment_id>/overlay", methods=["POST"])
 def update_investment_overlay(investment_id):
     """Upsert internal notes overlay for an investment."""
-    data = request.json
+    data = request.json or {}
     # Resolve author server-side — don't trust client-supplied updated_by
     email = request.headers.get("X-Forwarded-Email", "").strip() or None
     if email:
@@ -1733,7 +1745,7 @@ def submit_actual():
          data.get("notes"),
          submitted_by, submitted_permission]
     )
-    return jsonify({"status": "ok", "submitted_by": submitted_by, "submitted_permission": submitted_permission})
+    return jsonify({"status": "ok", "submitted_by": submitted_by})
 
 @app.route("/api/pending-actuals/<pending_id>/approve", methods=["POST"])
 def approve_actual(pending_id):
@@ -1804,6 +1816,9 @@ def approve_actual(pending_id):
                 [new_id(), r["entity_id"], r["year"], reviewed_value,
                  "pending_actuals_review", reviewed_by]
             )
+        else:
+            # M-4: unknown level — reject before touching pending_actuals
+            return jsonify({"error": f"Unknown approval level: {level!r}"}), 400
 
         was_edited = (reviewed_value != r["submitted_value"])
         decision   = "approved with edit" if was_edited else "approved"
@@ -1865,71 +1880,78 @@ def approve_actual(pending_id):
 
 @app.route("/api/pending-actuals/<pending_id>/reject", methods=["POST"])
 def reject_actual(pending_id):
-    data = request.json or {}
-    row  = query(f"SELECT * FROM {SCHEMA}.pending_actuals WHERE pending_id = ?", [pending_id])
-    if not row:
-        return jsonify({"error": "Not found"}), 404
-    r = row[0]
+    import traceback
+    try:
+        data = request.json or {}
+        row  = query(f"SELECT * FROM {SCHEMA}.pending_actuals WHERE pending_id = ?", [pending_id])
+        if not row:
+            return jsonify({"error": "Not found"}), 404
+        r = row[0]
 
-    reviewer_email = _actor(data)
-    reviewer_member = query(
-        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
-        [reviewer_email]
-    ) if reviewer_email != "unknown" else []
-    reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
+        reviewer_email = _actor(data)
+        reviewer_member = query(
+            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [reviewer_email]
+        ) if reviewer_email != "unknown" else []
+        reviewed_by = reviewer_member[0]["display_name"] if reviewer_member else (reviewer_email or "reviewer")
 
-    execute(
-        f"""UPDATE {SCHEMA}.pending_actuals
-            SET status         = 'rejected',
-                reviewer_notes = ?,
-                reviewed_by    = ?,
-                reviewed_at    = current_timestamp()
-            WHERE pending_id   = ?""",
-        [data.get("reviewer_notes"), reviewed_by, pending_id]
-    )
-
-    # Look up indicator label for the email body
-    ind_rows = query(
-        f"SELECT `text` FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
-        f"SELECT `text` FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
-        [r["indicator_id"], r["indicator_id"]]
-    )
-    ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
-
-    # Send email to submitter
-    submitter_rows = query(
-        f"SELECT email FROM {SCHEMA}.team_members WHERE display_name = ? AND is_active = true",
-        [r["submitted_by"]]
-    )
-    if submitter_rows:
-        submitter_email = submitter_rows[0]["email"]
-        reviewer_notes  = data.get("reviewer_notes") or ""
-        body = textwrap.dedent(f"""\
-            Hi {r['submitted_by']},
-
-            Your data submission has been rejected.
-
-            Indicator: {ind_label}
-            Year / period: {r['year']}{' · ' + r['period'] if r.get('period') else ''}
-            Submitted value: {r['submitted_value']}
-
-            Reviewer feedback:
-            {reviewer_notes}
-
-            Reviewed by: {reviewed_by}
-
-            If you have questions or would like to resubmit, please reach out to the MLE team or
-            resubmit corrected data through the Data Hub portal.
-
-            — Measurement & Insights Data Hub
-        """)
-        _send_notification_email(
-            submitter_email,
-            f"Data submission rejected: {ind_label} ({r['year']})",
-            body
+        execute(
+            f"""UPDATE {SCHEMA}.pending_actuals
+                SET `status`       = 'rejected',
+                    reviewer_notes = ?,
+                    reviewed_by    = ?,
+                    reviewed_at    = current_timestamp()
+                WHERE pending_id   = ?""",
+            [data.get("reviewer_notes"), reviewed_by, pending_id]
         )
 
-    return jsonify({"status": "ok"})
+        # Look up indicator label for the email body
+        ind_rows = query(
+            f"SELECT `text` FROM {SCHEMA}.bow_indicators WHERE indicator_id = ? UNION ALL "
+            f"SELECT `text` FROM {SCHEMA}.portfolio_indicators WHERE indicator_id = ?",
+            [r["indicator_id"], r["indicator_id"]]
+        )
+        ind_label = ind_rows[0]["text"] if ind_rows else r["indicator_id"]
+
+        # Send email to submitter
+        submitter_rows = query(
+            f"SELECT email FROM {SCHEMA}.team_members WHERE display_name = ? AND is_active = true",
+            [r["submitted_by"]]
+        )
+        if submitter_rows:
+            submitter_email = submitter_rows[0]["email"]
+            reviewer_notes  = data.get("reviewer_notes") or ""
+            body = textwrap.dedent(f"""\
+                Hi {r['submitted_by']},
+
+                Your data submission has been rejected.
+
+                Indicator: {ind_label}
+                Year / period: {r['year']}{' · ' + r['period'] if r.get('period') else ''}
+                Submitted value: {r['submitted_value']}
+
+                Reviewer feedback:
+                {reviewer_notes}
+
+                Reviewed by: {reviewed_by}
+
+                If you have questions or would like to resubmit, please reach out to the MLE team or
+                resubmit corrected data through the Data Hub portal.
+
+                — Measurement & Insights Data Hub
+            """)
+            _send_notification_email(
+                submitter_email,
+                f"Data submission rejected: {ind_label} ({r['year']})",
+                body
+            )
+
+        return jsonify({"status": "ok"})
+
+    except Exception as e:
+        msg = str(e)
+        print(f"[reject_actual] ERROR for {pending_id}:\n{traceback.format_exc()}")
+        return jsonify({"error": msg}), 500
 
 
 @app.route("/api/indicators/<indicator_id>/actuals")
@@ -2728,8 +2750,8 @@ def add_bow_indicator():
     iid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.bow_indicators
-            (indicator_id, bow_id, outcome_id, name, `text`, purpose, unit, collection_frequency,
-             baseline, source_id, measurement_level, status,
+            (indicator_id, bow_id, outcome_id, `name`, `text`, purpose, unit, collection_frequency,
+             baseline, source_id, measurement_level, `status`,
              data_quality_notes, tracking_notes,
              target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)""",
@@ -2972,8 +2994,8 @@ def add_portfolio_indicator():
     iid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_indicators
-            (indicator_id, portfolio_id, outcome_id, name, `text`, purpose, unit, collection_frequency,
-             baseline, source_id, measurement_level, status,
+            (indicator_id, portfolio_id, outcome_id, `name`, `text`, purpose, unit, collection_frequency,
+             baseline, source_id, measurement_level, `status`,
              data_quality_notes, tracking_notes,
              target_2026, target_2027, target_2028, target_2029, target_2030)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -3251,7 +3273,7 @@ def list_sources():
 
 @app.route("/api/sources", methods=["POST"])
 def create_source():
-    data        = request.json
+    data        = request.json or {}
     source_name = (data.get("source_name") or "").strip()
     if not source_name:
         return jsonify({"error": "source_name required"}), 400
@@ -3271,7 +3293,7 @@ def create_source():
 
 @app.route("/api/sources/<source_id>", methods=["PATCH"])
 def update_source(source_id):
-    data    = request.json
+    data    = request.json or {}
     EDITABLE = {"source_name", "source_type", "source_url", "owner", "coverage_notes"}
     rows    = query(f"SELECT * FROM {SCHEMA}.sources WHERE source_id = ?", [source_id])
     if not rows:
@@ -3304,7 +3326,7 @@ def list_source_rounds(source_id):
 
 @app.route("/api/sources/<source_id>/rounds", methods=["POST"])
 def create_source_round(source_id):
-    data        = request.json
+    data        = request.json or {}
     round_label = (data.get("round_label") or "").strip()
     if not round_label:
         return jsonify({"error": "round_label required"}), 400
