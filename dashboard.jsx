@@ -4418,37 +4418,47 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
             <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:6}}>What This All Builds Toward</div>
             <div style={{fontSize:22,fontWeight:800,color:TEXT,letterSpacing:-0.4,lineHeight:1.2}}>2030 Goals</div>
           </div>
-          <div style={{display:"flex",gap:36,alignItems:"flex-start"}}>
-            {(crossIndicators.length > 0 || goals.length > 0) && (
-              <div style={{flex:2,minWidth:0,display:"flex",flexDirection:"column",gap:14}}>
-                {crossIndicators.map((ind,i) => (
-                  <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                    <span style={{width:22,height:22,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{i+1}</span>
-                    <div style={{fontSize:15,color:TEXT,lineHeight:1.7,fontWeight:400}}>{ind}</div>
+
+          {/* Goal cards — 2-col grid, big stat value on top */}
+          {(crossIndicators.length > 0 || goals.length > 0) && (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14,marginBottom:(amb45Text||amb45Buckets)?28:0}}>
+              {crossIndicators.map((ind,i) => {
+                const m = ind.match(/^(\d+(?:\.\d+)?%|\$?\d+(?:\.\d+)?[MBK]?(?:\s*\w+)?|\d+)/);
+                const val  = m ? m[1] : null;
+                const body = m ? ind.slice(m[0].length).replace(/^\s*/,"").replace(/^of /,"of ") : ind;
+                return (
+                  <div key={i} style={{background:SURFACE,border:"1px solid "+BORDER,borderTop:"3px solid "+pc.color,borderRadius:10,padding:"20px 22px",display:"flex",flexDirection:"column",gap:8}}>
+                    {val
+                      ? <div style={{fontSize:40,fontWeight:800,color:pc.color,letterSpacing:-1.5,lineHeight:1}}>{val}</div>
+                      : <span style={{width:22,height:22,borderRadius:"50%",background:pc.light,color:pc.dark,border:"1px solid "+pc.color+"55",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{i+1}</span>
+                    }
+                    <div style={{fontSize:14,color:TEXT,lineHeight:1.65}}>{body}</div>
                   </div>
-                ))}
-                {crossIndicators.length === 0 && goals.map(g => (
-                  <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                    style={{display:"flex",alignItems:"flex-start",gap:12,cursor:onNavigateToStrategy?"pointer":"default"}}>
-                    <span style={{width:22,height:22,borderRadius:"50%",background:g.color?(g.color+"22"):pc.light,color:g.color||pc.dark,border:"1px solid "+(g.color||pc.color)+"55",fontSize:11,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>{g.number}</span>
-                    <span style={{fontSize:15,color:TEXT,lineHeight:1.6,fontWeight:400,flex:1}}>{g.title}</span>
-                    {onNavigateToStrategy&&<span style={{fontSize:13,color:TEXT_MUTED,flexShrink:0}}>↗</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-            {(amb45Text || amb45Buckets) && (
-              <div style={{flex:1,minWidth:0,borderLeft:"1px solid "+BORDER,paddingLeft:28}}>
-                <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
-                  Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
+                );
+              })}
+              {crossIndicators.length === 0 && goals.map(g => (
+                <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
+                  style={{background:SURFACE,border:"1px solid "+BORDER,borderTop:"3px solid "+(g.color||pc.color),borderRadius:10,padding:"20px 22px",display:"flex",flexDirection:"column",gap:8,cursor:onNavigateToStrategy?"pointer":"default"}}>
+                  <div style={{fontSize:40,fontWeight:800,color:g.color||pc.color,letterSpacing:-1.5,lineHeight:1}}>Goal {g.number}</div>
+                  <div style={{fontSize:14,color:TEXT,lineHeight:1.65,flex:1}}>{g.title}</div>
+                  {onNavigateToStrategy && <div style={{fontSize:12,color:TEXT_MUTED,marginTop:4}}>View in strategy ↗</div>}
                 </div>
-                {amb45Buckets
-                  ? <ToaAmb45Buckets buckets={amb45Buckets} />
-                  : <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7}}>{amb45Text}</div>
-                }
+              ))}
+            </div>
+          )}
+
+          {/* Ambition 2045 */}
+          {(amb45Text || amb45Buckets) && (
+            <div style={{borderTop:(crossIndicators.length > 0 || goals.length > 0)?"1px solid "+BORDER:"none",paddingTop:(crossIndicators.length > 0 || goals.length > 0)?24:0}}>
+              <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>
+                Ambition 2045{amb45Label && <span style={{fontWeight:400,color:TEXT_MUTED,textTransform:"none",letterSpacing:0,marginLeft:6}}>— {amb45Label}</span>}
               </div>
-            )}
-          </div>
+              {amb45Buckets
+                ? <ToaAmb45Buckets buckets={amb45Buckets} />
+                : <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7}}>{amb45Text}</div>
+              }
+            </div>
+          )}
         </div>
       )}
 
