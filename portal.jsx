@@ -1809,7 +1809,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
               justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
                 textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                {out.short_title || out.title}
+                {out.title}
               </span>
               <button
                 onClick={() => setAddingIndFor(addingIndFor === out.outcome_id ? null : out.outcome_id)}
@@ -2240,7 +2240,7 @@ function BowPanel({ bow, user, onBack }) {
                   O{i + 1}
                 </span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {out.short_title || out.title}
+                  {out.title}
                 </span>
               </button>
             );
@@ -2814,13 +2814,8 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.4 }}>
-                {outcome.title || outcome.short_title || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No title set</span>}
+                {outcome.title || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No title set</span>}
               </h3>
-              {outcome.short_title && outcome.short_title !== outcome.title && (
-                <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>
-                  Short title: {outcome.short_title}
-                </p>
-              )}
               {(outcome.text || outcome.outcome) ? (
                 <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7 }}>
                   {outcome.text || outcome.outcome}
@@ -3090,7 +3085,7 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
                     </span>
                   </td>
                   <td style={{ ...tdStyle, fontWeight: 700, fontSize: 13, color: TEXT }}>
-                    {out.short_title || out.title}
+                    {out.title}
                   </td>
                   <td style={{ ...tdStyle, fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>
                     {out.outcome || out.title}
@@ -3167,7 +3162,7 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
                           textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          {out.short_title || out.title}
+                          {out.title}
                         </span>
                         <button onClick={() => setAddingIndFor(addingIndFor === out.outcome_id ? null : out.outcome_id)}
                           style={{ background: "none", border: "none", cursor: "pointer",
@@ -3628,7 +3623,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
                 PO{i + 1}
               </span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                {out.short_title || out.title}
+                {out.title}
               </span>
             </button>
           );
@@ -3817,7 +3812,7 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
   ];
   const outcomes = data?.outcomes || [];
   const allInds = outcomes.flatMap(o =>
-    (o.indicators || []).map(i => ({ ...i, outcome_title: o.short_title || o.title, outcome_id: o.outcome_id }))
+    (o.indicators || []).map(i => ({ ...i, outcome_title: o.title, outcome_id: o.outcome_id }))
   );
 
   return (
@@ -3862,7 +3857,7 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
                 {selected.type === "bow" ? "O" : "PO"}{outcomes.indexOf(out) + 1}
               </span>
               <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
-                {out.short_title || out.title}
+                {out.title}
               </span>
             </div>
 
