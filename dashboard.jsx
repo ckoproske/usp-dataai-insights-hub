@@ -931,6 +931,7 @@ async function loadFromAPI() {
             number:          i + 1,                 // sequential 1,2,3 regardless of sort_order gaps
             shortTitle:      o.short_title || o.title || "",
             title:           o.title || "",
+            desc:            o.text || o.description || "",  // outcome description/narrative from DB
             notes:           "",
             manualStatus:    null,
             executionTargets: YEARS.reduce((a, y) => ({ ...a, [y]: [] }), {}),
@@ -2549,6 +2550,7 @@ function YearlyPlanView({ bow, onUpdate }) {
                   ? <div style={{fontSize:14,color:TEXT_MUTED,fontStyle:"italic"}}>Outcome description not yet loaded from database</div>
                   : <div style={{fontSize:15,fontWeight:700,lineHeight:1.4,color:TEXT}}>{o.title}</div>
                 }
+                {o.desc && <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6,marginTop:4}}>{o.desc}</div>}
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
                 <Chip label={rs.label} color={rs.color} bg={rs.pill}/>
