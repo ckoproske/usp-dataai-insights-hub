@@ -2250,7 +2250,7 @@ def upsert_portfolio_notes(portfolio_id):
 
 import json as _json
 
-MAJOR_TEXT_FIELDS = {"title", "text", "name"}
+MAJOR_TEXT_FIELDS = {"title", "text", "outcome", "name"}
 TARGET_FIELDS     = {"target_2026", "target_2027", "target_2028", "target_2029", "target_2030"}
 
 def _actor(body=None):
@@ -2932,7 +2932,7 @@ def delete_execution_target(target_id):
 
 # ── Portfolio outcomes CRUD ────────────────────────────────────────────────────
 
-PORT_OUTCOME_EDITABLE = {"title", "short_title", "text", "outcome", "investments_inputs"}
+PORT_OUTCOME_EDITABLE = {"title", "short_title", "outcome", "investments_inputs"}
 
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["PATCH"])
 def update_portfolio_outcome(outcome_id):
@@ -2973,9 +2973,9 @@ def add_portfolio_outcome():
     oid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_outcomes
-            (outcome_id, portfolio_id, title, short_title, `text`, sort_order)
+            (outcome_id, portfolio_id, title, short_title, outcome, sort_order)
             VALUES (?, ?, ?, ?, ?, ?)""",
-        [oid, portfolio_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
+        [oid, portfolio_id, title, data.get("short_title", ""), data.get("outcome", data.get("text", "")), sort_order]
     )
     return jsonify({"status": "ok", "outcome_id": oid})
 
