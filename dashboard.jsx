@@ -4433,16 +4433,20 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                   </div>
                 );
               })}
-              {crossIndicators.length === 0 && goals.map(g => (
-                <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
-                  style={{background:pc.light,border:"1px solid "+pc.color+"33",borderRadius:12,padding:"22px 24px",display:"flex",flexDirection:"column",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
-                  <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>
-                    {g.goal2030 != null ? g.goal2030+"%" : g.number}
+              {crossIndicators.length === 0 && goals.map(g => {
+                const tgt = g.target || g.title || "";
+                const m2 = tgt.match(/^(\d+(?:\.\d+)?%|\$?\d+(?:[,.]\d+)?[MBK]?|\d+)/);
+                const gVal  = m2 ? m2[1] : null;
+                const gBody = m2 ? tgt.slice(m2[0].length).trim() : tgt;
+                return (
+                  <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
+                    style={{background:pc.light,border:"1px solid "+pc.color+"33",borderRadius:12,padding:"22px 24px",display:"flex",flexDirection:"column",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
+                    <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>{gVal || g.number}</div>
+                    <div style={{fontSize:14,color:TEXT,lineHeight:1.65,flex:1}}>{gBody}</div>
+                    {onNavigateToStrategy && <div style={{fontSize:12,color:pc.dark,marginTop:4,fontWeight:600}}>View in strategy ↗</div>}
                   </div>
-                  <div style={{fontSize:14,color:TEXT,lineHeight:1.65,flex:1}}>{g.target || g.title}</div>
-                  {onNavigateToStrategy && <div style={{fontSize:12,color:pc.dark,marginTop:4,fontWeight:600}}>View in strategy ↗</div>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
