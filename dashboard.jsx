@@ -4307,17 +4307,40 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
             )}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
-            {bows.map(bow => (
-              <div key={bow.id} style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:pc.color,flexShrink:0,marginTop:5}}/>
-                <div>
-                  <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
+            {bows.map(bow => {
+              const bowOpen = !!expandedBows[bow.id];
+              const bowOutcomes = bow.outcomes || [];
+              return (
+                <div key={bow.id} style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,padding:"14px 18px",display:"flex",flexDirection:"column",gap:0}}>
+                  {/* Title + full-width color underline */}
+                  <div style={{borderBottom:"2px solid "+pc.color,paddingBottom:10,marginBottom:10}}>
+                    <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
+                  </div>
                   {bow.description && (
-                    <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55,marginTop:5}}>{bow.description}</div>
+                    <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55,marginBottom:10}}>{bow.description}</div>
+                  )}
+                  {bowOutcomes.length > 0 && (
+                    <div>
+                      <button onClick={()=>setExpandedBows(v=>({...v,[bow.id]:!v[bow.id]}))}
+                        style={{background:"none",border:"none",cursor:"pointer",padding:0,fontSize:12,color:TEXT_MUTED,display:"flex",alignItems:"center",gap:5,fontWeight:600}}>
+                        <span style={{display:"inline-block",transition:"transform .15s",transform:bowOpen?"rotate(90deg)":"rotate(0deg)"}}>▸</span>
+                        {bowOpen ? "Hide outcomes" : `View ${bowOutcomes.length} outcome${bowOutcomes.length!==1?"s":""}`}
+                      </button>
+                      {bowOpen && (
+                        <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8}}>
+                          {bowOutcomes.map((o,oi) => (
+                            <div key={o.id||oi} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                              <div style={{width:4,height:4,borderRadius:"50%",background:TEXT_MUTED,marginTop:7,flexShrink:0,opacity:0.5}}/>
+                              <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.55}}>{o.title||o.shortTitle}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Alignment matrix — SFL only */}
