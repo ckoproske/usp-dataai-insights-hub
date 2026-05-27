@@ -2607,7 +2607,7 @@ def get_portfolio_full(portfolio_id):
 
 # ── BOW outcomes CRUD ──────────────────────────────────────────────────────────
 
-BOW_OUTCOME_EDITABLE = {"title", "short_title", "text"}
+BOW_OUTCOME_EDITABLE = {"title", "text"}
 
 @app.route("/api/bow-outcomes/<outcome_id>", methods=["PATCH"])
 def update_bow_outcome(outcome_id):
@@ -2646,9 +2646,9 @@ def add_bow_outcome():
     oid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.bow_outcomes
-            (outcome_id, bow_id, title, short_title, `text`, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?)""",
-        [oid, bow_id, title, data.get("short_title", ""), data.get("text", ""), sort_order]
+            (outcome_id, bow_id, title, `text`, sort_order)
+            VALUES (?, ?, ?, ?, ?)""",
+        [oid, bow_id, title, data.get("text", ""), sort_order]
     )
     _log_edit("bow_outcome", oid, bow_id, None,
               {"title": {"old": None, "new": title}}, "New outcome added", None, user)
