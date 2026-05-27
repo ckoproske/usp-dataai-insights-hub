@@ -1753,6 +1753,19 @@ function BowOutcomePanel({ outcome, onUpdate }) {
 
   return (
     <div style={{background:SURFACE,borderRadius:"0 0 12px 12px",border:"1px solid "+BORDER,borderTop:"none"}}>
+      {/* Outcome title + description header */}
+      {(outcome.title || outcome.desc) && (
+        <div style={{padding:"14px 20px",borderBottom:"1px solid "+BORDER,background:BG}}>
+          {outcome.title && (
+            <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.4,marginBottom:outcome.desc?6:0}}>
+              {outcome.title}
+            </div>
+          )}
+          {outcome.desc && (
+            <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6}}>{outcome.desc}</div>
+          )}
+        </div>
+      )}
       {/* Side-by-side: Execution (left) + Impact Indicators (right) */}
       <div style={{display:"flex",alignItems:"flex-start",minHeight:0}}>
 
@@ -4667,7 +4680,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                           <button key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
                             style={{padding:"12px 20px",border:"none",borderRight:"1px solid "+BORDER,background:active?SURFACE:"transparent",borderBottom:active?"2px solid "+TEXT:"2px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:6,alignItems:"flex-start",marginBottom:-1,transition:"all .15s",minWidth:140,flexShrink:0}}>
                             <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Outcome {o.number||i+1}</div>
-                            <div style={{fontSize:13,fontWeight:active?700:500,color:active?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{BOW_TITLES[i]||o.shortTitle||"Outcome "+(i+1)}</div>
+                            <div style={{fontSize:13,fontWeight:active?700:500,color:active?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{BOW_TITLES[i]||o.title||o.shortTitle||"Outcome "+(i+1)}</div>
                           </button>
                         );
                       })}
