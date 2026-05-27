@@ -13,19 +13,26 @@ def handle_exception(e):
 
 # ── Frontend routes ───────────────────────────────────────────────────────────
 
+_NO_CACHE = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+}
+
+def _nocache(resp):
+    for k, v in _NO_CACHE.items():
+        resp.headers[k] = v
+    return resp
+
 @app.route("/")
 def index():
-    return send_file(os.path.join(os.path.dirname(__file__), "index.html"))
+    return _nocache(send_file(os.path.join(os.path.dirname(__file__), "index.html")))
 
 @app.route("/dashboard.jsx")
 def dashboard():
-    resp = send_file(
+    return _nocache(send_file(
         os.path.join(os.path.dirname(__file__), "dashboard.jsx"),
         mimetype="text/plain"
-    )
-    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    resp.headers["Pragma"] = "no-cache"
-    return resp
+    ))
 
 # ── Database connection ───────────────────────────────────────────────────────
 
@@ -1491,17 +1498,14 @@ def take_budget_forecast_snapshot():
 
 @app.route("/portal")
 def portal():
-    return send_file(os.path.join(os.path.dirname(__file__), "portal.html"))
+    return _nocache(send_file(os.path.join(os.path.dirname(__file__), "portal.html")))
 
 @app.route("/portal.jsx")
 def portal_jsx():
-    resp = send_file(
+    return _nocache(send_file(
         os.path.join(os.path.dirname(__file__), "portal.jsx"),
         mimetype="text/plain"
-    )
-    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    resp.headers["Pragma"] = "no-cache"
-    return resp
+    ))
 
 @app.route("/api/me")
 def get_me():
