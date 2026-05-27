@@ -913,10 +913,6 @@ async function loadFromAPI() {
       const decisions  = allDecisions[idx];
       const ratings    = allBowRatings[idx];
 
-      // ── DEBUG: log outcome fetch results for each BOW ──────────────────────
-      console.log(`[DB] bow-outcomes fetch: bow=${bowId} count=${bowOutcomes.length}`,
-        bowOutcomes.length > 0 ? bowOutcomes.map(o => ({id:o.outcome_id, title:o.title, text:o.text})) : "(empty)");
-
       if (targets.length > 0 || bowOutcomes.length > 0) anyRealData = true;
  
       Object.values(base.portfolios).forEach(portData => {
