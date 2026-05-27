@@ -2666,7 +2666,7 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
             {indicators.length===0 ? (
               <div style={{fontSize:13,color:TEXT_SUB,opacity:0.6}}>No indicators defined</div>
             ) : (
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14,marginBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,marginBottom:14}}>
                 {indicators.map((ind,ii)=>{
                   const {actuals,targets:tgts} = getIndData(ind);
                   const sc = STATUS[ind.manualStatus||autoSuggestStatus(ind)];
@@ -4304,7 +4304,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
               {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
             </button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:12}}>
             {bows.map(bow => (
               <div key={bow.id} style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:pc.color,flexShrink:0,marginTop:5}}/>
