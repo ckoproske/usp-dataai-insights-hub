@@ -1652,33 +1652,30 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
     : actualVals[yrIdx];
 
   return (
-    <div style={{padding:"14px 16px",borderRight:"1px solid "+BORDER,borderBottom:"1px solid "+BORDER,display:"flex",flexDirection:"column",gap:0}}>
-      {/* Status accent + label */}
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-        <span style={{width:8,height:8,borderRadius:"50%",background:sc.color,flexShrink:0,display:"inline-block"}}/>
-        <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1}}>Indicator {iIdx+1}</span>
-      </div>
-      {/* Indicator text */}
-      <div style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:6}}>{ind.text}</div>
-      <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
-      {/* Numbers */}
-      <div style={{display:"flex",gap:16,margin:"10px 0 6px"}}>
+    <div style={{border:"1px solid "+BORDER,borderTop:"3px solid "+sc.color,borderRadius:12,padding:"20px 22px",display:"flex",flexDirection:"column",gap:14,background:SURFACE}}>
+      {/* Big actual + status pill + target */}
+      <div style={{display:"flex",alignItems:"flex-start",gap:18}}>
         <div>
-          <div style={{fontSize:9,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.6,marginBottom:2}}>{activeYear} Target</div>
-          <div style={{fontSize:22,fontWeight:800,color:targetVals[yrIdx]!==null?sc.color:"#D0CBC2",lineHeight:1}}>
-            {targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}
-          </div>
-        </div>
-        <div>
-          <div style={{fontSize:9,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.6,marginBottom:2}}>{activeYear} Actual</div>
-          <div style={{fontSize:22,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",lineHeight:1}}>
+          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>{activeYear} Actual</div>
+          <div style={{fontSize:44,fontWeight:800,color:activeActual!==null?sc.color:"#D0CBC2",letterSpacing:-1.5,lineHeight:1}}>
             {activeActual!==null?activeActual:"—"}
           </div>
         </div>
+        <div style={{display:"flex",flexDirection:"column",gap:7,paddingTop:6}}>
+          <span style={{fontSize:11,fontWeight:700,color:sc.color,background:sc.color+"15",border:"1px solid "+sc.color+"44",borderRadius:20,padding:"3px 10px",whiteSpace:"nowrap"}}>
+            {(sc.label||"").replace(" Expectations","")}
+          </span>
+          <div style={{fontSize:12,color:TEXT_MUTED}}>
+            <span style={{fontWeight:700,color:TEXT_SUB}}>{targetVals[yrIdx]!==null?targetVals[yrIdx]:"—"}</span>
+            <span style={{marginLeft:3}}>target</span>
+          </div>
+        </div>
       </div>
+      {/* Indicator text */}
+      <div style={{fontSize:14,fontWeight:600,color:TEXT,lineHeight:1.65}}>{ind.text}</div>
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={70}>
-        <LineChart data={allChartData} margin={{top:4,right:4,bottom:0,left:-22}}>
+      <ResponsiveContainer width="100%" height={110}>
+        <LineChart data={allChartData} margin={{top:4,right:8,bottom:0,left:-22}}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
           <XAxis dataKey="label" tick={({x,y,payload})=>{
             const isHL=payload.value.includes("'"+String(activeYear).slice(2));
@@ -1695,6 +1692,7 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
           <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
         </LineChart>
       </ResponsiveContainer>
+      <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
     </div>
   );
 }
@@ -2017,25 +2015,23 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
         ))}
       </div>
 
-      {/* ── Outcome status overview (pipeline-style) ── */}
-      <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 22px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-        <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:14}}>Outcome Status — click to explore</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {allOutcomes.map((p,i)=>{
-            const s = impactAutoStatus({impactIndicators:p.indicators});
-            const rs = s ? (STATUS[s.label]||STATUS["No Data"]) : STATUS["No Data"];
-            const isActive = i===activeIdx;
-            return (
-              <div key={p.id} onClick={()=>switchOutcome(i)} style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:rs.color,flexShrink:0}}/>
-                <div style={{width:160,fontSize:13,fontWeight:isActive?700:500,color:isActive?TEXT:TEXT_SUB,flexShrink:0}}>{SHORT_TITLES[i]||p.title||p.shortTitle}</div>
-                <div style={{flex:1,height:26,borderRadius:6,background:rs.color+"18",border:"1px solid "+(isActive?rs.color:rs.color+"44"),display:"flex",alignItems:"center",paddingLeft:12,transition:"all .15s",boxShadow:isActive?"0 0 0 2px "+rs.color+"55":"none"}}>
-                  <span style={{fontSize:13,fontWeight:600,color:rs.color}}>{rs.label}</span>
-                </div>
+      {/* ── Outcome tabs ── */}
+      <div style={{display:"flex",borderBottom:"1px solid "+BORDER,overflowX:"auto",background:SURFACE,borderRadius:"12px 12px 0 0",border:"1px solid "+BORDER,borderBottomLeftRadius:0,borderBottomRightRadius:0}}>
+        {allOutcomes.map((p,i)=>{
+          const s = impactAutoStatus({impactIndicators:p.indicators});
+          const rs = s ? (STATUS[s.label]||STATUS["No Data"]) : STATUS["No Data"];
+          const isActive = i===activeIdx;
+          return (
+            <button key={p.id} onClick={()=>switchOutcome(i)}
+              style={{padding:"14px 22px",border:"none",borderRight:"1px solid "+BORDER,background:isActive?BG:"transparent",borderBottom:isActive?"3px solid "+pc.color:"3px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:5,alignItems:"flex-start",marginBottom:-1,flexShrink:0,minWidth:150,transition:"all .15s"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:rs.color,flexShrink:0}}/>
+                <span style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Outcome {i+1}</span>
               </div>
-            );
-          })}
-        </div>
+              <div style={{fontSize:13,fontWeight:isActive?700:500,color:isActive?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{SHORT_TITLES[i]||p.title||p.shortTitle}</div>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Outcome detail ── */}
@@ -2044,16 +2040,16 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
           <div style={{flex:1,minWidth:0,background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
 
             {/* Header */}
-            <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
-              <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>Outcome {activeIdx+1} — {SHORT_TITLES[activeIdx]||po.title||po.shortTitle}</div>
-              <div style={{fontSize:15,fontWeight:600,color:TEXT,lineHeight:1.6}}>{po.outcome}</div>
+            <div style={{padding:"22px 26px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
+              <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>{SHORT_TITLES[activeIdx]||po.title||po.shortTitle}</div>
+              <div style={{fontSize:18,fontWeight:700,color:TEXT,lineHeight:1.65}}>{po.outcome}</div>
             </div>
 
             {/* Leading signals */}
-            <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER}}>
-              <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:12}}>Leading Signals</div>
+            <div style={{padding:"20px 24px",borderBottom:"1px solid "+BORDER}}>
+              <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:16}}>Leading Signals</div>
               {po.indicators.filter(ind=>ind.text).length > 0 ? (
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:0,borderTop:"1px solid "+BORDER}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16}}>
                   {po.indicators.filter(ind=>ind.text).map((ind,iIdx)=>(
                     <IndicatorRow key={ind.id} ind={ind} iIdx={iIdx} activeYear={CURRENT_YEAR}/>
                   ))}
