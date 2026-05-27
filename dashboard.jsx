@@ -1108,7 +1108,8 @@ async function loadFromAPI() {
           : (existing ? existing.indicators : []);
         return {
           id:          po.outcome_id,
-          shortTitle:  po.short_title  || (existing ? existing.shortTitle : ""),
+          title:       po.title || po.short_title || (existing ? existing.shortTitle : ""),
+          shortTitle:  po.title || po.short_title  || (existing ? existing.shortTitle : ""),
           activity:    po.activity     || (existing ? existing.activity   : ""),
           // API returns COALESCE(text, outcome) AS text — check all field aliases
           outcome:     po.text || po.outcome_text || po.outcome || (existing ? existing.outcome : ""),
@@ -2027,7 +2028,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
             return (
               <div key={p.id} onClick={()=>switchOutcome(i)} style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:rs.color,flexShrink:0}}/>
-                <div style={{width:160,fontSize:13,fontWeight:isActive?700:500,color:isActive?TEXT:TEXT_SUB,flexShrink:0}}>{SHORT_TITLES[i]||p.shortTitle}</div>
+                <div style={{width:160,fontSize:13,fontWeight:isActive?700:500,color:isActive?TEXT:TEXT_SUB,flexShrink:0}}>{SHORT_TITLES[i]||p.title||p.shortTitle}</div>
                 <div style={{flex:1,height:26,borderRadius:6,background:rs.color+"18",border:"1px solid "+(isActive?rs.color:rs.color+"44"),display:"flex",alignItems:"center",paddingLeft:12,transition:"all .15s",boxShadow:isActive?"0 0 0 2px "+rs.color+"55":"none"}}>
                   <span style={{fontSize:13,fontWeight:600,color:rs.color}}>{rs.label}</span>
                 </div>
@@ -2044,7 +2045,7 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
 
             {/* Header */}
             <div style={{padding:"16px 22px",borderBottom:"1px solid "+BORDER,background:"#FAFAF8"}}>
-              <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>Outcome {activeIdx+1} — {SHORT_TITLES[activeIdx]||po.shortTitle}</div>
+              <div style={{fontSize:12,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>Outcome {activeIdx+1} — {SHORT_TITLES[activeIdx]||po.title||po.shortTitle}</div>
               <div style={{fontSize:15,fontWeight:600,color:TEXT,lineHeight:1.6}}>{po.outcome}</div>
             </div>
 
@@ -4509,7 +4510,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
   const isCrossC = portId==="cross-cutting";
   const isSFL = portId==="sfl";
   const hasTeam = isCrossC || isSFL;
-  const SHORT_TITLES = isCrossC ? PO_SHORT_TITLES_CC : portfolio.portfolioOutcomes.map((po,i)=>po.shortTitle||("Outcome "+(i+1)));
+  const SHORT_TITLES = isCrossC ? PO_SHORT_TITLES_CC : portfolio.portfolioOutcomes.map((po,i)=>po.title||po.shortTitle||("Outcome "+(i+1)));
   const BOW_TITLES = isCrossC ? BOW_SHORT_TITLES_CC : [];
 
   const BOW_COLORS_MAP = [
