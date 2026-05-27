@@ -1,4 +1,6 @@
 ﻿// ── CDN Shims — replaces import statements (loaded via index.html script tags) ──
+const DASHBOARD_BUILD = "2026-05-27-v1";  // bump this string on every deploy to verify cache is busted
+console.log(`%c[Dashboard] build ${DASHBOARD_BUILD} loaded`, "color:#059669;font-weight:bold");
 const { useState, useEffect, useRef, useCallback } = React;
 const _Recharts = window.Recharts || window.recharts || {};
 const { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid,
