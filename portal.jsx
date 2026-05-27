@@ -5907,7 +5907,7 @@ function PortalApp() {
 
       {/* Page content — full width for portfolio ToA, wider for BOW panels */}
       {mode !== null && (
-      <div style={{ padding: "36px 32px", maxWidth: selectedPortfolio ? 1600 : 980, margin: "0 auto" }}>
+      <div style={{ padding: "36px 32px", width: "100%", boxSizing: "border-box" }}>
 
         {tab === "content" && mode === "edit" && (
           <>
