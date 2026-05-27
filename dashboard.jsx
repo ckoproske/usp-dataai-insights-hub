@@ -4133,10 +4133,13 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
 
   return (
     <div style={{
-      display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,
-      paddingBottom:28,marginBottom:4,
-      borderBottom:"1px solid "+BORDER,
+      borderRadius:14,border:"1px solid "+BORDER,
+      borderTop:"3px solid "+pc.color,
+      background:"linear-gradient(135deg,"+pc.color+"0D 0%,transparent 55%)",
+      boxShadow:"0 2px 14px rgba(10,37,64,0.07)",
+      padding:"28px 32px",marginBottom:28,
     }}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0}}>
       {STATS.map((stat,i) => (
         <div key={i} style={{padding:"0 28px 0"+(i===0?" 0":" 28px"),borderLeft:i===0?"none":"1px solid "+BORDER}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6}}>
@@ -4153,6 +4156,7 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
           <div style={{fontSize:13,color:TEXT_MUTED,lineHeight:1.4}}>{stat.sub}</div>
         </div>
       ))}
+    </div>
     </div>
   );
 }
@@ -4248,7 +4252,7 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
           <div style={{fontSize:11,fontWeight:700,color:pc.color,textTransform:"uppercase",letterSpacing:2,marginBottom:6}}>What We're Trying to Achieve</div>
           <div style={{fontSize:22,fontWeight:800,color:TEXT,letterSpacing:-0.4,lineHeight:1.2}}>Portfolio Outcomes</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,2)},1fr)`,gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(numCols,3)},1fr)`,gap:16}}>
           {allOutcomes.map((o,i) => {
             const lane = toaLanes[i];
             const activities = lane?.activities || [];
@@ -4300,9 +4304,9 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
               {showMatrix ? "Hide Alignment Map ↑" : "View Alignment Map →"}
             </button>
           </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
             {bows.map(bow => (
-              <div key={bow.id} style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12,maxWidth:340}}>
+              <div key={bow.id} style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:pc.color,flexShrink:0,marginTop:5}}/>
                 <div>
                   <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.3}}>{bow.name}</div>
