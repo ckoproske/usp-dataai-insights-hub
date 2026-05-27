@@ -3499,7 +3499,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [loading, setLoading]       = useState(true);
   const [outcomes, setOutcomes]     = useState([]);
   const [activeOId, setActiveOId]   = useState(null);
-  const [activeTab, setActiveTab]   = useState("toa");
+  const [activeTab, setActiveTab]   = useState("outcome");
   const [addingOut, setAddingOut]   = useState(false);
   const [newOutTitle, setNewOutTitle] = useState("");
   const [saving, setSaving]         = useState(false);
@@ -3579,26 +3579,6 @@ function PortfolioPanel({ portfolio, user, onBack }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2,
         borderBottom: `2px solid ${BORDER}`, marginBottom: 24, flexWrap: "wrap" }}>
 
-        {/* Theory of Action tab */}
-        {(() => {
-          const isActive = activeTab === "toa";
-          return (
-            <button
-              onClick={() => setActiveTab("toa")}
-              style={{
-                ...tabBase,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? (p?.dark || ACCENT) : TEXT_MUTED,
-                background: isActive ? (p?.light || ACCENT_LIGHT) : "transparent",
-                borderBottom: isActive
-                  ? `2px solid ${p?.color || ACCENT}`
-                  : "2px solid transparent",
-              }}>
-              Theory of Action
-            </button>
-          );
-        })()}
-
         {/* Outcome tabs */}
         {outcomes.map((out, i) => {
           const isActive = activeTab === "outcome" && out.outcome_id === activeOutcome?.outcome_id;
@@ -3659,12 +3639,6 @@ function PortfolioPanel({ portfolio, user, onBack }) {
       </div>
 
       {/* ── Tab content ── */}
-      {activeTab === "toa" && (
-        <div style={{ overflowX: "auto" }}>
-          <PortalToaView portfolioId={portfolio.portfolio_id} portColor={p} />
-        </div>
-      )}
-
       {activeTab === "outcome" && activeOutcome && (
         <PortfolioOutcomePane
           key={activeOutcome.outcome_id}
