@@ -2272,19 +2272,20 @@ def _attach_last_edited(entities, id_field, edit_map):
         e["last_edited_by"] = edit.get("edited_by", "")
         e["last_edited_at"] = edit.get("edited_at", "")
 
-def _fetch_edit_map(entity_ids):
-    """Return {entity_id: {edited_by, edited_at}} for the most recent log entry per ID."""
+def _fetch_edit_map(entity_ids, cursor=None):
+    """Return {entity_id: {edited_by, edited_at}} for the most recent log entry per ID.
+    Pass an open cursor to reuse an existing connection instead of opening a new one."""
     if not entity_ids:
         return {}
     try:
         ph = ",".join(["?" for _ in entity_ids])
-        rows = query(
-            f"""SELECT entity_id, edited_by, CAST(edited_at AS STRING) AS edited_at
-                FROM {SCHEMA}.content_edit_log
-                WHERE entity_id IN ({ph})
-                QUALIFY ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY edited_at DESC) = 1""",
-            entity_ids
+        sql_str = (
+            f"SELECT entity_id, edited_by, CAST(edited_at AS STRING) AS edited_at"
+            f" FROM {SCHEMA}.content_edit_log"
+            f" WHERE entity_id IN ({ph})"
+            f" QUALIFY ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY edited_at DESC) = 1"
         )
+        rows = _qc(cursor, sql_str, entity_ids) if cursor is not None else query(sql_str, entity_ids)
         return {r["entity_id"]: r for r in rows}
     except Exception:
         return {}
@@ -2321,88 +2322,102 @@ def _build_changes(old_row, new_data, allowed_fields):
 
 @app.route("/api/bow/<bow_id>/full")
 def get_bow_full(bow_id):
-    bow_rows = query(f"SELECT * FROM {SCHEMA}.bows WHERE bow_id = ?", [bow_id])
-    if not bow_rows:
-        return jsonify({"error": "not found"}), 404
-    bow = bow_rows[0]
+    # L-5: single connection for all queries — avoids 6-7 separate handshakes per request
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            bow_rows = _qc(cur, f"SELECT * FROM {SCHEMA}.bows WHERE bow_id = ?", [bow_id])
+            if not bow_rows:
+                return jsonify({"error": "not found"}), 404
+            bow = bow_rows[0]
 
-    outcomes = query(
-        f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
-        [bow_id]
-    )
+            outcomes = _qc(cur,
+                f"SELECT * FROM {SCHEMA}.bow_outcomes WHERE bow_id = ? ORDER BY sort_order",
+                [bow_id]
+            )
 
-    try:
-        ind_rows = query(
-            f"""SELECT i.*,
-                       a.actual_value AS latest_actual,
-                       a.year         AS latest_actual_year
-                FROM {SCHEMA}.bow_indicators i
-                LEFT JOIN (
-                    SELECT indicator_id, actual_value, year,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
-                           ) AS rn
-                    FROM {SCHEMA}.bow_indicator_actuals
-                ) a ON i.indicator_id = a.indicator_id AND a.rn = 1
-                WHERE i.bow_id = ?
-                  AND COALESCE(i.is_active, true) = true
-                ORDER BY i.outcome_id, i.indicator_id""",
-            [bow_id]
-        )
-    except Exception:
-        ind_rows = query(
-            f"""SELECT * FROM {SCHEMA}.bow_indicators
-                WHERE bow_id = ? AND COALESCE(is_active, true) = true
-                ORDER BY outcome_id, indicator_id""",
-            [bow_id]
-        )
-
-    # Fetch all actuals for this BOW, deduped to latest per (indicator_id, year, period)
-    try:
-        all_actuals = query(
-            f"""SELECT a.indicator_id, a.year, a.period, a.actual_value, a.reading_date
-                FROM {SCHEMA}.bow_indicator_actuals a
-                INNER JOIN (
-                    SELECT indicator_id, year, period, MAX(loaded_at) AS max_loaded
-                    FROM {SCHEMA}.bow_indicator_actuals
-                    WHERE indicator_id IN (
-                        SELECT indicator_id FROM {SCHEMA}.bow_indicators
+            try:
+                ind_rows = _qc(cur,
+                    f"""SELECT i.*,
+                               a.actual_value AS latest_actual,
+                               a.year         AS latest_actual_year
+                        FROM {SCHEMA}.bow_indicators i
+                        LEFT JOIN (
+                            SELECT indicator_id, actual_value, year,
+                                   ROW_NUMBER() OVER (
+                                       PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
+                                   ) AS rn
+                            FROM {SCHEMA}.bow_indicator_actuals
+                        ) a ON i.indicator_id = a.indicator_id AND a.rn = 1
+                        WHERE i.bow_id = ?
+                          AND COALESCE(i.is_active, true) = true
+                        ORDER BY i.outcome_id, i.indicator_id""",
+                    [bow_id]
+                )
+            except Exception:
+                ind_rows = _qc(cur,
+                    f"""SELECT * FROM {SCHEMA}.bow_indicators
                         WHERE bow_id = ? AND COALESCE(is_active, true) = true
-                    )
-                    GROUP BY indicator_id, year, period
-                ) b ON a.indicator_id = b.indicator_id
-                    AND a.year        = b.year
-                    AND COALESCE(a.period, '')  = COALESCE(b.period, '')
-                    AND a.loaded_at   = b.max_loaded
-                ORDER BY a.indicator_id, a.year, a.period""",
-            [bow_id]
-        )
-    except Exception:
-        all_actuals = []
+                        ORDER BY outcome_id, indicator_id""",
+                    [bow_id]
+                )
 
-    # Index actuals by indicator_id
+            try:
+                all_actuals = _qc(cur,
+                    f"""SELECT a.indicator_id, a.year, a.period, a.actual_value, a.reading_date
+                        FROM {SCHEMA}.bow_indicator_actuals a
+                        INNER JOIN (
+                            SELECT indicator_id, year, period, MAX(loaded_at) AS max_loaded
+                            FROM {SCHEMA}.bow_indicator_actuals
+                            WHERE indicator_id IN (
+                                SELECT indicator_id FROM {SCHEMA}.bow_indicators
+                                WHERE bow_id = ? AND COALESCE(is_active, true) = true
+                            )
+                            GROUP BY indicator_id, year, period
+                        ) b ON a.indicator_id = b.indicator_id
+                            AND a.year        = b.year
+                            AND COALESCE(a.period, '')  = COALESCE(b.period, '')
+                            AND a.loaded_at   = b.max_loaded
+                        ORDER BY a.indicator_id, a.year, a.period""",
+                    [bow_id]
+                )
+            except Exception:
+                all_actuals = []
+
+            source_ids = list({i["source_id"] for i in ind_rows if i.get("source_id")})
+            source_map = {}
+            if source_ids:
+                try:
+                    ph = ",".join(["?" for _ in source_ids])
+                    src_rows = _qc(cur,
+                        f"SELECT source_id, source_name, source_url FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
+                        source_ids
+                    )
+                    source_map = {r["source_id"]: r for r in src_rows}
+                except Exception:
+                    pass
+
+            execution_targets = _qc(cur,
+                f"""SELECT t.*, s.completion, s.notes AS status_notes, s.last_updated, s.updated_by
+                    FROM {SCHEMA}.execution_targets t
+                    LEFT JOIN {SCHEMA}.execution_target_status s
+                      ON t.target_id = s.target_id AND t.year = s.year
+                    WHERE t.bow_id = ?
+                    ORDER BY t.year, t.sort_order""",
+                [bow_id]
+            )
+
+            all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in ind_rows]
+            edit_map = _fetch_edit_map(all_ids, cursor=cur)
+
+    # ── Python post-processing (connection already closed) ──────────────────
     actuals_by_ind = {}
     for a in all_actuals:
         actuals_by_ind.setdefault(a["indicator_id"], []).append({
-            "year":          a["year"],
-            "period":        a.get("period"),
-            "actual_value":  a["actual_value"],
-            "reading_date":  a.get("reading_date"),
+            "year":         a["year"],
+            "period":       a.get("period"),
+            "actual_value": a["actual_value"],
+            "reading_date": a.get("reading_date"),
         })
-
-    # Attach source_name to indicators
-    source_ids = list({i["source_id"] for i in ind_rows if i.get("source_id")})
-    source_map = {}
-    if source_ids:
-        try:
-            ph = ",".join(["?" for _ in source_ids])
-            src_rows = query(
-                f"SELECT source_id, source_name, source_url FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
-                source_ids
-            )
-            source_map = {r["source_id"]: r for r in src_rows}
-        except Exception:
-            pass
 
     indicators = []
     for ind in ind_rows:
@@ -2412,16 +2427,6 @@ def get_bow_full(bow_id):
         ind["source_url"]  = src.get("source_url", "")  if src else ""
         indicators.append(ind)
 
-    execution_targets = query(
-        f"""SELECT t.*, s.completion, s.notes AS status_notes, s.last_updated, s.updated_by
-            FROM {SCHEMA}.execution_targets t
-            LEFT JOIN {SCHEMA}.execution_target_status s
-              ON t.target_id = s.target_id AND t.year = s.year
-            WHERE t.bow_id = ?
-            ORDER BY t.year, t.sort_order""",
-        [bow_id]
-    )
-
     ind_by_outcome = {}
     for ind in indicators:
         key = ind.get("outcome_id") or "__none"
@@ -2430,9 +2435,6 @@ def get_bow_full(bow_id):
     for out in outcomes:
         out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
 
-    # Attach last-edited metadata from content_edit_log
-    all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in indicators]
-    edit_map = _fetch_edit_map(all_ids)
     _attach_last_edited(outcomes, "outcome_id", edit_map)
     _attach_last_edited(indicators, "indicator_id", edit_map)
 
@@ -2584,84 +2586,105 @@ def delete_toa_lane_indicator(indicator_id):
 
 @app.route("/api/portfolio/<portfolio_id>/full")
 def get_portfolio_full(portfolio_id):
-    port_rows = query(f"SELECT * FROM {SCHEMA}.portfolios WHERE portfolio_id = ?", [portfolio_id])
-    if not port_rows:
-        return jsonify({"error": "not found"}), 404
-    portfolio = port_rows[0]
+    # L-5: single connection for all queries — avoids 7-8 separate handshakes per request
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            port_rows = _qc(cur, f"SELECT * FROM {SCHEMA}.portfolios WHERE portfolio_id = ?", [portfolio_id])
+            if not port_rows:
+                return jsonify({"error": "not found"}), 404
+            portfolio = port_rows[0]
 
-    try:
-        outcomes = query(
-            f"""SELECT outcome_id, portfolio_id, title, short_title,
-                       COALESCE(text, outcome) AS text,
-                       sort_order, investments_inputs
-                FROM {SCHEMA}.portfolio_outcomes
-                WHERE portfolio_id = ?
-                ORDER BY sort_order""",
-            [portfolio_id]
-        )
-    except Exception:
-        # Fallback if one of the columns doesn't exist
-        outcomes = query(
-            f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
-            [portfolio_id]
-        )
-        for o in outcomes:
-            if not o.get("text") and o.get("outcome"):
-                o["text"] = o["outcome"]
+            try:
+                outcomes = _qc(cur,
+                    f"""SELECT outcome_id, portfolio_id, title, short_title,
+                               COALESCE(text, outcome) AS text,
+                               sort_order, investments_inputs
+                        FROM {SCHEMA}.portfolio_outcomes
+                        WHERE portfolio_id = ?
+                        ORDER BY sort_order""",
+                    [portfolio_id]
+                )
+            except Exception:
+                outcomes = _qc(cur,
+                    f"SELECT * FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
+                    [portfolio_id]
+                )
+                for o in outcomes:
+                    if not o.get("text") and o.get("outcome"):
+                        o["text"] = o["outcome"]
 
-    try:
-        indicators = query(
-            f"""SELECT
-                    i.indicator_id, i.portfolio_id, i.outcome_id, i.bow_indicator_id,
-                    i.baseline,
-                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
-                    COALESCE(b.name,  i.name)  AS name,
-                    COALESCE(b.text,  i.text)  AS text,
-                    COALESCE(b.purpose, i.purpose) AS purpose,
-                    COALESCE(b.unit,  i.unit)  AS unit,
-                    COALESCE(b.collection_frequency, i.collection_frequency) AS collection_frequency,
-                    COALESCE(b.source_id, i.source_id) AS source_id,
-                    COALESCE(b.measurement_level, i.measurement_level) AS measurement_level,
-                    COALESCE(b.status, i.status) AS status,
-                    COALESCE(b.data_quality_notes, i.data_quality_notes) AS data_quality_notes,
-                    COALESCE(b.tracking_notes, i.tracking_notes) AS tracking_notes,
-                    b.bow_id, b.outcome_id AS bow_outcome_id,
-                    a.actual_value AS latest_actual,
-                    a.year         AS latest_actual_year
-                FROM {SCHEMA}.portfolio_indicators i
-                LEFT JOIN {SCHEMA}.bow_indicators b ON i.bow_indicator_id = b.indicator_id
-                LEFT JOIN (
-                    SELECT indicator_id, actual_value, year,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
-                           ) AS rn
-                    FROM {SCHEMA}.portfolio_indicator_actuals
-                ) a ON i.indicator_id = a.indicator_id AND a.rn = 1
-                WHERE i.portfolio_id = ?
-                ORDER BY i.outcome_id, i.indicator_id""",
-            [portfolio_id]
-        )
-    except Exception:
-        indicators = query(
-            f"""SELECT * FROM {SCHEMA}.portfolio_indicators
-                WHERE portfolio_id = ?
-                ORDER BY outcome_id, indicator_id""",
-            [portfolio_id]
-        )
+            try:
+                indicators = _qc(cur,
+                    f"""SELECT
+                            i.indicator_id, i.portfolio_id, i.outcome_id, i.bow_indicator_id,
+                            i.baseline,
+                            i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                            COALESCE(b.name,  i.name)  AS name,
+                            COALESCE(b.text,  i.text)  AS text,
+                            COALESCE(b.purpose, i.purpose) AS purpose,
+                            COALESCE(b.unit,  i.unit)  AS unit,
+                            COALESCE(b.collection_frequency, i.collection_frequency) AS collection_frequency,
+                            COALESCE(b.source_id, i.source_id) AS source_id,
+                            COALESCE(b.measurement_level, i.measurement_level) AS measurement_level,
+                            COALESCE(b.status, i.status) AS status,
+                            COALESCE(b.data_quality_notes, i.data_quality_notes) AS data_quality_notes,
+                            COALESCE(b.tracking_notes, i.tracking_notes) AS tracking_notes,
+                            b.bow_id, b.outcome_id AS bow_outcome_id,
+                            a.actual_value AS latest_actual,
+                            a.year         AS latest_actual_year
+                        FROM {SCHEMA}.portfolio_indicators i
+                        LEFT JOIN {SCHEMA}.bow_indicators b ON i.bow_indicator_id = b.indicator_id
+                        LEFT JOIN (
+                            SELECT indicator_id, actual_value, year,
+                                   ROW_NUMBER() OVER (
+                                       PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
+                                   ) AS rn
+                            FROM {SCHEMA}.portfolio_indicator_actuals
+                        ) a ON i.indicator_id = a.indicator_id AND a.rn = 1
+                        WHERE i.portfolio_id = ?
+                        ORDER BY i.outcome_id, i.indicator_id""",
+                    [portfolio_id]
+                )
+            except Exception:
+                indicators = _qc(cur,
+                    f"""SELECT * FROM {SCHEMA}.portfolio_indicators
+                        WHERE portfolio_id = ?
+                        ORDER BY outcome_id, indicator_id""",
+                    [portfolio_id]
+                )
 
-    # Attach source_name to indicators
-    port_source_ids = list({i["source_id"] for i in indicators if i.get("source_id")})
-    port_source_map = {}
-    if port_source_ids:
-        try:
-            ph = ",".join(["?" for _ in port_source_ids])
-            src_rows = query(
-                f"SELECT source_id, source_name, source_url FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
-                port_source_ids
+            port_source_ids = list({i["source_id"] for i in indicators if i.get("source_id")})
+            port_source_map = {}
+            if port_source_ids:
+                try:
+                    ph = ",".join(["?" for _ in port_source_ids])
+                    src_rows = _qc(cur,
+                        f"SELECT source_id, source_name, source_url FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
+                        port_source_ids
+                    )
+                    port_source_map = {r["source_id"]: r for r in src_rows}
+                except Exception:
+                    pass
+
+            toa_lanes = _qc(cur,
+                f"""SELECT * FROM {SCHEMA}.portfolio_toa_lanes
+                    WHERE portfolio_id = ? AND COALESCE(is_active, true) = true
+                    ORDER BY sort_order""",
+                [portfolio_id]
             )
-            port_source_map = {r["source_id"]: r for r in src_rows}
-        except Exception:
-            pass
+            all_acts = _qc(cur,
+                f"""SELECT a.lane_id, a.activity_id, a.activity_text, a.sort_order
+                    FROM {SCHEMA}.portfolio_toa_activities a
+                    JOIN {SCHEMA}.portfolio_toa_lanes l ON a.lane_id = l.lane_id
+                    WHERE l.portfolio_id = ?
+                    ORDER BY a.sort_order""",
+                [portfolio_id]
+            )
+
+            all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in indicators]
+            edit_map = _fetch_edit_map(all_ids, cursor=cur)
+
+    # ── Python post-processing (connection already closed) ──────────────────
     for ind in indicators:
         src = port_source_map.get(ind.get("source_id"), {})
         ind["source_name"] = src.get("source_name", "") if src else ""
@@ -2672,41 +2695,21 @@ def get_portfolio_full(portfolio_id):
         key = ind.get("outcome_id") or "__none"
         ind_by_outcome.setdefault(key, []).append(ind)
 
-    # Load TOA lanes + activities and attach to matching outcomes
-    toa_lanes = query(
-        f"""SELECT * FROM {SCHEMA}.portfolio_toa_lanes
-            WHERE portfolio_id = ? AND COALESCE(is_active, true) = true
-            ORDER BY sort_order""",
-        [portfolio_id]
-    )
-    all_acts = query(
-        f"""SELECT a.lane_id, a.activity_id, a.activity_text, a.sort_order
-            FROM {SCHEMA}.portfolio_toa_activities a
-            JOIN {SCHEMA}.portfolio_toa_lanes l ON a.lane_id = l.lane_id
-            WHERE l.portfolio_id = ?
-            ORDER BY a.sort_order""",
-        [portfolio_id]
-    )
     acts_by_lane = {}
     for a in all_acts:
         acts_by_lane.setdefault(a["lane_id"], []).append(a)
 
-    # Build lookup: lane_id → activities, and label → activities (fallback)
     lane_by_id    = {l["lane_id"]: l for l in toa_lanes}
     lane_by_label = {(l.get("label") or "").strip().lower(): l for l in toa_lanes}
 
     for out in outcomes:
         out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
-        # Match lane by ID first, then by short_title ↔ label
         lane = lane_by_id.get(out["outcome_id"])
         if not lane:
             key = (out.get("short_title") or out.get("title") or "").strip().lower()
             lane = lane_by_label.get(key)
         out["toa_activities"] = acts_by_lane.get(lane["lane_id"], []) if lane else []
 
-    # Attach last-edited metadata from content_edit_log
-    all_ids = [o["outcome_id"] for o in outcomes] + [i["indicator_id"] for i in indicators]
-    edit_map = _fetch_edit_map(all_ids)
     _attach_last_edited(outcomes, "outcome_id", edit_map)
     _attach_last_edited(indicators, "indicator_id", edit_map)
 
