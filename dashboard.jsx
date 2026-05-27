@@ -4653,44 +4653,31 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 </div>
               </div>
             </div>
-            {/* View toggle */}
-            <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid "+BORDER}}>
-              {[["progress","Progress"]].map(([v,label])=>(
-                <button key={v} onClick={()=>setBowView(v)}
-                  style={{padding:"10px 18px",fontSize:13,fontWeight:bowView===v?600:400,border:"none",background:"none",cursor:"pointer",
-                    borderBottom:bowView===v?"2px solid "+TEXT:"2px solid transparent",
-                    color:bowView===v?TEXT:TEXT_MUTED,marginBottom:-1,transition:"color .15s",letterSpacing:0.1}}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            {bowView==="progress"&&(
-              <div>
-                {currentBow.outcomes.length>0&&(
-                  <div>
-                    {/* Horizontal outcome tabs */}
-                    <div style={{display:"flex",borderBottom:"1px solid "+BORDER,marginBottom:20,overflowX:"auto"}}>
-                      {currentBow.outcomes.map((o,i)=>{
-                        const active=i===activeBowOutcomeIdx;
-                        return (
-                          <button key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
-                            style={{padding:"12px 20px",border:"none",borderRight:"1px solid "+BORDER,background:active?SURFACE:"transparent",borderBottom:active?"2px solid "+TEXT:"2px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:6,alignItems:"flex-start",marginBottom:-1,transition:"all .15s",minWidth:140,flexShrink:0}}>
-                            <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Outcome {o.number||i+1}</div>
-                            <div style={{fontSize:13,fontWeight:active?700:500,color:active?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{BOW_TITLES[i]||o.title||o.shortTitle||"Outcome "+(i+1)}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {activeBowOutcomeIdx>=0&&activeBowOutcomeIdx<currentBow.outcomes.length&&(
-                      <div style={{border:"1.5px solid "+BORDER,borderRadius:12,overflow:"hidden",boxShadow:"0 2px 12px rgba(10,37,64,0.08)"}}>
-                        <BowOutcomePanel outcome={currentBow.outcomes[activeBowOutcomeIdx]} onUpdate={u=>updateBowOutcome(activeBow,currentBow.outcomes[activeBowOutcomeIdx].id,u)}/>
-                      </div>
-                    )}
+            <div>
+              {currentBow.outcomes.length>0&&(
+                <div>
+                  {/* Horizontal outcome tabs */}
+                  <div style={{display:"flex",borderBottom:"1px solid "+BORDER,marginBottom:20,overflowX:"auto"}}>
+                    {currentBow.outcomes.map((o,i)=>{
+                      const active=i===activeBowOutcomeIdx;
+                      return (
+                        <button key={o.id} onClick={()=>setActiveBowOutcomeIdx(active?-1:i)}
+                          style={{padding:"12px 20px",border:"none",borderRight:"1px solid "+BORDER,background:active?SURFACE:"transparent",borderBottom:active?"2px solid "+TEXT:"2px solid transparent",cursor:"pointer",display:"flex",flexDirection:"column",gap:6,alignItems:"flex-start",marginBottom:-1,transition:"all .15s",minWidth:140,flexShrink:0}}>
+                          <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8}}>Outcome {o.number||i+1}</div>
+                          <div style={{fontSize:13,fontWeight:active?700:500,color:active?TEXT:TEXT_SUB,lineHeight:1.3,textAlign:"left"}}>{BOW_TITLES[i]||o.title||o.shortTitle||"Outcome "+(i+1)}</div>
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-                {currentBow.outcomes.length===0&&<div style={{color:TEXT_SUB,fontSize:15,textAlign:"center",padding:48}}>No outcomes defined yet.</div>}
-              </div>
-            )}
+                  {activeBowOutcomeIdx>=0&&activeBowOutcomeIdx<currentBow.outcomes.length&&(
+                    <div style={{border:"1.5px solid "+BORDER,borderRadius:12,overflow:"hidden",boxShadow:"0 2px 12px rgba(10,37,64,0.08)"}}>
+                      <BowOutcomePanel outcome={currentBow.outcomes[activeBowOutcomeIdx]} onUpdate={u=>updateBowOutcome(activeBow,currentBow.outcomes[activeBowOutcomeIdx].id,u)}/>
+                    </div>
+                  )}
+                </div>
+              )}
+              {currentBow.outcomes.length===0&&<div style={{color:TEXT_SUB,fontSize:15,textAlign:"center",padding:48}}>No outcomes defined yet.</div>}
+            </div>
           </div>
         )}
       </div>
