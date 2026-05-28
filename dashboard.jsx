@@ -6822,6 +6822,9 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   const [newSaving, setNewSaving]     = useState(false);
   const [newError, setNewError]       = useState(null);
   const [toast, setToast] = useState(null); // {msg, type}
+  const [archivedIdeas, setArchivedIdeas]   = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [showArchive, setShowArchive]       = useState(false);
   const [expandedCommentRow, setExpandedCommentRow] = useState(null);
   const [rowComments, setRowComments]               = useState({});
   const [rowCommentInput, setRowCommentInput]       = useState("");
@@ -6875,11 +6878,19 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     }
   };
 
+  const loadArchived = () => {
+    setArchivedLoading(true);
+    apiFetch("/api/investment-ideas/archive")
+      .then(data => { setArchivedIdeas(data || []); setArchivedLoading(false); })
+      .catch(() => { setArchivedIdeas([]); setArchivedLoading(false); });
+  };
+
   const loadIdeas = () => {
     setLoading(true);
     apiFetch("/api/investment-ideas")
       .then(data => { setIdeas((data || []).map(i => ({...i, id: i.idea_id}))); setLoading(false); })
       .catch(() => { setError("Could not load investment ideas."); setLoading(false); });
+    loadArchived();
   };
 
   useEffect(() => { loadIdeas(); }, []);
@@ -6937,8 +6948,15 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     ? activeIdeas.filter(i => i.stage === stageFilter)
     : activeIdeas;
 
+  // Count ideas moved to INVEST in the last 60 days
+  const movedLast60 = archivedIdeas.filter(i => {
+    if (!i.moved_to_invest_at) return false;
+    return (Date.now() - new Date(i.moved_to_invest_at).getTime()) <= 60 * 24 * 60 * 60 * 1000;
+  }).length;
+
   // Pipeline bar data
   const pipelineData = IDEA_STAGES.map(s => {
+    if (s.name === "Moved to Invest") return { ...s, count: movedLast60, total: 0, isArchiveTile: true };
     const stageIdeas = activeIdeas.filter(i => i.stage === s.name);
     const total = stageIdeas.reduce((sum, i) => sum + (parseFloat(i.est_2026_amount) || 0), 0);
     return { ...s, count: stageIdeas.length, total };
@@ -6947,7 +6965,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   return (
     <div style={{
       display: "flex", flexDirection: "column",
-      height: "100%", minHeight: 0,
+      height: "100%", minHeight: 0, position: "relative",
     }}>
 
         {/* Header */}
@@ -6992,17 +7010,47 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
           <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
             {pipelineData.map(s => {
               const isActive = stageFilter === s.name;
+              const tileStyle = {
+                flex: "1 1 0", minWidth: 110, padding: "10px 8px", borderRadius: 10,
+                border: isActive ? `2px solid ${s.color}` : "2px solid transparent",
+                background: isActive ? s.color : s.color + "18",
+                cursor: "pointer", textAlign: "center",
+                boxShadow: isActive ? `0 2px 8px ${s.color}44` : "none",
+                transition: "all .12s",
+              };
+
+              if (s.isArchiveTile) {
+                // "Moved to Invest" — shows 60-day count + archive button
+                return (
+                  <div key={s.name} style={tileStyle}
+                    onClick={() => setStageFilter(prev => prev === s.name ? null : s.name)}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: isActive ? "#fff" : s.color,
+                      textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3,
+                      whiteSpace: "normal", lineHeight: 1.2 }}>{s.name}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800,
+                      color: isActive ? "#fff" : s.color, lineHeight: 1 }}>{s.count}</div>
+                    <div style={{ fontSize: 10, color: isActive ? "rgba(255,255,255,0.8)" : TEXT_MUTED,
+                      marginTop: 2 }}>last 60 days</div>
+                    <button
+                      onClick={e => { e.stopPropagation(); setShowArchive(true); }}
+                      style={{
+                        marginTop: 6, padding: "3px 8px", borderRadius: 5,
+                        border: `1px solid ${isActive ? "rgba(255,255,255,0.55)" : s.color}`,
+                        background: isActive ? "rgba(255,255,255,0.15)" : "transparent",
+                        color: isActive ? "#fff" : s.color,
+                        fontSize: 9, fontWeight: 700, cursor: "pointer",
+                        display: "block", width: "100%",
+                      }}>
+                      📦 View Archive
+                    </button>
+                  </div>
+                );
+              }
+
               return (
                 <button key={s.name}
                   onClick={() => setStageFilter(prev => prev === s.name ? null : s.name)}
-                  style={{
-                    flex: "1 1 0", minWidth: 100, padding: "10px 8px", borderRadius: 10,
-                    border: isActive ? `2px solid ${s.color}` : "2px solid transparent",
-                    background: isActive ? s.color : s.color + "18",
-                    cursor: "pointer", textAlign: "center",
-                    boxShadow: isActive ? `0 2px 8px ${s.color}44` : "none",
-                    transition: "all .12s",
-                  }}>
+                  style={tileStyle}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: isActive ? "#fff" : s.color,
                     textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3,
                     whiteSpace: "normal", lineHeight: 1.2 }}>{s.name}</div>
@@ -7427,6 +7475,125 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
             </div>
           )}
         </div>
+
+        {/* ── Archive overlay ───────────────────────────────── */}
+        {showArchive && (
+          <div style={{
+            position: "absolute", inset: 0, background: SURFACE, zIndex: 30,
+            display: "flex", flexDirection: "column",
+          }}>
+            {/* Archive header */}
+            <div style={{
+              padding: "16px 24px", background: SURFACE,
+              borderBottom: "1px solid " + BORDER,
+              display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+            }}>
+              <button onClick={() => setShowArchive(false)}
+                style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid " + BORDER,
+                  background: SURFACE, color: TEXT_MUTED, fontSize: 12, fontWeight: 700,
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                ← Back
+              </button>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>
+                  Investment Idea Tracker
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>
+                  📦 Moved to INVEST — Archive
+                </div>
+              </div>
+              <div style={{ marginLeft: "auto", fontSize: 13, color: TEXT_MUTED }}>
+                {archivedIdeas.length} idea{archivedIdeas.length !== 1 ? "s" : ""} archived
+              </div>
+            </div>
+
+            {/* Archive body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+              {archivedLoading ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                  height: 100, gap: 10, color: TEXT_SUB, fontSize: 13 }}>
+                  <div style={{ width: 16, height: 16, border: "2px solid #7C3AED",
+                    borderTopColor: "transparent", borderRadius: "50%",
+                    animation: "spin 0.7s linear infinite" }}/>
+                  Loading archive…
+                </div>
+              ) : archivedIdeas.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: TEXT_MUTED, fontSize: 13 }}>
+                  No archived ideas yet. Ideas moved to INVEST will appear here.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
+                    <thead>
+                      <tr style={{ background: BG, position: "sticky", top: 0 }}>
+                        {["Title","Objective","Type","Portfolio","BOW","INV #","Submitted By","Moved to INVEST"].map(h => (
+                          <th key={h} style={{ padding: "8px 12px", textAlign: "left",
+                            fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
+                            textTransform: "uppercase", letterSpacing: 0.6,
+                            borderBottom: "1px solid " + BORDER, whiteSpace: "nowrap" }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archivedIdeas.map((idea, idx) => {
+                        const rowBg = idx % 2 === 0 ? SURFACE : BG;
+                        const mtiDate = idea.moved_to_invest_at
+                          ? new Date(idea.moved_to_invest_at).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })
+                          : "—";
+                        return (
+                          <tr key={idea.idea_id} style={{ background: rowBg }}>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              fontWeight: 700, color: TEXT, maxWidth: 220 }}>
+                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {idea.title}
+                              </div>
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, maxWidth: 200 }}>
+                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {idea.objective || "—"}
+                              </div>
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                              {idea.idea_type || "—"}
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                              {idea.primary_portfolio || "—"}
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                              {idea.primary_bow || "—"}
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                              {idea.inv_number
+                                ? <span style={{ fontWeight: 700, color: "#7C3AED" }}>{idea.inv_number}</span>
+                                : <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                              {idea.submitted_by || "—"}
+                            </td>
+                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                              <span style={{ fontWeight: 600, color: "#7C3AED" }}>{mtiDate}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
     </div>
   );
 }

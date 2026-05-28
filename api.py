@@ -3609,6 +3609,25 @@ def create_investment_idea():
     return jsonify({"status": "ok", "idea_id": idea_id}), 201
 
 
+@app.route("/api/investment-ideas/archive", methods=["GET"])
+def list_archived_investment_ideas():
+    """Return all archived investment ideas (moved to INVEST), most-recently archived first."""
+    rows = query(f"""
+        SELECT
+          idea_id, title, submitted_by,
+          CAST(submitted_at AS STRING)       AS submitted_at,
+          stage, idea_type, objective,
+          primary_portfolio, primary_bow, additional_bows,
+          inv_number,
+          CAST(moved_to_invest_at AS STRING) AS moved_to_invest_at,
+          CAST(archived_at AS STRING)        AS archived_at
+        FROM {SCHEMA}.investment_ideas
+        WHERE COALESCE(archived, false) = true
+        ORDER BY archived_at DESC
+    """)
+    return jsonify(rows or [])
+
+
 @app.route("/api/investment-ideas/<idea_id>", methods=["PATCH"])
 def update_investment_idea(idea_id):
     """Update editable fields on an investment idea.
