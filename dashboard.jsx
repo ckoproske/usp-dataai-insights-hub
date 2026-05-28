@@ -6297,7 +6297,7 @@ function IdeaStageBadge({ stage }) {
 
 function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate }) {
   const canApprove = currentUser &&
-    (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT");
+    (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT" || currentUser.permission_level === "MLE");
 
   const [editDraft, setEditDraft] = useState({
     title:             idea.title             || "",
@@ -6538,7 +6538,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate }) {
             textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Actions</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
 
-            {/* Approve button — Leadership / DMT only */}
+            {/* Approve button — gated by canApprove */}
             {canApprove && idea.stage !== "Okay to Proceed" && idea.stage !== "Moved to Invest" && (
               <button onClick={() => setApproveOpen(v => !v)}
                 style={{ padding: "7px 16px", borderRadius: 7, border: "none",

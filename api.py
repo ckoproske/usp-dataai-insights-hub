@@ -3514,7 +3514,7 @@ def create_source_round(source_id):
 # Valid idea_type values:
 #   Grant, Contract, Bucket (multiple INVs), Supplement to existing INV
 #
-# Approval gate: permission_level must be "Leadership" or "DMT"
+# Approval gate: permission_level must be "Leadership", "DMT", or "MLE"
 # ══════════════════════════════════════════════════════════════════════════════
 
 _IDEA_STAGES   = ["Brainstorming", "More Info Needed", "Ready for Review",
@@ -3652,8 +3652,8 @@ def approve_investment_idea(idea_id):
         f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
     )
-    if not member or member[0].get("permission_level") not in ("Leadership", "DMT"):
-        return jsonify({"error": "Leadership or DMT permission required"}), 403
+    if not member or member[0].get("permission_level") not in ("Leadership", "DMT", "MLE"):
+        return jsonify({"error": "Insufficient permissions to approve"}), 403
 
     approved_by = member[0].get("display_name") or email
 
