@@ -4873,6 +4873,7 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {pbows.map(bow => (
                 <div key={bow.bow_id}
+                  onClick={() => onSelectBow(bow)}
                   style={{ display: "flex", alignItems: "center",
                     justifyContent: "space-between",
                     padding: "12px 16px", background: SURFACE, borderRadius: 8,
@@ -4882,14 +4883,13 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
                   onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.08)"}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
                   <p style={{ fontSize: 14, fontWeight: 500, color: TEXT, margin: 0 }}>{bow.title}</p>
-                  <button onClick={() => onSelectBow(bow)}
+                  <button
                     style={{ flexShrink: 0, marginLeft: 16, padding: "5px 14px",
                       fontSize: 12, fontWeight: 600, cursor: "pointer",
                       background: "none", border: `1px solid ${BORDER}`,
                       borderRadius: 6, color: TEXT_SUB,
-                      transition: "border-color 0.12s, color 0.12s" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_SUB; }}>
+                      transition: "border-color 0.12s, color 0.12s",
+                      pointerEvents: "none" }}>
                     Open
                   </button>
                 </div>
@@ -4905,6 +4905,7 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
             const p = PORT_COLORS[portfolio.portfolio_id];
             return (
               <div key={portfolio.portfolio_id}
+                onClick={() => onSelectPortfolio(portfolio)}
                 style={{ display: "flex", alignItems: "center",
                   justifyContent: "space-between",
                   padding: "12px 16px", background: SURFACE, borderRadius: 8,
@@ -4920,14 +4921,13 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
                     {p?.label || portfolio.title}
                   </p>
                 </div>
-                <button onClick={() => onSelectPortfolio(portfolio)}
+                <button
                   style={{ flexShrink: 0, marginLeft: 16, padding: "5px 14px",
                     fontSize: 12, fontWeight: 600, cursor: "pointer",
                     background: "none", border: `1px solid ${BORDER}`,
                     borderRadius: 6, color: TEXT_SUB,
-                    transition: "border-color 0.12s, color 0.12s" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_SUB; }}>
+                    transition: "border-color 0.12s, color 0.12s",
+                    pointerEvents: "none" }}>
                   Open
                 </button>
               </div>
