@@ -6916,6 +6916,10 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     const sc = sortConfig;
     if (!sc.col) return filteredIdeas;
     return [...filteredIdeas].sort((a, b) => {
+      if (sc.col === "title") {
+        const cmp = (a.title || "").localeCompare(b.title || "");
+        return sc.dir === "asc" ? cmp : -cmp;
+      }
       let va, vb;
       if (sc.col === "est_total_amount" || sc.col === "est_2026_amount") {
         va = parseFloat(a[sc.col]) || 0;
@@ -7221,8 +7225,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                     };
                     return (
                       <tr style={{ background: "#F1F5F9", position: "sticky", top: 29, zIndex: 2 }}>
-                        {/* Title — A-Z dropdown */}
-                        {fSel("title", titleOptions.map(t => <option key={t} value={t}>{t}</option>))}
+                        {/* Title — A-Z sort */}
+                        {fSort("title", "asc", ["Z → A ↓", "A → Z ↑"])}
                         {/* Objective — no filter */}
                         {fTh(null)}
                         {/* Stage */}
