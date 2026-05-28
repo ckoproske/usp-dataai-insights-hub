@@ -7297,7 +7297,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 2200, tableLayout: "auto" }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 2 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Notes", "Approver Requests", "Approver", "Approval Status"].map(h => (
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Additional Notes", "Approver Requests", "Approver", "Approval Status"].map(h => (
                       <th key={h} style={{ padding: "8px 14px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
