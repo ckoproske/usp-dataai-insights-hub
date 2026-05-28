@@ -6804,6 +6804,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     notes: "", designated_approver: "", approver_note: "",
   };
   const [colFilters, setColFilters] = useState(_emptyFilters);
+  const [reviewApproverFilter, setReviewApproverFilter] = useState(null);
   const [moveRowId, setMoveRowId]   = useState(null);
   const [moveRowInv, setMoveRowInv] = useState("");
   const [moveRowSaving, setMoveRowSaving] = useState(false);
@@ -6920,6 +6921,10 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
 
   const filteredIdeas = activeIdeas.filter(idea => {
     if (stageFilter && idea.stage !== stageFilter) return false;
+    if (reviewApproverFilter) {
+      if (idea.stage !== "Ready for Review") return false;
+      if (idea.designated_approver !== reviewApproverFilter) return false;
+    }
     const cf = colFilters;
     const lc = s => (s || "").toLowerCase();
     if (cf.title        && !lc(idea.title).includes(lc(cf.title)))                   return false;
@@ -6979,7 +6984,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>
               USP Data & AI Pipeline Planning List
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>💡 Investment Idea Tracker</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>Investment Idea Tracker</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={() => { setShowNewForm(v => !v); setSelectedIdea(null); }}
@@ -7003,73 +7008,6 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
             {toast.msg}
           </div>
         )}
-
-        {/* Review Queue — per-approver pending count */}
-        <div style={{
-          padding: "10px 24px", background: "#EEF2FF",
-          borderBottom: "1px solid #C7D2FE", flexShrink: 0,
-          display: "flex", alignItems: "center", gap: 14,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <span style={{ fontSize: 13 }}>📋</span>
-            <div>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "#4338CA",
-                textTransform: "uppercase", letterSpacing: 1, lineHeight: 1 }}>
-                Approver Review Queue
-              </div>
-              <div style={{ fontSize: 9, color: "#6366F1", marginTop: 2 }}>
-                Ideas awaiting review
-              </div>
-            </div>
-          </div>
-          <div style={{ width: 1, height: 32, background: "#C7D2FE", flexShrink: 0 }}/>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            {reviewByApprover.map(({ name, count }) => {
-              const hot = count > 0;
-              return (
-                <button key={name}
-                  onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 7,
-                    padding: "5px 14px", borderRadius: 20,
-                    border: hot ? "1.5px solid #D97706" : "1.5px solid #A5B4FC",
-                    background: hot ? "#FFFBEB" : "#fff",
-                    cursor: "pointer", transition: "all .12s",
-                  }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: hot ? "#92400E" : "#4338CA" }}>
-                    {name}
-                  </span>
-                  <span style={{
-                    minWidth: 22, height: 22, borderRadius: 11, display: "flex",
-                    alignItems: "center", justifyContent: "center",
-                    background: hot ? "#D97706" : "#A5B4FC",
-                    color: "#fff", fontSize: 11, fontWeight: 800, lineHeight: 1,
-                  }}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-            {unassignedReview > 0 && (
-              <button
-                onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
-                style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "5px 14px", borderRadius: 20,
-                  border: "1.5px solid #DC2626", background: "#FEF2F2", cursor: "pointer",
-                }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#991B1B" }}>Unassigned</span>
-                <span style={{
-                  minWidth: 22, height: 22, borderRadius: 11, display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                  background: "#DC2626", color: "#fff", fontSize: 11, fontWeight: 800,
-                }}>
-                  {unassignedReview}
-                </span>
-              </button>
-            )}
-          </div>
-        </div>
 
         {/* Pipeline bar */}
         <div style={{ padding: "12px 24px", background: SURFACE,
@@ -7140,6 +7078,73 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                   cursor: "pointer", textDecoration: "underline", padding: 0 }}>Clear</button>
             </div>
           )}
+        </div>
+
+        {/* Review Queue — subtle bar under pipeline */}
+        <div style={{
+          padding: "7px 24px", background: SURFACE,
+          borderBottom: "1px solid " + BORDER, flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 0.8, whiteSpace: "nowrap", flexShrink: 0 }}>
+            Ready for Review
+          </span>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {reviewByApprover.map(({ name, count }) => {
+              const isActive = reviewApproverFilter === name;
+              const hot = count > 0;
+              return (
+                <button key={name}
+                  onClick={() => {
+                    if (isActive) { setReviewApproverFilter(null); }
+                    else { setReviewApproverFilter(name); setStageFilter(null); }
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "3px 10px", borderRadius: 12,
+                    border: isActive ? "1.5px solid #D97706" : "1px solid " + BORDER,
+                    background: isActive ? "#FFFBEB" : SURFACE,
+                    cursor: "pointer", transition: "all .1s",
+                  }}>
+                  <span style={{ fontSize: 11, fontWeight: isActive ? 700 : 500,
+                    color: isActive ? "#92400E" : hot ? TEXT : TEXT_MUTED }}>
+                    {name}
+                  </span>
+                  <span style={{
+                    minWidth: 18, height: 18, borderRadius: 9, display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    background: isActive ? "#D97706" : hot ? "#D97706" : BORDER,
+                    color: hot ? "#fff" : TEXT_MUTED,
+                    fontSize: 10, fontWeight: 700, lineHeight: 1,
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+            {unassignedReview > 0 && (
+              <button
+                onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
+                style={{ display: "flex", alignItems: "center", gap: 5,
+                  padding: "3px 10px", borderRadius: 12,
+                  border: "1px solid #FECACA", background: "#FEF2F2", cursor: "pointer" }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: "#991B1B" }}>Unassigned</span>
+                <span style={{ minWidth: 18, height: 18, borderRadius: 9, display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  background: "#DC2626", color: "#fff", fontSize: 10, fontWeight: 700 }}>
+                  {unassignedReview}
+                </span>
+              </button>
+            )}
+            {reviewApproverFilter && (
+              <button onClick={() => setReviewApproverFilter(null)}
+                style={{ fontSize: 10, color: TEXT_MUTED, background: "none", border: "none",
+                  cursor: "pointer", textDecoration: "underline", padding: 0 }}>
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Main body: list + detail/new-idea panel */}
