@@ -7198,23 +7198,6 @@ function AllInvestmentsView() {
     };
   });
 
-  if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
-      height: 200, gap: 12, color: TEXT_SUB, fontSize: 14 }}>
-      <div style={{ width: 18, height: 18, border: "2px solid #3086AB",
-        borderTopColor: "transparent", borderRadius: "50%",
-        animation: "spin 0.7s linear infinite" }} />
-      Loading investments from INVEST…
-    </div>
-  );
-
-  if (error) return (
-    <div style={{ background: "#FEF2F2", border: "1px solid #FECACA",
-      borderRadius: 10, padding: "20px 24px", color: "#B91C1C", fontSize: 14 }}>
-      {error}
-    </div>
-  );
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
@@ -7225,7 +7208,7 @@ function AllInvestmentsView() {
         />
       )}
 
-      {/* Investment Idea Tracker button */}
+      {/* Investment Idea Tracker button — always visible */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button onClick={() => setShowIdeaTracker(true)}
           style={{
@@ -7238,6 +7221,24 @@ function AllInvestmentsView() {
           💡 Investment Idea Tracker
         </button>
       </div>
+
+      {/* Loading / error states for investments table */}
+      {loading && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+          height: 200, gap: 12, color: TEXT_SUB, fontSize: 14 }}>
+          <div style={{ width: 18, height: 18, border: "2px solid #3086AB",
+            borderTopColor: "transparent", borderRadius: "50%",
+            animation: "spin 0.7s linear infinite" }} />
+          Loading investments from INVEST…
+        </div>
+      )}
+      {error && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA",
+          borderRadius: 10, padding: "20px 24px", color: "#B91C1C", fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+      {!loading && !error && (<React.Fragment>
 
       {/* Pipeline tracker header */}
       <div style={{ background: "#EEF4FB", border: "1px solid #D3E4F4", borderRadius: 12, padding: "16px 20px 14px" }}>
@@ -8407,6 +8408,7 @@ function DataModelExplorer() {
           </div>
         </div>
       )}
+      </React.Fragment>)}
     </div>
   );
 }
