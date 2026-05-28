@@ -6907,8 +6907,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
       setIdeas(mapped);
       setShowNewForm(false);
       setNewDraft({ title: "", stage: "Brainstorming", idea_type: "", primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "", est_total_amount: "", est_2026_amount: "", co_funding_details: "", desired_start_date: "", est_duration: "", objective: "", notes: "", designated_approver: "" });
-      const newIdea = mapped.find(i => i.idea_id === resp.idea_id) || null;
-      setSelectedIdea(newIdea);
+      showToast("Idea created successfully!");
     } catch {
       setNewError("Failed to create idea.");
     } finally {
@@ -7007,14 +7006,23 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
 
         {/* Review Queue — per-approver pending count */}
         <div style={{
-          padding: "10px 24px", background: "#FAFAF7",
-          borderBottom: "1px solid " + BORDER, flexShrink: 0,
-          display: "flex", alignItems: "center", gap: 12,
+          padding: "10px 24px", background: "#EEF2FF",
+          borderBottom: "1px solid #C7D2FE", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 14,
         }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
-            textTransform: "uppercase", letterSpacing: 1, whiteSpace: "nowrap", flexShrink: 0 }}>
-            Ready for Review
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 13 }}>📋</span>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#4338CA",
+                textTransform: "uppercase", letterSpacing: 1, lineHeight: 1 }}>
+                Approver Review Queue
+              </div>
+              <div style={{ fontSize: 9, color: "#6366F1", marginTop: 2 }}>
+                Ideas awaiting review
+              </div>
+            </div>
           </div>
+          <div style={{ width: 1, height: 32, background: "#C7D2FE", flexShrink: 0 }}/>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             {reviewByApprover.map(({ name, count }) => {
               const hot = count > 0;
@@ -7023,20 +7031,19 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                   onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
                   style={{
                     display: "flex", alignItems: "center", gap: 7,
-                    padding: "5px 12px", borderRadius: 20,
-                    border: hot ? "1.5px solid #D97706" : "1.5px solid " + BORDER,
-                    background: hot ? "#FFFBEB" : SURFACE,
+                    padding: "5px 14px", borderRadius: 20,
+                    border: hot ? "1.5px solid #D97706" : "1.5px solid #A5B4FC",
+                    background: hot ? "#FFFBEB" : "#fff",
                     cursor: "pointer", transition: "all .12s",
                   }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: hot ? "#92400E" : TEXT_MUTED }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: hot ? "#92400E" : "#4338CA" }}>
                     {name}
                   </span>
                   <span style={{
-                    minWidth: 20, height: 20, borderRadius: 10, display: "flex",
+                    minWidth: 22, height: 22, borderRadius: 11, display: "flex",
                     alignItems: "center", justifyContent: "center",
-                    background: hot ? "#D97706" : BORDER,
-                    color: hot ? "#fff" : TEXT_MUTED,
-                    fontSize: 11, fontWeight: 800, lineHeight: 1,
+                    background: hot ? "#D97706" : "#A5B4FC",
+                    color: "#fff", fontSize: 11, fontWeight: 800, lineHeight: 1,
                   }}>
                     {count}
                   </span>
@@ -7048,12 +7055,12 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                 onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
                 style={{
                   display: "flex", alignItems: "center", gap: 7,
-                  padding: "5px 12px", borderRadius: 20,
+                  padding: "5px 14px", borderRadius: 20,
                   border: "1.5px solid #DC2626", background: "#FEF2F2", cursor: "pointer",
                 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#991B1B" }}>Unassigned</span>
                 <span style={{
-                  minWidth: 20, height: 20, borderRadius: 10, display: "flex",
+                  minWidth: 22, height: 22, borderRadius: 11, display: "flex",
                   alignItems: "center", justifyContent: "center",
                   background: "#DC2626", color: "#fff", fontSize: 11, fontWeight: 800,
                 }}>
