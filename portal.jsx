@@ -1710,6 +1710,71 @@ function ExecutionTargetsSection({ targets: initTargets, bow, outcomes, user }) 
   );
 }
 
+// ─── IndicatorChipRow ─────────────────────────────────────────────────────────
+function IndicatorChipRow({ ind, accentColor, onEdit, yearSet }) {
+  const unit    = ind.unit ? ` ${ind.unit}` : "";
+  const years   = yearSet || TARGET_YEARS;
+  const targets = years.map(y => ({ year: y, val: ind[`target_${y}`] })).filter(t => t.val != null);
+
+  const chip = {
+    display: "inline-flex", alignItems: "center",
+    fontSize: 11, fontWeight: 500, color: TEXT_SUB,
+    background: BG, borderRadius: 10,
+    padding: "2px 9px", whiteSpace: "nowrap",
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "stretch", borderBottom: `1px solid ${BORDER}` }}>
+      {/* Accent bar */}
+      <div style={{ width: 3, flexShrink: 0, background: accentColor || ACCENT, borderRadius: "2px 0 0 2px" }} />
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0, padding: "10px 12px 10px 14px",
+        display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Name */}
+          <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, margin: "0 0 5px 0" }}>
+            {ind.name || ind.text}
+          </p>
+          {ind.name && ind.text && ind.text !== ind.name && (
+            <p style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: "0 0 5px 0" }}>
+              {ind.text}
+            </p>
+          )}
+          {/* Meta chips */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {ind.status && ind.status !== "active" && <StatusBadge status={ind.status} />}
+            {ind.collection_frequency && (
+              <span style={chip}>{ind.collection_frequency}</span>
+            )}
+            {(ind.source_name || ind.source_id) && (
+              <span style={chip}>
+                {ind.source_url
+                  ? <a href={ind.source_url} target="_blank" rel="noreferrer"
+                      style={{ color: TEXT_SUB, textDecoration: "none" }}>
+                      {ind.source_name || ind.source_id}
+                    </a>
+                  : (ind.source_name || ind.source_id)}
+              </span>
+            )}
+            {ind.baseline != null && (
+              <span style={chip}>Baseline: <strong style={{ marginLeft: 3 }}>{ind.baseline}{unit}</strong></span>
+            )}
+            {targets.map(t => (
+              <span key={t.year} style={chip}>{t.year}: <strong style={{ marginLeft: 3 }}>{t.val}{unit}</strong></span>
+            ))}
+          </div>
+        </div>
+        {/* Edit button */}
+        <button onClick={onEdit}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 14, color: TEXT_MUTED, padding: "4px 6px", flexShrink: 0,
+            borderRadius: 4, lineHeight: 1 }}
+          title="Edit indicator">✎</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── BOW Content Table ────────────────────────────────────────────────────────
 // Mirrors the slide layout: outcome rows × year columns for execution targets,
 // then indicators as rows × year columns for targets & actuals.
@@ -1951,87 +2016,15 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {inds.map(ind => {
-                const unit = ind.unit ? ` ${ind.unit}` : "";
-                const targets = TARGET_YEARS.map(y => ({ year: y, val: ind[`target_${y}`] }))
-                  .filter(t => t.val != null);
-                return (
-                  <div key={ind.indicator_id}
-                    style={{ borderLeft: `3px solid ${p?.color || ACCENT}`,
-                      background: "#FAFAFA", borderRadius: "0 6px 6px 0",
-                      overflow: "hidden", marginBottom: 0 }}>
-
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
-                      padding: "10px 14px" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, margin: 0 }}>
-                            {ind.name || ind.text}
-                          </p>
-                          <StatusBadge status={ind.status} />
-                        </div>
-                        {ind.name && ind.text && ind.text !== ind.name && (
-                          <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
-                            {ind.text}
-                          </p>
-                        )}
-                        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
-                          {ind.collection_frequency && (
-                            <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                              <strong>Frequency:</strong> {ind.collection_frequency}
-                            </span>
-                          )}
-                          {(ind.source_name || ind.source_id) && (
-                            <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                              <strong>Source:</strong>{" "}
-                              {ind.source_url
-                                ? <a href={ind.source_url} target="_blank" rel="noreferrer"
-                                    style={{ color: ACCENT }}>{ind.source_name || ind.source_id}</a>
-                                : (ind.source_name || ind.source_id)}
-                            </span>
-                          )}
-                        </div>
-                        {(ind.baseline != null || targets.length > 0) && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {ind.baseline != null && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                                  minWidth: 52 }}>Baseline</span>
-                                <span style={{ fontSize: 11, background: BG,
-                                  border: `1px solid ${BORDER}`, borderRadius: 4,
-                                  padding: "2px 8px", color: TEXT_SUB }}>
-                                  <strong>{ind.baseline}{unit}</strong>
-                                </span>
-                              </div>
-                            )}
-                            {targets.length > 0 && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                                  minWidth: 52 }}>Targets</span>
-                                {targets.map(t => (
-                                  <span key={t.year} style={{ fontSize: 11, background: BG,
-                                    border: `1px solid ${BORDER}`, borderRadius: 4,
-                                    padding: "2px 8px", color: TEXT_SUB }}>
-                                    {t.year}: <strong>{t.val}{unit}</strong>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => onOpenDrawer({ type: "indicator", item: ind })}
-                        style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
-                          background: SURFACE, color: TEXT_SUB, border: `1px solid ${BORDER}`,
-                          borderRadius: 4, padding: "3px 8px", marginTop: 2 }}>
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden" }}>
+              {inds.map(ind => (
+                <IndicatorChipRow
+                  key={ind.indicator_id}
+                  ind={ind}
+                  accentColor={p?.color || ACCENT}
+                  onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
+                />
+              ))}
             </div>
           </div>
         );
@@ -2954,82 +2947,16 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
           action="Add indicator" onAction={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })} />
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
-        {inds.map(ind => {
-          const unit = ind.unit ? ` ${ind.unit}` : "";
-          const targets = PORT_TABLE_YEARS.map(y => ({ year: y, val: ind[`target_${y}`] }))
-            .filter(t => t.val != null);
-          return (
-            <div key={ind.indicator_id}
-              style={{ borderLeft: `3px solid ${p?.color || ACCENT}`,
-                background: "#FAFAFA", borderRadius: "0 6px 6px 0",
-                overflow: "hidden" }}>
-
-              {/* Card header */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
-                padding: "10px 14px" }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, marginBottom: 4 }}>
-                    {ind.name || ind.text}
-                  </p>
-                  {ind.name && ind.text && ind.text !== ind.name && (
-                    <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
-                      {ind.text}
-                    </p>
-                  )}
-
-                  {/* Meta row */}
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
-                    {ind.collection_frequency && (
-                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                        <strong>Frequency:</strong> {ind.collection_frequency}
-                      </span>
-                    )}
-                    {(ind.source_name || ind.source_id) && (
-                      <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                        <strong>Source:</strong>{" "}
-                        {ind.source_url
-                          ? <a href={ind.source_url} target="_blank" rel="noreferrer"
-                              style={{ color: ACCENT }}>{ind.source_name || ind.source_id}</a>
-                          : (ind.source_name || ind.source_id)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Baseline + targets */}
-                  {(ind.baseline != null || targets.length > 0) && (
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {ind.baseline != null && (
-                        <span style={{ fontSize: 11, background: BG,
-                          border: `1px solid ${BORDER}`, borderRadius: 4,
-                          padding: "2px 8px", color: TEXT_SUB }}>
-                          Baseline: <strong>{ind.baseline}{unit}</strong>
-                        </span>
-                      )}
-                      {targets.map(t => (
-                        <span key={t.year} style={{ fontSize: 11, background: BG,
-                          border: `1px solid ${BORDER}`, borderRadius: 4,
-                          padding: "2px 8px", color: TEXT_SUB }}>
-                          {t.year}: <strong>{t.val}{unit}</strong>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                  <button onClick={() => onOpenDrawer({ type: "indicator", item: ind })}
-                    style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
-                      background: SURFACE, color: TEXT_SUB,
-                      border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
-                    Edit
-                  </button>
-                  <LastEdited by={ind.last_edited_by} at={ind.last_edited_at} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden", marginBottom: 28 }}>
+        {inds.map(ind => (
+          <IndicatorChipRow
+            key={ind.indicator_id}
+            ind={ind}
+            accentColor={p?.color || ACCENT}
+            onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
+            yearSet={PORT_TABLE_YEARS}
+          />
+        ))}
       </div>
 
       {/* ── Remove outcome ── */}
