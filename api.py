@@ -3718,7 +3718,9 @@ def move_idea_to_invest(idea_id):
             SET stage              = 'Moved to Invest',
                 moved_to_invest    = true,
                 moved_to_invest_at = current_timestamp(),
-                inv_number         = COALESCE(?, inv_number)
+                inv_number         = COALESCE(?, inv_number),
+                archived           = true,
+                archived_at        = current_timestamp()
             WHERE idea_id = ?""",
         [inv_number, idea_id]
     )
