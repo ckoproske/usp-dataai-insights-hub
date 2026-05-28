@@ -6324,6 +6324,8 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState(null);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
 
   const handleFieldChange = (field, val) => setEditDraft(d => ({ ...d, [field]: val }));
 
@@ -6360,17 +6362,34 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
         method: "POST",
         body: JSON.stringify({ comment: commentText }),
       });
-      const newComment = result?.comment_id
-        ? result
-        : { comment_id: Date.now(), idea_id: idea.idea_id, comment_text: commentText,
-            commented_by: currentUser?.display_name || currentUser?.email || "You",
-            commented_at: new Date().toISOString(), is_approval_comment: false };
+      // Always build the full comment object locally — the API only returns {status, comment_id}
+      const newComment = {
+        comment_id: result?.comment_id || String(Date.now()),
+        idea_id: idea.idea_id,
+        comment_text: commentText,
+        commented_by: currentUser?.display_name || currentUser?.email || "You",
+        commented_at: new Date().toISOString(),
+        is_approval_comment: false,
+      };
       setLocalComments(prev => [...prev, newComment]);
       setCommentText("");
     } catch {
       // silent
     } finally {
       setAddingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    setDeletingCommentId(commentId);
+    try {
+      await apiFetch(`/api/investment-ideas/${idea.idea_id}/comments/${commentId}`, { method: "DELETE" });
+      setLocalComments(prev => prev.filter(c => c.comment_id !== commentId));
+    } catch {
+      // silent
+    } finally {
+      setDeletingCommentId(null);
+      setConfirmDeleteCommentId(null);
     }
   };
 
@@ -6730,11 +6749,37 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
               background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
               padding: "10px 12px", marginBottom: 8,
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{c.commented_by}</span>
-                <span style={{ fontSize: 10, color: TEXT_MUTED }}>
-                  {c.commented_at ? new Date(c.commented_at).toLocaleDateString() : ""}
-                </span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{c.commented_by}</span>
+                  <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 8 }}>
+                    {c.commented_at ? new Date(c.commented_at).toLocaleDateString() : ""}
+                  </span>
+                </div>
+                {confirmDeleteCommentId === c.comment_id ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontSize: 10, color: "#DC2626", fontWeight: 600 }}>Delete?</span>
+                    <button onClick={() => handleDeleteComment(c.comment_id)}
+                      disabled={deletingCommentId === c.comment_id}
+                      style={{ padding: "2px 7px", borderRadius: 4, border: "none",
+                        background: "#DC2626", color: "#fff", fontSize: 10, fontWeight: 700,
+                        cursor: "pointer", opacity: deletingCommentId === c.comment_id ? 0.6 : 1 }}>
+                      {deletingCommentId === c.comment_id ? "…" : "Yes"}
+                    </button>
+                    <button onClick={() => setConfirmDeleteCommentId(null)}
+                      style={{ padding: "2px 7px", borderRadius: 4, border: "1px solid " + BORDER,
+                        background: BG, color: TEXT_MUTED, fontSize: 10, cursor: "pointer" }}>
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDeleteCommentId(c.comment_id)}
+                    style={{ background: "none", border: "none", cursor: "pointer",
+                      color: TEXT_MUTED, fontSize: 14, lineHeight: 1, padding: "0 2px",
+                      opacity: 0.4, flexShrink: 0 }}>
+                    ×
+                  </button>
+                )}
               </div>
               <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>{c.comment_text}</div>
             </div>

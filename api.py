@@ -3825,6 +3825,16 @@ def add_idea_comment(idea_id):
     return jsonify({"status": "ok", "comment_id": cid}), 201
 
 
+@app.route("/api/investment-ideas/<idea_id>/comments/<comment_id>", methods=["DELETE"])
+def delete_idea_comment(idea_id, comment_id):
+    """Hard-delete a single comment. Available to all authenticated users."""
+    execute(
+        f"DELETE FROM {SCHEMA}.investment_idea_comments WHERE comment_id = ? AND idea_id = ?",
+        [comment_id, idea_id]
+    )
+    return jsonify({"status": "ok"})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
