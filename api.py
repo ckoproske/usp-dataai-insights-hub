@@ -3525,6 +3525,7 @@ _IDEA_EDITABLE = {
     "primary_bow", "additional_bows", "potential_partner",
     "est_total_amount", "est_2026_amount", "co_funding_details",
     "desired_start_date", "est_duration", "notes",
+    "designated_approver",
 }
 
 
@@ -3552,11 +3553,17 @@ def list_investment_ideas():
             WHERE COALESCE(archived, false) = false
             ORDER BY submitted_at DESC"""
     try:
-        rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note', 1)}")
+        rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note, designated_approver', 1)}")
     except Exception:
-        rows = query(f"SELECT {_base}")
-        for r in (rows or []):
-            r["approver_note"] = None
+        try:
+            rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note', 1)}")
+            for r in (rows or []):
+                r["designated_approver"] = None
+        except Exception:
+            rows = query(f"SELECT {_base}")
+            for r in (rows or []):
+                r["approver_note"] = None
+                r["designated_approver"] = None
     return jsonify(rows or [])
 
 
@@ -3585,12 +3592,12 @@ def create_investment_idea():
              objective, primary_portfolio, primary_bow, additional_bows,
              potential_partner, est_total_amount, est_2026_amount,
              co_funding_details, desired_start_date, est_duration, notes,
-             archived)
+             designated_approver, archived)
             VALUES (?, ?, ?, current_timestamp(), ?, ?,
                     ?, ?, ?, ?,
                     ?, ?, ?,
                     ?, ?, ?, ?,
-                    false)""",
+                    ?, false)""",
         [idea_id, title, submitted_by,
          data.get("stage") or "Brainstorming",
          data.get("idea_type") or None,
@@ -3604,7 +3611,8 @@ def create_investment_idea():
          data.get("co_funding_details") or None,
          data.get("desired_start_date") or None,
          data.get("est_duration") or None,
-         data.get("notes") or None]
+         data.get("notes") or None,
+         data.get("designated_approver") or None]
     )
     return jsonify({"status": "ok", "idea_id": idea_id}), 201
 

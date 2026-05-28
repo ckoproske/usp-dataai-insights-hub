@@ -6275,6 +6275,7 @@ const IDEA_STAGES = [
 ];
 const IDEA_STAGE_MAP = Object.fromEntries(IDEA_STAGES.map(s => [s.name, s.color]));
 const IDEA_TYPES = ["Grant", "Contract", "Bucket (multiple INVs)", "Supplement to existing INV"];
+const DESIGNATED_APPROVERS = ["Matt Gee", "Natasha Fedo", "Nicole Ifill"];
 
 function fmtIdeaAmt(n) {
   const num = parseFloat(n) || 0;
@@ -6300,15 +6301,16 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
     (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT" || currentUser.permission_level === "MLE");
 
   const [editDraft, setEditDraft] = useState({
-    title:             idea.title             || "",
-    idea_type:         idea.idea_type         || "",
-    primary_portfolio: idea.primary_portfolio || "",
-    primary_bow:       idea.primary_bow       || "",
-    potential_partner: idea.potential_partner || "",
-    est_2026_amount:   idea.est_2026_amount   || "",
-    description:       idea.description       || "",
-    stage:             idea.stage             || "Brainstorming",
-    inv_number:        idea.inv_number        || "",
+    title:                idea.title                || "",
+    idea_type:            idea.idea_type            || "",
+    primary_portfolio:    idea.primary_portfolio    || "",
+    primary_bow:          idea.primary_bow          || "",
+    potential_partner:    idea.potential_partner    || "",
+    est_2026_amount:      idea.est_2026_amount      || "",
+    description:          idea.description          || "",
+    stage:                idea.stage                || "Brainstorming",
+    inv_number:           idea.inv_number           || "",
+    designated_approver:  idea.designated_approver  || "",
   });
   const [saving, setSaving]         = useState(false);
   const [saveMsg, setSaveMsg]       = useState(null);
@@ -6548,6 +6550,17 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
           </div>
           {fieldRow("Potential Partner", "potential_partner")}
           {fieldRow("Est. 2026 Amount ($)", "est_2026_amount", "number")}
+          <div style={{ marginBottom: 14, gridColumn: "1 / -1" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+              letterSpacing: 0.8, marginBottom: 4 }}>Designated Approver</div>
+            <select value={editDraft.designated_approver}
+              onChange={e => handleFieldChange("designated_approver", e.target.value)}
+              style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+              <option value="">— Select Approver —</option>
+              {DESIGNATED_APPROVERS.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </div>
         </div>
         {fieldRow("Description / Rationale", "description", "textarea")}
 
@@ -6817,7 +6830,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     primary_portfolio: "", primary_bow: "", additional_bows: "",
     potential_partner: "", est_total_amount: "", est_2026_amount: "",
     co_funding_details: "", desired_start_date: "", est_duration: "",
-    objective: "", notes: "",
+    objective: "", notes: "", designated_approver: "",
   });
   const [newSaving, setNewSaving]     = useState(false);
   const [newError, setNewError]       = useState(null);
@@ -6933,7 +6946,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
       const mapped = (refreshed || []).map(i => ({...i, id: i.idea_id}));
       setIdeas(mapped);
       setShowNewForm(false);
-      setNewDraft({ title: "", stage: "Brainstorming", idea_type: "", primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "", est_total_amount: "", est_2026_amount: "", co_funding_details: "", desired_start_date: "", est_duration: "", objective: "", notes: "" });
+      setNewDraft({ title: "", stage: "Brainstorming", idea_type: "", primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "", est_total_amount: "", est_2026_amount: "", co_funding_details: "", desired_start_date: "", est_duration: "", objective: "", notes: "", designated_approver: "" });
       const newIdea = mapped.find(i => i.idea_id === resp.idea_id) || null;
       setSelectedIdea(newIdea);
     } catch {
@@ -7109,7 +7122,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 1200 }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Approver Note", "Comments"].map(h => (
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Designated Approver", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Approver Note", "Comments"].map(h => (
                       <th key={h} style={{ padding: "8px 10px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -7156,6 +7169,11 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         </td>
                         <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
                           {idea.submitted_by || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                          {idea.designated_approver
+                            ? <span style={{ fontWeight: 700, color: "#7C3AED", fontSize: 11 }}>{idea.designated_approver}</span>
+                            : <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}
                         </td>
                         <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
                           maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -7210,7 +7228,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                       </tr>
                       {expandedCommentRow === idea.idea_id && (
                         <tr key={idea.id + "-comments"}>
-                          <td colSpan={15}
+                          <td colSpan={16}
                             style={{ padding: "0 12px 14px 12px", background: "#F8FAFC",
                               borderBottom: "2px solid #6366F133" }}>
                             <div style={{ maxWidth: 700, paddingTop: 10 }}>
@@ -7428,6 +7446,19 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         onChange={e => setNewDraft(d => ({...d, co_funding_details: e.target.value}))}
                         style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
                           fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Designated Approver *</div>
+                      <select value={newDraft.designated_approver}
+                        onChange={e => setNewDraft(d => ({...d, designated_approver: e.target.value}))}
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7,
+                          border: "1px solid " + (newDraft.designated_approver ? BORDER : "#FCA5A5"),
+                          fontSize: 13, color: newDraft.designated_approver ? TEXT : TEXT_MUTED,
+                          background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+                        <option value="">— Select Approver —</option>
+                        {DESIGNATED_APPROVERS.map(name => <option key={name} value={name}>{name}</option>)}
+                      </select>
                     </div>
                     {/* Section: Description */}
                     <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
