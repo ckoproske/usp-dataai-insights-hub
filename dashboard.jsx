@@ -9757,23 +9757,24 @@ function App() {
               onMouseLeave={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.color=TEXT_SUB;}}>
               💬 Give Feedback
             </button>
-            {/* Submit Data button */}
+            {/* Submit Data & Edit button */}
             <a
               href="/portal"
-              title="Submit actuals or share insights"
+              title="Submit data, edit content, browse indicators"
               style={{
-                display:"flex",alignItems:"center",gap:6,
-                padding:"7px 16px",
-                background:ACCENT,color:"#fff",
-                border:"none",borderRadius:8,
-                fontSize:12,fontWeight:700,cursor:"pointer",
-                letterSpacing:0.2,textDecoration:"none",
-                boxShadow:"0 1px 4px rgba(248,92,2,0.25)",
-                transition:"background .15s,box-shadow .15s",
+                display:"flex", alignItems:"center", gap:7,
+                padding:"9px 20px",
+                background:`linear-gradient(135deg, ${ACCENT} 0%, #D94E02 100%)`,
+                color:"#fff",
+                border:"none", borderRadius:9,
+                fontSize:13, fontWeight:700, cursor:"pointer",
+                letterSpacing:0.2, textDecoration:"none",
+                boxShadow:"0 2px 10px rgba(248,92,2,0.35)",
+                transition:"box-shadow .15s, filter .15s",
               }}
-              onMouseEnter={e=>{e.currentTarget.style.background="#D94E02";e.currentTarget.style.boxShadow="0 2px 8px rgba(248,92,2,0.35)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background=ACCENT;e.currentTarget.style.boxShadow="0 1px 4px rgba(248,92,2,0.25)";}}>
-              Update Data
+              onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 18px rgba(248,92,2,0.5)";e.currentTarget.style.filter="brightness(1.06)";}}
+              onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 2px 10px rgba(248,92,2,0.35)";e.currentTarget.style.filter="none";}}>
+              Submit Data &amp; Edit ↗
             </a>
           </div>
         </div>
