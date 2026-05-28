@@ -7819,6 +7819,7 @@ function AllInvestmentsView({ onNavigate }) {
   const [selectedOwner, setSelectedOwner]           = useState("all");
   const [showApprover, setShowApprover]             = useState(true);
   const [showNotes, setShowNotes]                   = useState(false);
+  const [approverDropdownPos, setApproverDropdownPos] = useState({ top: 0, left: 0 });
   const [paymentPopover, setPaymentPopover]         = useState(null);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
@@ -8699,7 +8700,11 @@ function AllInvestmentsView({ onNavigate }) {
                         <td style={{ ...tdBase, padding: showApprover ? "8px 12px" : 0, overflow: "hidden" }}>
                           {showApprover && inv.status === "In Process" && (
                             <div style={{ position: "relative" }}>
-                              <div onClick={() => setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`)}
+                              <div onClick={e => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setApproverDropdownPos({ top: rect.bottom + 4, left: rect.left });
+                                  setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`);
+                                }}
                                 style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
                                   display: "flex", alignItems: "center", gap: 3,
                                   color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
@@ -8711,7 +8716,7 @@ function AllInvestmentsView({ onNavigate }) {
                                 <>
                                   <div onClick={() => setOpenDropdown(null)}
                                     style={{ position: "fixed", inset: 0, zIndex: 199 }} />
-                                  <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 200,
+                                  <div style={{ position: "fixed", top: approverDropdownPos.top, left: approverDropdownPos.left, zIndex: 200,
                                     background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
                                     padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
                                     {APPROVERS.map(name => (
