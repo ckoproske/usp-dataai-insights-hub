@@ -1248,10 +1248,9 @@ function migrateCompletion(val) {
   return COMPLETION[val] ? val : (COMPLETION_MIGRATE[val] || "Not Started");
 }
 function getIndData(ind) {
-  const ph = PLACEHOLDER[ind.id];
-  const baseline = (ind.baseline!==""&&ind.baseline!==undefined&&ind.baseline!==null) ? Number(ind.baseline) : (ph?ph.baseline:null);
-  const actuals = YEARS.map((yr,j)=>{ const v=ind.actuals&&ind.actuals[yr]!==undefined?ind.actuals[yr]:""; return (v!==""&&v!==null)?Number(v):(ph?ph.data[j]:null); });
-  const targets = YEARS.map((yr,j)=>{ const v=ind.targets&&ind.targets[yr]!==undefined?ind.targets[yr]:""; return (v!==""&&v!==null)?Number(v):(ph?ph.target[j]:null); });
+  const baseline = (ind.baseline!==""&&ind.baseline!==undefined&&ind.baseline!==null) ? Number(ind.baseline) : null;
+  const actuals  = YEARS.map(yr  =>{ const v=ind.actuals&&ind.actuals[yr]!==undefined?ind.actuals[yr]:"";  return (v!==""&&v!==null)?Number(v):null; });
+  const targets  = YEARS.map(yr  =>{ const v=ind.targets&&ind.targets[yr]!==undefined?ind.targets[yr]:"";  return (v!==""&&v!==null)?Number(v):null; });
   return { baseline, actuals, targets };
 }
 function autoSuggestStatus(ind) {
