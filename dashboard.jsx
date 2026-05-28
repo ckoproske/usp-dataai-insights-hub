@@ -7124,7 +7124,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                     const isSelected = selectedIdea && selectedIdea.id === idea.id;
                     const isApproved = idea.stage === "Okay to Proceed";
                     return (
-                      <tr key={idea.id}
+                      <React.Fragment key={idea.id}>
+                      <tr
                         onClick={() => { setSelectedIdea(isSelected ? null : idea); setShowNewForm(false); }}
                         style={{
                           cursor: "pointer",
@@ -7266,6 +7267,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           </td>
                         </tr>
                       )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
