@@ -7415,7 +7415,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           {idea.title || "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB,
-                          minWidth: 200, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          minWidth: 200, maxWidth: 280, whiteSpace: "normal", lineHeight: 1.45 }}>
                           {idea.objective || "—"}
                         </td>
                         <td style={{ padding: "9px 14px" }} onClick={e => { if (idea.stage === "Okay to Proceed") e.stopPropagation(); }}>
@@ -7496,12 +7496,12 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           {idea.est_duration || "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB,
-                          minWidth: 200, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          minWidth: 200, maxWidth: 260, whiteSpace: "normal", lineHeight: 1.45,
                           fontStyle: idea.notes ? "normal" : "italic" }}>
                           {idea.notes || "—"}
                         </td>
                         <td style={{ padding: "9px 14px",
-                          minWidth: 200, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          minWidth: 200, maxWidth: 260, whiteSpace: "normal", lineHeight: 1.45,
                           color: idea.reviewer_note ? "#92400E" : TEXT_MUTED,
                           fontStyle: idea.reviewer_note ? "normal" : "italic",
                           background: idea.reviewer_note ? "#FFFBEB" : "inherit" }}>
@@ -7513,7 +7513,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                             : <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB,
-                          minWidth: 200, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          minWidth: 200, maxWidth: 260, whiteSpace: "normal", lineHeight: 1.45,
                           fontStyle: idea.approver_note ? "normal" : "italic" }}>
                           {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
                         </td>
