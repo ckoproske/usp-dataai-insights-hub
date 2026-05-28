@@ -2202,7 +2202,7 @@ function CommentsPanel({ entityType, entityId }) {
   const [loading, setLoading]   = useState(true);
   const [draft, setDraft]       = useState("");
   const [saving, setSaving]     = useState(false);
-  const [deleting, setDeleting] = useState(null); // comment_id being deleted
+  const [acting, setActing]     = useState(null); // comment_id under action
   const inputRef                = useRef(null);
 
   const load = () => {
@@ -2214,7 +2214,6 @@ function CommentsPanel({ entityType, entityId }) {
   };
 
   useEffect(() => { load(); }, [entityType, entityId]);
-
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 280);
   }, [open]);
@@ -2225,25 +2224,43 @@ function CommentsPanel({ entityType, entityId }) {
     setSaving(true);
     try {
       const saved = await api(`/api/comments/${entityType}/${entityId}`, {
-        method: "POST",
-        body: JSON.stringify({ body }),
+        method: "POST", body: JSON.stringify({ body }),
       });
-      setComments(prev => [...prev, saved]);
-      setDraft("");
+      if (saved && !saved.error) {
+        setComments(prev => [...prev, saved]);
+        setDraft("");
+      }
     } catch (e) { /* ignore */ }
     finally { setSaving(false); }
   };
 
   const del = async (commentId) => {
-    setDeleting(commentId);
+    setActing(commentId);
     try {
       await api(`/api/comments/${commentId}`, { method: "DELETE" });
       setComments(prev => prev.filter(c => c.comment_id !== commentId));
     } catch (e) { /* ignore */ }
-    finally { setDeleting(null); }
+    finally { setActing(null); }
   };
 
-  // Format timestamp as MM/DD/YY HH:MM TZ
+  const toggleResolve = async (c) => {
+    const next = !c.is_resolved;
+    // Optimistic update
+    setComments(prev => prev.map(x =>
+      x.comment_id === c.comment_id ? { ...x, is_resolved: next } : x
+    ));
+    try {
+      await api(`/api/comments/${c.comment_id}/resolve`, {
+        method: "PATCH", body: JSON.stringify({ is_resolved: next }),
+      });
+    } catch (e) {
+      // Roll back on failure
+      setComments(prev => prev.map(x =>
+        x.comment_id === c.comment_id ? { ...x, is_resolved: c.is_resolved } : x
+      ));
+    }
+  };
+
   const fmtTs = (ts) => {
     if (!ts) return "";
     try {
@@ -2259,35 +2276,35 @@ function CommentsPanel({ entityType, entityId }) {
     } catch (e) { return ts; }
   };
 
-  const count = comments.length;
+  const count      = comments.length;
+  const unresolvedCount = comments.filter(c => !c.is_resolved).length;
 
   return (
     <>
-      {/* Floating bubble — visible when panel is closed */}
+      {/* ── Trigger button — top-right, always visible when panel closed ── */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          title={count > 0 ? `${count} comment${count !== 1 ? "s" : ""}` : "Add a comment"}
           style={{
-            position: "fixed", bottom: 32, right: 32, zIndex: 150,
-            minWidth: 48, height: 48, borderRadius: 24,
-            padding: "0 14px",
-            background: count > 0 ? BRAND : SURFACE,
-            color: count > 0 ? "#fff" : TEXT_MUTED,
-            border: `2px solid ${count > 0 ? BRAND : BORDER}`,
+            position: "fixed", top: 112, right: 0, zIndex: 150,
+            height: 40, padding: "0 16px 0 14px",
+            background: ACCENT, color: "#fff",
+            border: "none", borderRadius: "20px 0 0 20px",
             cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            boxShadow: "0 2px 12px rgba(48,58,68,0.18)",
-            transition: "opacity 0.2s",
-          }}>
-          <span style={{ fontSize: 18, lineHeight: 1 }}>💬</span>
-          {count > 0 && (
-            <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1 }}>{count}</span>
-          )}
+            display: "flex", alignItems: "center", gap: 8,
+            boxShadow: "-2px 2px 12px rgba(248,92,2,0.30)",
+            transition: "box-shadow 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.boxShadow = "-2px 2px 18px rgba(248,92,2,0.45)"}
+          onMouseLeave={e => e.currentTarget.style.boxShadow = "-2px 2px 12px rgba(248,92,2,0.30)"}>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>💬</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>
+            Comments{unresolvedCount > 0 ? ` (${unresolvedCount})` : ""}
+          </span>
         </button>
       )}
 
-      {/* Panel — no backdrop overlay, slides from right */}
+      {/* ── Side panel — no backdrop, slides from right ── */}
       <div style={{
         position: "fixed", top: 56, right: 0, bottom: 0,
         width: 360, zIndex: 120,
@@ -2298,7 +2315,7 @@ function CommentsPanel({ entityType, entityId }) {
         boxShadow: open ? "-4px 0 24px rgba(48,58,68,0.10)" : "none",
       }}>
 
-        {/* Panel header */}
+        {/* Header */}
         <div style={{
           padding: "14px 16px 12px", flexShrink: 0,
           borderBottom: `1px solid ${BORDER}`, background: BG,
@@ -2308,18 +2325,23 @@ function CommentsPanel({ entityType, entityId }) {
             <span style={{ fontSize: 16 }}>💬</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Comments</span>
             {count > 0 && (
-              <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 400 }}>({count})</span>
+              <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 400 }}>
+                {unresolvedCount < count
+                  ? `${unresolvedCount} open · ${count - unresolvedCount} resolved`
+                  : `(${count})`}
+              </span>
             )}
           </div>
           <button onClick={() => setOpen(false)}
             style={{ background: "none", border: "none", cursor: "pointer",
-              fontSize: 20, color: TEXT_MUTED, lineHeight: 1, padding: "2px 4px",
+              fontSize: 20, color: TEXT_MUTED, lineHeight: 1, padding: "2px 6px",
               borderRadius: 4, fontFamily: "inherit" }}>×</button>
         </div>
 
         {/* Comment list */}
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px",
           display: "flex", flexDirection: "column", gap: 10 }}>
+
           {loading && [1, 2].map(i => <Skeleton key={i} height={68} />)}
 
           {!loading && count === 0 && (
@@ -2329,42 +2351,80 @@ function CommentsPanel({ entityType, entityId }) {
             </p>
           )}
 
-          {comments.map(c => (
-            <div key={c.comment_id} style={{
-              padding: "10px 12px", background: BG, borderRadius: 8,
-              border: `1px solid ${BORDER}`, position: "relative",
-            }}>
-              {/* Author + timestamp */}
-              <div style={{ display: "flex", alignItems: "baseline",
-                gap: 8, marginBottom: 6, paddingRight: 24 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT,
-                  flexShrink: 0 }}>{c.author || "Unknown"}</span>
-                <span style={{ fontSize: 10, color: TEXT_MUTED,
-                  whiteSpace: "nowrap" }}>{fmtTs(c.created_at)}</span>
+          {comments.map(c => {
+            const resolved = !!c.is_resolved;
+            return (
+              <div key={c.comment_id} style={{
+                padding: "10px 12px", borderRadius: 8,
+                background: resolved ? "#F8F8F6" : BG,
+                border: `1px solid ${resolved ? "#E0DDD4" : BORDER}`,
+                opacity: resolved ? 0.6 : 1,
+                position: "relative",
+                transition: "opacity 0.2s, background 0.2s",
+              }}>
+                {/* Resolved badge */}
+                {resolved && (
+                  <span style={{
+                    display: "inline-block", fontSize: 10, fontWeight: 700,
+                    color: TEXT_MUTED, background: "#E8E6E0",
+                    borderRadius: 4, padding: "1px 6px", marginBottom: 6,
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}>Resolved</span>
+                )}
+
+                {/* Author + timestamp */}
+                <div style={{ display: "flex", alignItems: "baseline",
+                  gap: 8, marginBottom: 5, paddingRight: 20 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700,
+                    color: resolved ? TEXT_MUTED : TEXT, flexShrink: 0 }}>
+                    {c.author || "Unknown"}
+                  </span>
+                  <span style={{ fontSize: 10, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
+                    {fmtTs(c.created_at)}
+                  </span>
+                </div>
+
+                {/* Body */}
+                <p style={{ fontSize: 13, lineHeight: 1.6, margin: "0 0 10px 0",
+                  color: resolved ? TEXT_MUTED : TEXT,
+                  textDecoration: resolved ? "line-through" : "none",
+                  whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {c.body}
+                </p>
+
+                {/* Actions row */}
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => toggleResolve(c)}
+                    style={{
+                      fontSize: 11, fontWeight: 600, cursor: "pointer",
+                      padding: "3px 9px", borderRadius: 5, fontFamily: "inherit",
+                      border: `1px solid ${resolved ? BORDER : SUCCESS}`,
+                      background: resolved ? "none" : SUCCESS_BG,
+                      color: resolved ? TEXT_MUTED : SUCCESS,
+                      transition: "all 0.12s",
+                    }}>
+                    {resolved ? "Unresolve" : "✓ Resolve"}
+                  </button>
+                  <button
+                    onClick={() => del(c.comment_id)}
+                    disabled={acting === c.comment_id}
+                    style={{
+                      fontSize: 11, fontWeight: 600, cursor: "pointer",
+                      padding: "3px 9px", borderRadius: 5, fontFamily: "inherit",
+                      border: `1px solid ${BORDER}`,
+                      background: "none", color: TEXT_MUTED,
+                      opacity: acting === c.comment_id ? 0.4 : 1,
+                      transition: "all 0.12s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = DANGER; e.currentTarget.style.color = DANGER; e.currentTarget.style.background = DANGER_BG; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = "none"; }}>
+                    Delete
+                  </button>
+                </div>
               </div>
-              {/* Body */}
-              <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.6, margin: 0,
-                whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                {c.body}
-              </p>
-              {/* Delete button */}
-              <button
-                onClick={() => del(c.comment_id)}
-                disabled={deleting === c.comment_id}
-                title="Delete comment"
-                style={{
-                  position: "absolute", top: 8, right: 8,
-                  background: "none", border: "none", cursor: "pointer",
-                  fontSize: 12, color: TEXT_MUTED, lineHeight: 1,
-                  padding: "3px 5px", borderRadius: 4, fontFamily: "inherit",
-                  opacity: deleting === c.comment_id ? 0.4 : 1,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = DANGER; e.currentTarget.style.background = DANGER_BG; }}
-                onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = "none"; }}>
-                ✕
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Compose area */}

@@ -3975,7 +3975,8 @@ def get_comments(entity_type, entity_id):
     try:
         rows = query(
             f"""SELECT comment_id, entity_type, entity_id, author, author_email,
-                       body, CAST(created_at AS STRING) AS created_at
+                       body, CAST(created_at AS STRING) AS created_at,
+                       COALESCE(is_resolved, false) AS is_resolved
                 FROM {SCHEMA}.comments
                 WHERE entity_type = ? AND entity_id = ?
                 ORDER BY created_at ASC""",
@@ -4046,6 +4047,18 @@ def delete_comment(comment_id):
         [comment_id]
     )
     return jsonify({"deleted": comment_id})
+
+
+@app.route("/api/comments/<comment_id>/resolve", methods=["PATCH"])
+def resolve_comment(comment_id):
+    """Toggle the resolved state of a comment."""
+    data = request.json or {}
+    is_resolved = bool(data.get("is_resolved", True))
+    execute(
+        f"UPDATE {SCHEMA}.comments SET is_resolved = ? WHERE comment_id = ?",
+        [is_resolved, comment_id]
+    )
+    return jsonify({"comment_id": comment_id, "is_resolved": is_resolved})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
