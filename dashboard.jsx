@@ -6687,7 +6687,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate }) {
   );
 }
 
-function InvestmentIdeaTracker({ onClose, currentUser }) {
+function InvestmentIdeaTracker({ currentUser }) {
   const [ideas, setIdeas]             = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
@@ -6749,17 +6749,10 @@ function InvestmentIdeaTracker({ onClose, currentUser }) {
   });
 
   return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 1500,
-        background: "rgba(10,20,40,0.55)",
-        display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
-      <div onClick={e => e.stopPropagation()}
-        style={{
-          background: BG, borderRadius: 16,
-          maxWidth: 1300, width: "95vw", maxHeight: "90vh",
-          overflow: "hidden", display: "flex", flexDirection: "column",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
-        }}>
+    <div style={{
+      display: "flex", flexDirection: "column",
+      height: "100%", minHeight: 0,
+    }}>
 
         {/* Header */}
         <div style={{
@@ -6781,9 +6774,6 @@ function InvestmentIdeaTracker({ onClose, currentUser }) {
                 cursor: "pointer" }}>
               + New Idea
             </button>
-            <button onClick={onClose}
-              style={{ background: "none", border: "none", cursor: "pointer",
-                color: TEXT_MUTED, fontSize: 24, lineHeight: 1, padding: "0 4px" }}>×</button>
           </div>
         </div>
 
@@ -7004,13 +6994,12 @@ function InvestmentIdeaTracker({ onClose, currentUser }) {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
 
 // ── AllInvestmentsView ────────────────────────────────────────────────────────
-function AllInvestmentsView() {
+function AllInvestmentsView({ onNavigate }) {
   const [investments, setInvestments]   = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState(null);
@@ -7031,7 +7020,6 @@ function AllInvestmentsView() {
   const [showApprover, setShowApprover]             = useState(false);
   const [showNotes, setShowNotes]                   = useState(false);
   const [paymentPopover, setPaymentPopover]         = useState(null);
-  const [showIdeaTracker, setShowIdeaTracker]       = useState(false);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
 
@@ -7201,16 +7189,9 @@ function AllInvestmentsView() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {showIdeaTracker && (
-        <InvestmentIdeaTracker
-          onClose={() => setShowIdeaTracker(false)}
-          currentUser={currentUser}
-        />
-      )}
-
       {/* Investment Idea Tracker button — always visible */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button onClick={() => setShowIdeaTracker(true)}
+        <button onClick={() => onNavigate && onNavigate({type:"idea-tracker"})}
           style={{
             padding: "9px 20px", borderRadius: 9, border: "none",
             background: "linear-gradient(135deg,#6366F1,#3086AB)",
@@ -8432,6 +8413,7 @@ function BudgetForecastsView() {
 function Sidebar({ activeView, onNavigate, data }) {
   const isStrategyActive  = activeView.type==="strategy";
   const isAllInvActive    = activeView.type==="all-investments";
+  const isIdeaTrackerActive = activeView.type==="idea-tracker";
   const isBudgetActive    = activeView.type==="budget-forecasts";
   const isPortActive = (id) => activeView.type==="portfolio" && activeView.portId===id;
 
@@ -8466,6 +8448,12 @@ function Sidebar({ activeView, onNavigate, data }) {
           icon={<IconTable/>}
           active={isAllInvActive}
           onClick={()=>onNavigate({type:"all-investments"})}
+        />
+        <NavItem
+          label="Investment Idea Tracker"
+          icon={<span style={{fontSize:13}}>💡</span>}
+          active={isIdeaTrackerActive}
+          onClick={()=>onNavigate({type:"idea-tracker"})}
         />
         <NavItem
           label="Budget Forecast"
@@ -8588,9 +8576,14 @@ function App() {
   const [loading,setLoading] = useState(true);
   const [saveStatus,setSaveStatus] = useState("saved");
   const [activeView,setActiveView] = useState({type:"strategy"});
+  const [currentUser,setCurrentUser] = useState(null);
 
   const [usingPlaceholder, setUsingPlaceholder] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false); // "ok" | "db-error" | false
+
+  useEffect(() => {
+    apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -8666,6 +8659,8 @@ function App() {
     ? "2026–2030 Strategy"
     : activeView.type==="all-investments"
     ? "2026–2030 Strategy"
+    : activeView.type==="idea-tracker"
+    ? "All Investments"
     : activeView.type==="budget-forecasts"
     ? "All Investments"
     : activeView.type==="data-model"
@@ -8676,6 +8671,8 @@ function App() {
     ? "USP Data & AI Measurement & Insights Dashboard"
     : activeView.type==="all-investments"
     ? "All Investments"
+    : activeView.type==="idea-tracker"
+    ? "Investment Idea Tracker"
     : activeView.type==="budget-forecasts"
     ? "Budget Forecast"
     : activeView.type==="data-model"
@@ -8754,7 +8751,10 @@ function App() {
             <StrategyOverview data={data} onUpdateRatings={r=>setData(prev=>({...prev,strategyRatings:r}))} onNavigateToPortfolio={id=>setActiveView({type:"portfolio",portId:id})} selectedGoal={activeView.goalNumber}/>
           )}
           {activeView.type==="all-investments"&&(
-            <AllInvestmentsView/>
+            <AllInvestmentsView onNavigate={setActiveView}/>
+          )}
+          {activeView.type==="idea-tracker"&&(
+            <InvestmentIdeaTracker currentUser={currentUser}/>
           )}
           {activeView.type==="budget-forecasts"&&(
             <BudgetForecastsView/>
