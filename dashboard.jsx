@@ -6552,7 +6552,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
           {fieldRow("Est. 2026 Amount ($)", "est_2026_amount", "number")}
           <div style={{ marginBottom: 14, gridColumn: "1 / -1" }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
-              letterSpacing: 0.8, marginBottom: 4 }}>Designated Approver</div>
+              letterSpacing: 0.8, marginBottom: 4 }}>Approver</div>
             <select value={editDraft.designated_approver}
               onChange={e => handleFieldChange("designated_approver", e.target.value)}
               style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
@@ -7122,7 +7122,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               <table style={{ borderCollapse: "collapse", fontSize: 12, minWidth: 2000, tableLayout: "auto" }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Notes", "Designated Approver", "Approver Note", "Comments"].map(h => (
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Notes", "Approver", "Approver Note", "Comments"].map(h => (
                       <th key={h} style={{ padding: "8px 14px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -7454,7 +7454,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                     </div>
                     <div style={{ marginBottom: 14 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", textTransform: "uppercase",
-                        letterSpacing: 0.8, marginBottom: 4 }}>Designated Approver *</div>
+                        letterSpacing: 0.8, marginBottom: 4 }}>Approver *</div>
                       <select value={newDraft.designated_approver}
                         onChange={e => setNewDraft(d => ({...d, designated_approver: e.target.value}))}
                         style={{ width: "100%", padding: "6px 10px", borderRadius: 7,
