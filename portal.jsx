@@ -6260,7 +6260,7 @@ function PortalApp() {
   injectStyle();
 
   const [user, setUser]             = useState(null);
-  const [mode, setMode]             = useState(null); // null = landing, "edit", "data"
+  const [mode, setMode]             = useState(null); // null = landing, "edit", "data", "catalog", "insight"
   const [tab, setTab]               = useState("content");
   const [bows, setBows]             = useState([]);
   const [portfolios, setPortfolios] = useState([]);
@@ -6319,9 +6319,10 @@ function PortalApp() {
       ]
     : mode === "catalog"
     ? [{ id: "content", label: "Indicator Catalog" }]
+    : mode === "insight"
+    ? [{ id: "content", label: "Share an Insight" }]
     : [
         { id: "content", label: "BOWs & Portfolios" },
-        { id: "insight", label: "Share an Insight" },
         { id: "activity", label: "Activity" },
         ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
       ];
@@ -6401,7 +6402,7 @@ function PortalApp() {
               marginBottom: 40, lineHeight: 1.6 }}>
               Choose a path below to get started.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               {/* Edit Content */}
               <button onClick={() => { setMode("edit"); setTab("content"); }}
                 style={{ background: SURFACE, border: `2px solid ${BORDER}`,
@@ -6450,6 +6451,23 @@ function PortalApp() {
                 </div>
                 <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.65 }}>
                   Explore all indicators across BOWs and portfolios — filter by source, review collection details, and access linked documentation.
+                </div>
+              </button>
+
+              {/* Share an Insight */}
+              <button onClick={() => { setMode("insight"); setTab("content"); }}
+                style={{ background: SURFACE, border: `2px solid ${BORDER}`,
+                  borderRadius: 14, padding: "32px 28px", cursor: "pointer",
+                  textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
+                  fontFamily: "inherit" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = ACCENT_SHADOW; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>💡</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
+                  Share an Insight
+                </div>
+                <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.65 }}>
+                  Share qualitative observations from partners, the field, or the market — insights that inform assumption confidence alongside numeric data.
                 </div>
               </button>
             </div>
@@ -6532,7 +6550,7 @@ function PortalApp() {
           />
         )}
 
-        {tab === "insight" && (
+        {mode === "insight" && tab === "content" && (
           <>
             <div style={{ marginBottom: 28 }}>
               <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
