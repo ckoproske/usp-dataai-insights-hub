@@ -1050,12 +1050,19 @@ async function loadFromAPI() {
           }
         });
 
+        const hasAnyDbInds = Object.keys(byOutcome).length > 0;
         bow.outcomes.forEach(o => {
           // outcome_id in DB may be fully-qualified ("bow1-o1") while DEFAULT_DATA
           // uses short form ("o1") — try both so either schema works
           const inds = byOutcome[o.id] || byOutcome[`${bowId}-${o.id}`];
-          if (!inds) return;
-          o.impactIndicators = Object.values(inds);
+          if (inds) {
+            o.impactIndicators = Object.values(inds);
+          } else if (hasAnyDbInds) {
+            // DB responded with data for this BOW but no indicators for this outcome —
+            // show empty rather than leaving hardcoded DEFAULT_DATA (with stale source, etc.)
+            o.impactIndicators = [];
+          }
+          // else: DB returned nothing for the whole BOW — keep DEFAULT_DATA as fallback
         });
       });
     });
