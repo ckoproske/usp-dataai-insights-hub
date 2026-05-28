@@ -6089,10 +6089,11 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
 
 // ─── Activity Feed ─────────────────────────────────────────────────────────────
 function ActivityFeed({ bows, user }) {
-  const [feed, setFeed]       = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [feed, setFeed]           = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [bowFilter, setBowFilter] = useState("");
   const [deleting, setDeleting]   = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   const canDelete = user?.permission_level === "MLE";
 
@@ -6110,7 +6111,7 @@ function ActivityFeed({ bows, user }) {
   const del = async (id) => {
     setDeleting(id);
     const res = await api(`/api/activity/${id}`, { method: "DELETE" });
-    if (!res.error) setFeed(prev => prev.filter(x => x.id !== id));
+    if (!res.error) { setFeed(prev => prev.filter(x => x.id !== id)); if (expandedId === id) setExpandedId(null); }
     setDeleting(null);
   };
 
@@ -6138,17 +6139,19 @@ function ActivityFeed({ bows, user }) {
     portfolio_description:  "portfolio description",
   }[type] || (type || "content").replace(/_/g, " "));
 
-  const fieldSummary = changes => {
-    try {
-      const c = typeof changes === "string" ? JSON.parse(changes) : (changes || {});
-      const fields = Object.keys(c);
-      if (!fields.length) return null;
-      return fields.map(f => f.replace(/_/g, " ")).join(", ");
-    } catch { return null; }
+  const parseChanges = raw => {
+    try { return typeof raw === "string" ? JSON.parse(raw) : (raw || {}); }
+    catch { return {}; }
+  };
+
+  const fieldSummary = raw => {
+    const c = parseChanges(raw);
+    const fields = Object.keys(c);
+    return fields.length ? fields.map(f => f.replace(/_/g, " ")).join(", ") : null;
   };
 
   return (
-    <div style={{ maxWidth: 860 }}>
+    <div style={{ maxWidth: 900 }}>
       {/* Filter bar */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
         <select value={bowFilter} onChange={e => setBowFilter(e.target.value)}
@@ -6173,55 +6176,146 @@ function ActivityFeed({ bows, user }) {
       ) : (
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
           {feed.map((item, i) => {
-            const fields = fieldSummary(item.changes);
+            const isExpanded = expandedId === item.id;
             const isLast = i === feed.length - 1;
+            const rowBg = i % 2 === 0 ? SURFACE : BG;
+            const fields = fieldSummary(item.changes);
+            const changes = parseChanges(item.changes);
+            const changedFields = Object.keys(changes);
+
             return (
               <div key={item.id}
-                style={{ display: "flex", alignItems: "center", gap: 16,
-                  padding: "11px 18px", background: i % 2 === 0 ? SURFACE : BG,
-                  borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
+                style={{ borderBottom: isLast && !isExpanded ? "none" : `1px solid ${BORDER}` }}>
 
-                {/* Timestamp */}
-                <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, minWidth: 150 }}>
-                  {fmtTs(item.ts)}
-                </span>
+                {/* Summary row — click to expand */}
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 16,
+                    padding: "11px 18px", background: isExpanded ? ACCENT_LIGHT : rowBg,
+                    cursor: "pointer", transition: "background 0.12s",
+                    userSelect: "none" }}
+                  onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = "#F5F5F3"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isExpanded ? ACCENT_LIGHT : rowBg; }}>
 
-                {/* Actor */}
-                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT,
-                  flexShrink: 0, minWidth: 110 }}>
-                  {actorName(item.actor)}
-                </span>
+                  {/* Chevron */}
+                  <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0,
+                    transition: "transform 0.15s", display: "inline-block",
+                    transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
 
-                {/* What changed */}
-                <span style={{ fontSize: 13, color: TEXT, flex: 1, minWidth: 0 }}>
-                  <span style={{ color: TEXT_MUTED }}>Edited </span>
-                  <span style={{ fontWeight: 500 }}>{entityLabel(item.entity_type)}</span>
-                  {item.bow_title && (
-                    <span style={{ color: TEXT_MUTED }}> · {item.bow_title}</span>
+                  {/* Timestamp */}
+                  <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, minWidth: 148 }}>
+                    {fmtTs(item.ts)}
+                  </span>
+
+                  {/* Actor */}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT,
+                    flexShrink: 0, minWidth: 110 }}>
+                    {actorName(item.actor)}
+                  </span>
+
+                  {/* What changed */}
+                  <span style={{ fontSize: 13, color: TEXT, flex: 1, minWidth: 0,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ color: TEXT_MUTED }}>Edited </span>
+                    <span style={{ fontWeight: 500 }}>{entityLabel(item.entity_type)}</span>
+                    {item.bow_title && (
+                      <span style={{ color: TEXT_MUTED }}> · {item.bow_title}</span>
+                    )}
+                    {fields && (
+                      <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}> ({fields})</span>
+                    )}
+                  </span>
+
+                  {/* Delete (MLE only) */}
+                  {canDelete && (
+                    <button
+                      onClick={e => { e.stopPropagation(); del(item.id); }}
+                      disabled={deleting === item.id}
+                      title="Delete entry"
+                      style={{ flexShrink: 0, background: "none", border: "none",
+                        cursor: deleting === item.id ? "default" : "pointer",
+                        fontSize: 13, color: TEXT_MUTED, padding: "2px 6px",
+                        opacity: deleting === item.id ? 0.35 : 1,
+                        borderRadius: 4, transition: "color 0.12s, background 0.12s" }}
+                      onMouseEnter={e => { if (deleting !== item.id) { e.currentTarget.style.color = DANGER; e.currentTarget.style.background = DANGER_BG; }}}
+                      onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = "none"; }}>
+                      {deleting === item.id ? "…" : "Delete"}
+                    </button>
                   )}
-                  {fields && (
-                    <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}> ({fields})</span>
-                  )}
-                  {item.rationale && (
-                    <span style={{ color: TEXT_MUTED }}> — {item.rationale}</span>
-                  )}
-                </span>
+                </div>
 
-                {/* Delete (MLE only) */}
-                {canDelete && (
-                  <button
-                    onClick={() => del(item.id)}
-                    disabled={deleting === item.id}
-                    title="Delete entry"
-                    style={{ flexShrink: 0, background: "none", border: "none",
-                      cursor: deleting === item.id ? "default" : "pointer",
-                      fontSize: 13, color: TEXT_MUTED, padding: "2px 6px",
-                      opacity: deleting === item.id ? 0.35 : 1,
-                      borderRadius: 4, transition: "color 0.12s, background 0.12s" }}
-                    onMouseEnter={e => { if (deleting !== item.id) { e.currentTarget.style.color = DANGER; e.currentTarget.style.background = DANGER_BG; }}}
-                    onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = "none"; }}>
-                    {deleting === item.id ? "…" : "Delete"}
-                  </button>
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div style={{ padding: "16px 48px 20px",
+                    background: "#FAFAF8", borderTop: `1px solid ${BORDER}`,
+                    borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
+
+                    {/* Field-by-field changes */}
+                    {changedFields.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                        {changedFields.map(f => {
+                          const oldVal = changes[f]?.old;
+                          const newVal = changes[f]?.new;
+                          return (
+                            <div key={f}>
+                              <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                                textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+                                {f.replace(/_/g, " ")}
+                              </p>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                {oldVal != null && String(oldVal).trim() !== "" && (
+                                  <div style={{ padding: "10px 12px", borderRadius: 6,
+                                    background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: "#DC2626",
+                                      marginBottom: 4, letterSpacing: "0.05em" }}>BEFORE</p>
+                                    <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.5,
+                                      whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                      {String(oldVal)}
+                                    </p>
+                                  </div>
+                                )}
+                                {newVal != null && String(newVal).trim() !== "" && (
+                                  <div style={{ padding: "10px 12px", borderRadius: 6,
+                                    background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: "#16A34A",
+                                      marginBottom: 4, letterSpacing: "0.05em" }}>AFTER</p>
+                                    <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.5,
+                                      whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                      {String(newVal)}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
+                        No field detail recorded.
+                      </p>
+                    )}
+
+                    {/* Rationale / revision reason */}
+                    {(item.rationale || item.revision_reason) && (
+                      <div style={{ marginTop: 14, paddingTop: 14,
+                        borderTop: `1px solid ${BORDER}`, display: "flex", gap: 24 }}>
+                        {item.rationale && (
+                          <p style={{ fontSize: 13, color: TEXT_SUB }}>
+                            <span style={{ fontWeight: 600, color: TEXT }}>Rationale: </span>
+                            {item.rationale}
+                          </p>
+                        )}
+                        {item.revision_reason && (
+                          <p style={{ fontSize: 13, color: TEXT_SUB }}>
+                            <span style={{ fontWeight: 600, color: TEXT }}>Reason: </span>
+                            {REVISION_REASONS.find(r => r.value === item.revision_reason)?.label
+                              || item.revision_reason}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             );
