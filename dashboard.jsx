@@ -1865,7 +1865,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
                     <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
                       <span style={{width:7,height:7,borderRadius:"50%",background:c.color,flexShrink:0,marginTop:5,display:"inline-block"}}/>
                       <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
-                        <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
+                        <span>{t.text||<span style={{color:TEXT_MUTED,fontStyle:"italic"}}>No target text</span>}</span>
                       </div>
                       <CompletionCycler value={t.completion} onChange={v=>updExec(i,"completion",v)}/>
                     </div>
