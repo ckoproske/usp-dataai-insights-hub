@@ -7813,8 +7813,8 @@ function AllInvestmentsView({ onNavigate }) {
   const [currentUser, setCurrentUser]               = useState(null);
   const [viewMode, setViewMode]                     = useState("table");
   const [selectedOwner, setSelectedOwner]           = useState("all");
-  const [showApprover, setShowApprover]             = useState(false);
-  const [showNotes, setShowNotes]                   = useState(false);
+  const [showApprover, setShowApprover]             = useState(true);
+  const [showNotes, setShowNotes]                   = useState(true);
   const [paymentPopover, setPaymentPopover]         = useState(null);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
