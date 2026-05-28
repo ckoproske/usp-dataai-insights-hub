@@ -3464,6 +3464,347 @@ def create_source_round(source_id):
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ══════════════════════════════════════════════════════════════════════════════
+# INVESTMENT IDEA TRACKER
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# CREATE TABLE DDL (run once in Databricks):
+#
+#   CREATE TABLE usp_data.usp_strategy.investment_ideas (
+#     idea_id            STRING NOT NULL,
+#     title              STRING,
+#     submitted_by       STRING,
+#     submitted_at       TIMESTAMP,
+#     stage              STRING,
+#     idea_type          STRING,
+#     objective          STRING,
+#     primary_portfolio  STRING,
+#     primary_bow        STRING,
+#     additional_bows    STRING,
+#     potential_partner  STRING,
+#     est_total_amount   DOUBLE,
+#     est_2026_amount    DOUBLE,
+#     co_funding_details STRING,
+#     desired_start_date STRING,
+#     est_duration       STRING,
+#     notes              STRING,
+#     approved_by        STRING,
+#     approved_at        TIMESTAMP,
+#     moved_to_invest    BOOLEAN,
+#     moved_to_invest_at TIMESTAMP,
+#     inv_number         STRING,
+#     archived           BOOLEAN DEFAULT FALSE,
+#     archived_at        TIMESTAMP,
+#     archived_by        STRING
+#   );
+#
+#   CREATE TABLE usp_data.usp_strategy.investment_idea_comments (
+#     comment_id          STRING NOT NULL,
+#     idea_id             STRING,
+#     comment_text        STRING,
+#     commented_by        STRING,
+#     commented_at        TIMESTAMP,
+#     is_approval_comment BOOLEAN DEFAULT FALSE
+#   );
+#
+# Valid stages (in order):
+#   Brainstorming → More Info Needed → Ready for Review →
+#   Okay to Proceed → On Hold → Moved to Invest
+#
+# Valid idea_type values:
+#   Grant, Contract, Bucket (multiple INVs), Supplement to existing INV
+#
+# Approval gate: permission_level must be "Leadership" or "DMT"
+# ══════════════════════════════════════════════════════════════════════════════
+
+_IDEA_STAGES   = ["Brainstorming", "More Info Needed", "Ready for Review",
+                  "Okay to Proceed", "On Hold", "Moved to Invest"]
+_IDEA_TYPES    = ["Grant", "Contract", "Bucket (multiple INVs)", "Supplement to existing INV"]
+_IDEA_EDITABLE = {
+    "title", "stage", "idea_type", "objective", "primary_portfolio",
+    "primary_bow", "additional_bows", "potential_partner",
+    "est_total_amount", "est_2026_amount", "co_funding_details",
+    "desired_start_date", "est_duration", "notes",
+}
+
+
+@app.route("/api/investment-ideas", methods=["GET"])
+def list_investment_ideas():
+    """Return all non-archived investment ideas, most-recently-submitted first."""
+    rows = query(
+        f"""SELECT
+              idea_id, title, submitted_by,
+              CAST(submitted_at AS STRING)       AS submitted_at,
+              stage, idea_type, objective,
+              primary_portfolio, primary_bow, additional_bows,
+              potential_partner, est_total_amount, est_2026_amount,
+              co_funding_details, desired_start_date, est_duration, notes,
+              approved_by,
+              CAST(approved_at AS STRING)        AS approved_at,
+              moved_to_invest,
+              CAST(moved_to_invest_at AS STRING) AS moved_to_invest_at,
+              inv_number,
+              COALESCE(archived, false)          AS archived,
+              CAST(archived_at AS STRING)        AS archived_at,
+              archived_by
+            FROM {SCHEMA}.investment_ideas
+            WHERE COALESCE(archived, false) = false
+            ORDER BY submitted_at DESC"""
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/investment-ideas", methods=["POST"])
+def create_investment_idea():
+    """Create a new investment idea.
+    submitted_by is resolved from X-Forwarded-Email → display_name in team_members."""
+    data  = request.json or {}
+    email = _actor(data)
+
+    # Resolve display_name for submitted_by
+    member = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    submitted_by = member[0]["display_name"] if member and member[0].get("display_name") else email
+
+    title = (data.get("title") or "").strip()
+    if not title:
+        return jsonify({"error": "title required"}), 400
+
+    idea_id = str(uuid.uuid4())
+    execute(
+        f"""INSERT INTO {SCHEMA}.investment_ideas
+            (idea_id, title, submitted_by, submitted_at, stage, idea_type,
+             objective, primary_portfolio, primary_bow, additional_bows,
+             potential_partner, est_total_amount, est_2026_amount,
+             co_funding_details, desired_start_date, est_duration, notes,
+             archived)
+            VALUES (?, ?, ?, current_timestamp(), ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?,
+                    ?, ?, ?, ?,
+                    false)""",
+        [idea_id, title, submitted_by,
+         data.get("stage") or "Brainstorming",
+         data.get("idea_type") or None,
+         data.get("objective") or None,
+         data.get("primary_portfolio") or None,
+         data.get("primary_bow") or None,
+         data.get("additional_bows") or None,
+         data.get("potential_partner") or None,
+         data.get("est_total_amount") or None,
+         data.get("est_2026_amount") or None,
+         data.get("co_funding_details") or None,
+         data.get("desired_start_date") or None,
+         data.get("est_duration") or None,
+         data.get("notes") or None]
+    )
+    return jsonify({"status": "ok", "idea_id": idea_id}), 201
+
+
+@app.route("/api/investment-ideas/<idea_id>", methods=["PATCH"])
+def update_investment_idea(idea_id):
+    """Update editable fields on an investment idea.
+    Setting stage='Okay to Proceed' is blocked here — use the /approve endpoint instead."""
+    data = request.json or {}
+
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    if rows[0].get("archived"):
+        return jsonify({"error": "cannot edit an archived idea"}), 400
+
+    # Block setting "Okay to Proceed" via this endpoint
+    if data.get("stage") == "Okay to Proceed":
+        return jsonify({"error": "Use the /approve endpoint to set stage to 'Okay to Proceed'"}), 400
+
+    sets, vals = [], []
+    for field in _IDEA_EDITABLE:
+        if field in data:
+            sets.append(f"`{field}` = ?")
+            vals.append(data[field] if data[field] != "" else None)
+
+    if not sets:
+        return jsonify({"status": "no_change"})
+
+    vals.append(idea_id)
+    execute(
+        f"UPDATE {SCHEMA}.investment_ideas SET {', '.join(sets)} WHERE idea_id = ?",
+        vals
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/investment-ideas/<idea_id>/approve", methods=["POST"])
+def approve_investment_idea(idea_id):
+    """Leadership/DMT only.
+    Sets stage='Okay to Proceed', records approved_by + approved_at.
+    Optionally adds an approval comment to investment_idea_comments."""
+    data  = request.json or {}
+    email = _actor(data)
+
+    # Permission check
+    member = query(
+        f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    if not member or member[0].get("permission_level") not in ("Leadership", "DMT"):
+        return jsonify({"error": "Leadership or DMT permission required"}), 403
+
+    approved_by = member[0].get("display_name") or email
+
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    if rows[0].get("archived"):
+        return jsonify({"error": "cannot approve an archived idea"}), 400
+
+    execute(
+        f"""UPDATE {SCHEMA}.investment_ideas
+            SET stage = 'Okay to Proceed',
+                approved_by = ?,
+                approved_at = current_timestamp()
+            WHERE idea_id = ?""",
+        [approved_by, idea_id]
+    )
+
+    # Optionally record an approval comment
+    comment_text = (data.get("comment") or "").strip()
+    if comment_text:
+        cid = str(uuid.uuid4())
+        execute(
+            f"""INSERT INTO {SCHEMA}.investment_idea_comments
+                (comment_id, idea_id, comment_text, commented_by, commented_at, is_approval_comment)
+                VALUES (?, ?, ?, ?, current_timestamp(), true)""",
+            [cid, idea_id, comment_text, approved_by]
+        )
+
+    return jsonify({"status": "ok", "approved_by": approved_by})
+
+
+@app.route("/api/investment-ideas/<idea_id>/move-to-invest", methods=["POST"])
+def move_idea_to_invest(idea_id):
+    """Sets stage='Moved to Invest', moved_to_invest=true, moved_to_invest_at.
+    Optionally records inv_number."""
+    data = request.json or {}
+
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    if rows[0].get("archived"):
+        return jsonify({"error": "cannot move an archived idea to invest"}), 400
+
+    inv_number = data.get("inv_number") or None
+    execute(
+        f"""UPDATE {SCHEMA}.investment_ideas
+            SET stage              = 'Moved to Invest',
+                moved_to_invest    = true,
+                moved_to_invest_at = current_timestamp(),
+                inv_number         = COALESCE(?, inv_number)
+            WHERE idea_id = ?""",
+        [inv_number, idea_id]
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/investment-ideas/<idea_id>/archive", methods=["POST"])
+def archive_investment_idea(idea_id):
+    """Sets archived=true, archived_at, archived_by (display_name)."""
+    data  = request.json or {}
+    email = _actor(data)
+
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    if rows[0].get("archived"):
+        return jsonify({"status": "no_change", "message": "already archived"})
+
+    # Resolve display_name for archived_by
+    member = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    archived_by = member[0]["display_name"] if member and member[0].get("display_name") else email
+
+    execute(
+        f"""UPDATE {SCHEMA}.investment_ideas
+            SET archived    = true,
+                archived_at = current_timestamp(),
+                archived_by = ?
+            WHERE idea_id = ?""",
+        [archived_by, idea_id]
+    )
+    return jsonify({"status": "ok", "archived_by": archived_by})
+
+
+@app.route("/api/investment-ideas/<idea_id>/comments", methods=["GET"])
+def list_idea_comments(idea_id):
+    """List all comments for an idea, oldest first."""
+    rows = query(
+        f"""SELECT
+              comment_id,
+              idea_id,
+              comment_text,
+              commented_by,
+              CAST(commented_at AS STRING) AS commented_at,
+              COALESCE(is_approval_comment, false) AS is_approval_comment
+            FROM {SCHEMA}.investment_idea_comments
+            WHERE idea_id = ?
+            ORDER BY commented_at ASC""",
+        [idea_id]
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/investment-ideas/<idea_id>/comments", methods=["POST"])
+def add_idea_comment(idea_id):
+    """Add a comment to an investment idea.
+    commented_by is resolved from X-Forwarded-Email → display_name in team_members."""
+    data = request.json or {}
+    comment_text = (data.get("comment_text") or data.get("comment") or "").strip()
+    if not comment_text:
+        return jsonify({"error": "comment_text required"}), 400
+
+    # Verify idea exists
+    rows = query(
+        f"SELECT idea_id FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "idea not found"}), 404
+
+    email = _actor(data)
+    member = query(
+        f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    commented_by = member[0]["display_name"] if member and member[0].get("display_name") else email
+
+    cid = str(uuid.uuid4())
+    execute(
+        f"""INSERT INTO {SCHEMA}.investment_idea_comments
+            (comment_id, idea_id, comment_text, commented_by, commented_at, is_approval_comment)
+            VALUES (?, ?, ?, ?, current_timestamp(), false)""",
+        [cid, idea_id, comment_text, commented_by]
+    )
+    return jsonify({"status": "ok", "comment_id": cid}), 201
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port, debug=True)

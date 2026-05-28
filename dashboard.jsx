@@ -6264,6 +6264,751 @@ function IconTable() {
   );
 }
 
+// ── InvestmentIdeaTracker ─────────────────────────────────────────────────────
+const IDEA_STAGES = [
+  { name: "Brainstorming",       color: "#6366F1" },
+  { name: "More Info Needed",    color: "#D97706" },
+  { name: "Ready for Review",    color: "#3086AB" },
+  { name: "Okay to Proceed",     color: "#059669" },
+  { name: "On Hold",             color: "#9CA3AF" },
+  { name: "Moved to Invest",     color: "#7C3AED" },
+];
+const IDEA_STAGE_MAP = Object.fromEntries(IDEA_STAGES.map(s => [s.name, s.color]));
+const IDEA_TYPES = ["Grant", "Contract", "Bucket (multiple INVs)", "Supplement to existing INV"];
+
+function fmtIdeaAmt(n) {
+  const num = parseFloat(n) || 0;
+  if (!num) return "—";
+  if (num >= 1000000) return "$" + (num / 1000000).toFixed(1) + "M";
+  if (num >= 1000)    return "$" + Math.round(num / 1000) + "K";
+  return "$" + num;
+}
+
+function IdeaStageBadge({ stage }) {
+  const color = IDEA_STAGE_MAP[stage] || "#9CA3AF";
+  return (
+    <span style={{
+      display: "inline-block", fontSize: 10, fontWeight: 700,
+      color: "#fff", background: color,
+      borderRadius: 5, padding: "2px 8px", whiteSpace: "nowrap",
+    }}>{stage}</span>
+  );
+}
+
+function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate }) {
+  const canApprove = currentUser &&
+    (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT");
+
+  const [editDraft, setEditDraft] = useState({
+    title:             idea.title             || "",
+    idea_type:         idea.idea_type         || "",
+    primary_portfolio: idea.primary_portfolio || "",
+    primary_bow:       idea.primary_bow       || "",
+    potential_partner: idea.potential_partner || "",
+    est_2026_amount:   idea.est_2026_amount   || "",
+    description:       idea.description       || "",
+    stage:             idea.stage             || "Brainstorming",
+    inv_number:        idea.inv_number        || "",
+  });
+  const [saving, setSaving]         = useState(false);
+  const [saveMsg, setSaveMsg]       = useState(null);
+  const [commentText, setCommentText] = useState("");
+  const [addingComment, setAddingComment] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [approveComment, setApproveComment] = useState("");
+  const [approvingSaving, setApprovingSaving] = useState(false);
+  const [movedOpen, setMovedOpen]   = useState(false);
+  const [invNumber, setInvNumber]   = useState("");
+  const [archiveConfirm, setArchiveConfirm] = useState(false);
+
+  const handleFieldChange = (field, val) => setEditDraft(d => ({ ...d, [field]: val }));
+
+  const handleSave = async () => {
+    setSaving(true); setSaveMsg(null);
+    try {
+      const updated = await apiFetch(`/api/investment-ideas/${idea.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(editDraft),
+      });
+      onUpdate({ ...idea, ...editDraft, ...(updated || {}) });
+      setSaveMsg("Saved");
+      setTimeout(() => setSaveMsg(null), 2000);
+    } catch {
+      setSaveMsg("Error saving");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+    setAddingComment(true);
+    try {
+      const result = await apiFetch(`/api/investment-ideas/${idea.id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({
+          comment: commentText,
+          author: currentUser?.display_name || currentUser?.email || "Unknown",
+        }),
+      });
+      const newComment = result || {
+        id: Date.now(), comment: commentText,
+        author: currentUser?.display_name || currentUser?.email || "Unknown",
+        created_at: new Date().toISOString(),
+      };
+      onUpdate({ ...idea, comments: [...(idea.comments || []), newComment] });
+      setCommentText("");
+    } catch {
+      // ignore
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setApprovingSaving(true);
+    try {
+      const updated = await apiFetch(`/api/investment-ideas/${idea.id}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ comment: approveComment }),
+      });
+      onUpdate({ ...idea, stage: "Okay to Proceed", ...(updated || {}) });
+      setApproveOpen(false);
+      setApproveComment("");
+    } catch {
+      // ignore
+    } finally {
+      setApprovingSaving(false);
+    }
+  };
+
+  const handleMoveToInvest = async () => {
+    setSaving(true);
+    try {
+      const updated = await apiFetch(`/api/investment-ideas/${idea.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ stage: "Moved to Invest", inv_number: invNumber }),
+      });
+      onUpdate({ ...idea, stage: "Moved to Invest", inv_number: invNumber, ...(updated || {}) });
+      setMovedOpen(false);
+      setInvNumber("");
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    setSaving(true);
+    try {
+      await apiFetch(`/api/investment-ideas/${idea.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ archived: true }),
+      });
+      onUpdate({ ...idea, archived: true });
+      onClose();
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isApproved = (idea.stage || editDraft.stage) === "Okay to Proceed";
+  const accentColor = IDEA_STAGE_MAP[idea.stage] || "#3086AB";
+
+  const fieldRow = (label, field, type = "text", opts = null) => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+        letterSpacing: 0.8, marginBottom: 4 }}>{label}</div>
+      {opts ? (
+        <select value={editDraft[field]} onChange={e => handleFieldChange(field, e.target.value)}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+          <option value="">— Select —</option>
+          {opts.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : type === "textarea" ? (
+        <textarea value={editDraft[field]} onChange={e => handleFieldChange(field, e.target.value)}
+          rows={3}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
+            outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
+      ) : (
+        <input value={editDraft[field]} onChange={e => handleFieldChange(field, e.target.value)}
+          type={type}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none",
+            boxSizing: "border-box" }}/>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Detail header */}
+      <div style={{
+        borderBottom: "1px solid " + BORDER, padding: "14px 20px",
+        background: isApproved ? "#F0FDF4" : SURFACE,
+        borderTop: "3px solid " + accentColor,
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+      }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>
+            Idea Detail
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: TEXT, lineHeight: 1.3 }}>
+            {idea.title || "Untitled Idea"}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <IdeaStageBadge stage={idea.stage}/>
+          <button onClick={onClose}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              color: TEXT_MUTED, fontSize: 20, lineHeight: 1, padding: "2px 6px" }}>×</button>
+        </div>
+      </div>
+
+      {/* Scrollable body */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 0 }}>
+
+        {/* Edit fields */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+          {fieldRow("Title", "title")}
+          {fieldRow("Idea Type", "idea_type", "text", IDEA_TYPES)}
+          {fieldRow("Primary Portfolio", "primary_portfolio")}
+          {fieldRow("Primary BOW", "primary_bow")}
+          {fieldRow("Potential Partner", "potential_partner")}
+          {fieldRow("Est. 2026 Amount ($)", "est_2026_amount", "number")}
+        </div>
+        {fieldRow("Description / Rationale", "description", "textarea")}
+
+        {/* Stage — all except Okay to Proceed which requires Approve */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+            letterSpacing: 0.8, marginBottom: 4 }}>Stage</div>
+          <select
+            value={editDraft.stage}
+            onChange={e => handleFieldChange("stage", e.target.value)}
+            style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+              fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+            {IDEA_STAGES.filter(s => s.name !== "Okay to Proceed").map(s => (
+              <option key={s.name} value={s.name}>{s.name}</option>
+            ))}
+          </select>
+          <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 3 }}>
+            "Okay to Proceed" can only be set via the Approve action below.
+          </div>
+        </div>
+
+        {/* INV Number (shown when Moved to Invest) */}
+        {(idea.stage === "Moved to Invest" || editDraft.stage === "Moved to Invest") && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+              letterSpacing: 0.8, marginBottom: 4 }}>INV Number</div>
+            <input value={editDraft.inv_number}
+              onChange={e => handleFieldChange("inv_number", e.target.value)}
+              placeholder="e.g. INV-12345"
+              style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none",
+                boxSizing: "border-box" }}/>
+          </div>
+        )}
+
+        {/* Save button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: "7px 20px", borderRadius: 7, border: "none",
+              background: accentColor, color: "#fff", fontWeight: 700, fontSize: 13,
+              cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+          {saveMsg && (
+            <span style={{ fontSize: 12, color: saveMsg === "Saved" ? "#059669" : "#DC2626", fontWeight: 600 }}>
+              {saveMsg}
+            </span>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 14, marginBottom: 20 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Actions</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+
+            {/* Approve button — Leadership / DMT only */}
+            {canApprove && idea.stage !== "Okay to Proceed" && idea.stage !== "Moved to Invest" && (
+              <button onClick={() => setApproveOpen(v => !v)}
+                style={{ padding: "7px 16px", borderRadius: 7, border: "none",
+                  background: "#059669", color: "#fff", fontWeight: 700, fontSize: 13,
+                  cursor: "pointer" }}>
+                ✓ Approve (Okay to Proceed)
+              </button>
+            )}
+
+            {/* Mark as Moved to INVEST */}
+            {idea.stage === "Okay to Proceed" && (
+              <button onClick={() => setMovedOpen(v => !v)}
+                style={{ padding: "7px 16px", borderRadius: 7, border: "none",
+                  background: "#7C3AED", color: "#fff", fontWeight: 700, fontSize: 13,
+                  cursor: "pointer" }}>
+                🚀 Mark as Moved to INVEST
+              </button>
+            )}
+
+            {/* Archive button */}
+            {!archiveConfirm ? (
+              <button onClick={() => setArchiveConfirm(true)}
+                style={{ padding: "5px 12px", borderRadius: 7,
+                  border: "1px solid " + BORDER, background: SURFACE,
+                  color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                Archive
+              </button>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 12, color: TEXT_SUB }}>Archive this idea?</span>
+                <button onClick={handleArchive} disabled={saving}
+                  style={{ padding: "4px 10px", borderRadius: 6, border: "none",
+                    background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  Yes, Archive
+                </button>
+                <button onClick={() => setArchiveConfirm(false)}
+                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + BORDER,
+                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Approve inline form */}
+          {approveOpen && (
+            <div style={{ marginTop: 12, background: "#F0FDF4", border: "1px solid #A7F3D0",
+              borderRadius: 8, padding: "12px 14px" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#065F46", marginBottom: 8 }}>
+                Add an optional approval comment:
+              </div>
+              <textarea value={approveComment} onChange={e => setApproveComment(e.target.value)}
+                placeholder="Optional: rationale, conditions, or context for approval…"
+                rows={2}
+                style={{ width: "100%", padding: "7px 10px", borderRadius: 6,
+                  border: "1px solid #A7F3D0", fontSize: 12, fontFamily: "inherit",
+                  color: TEXT, background: "#fff", resize: "vertical",
+                  outline: "none", lineHeight: 1.5, boxSizing: "border-box", marginBottom: 8 }}/>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleApprove} disabled={approvingSaving}
+                  style={{ padding: "6px 16px", borderRadius: 6, border: "none",
+                    background: "#059669", color: "#fff", fontWeight: 700, fontSize: 13,
+                    cursor: approvingSaving ? "default" : "pointer", opacity: approvingSaving ? 0.7 : 1 }}>
+                  {approvingSaving ? "Approving…" : "Confirm Approval"}
+                </button>
+                <button onClick={() => setApproveOpen(false)}
+                  style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid " + BORDER,
+                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Move to Invest inline form */}
+          {movedOpen && (
+            <div style={{ marginTop: 12, background: "#F5F3FF", border: "1px solid #C4B5FD",
+              borderRadius: 8, padding: "12px 14px" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#5B21B6", marginBottom: 8 }}>
+                Enter optional INV number:
+              </div>
+              <input value={invNumber} onChange={e => setInvNumber(e.target.value)}
+                placeholder="e.g. INV-12345"
+                style={{ width: "100%", padding: "6px 10px", borderRadius: 6,
+                  border: "1px solid #C4B5FD", fontSize: 12, fontFamily: "inherit",
+                  color: TEXT, background: "#fff", outline: "none",
+                  boxSizing: "border-box", marginBottom: 8 }}/>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleMoveToInvest} disabled={saving}
+                  style={{ padding: "6px 16px", borderRadius: 6, border: "none",
+                    background: "#7C3AED", color: "#fff", fontWeight: 700, fontSize: 13,
+                    cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>
+                  {saving ? "Saving…" : "Confirm"}
+                </button>
+                <button onClick={() => setMovedOpen(false)}
+                  style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid " + BORDER,
+                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Comments */}
+        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+            Comments ({(idea.comments || []).length})
+          </div>
+          {(idea.comments || []).length === 0 && (
+            <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>No comments yet.</div>
+          )}
+          {(idea.comments || []).map((c, i) => (
+            <div key={c.id || i} style={{
+              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+              padding: "10px 12px", marginBottom: 8,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{c.author}</span>
+                <span style={{ fontSize: 10, color: TEXT_MUTED }}>
+                  {c.created_at ? new Date(c.created_at).toLocaleDateString() : ""}
+                </span>
+              </div>
+              <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>{c.comment}</div>
+            </div>
+          ))}
+          <div style={{ marginTop: 8 }}>
+            <textarea value={commentText} onChange={e => setCommentText(e.target.value)}
+              placeholder="Add a comment…" rows={2}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 7,
+                border: "1px solid " + BORDER, fontSize: 13, fontFamily: "inherit",
+                color: TEXT, background: SURFACE, resize: "vertical",
+                outline: "none", lineHeight: 1.5, boxSizing: "border-box", marginBottom: 6 }}/>
+            <button onClick={handleAddComment} disabled={addingComment || !commentText.trim()}
+              style={{ padding: "6px 16px", borderRadius: 7, border: "none",
+                background: accentColor, color: "#fff", fontWeight: 700, fontSize: 12,
+                cursor: (addingComment || !commentText.trim()) ? "default" : "pointer",
+                opacity: (addingComment || !commentText.trim()) ? 0.6 : 1 }}>
+              {addingComment ? "Adding…" : "Add Comment"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InvestmentIdeaTracker({ onClose, currentUser }) {
+  const [ideas, setIdeas]             = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [stageFilter, setStageFilter] = useState(null);
+  const [selectedIdea, setSelectedIdea] = useState(null);
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newDraft, setNewDraft]       = useState({
+    title: "", idea_type: "", primary_portfolio: "",
+    primary_bow: "", potential_partner: "", est_2026_amount: "",
+    description: "", stage: "Brainstorming",
+  });
+  const [newSaving, setNewSaving]     = useState(false);
+  const [newError, setNewError]       = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/api/investment-ideas")
+      .then(data => { setIdeas(data || []); setLoading(false); })
+      .catch(() => { setError("Could not load investment ideas."); setLoading(false); });
+  }, []);
+
+  const handleUpdate = (updatedIdea) => {
+    setIdeas(prev => prev.map(i => i.id === updatedIdea.id ? updatedIdea : i));
+    if (selectedIdea && selectedIdea.id === updatedIdea.id) {
+      setSelectedIdea(updatedIdea);
+    }
+  };
+
+  const handleCreateNew = async () => {
+    if (!newDraft.title.trim()) { setNewError("Title is required."); return; }
+    setNewSaving(true); setNewError(null);
+    try {
+      const created = await apiFetch("/api/investment-ideas", {
+        method: "POST",
+        body: JSON.stringify(newDraft),
+      });
+      setIdeas(prev => [created, ...prev]);
+      setShowNewForm(false);
+      setNewDraft({ title: "", idea_type: "", primary_portfolio: "", primary_bow: "",
+        potential_partner: "", est_2026_amount: "", description: "", stage: "Brainstorming" });
+      setSelectedIdea(created);
+    } catch {
+      setNewError("Failed to create idea.");
+    } finally {
+      setNewSaving(false);
+    }
+  };
+
+  const activeIdeas = ideas.filter(i => !i.archived);
+  const filteredIdeas = stageFilter
+    ? activeIdeas.filter(i => i.stage === stageFilter)
+    : activeIdeas;
+
+  // Pipeline bar data
+  const pipelineData = IDEA_STAGES.map(s => {
+    const stageIdeas = activeIdeas.filter(i => i.stage === s.name);
+    const total = stageIdeas.reduce((sum, i) => sum + (parseFloat(i.est_2026_amount) || 0), 0);
+    return { ...s, count: stageIdeas.length, total };
+  });
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 1500,
+        background: "rgba(10,20,40,0.55)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{
+          background: BG, borderRadius: 16,
+          maxWidth: 1300, width: "95vw", maxHeight: "90vh",
+          overflow: "hidden", display: "flex", flexDirection: "column",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
+        }}>
+
+        {/* Header */}
+        <div style={{
+          padding: "16px 24px", background: SURFACE,
+          borderBottom: "1px solid " + BORDER,
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+              textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>
+              Investment Pipeline Prep
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>💡 Investment Idea Tracker</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => setShowNewForm(v => !v)}
+              style={{ padding: "8px 18px", borderRadius: 8, border: "none",
+                background: "#6366F1", color: "#fff", fontWeight: 700, fontSize: 13,
+                cursor: "pointer" }}>
+              + New Idea
+            </button>
+            <button onClick={onClose}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                color: TEXT_MUTED, fontSize: 24, lineHeight: 1, padding: "0 4px" }}>×</button>
+          </div>
+        </div>
+
+        {/* New Idea Form (collapsible) */}
+        {showNewForm && (
+          <div style={{ background: "#F0F0FF", borderBottom: "1px solid #C7D2FE",
+            padding: "14px 24px", flexShrink: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#4338CA", marginBottom: 12 }}>
+              New Investment Idea
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px 14px" }}>
+              {[
+                { label: "Title *",             field: "title",             type: "text" },
+                { label: "Idea Type",           field: "idea_type",         type: "select", opts: IDEA_TYPES },
+                { label: "Primary Portfolio",   field: "primary_portfolio", type: "text" },
+                { label: "Primary BOW",         field: "primary_bow",       type: "text" },
+                { label: "Potential Partner",   field: "potential_partner", type: "text" },
+                { label: "Est. 2026 Amount ($)",field: "est_2026_amount",   type: "number" },
+              ].map(({ label, field, type, opts }) => (
+                <div key={field}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+                    textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>{label}</div>
+                  {opts ? (
+                    <select value={newDraft[field]}
+                      onChange={e => setNewDraft(d => ({ ...d, [field]: e.target.value }))}
+                      style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: "1px solid " + BORDER,
+                        fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+                      <option value="">— Select —</option>
+                      {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : (
+                    <input value={newDraft[field]} type={type}
+                      onChange={e => setNewDraft(d => ({ ...d, [field]: e.target.value }))}
+                      style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: "1px solid " + BORDER,
+                        fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none",
+                        boxSizing: "border-box" }}/>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+                textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>Description</div>
+              <textarea value={newDraft.description}
+                onChange={e => setNewDraft(d => ({ ...d, description: e.target.value }))}
+                rows={2} placeholder="Brief description or rationale…"
+                style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: "1px solid " + BORDER,
+                  fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
+                  outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
+            </div>
+            {newError && (
+              <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{newError}</div>
+            )}
+            <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+              <button onClick={handleCreateNew} disabled={newSaving}
+                style={{ padding: "6px 18px", borderRadius: 7, border: "none",
+                  background: "#6366F1", color: "#fff", fontWeight: 700, fontSize: 13,
+                  cursor: newSaving ? "default" : "pointer", opacity: newSaving ? 0.7 : 1 }}>
+                {newSaving ? "Creating…" : "Create Idea"}
+              </button>
+              <button onClick={() => setShowNewForm(false)}
+                style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid " + BORDER,
+                  background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pipeline bar */}
+        <div style={{ padding: "12px 24px", background: SURFACE,
+          borderBottom: "1px solid " + BORDER, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+            {pipelineData.map(s => {
+              const isActive = stageFilter === s.name;
+              return (
+                <button key={s.name}
+                  onClick={() => setStageFilter(prev => prev === s.name ? null : s.name)}
+                  style={{
+                    flex: "1 1 0", minWidth: 100, padding: "10px 8px", borderRadius: 10,
+                    border: isActive ? `2px solid ${s.color}` : "2px solid transparent",
+                    background: isActive ? s.color : s.color + "18",
+                    cursor: "pointer", textAlign: "center",
+                    boxShadow: isActive ? `0 2px 8px ${s.color}44` : "none",
+                    transition: "all .12s",
+                  }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: isActive ? "#fff" : s.color,
+                    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3,
+                    whiteSpace: "normal", lineHeight: 1.2 }}>{s.name}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800,
+                    color: isActive ? "#fff" : s.color, lineHeight: 1 }}>{s.count}</div>
+                  <div style={{ fontSize: 10, color: isActive ? "rgba(255,255,255,0.8)" : TEXT_MUTED,
+                    marginTop: 2 }}>{fmtIdeaAmt(s.total)}</div>
+                </button>
+              );
+            })}
+          </div>
+          {stageFilter && (
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10, color: TEXT_MUTED }}>Filtered to:</span>
+              <span style={{ fontSize: 10, fontWeight: 700,
+                color: IDEA_STAGE_MAP[stageFilter], background: IDEA_STAGE_MAP[stageFilter] + "18",
+                borderRadius: 4, padding: "2px 8px" }}>{stageFilter}</span>
+              <button onClick={() => setStageFilter(null)}
+                style={{ fontSize: 10, color: TEXT_MUTED, background: "none", border: "none",
+                  cursor: "pointer", textDecoration: "underline", padding: 0 }}>Clear</button>
+            </div>
+          )}
+        </div>
+
+        {/* Main body: list + detail */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+
+          {/* Ideas list */}
+          <div style={{
+            width: selectedIdea ? 440 : "100%", flexShrink: 0,
+            overflowY: "auto", borderRight: selectedIdea ? "1px solid " + BORDER : "none",
+            transition: "width .15s",
+          }}>
+            {loading && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                height: 120, gap: 10, color: TEXT_SUB, fontSize: 13 }}>
+                <div style={{ width: 16, height: 16, border: "2px solid #6366F1",
+                  borderTopColor: "transparent", borderRadius: "50%",
+                  animation: "spin 0.7s linear infinite" }}/>
+                Loading ideas…
+              </div>
+            )}
+            {error && (
+              <div style={{ margin: 16, background: "#FEF2F2", border: "1px solid #FECACA",
+                borderRadius: 8, padding: "12px 16px", color: "#B91C1C", fontSize: 13 }}>
+                {error}
+              </div>
+            )}
+            {!loading && !error && filteredIdeas.length === 0 && (
+              <div style={{ padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                {stageFilter ? `No ideas in "${stageFilter}".` : "No ideas yet. Create one above!"}
+              </div>
+            )}
+            {!loading && !error && filteredIdeas.length > 0 && (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
+                    {["Title", "Stage", "Type", "Portfolio", "BOW", "Partner", "Est. 2026"].map(h => (
+                      <th key={h} style={{ padding: "8px 10px", textAlign: "left",
+                        fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
+                        textTransform: "uppercase", letterSpacing: 0.6,
+                        borderBottom: "1px solid " + BORDER, whiteSpace: "nowrap" }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredIdeas.map((idea, idx) => {
+                    const isSelected = selectedIdea && selectedIdea.id === idea.id;
+                    const isApproved = idea.stage === "Okay to Proceed";
+                    return (
+                      <tr key={idea.id}
+                        onClick={() => setSelectedIdea(isSelected ? null : idea)}
+                        style={{
+                          cursor: "pointer",
+                          background: isSelected
+                            ? (IDEA_STAGE_MAP[idea.stage] + "18")
+                            : isApproved
+                            ? "#F0FDF4"
+                            : idx % 2 === 0 ? SURFACE : BG,
+                          borderLeft: isSelected
+                            ? `3px solid ${IDEA_STAGE_MAP[idea.stage]}`
+                            : isApproved
+                            ? "3px solid #059669"
+                            : "3px solid transparent",
+                        }}>
+                        <td style={{ padding: "9px 10px", fontWeight: 600, color: TEXT,
+                          maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {idea.title || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                          <IdeaStageBadge stage={idea.stage}/>
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                          {idea.idea_type || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {idea.primary_portfolio || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {idea.primary_bow || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {idea.potential_partner || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", fontWeight: 600,
+                          color: idea.est_2026_amount ? TEXT : TEXT_MUTED, whiteSpace: "nowrap" }}>
+                          {fmtIdeaAmt(idea.est_2026_amount)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Detail panel */}
+          {selectedIdea && (
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column",
+              minWidth: 0 }}>
+              <InvestmentIdeaDetail
+                idea={selectedIdea}
+                onClose={() => setSelectedIdea(null)}
+                currentUser={currentUser}
+                onUpdate={handleUpdate}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── AllInvestmentsView ────────────────────────────────────────────────────────
 function AllInvestmentsView() {
   const [investments, setInvestments]   = useState([]);
@@ -6286,6 +7031,7 @@ function AllInvestmentsView() {
   const [showApprover, setShowApprover]             = useState(false);
   const [showNotes, setShowNotes]                   = useState(false);
   const [paymentPopover, setPaymentPopover]         = useState(null);
+  const [showIdeaTracker, setShowIdeaTracker]       = useState(false);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
 
@@ -6471,6 +7217,27 @@ function AllInvestmentsView() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {showIdeaTracker && (
+        <InvestmentIdeaTracker
+          onClose={() => setShowIdeaTracker(false)}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* Investment Idea Tracker button */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button onClick={() => setShowIdeaTracker(true)}
+          style={{
+            padding: "9px 20px", borderRadius: 9, border: "none",
+            background: "linear-gradient(135deg,#6366F1,#3086AB)",
+            color: "#fff", fontWeight: 700, fontSize: 13,
+            cursor: "pointer", boxShadow: "0 2px 8px rgba(99,102,241,0.3)",
+            display: "flex", alignItems: "center", gap: 7,
+          }}>
+          💡 Investment Idea Tracker
+        </button>
+      </div>
 
       {/* Pipeline tracker header */}
       <div style={{ background: "#EEF4FB", border: "1px solid #D3E4F4", borderRadius: 12, padding: "16px 20px 14px" }}>
