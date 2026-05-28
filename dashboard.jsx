@@ -6804,6 +6804,9 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     notes: "", designated_approver: "", approver_note: "",
   };
   const [colFilters, setColFilters] = useState(_emptyFilters);
+  const [moveRowId, setMoveRowId]   = useState(null);
+  const [moveRowInv, setMoveRowInv] = useState("");
+  const [moveRowSaving, setMoveRowSaving] = useState(false);
 
   const showToast = (msg, type = "success") => {
     setToast({msg, type});
@@ -6813,6 +6816,24 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   const setColFilter = (key, val) => setColFilters(prev => ({ ...prev, [key]: val }));
   const clearColFilters = () => setColFilters(_emptyFilters);
   const hasColFilters = Object.values(colFilters).some(v => v !== "");
+
+  const handleMoveRow = async (ideaId) => {
+    setMoveRowSaving(true);
+    try {
+      await apiFetch(`/api/investment-ideas/${ideaId}/move-to-invest`, {
+        method: "POST",
+        body: JSON.stringify({ inv_number: moveRowInv.trim() || null }),
+      });
+      setMoveRowId(null);
+      setMoveRowInv("");
+      showToast("Moved to INVEST — idea archived ✓");
+      loadIdeas();
+    } catch {
+      showToast("Failed to move to INVEST", "error");
+    } finally {
+      setMoveRowSaving(false);
+    }
+  };
 
   const loadArchived = () => {
     setArchivedLoading(true);
@@ -7316,8 +7337,47 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           minWidth: 200, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {idea.objective || "—"}
                         </td>
-                        <td style={{ padding: "9px 14px", whiteSpace: "nowrap" }}>
-                          <IdeaStageBadge stage={idea.stage}/>
+                        <td style={{ padding: "9px 14px" }} onClick={e => { if (idea.stage === "Okay to Proceed") e.stopPropagation(); }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <IdeaStageBadge stage={idea.stage}/>
+                            {idea.stage === "Okay to Proceed" && moveRowId !== idea.idea_id && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setMoveRowId(idea.idea_id); setMoveRowInv(""); }}
+                                style={{ padding: "3px 9px", borderRadius: 6, border: "none",
+                                  background: "#7C3AED", color: "#fff", fontSize: 10, fontWeight: 700,
+                                  cursor: "pointer", whiteSpace: "nowrap" }}>
+                                🚀 Move to INVEST
+                              </button>
+                            )}
+                            {idea.stage === "Okay to Proceed" && moveRowId === idea.idea_id && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}
+                                onClick={e => e.stopPropagation()}>
+                                <input
+                                  value={moveRowInv}
+                                  onChange={e => setMoveRowInv(e.target.value)}
+                                  placeholder="INV # (optional)"
+                                  style={{ width: 110, padding: "3px 7px", borderRadius: 5,
+                                    border: "1px solid #7C3AED", fontSize: 11, outline: "none",
+                                    fontFamily: "inherit" }}/>
+                                <button
+                                  onClick={() => handleMoveRow(idea.idea_id)}
+                                  disabled={moveRowSaving}
+                                  style={{ padding: "3px 9px", borderRadius: 5, border: "none",
+                                    background: "#7C3AED", color: "#fff", fontSize: 11, fontWeight: 700,
+                                    cursor: moveRowSaving ? "default" : "pointer",
+                                    opacity: moveRowSaving ? 0.6 : 1 }}>
+                                  {moveRowSaving ? "…" : "Confirm"}
+                                </button>
+                                <button
+                                  onClick={() => setMoveRowId(null)}
+                                  style={{ padding: "3px 7px", borderRadius: 5,
+                                    border: "1px solid " + BORDER, background: "transparent",
+                                    color: TEXT_MUTED, fontSize: 11, cursor: "pointer" }}>
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 110 }}>
                           {idea.idea_type || "—"}
