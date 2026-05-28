@@ -1826,17 +1826,10 @@ function BowOutcomePanel({ outcome, onUpdate }) {
 
   return (
     <div style={{background:SURFACE,borderRadius:"0 0 12px 12px",border:"1px solid "+BORDER,borderTop:"none"}}>
-      {/* Outcome title + description header */}
-      {(outcome.title || outcome.desc) && (
-        <div style={{padding:"14px 20px",borderBottom:"1px solid "+BORDER,background:BG}}>
-          {outcome.title && (
-            <div style={{fontSize:15,fontWeight:700,color:TEXT,lineHeight:1.4,marginBottom:outcome.desc?6:0}}>
-              {outcome.title}
-            </div>
-          )}
-          {outcome.desc && (
-            <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.6}}>{outcome.desc}</div>
-          )}
+      {/* Outcome description header — title lives in the tab, not repeated here */}
+      {outcome.desc && (
+        <div style={{padding:"18px 22px",borderBottom:"1px solid "+BORDER,background:BG}}>
+          <div style={{fontSize:16,color:TEXT,lineHeight:1.7,fontWeight:500}}>{outcome.desc}</div>
         </div>
       )}
       {/* Side-by-side: Execution (left) + Impact Indicators (right) */}
