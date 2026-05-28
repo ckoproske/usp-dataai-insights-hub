@@ -8464,22 +8464,22 @@ function AllInvestmentsView({ onNavigate }) {
       ) : (
         <div style={{ background: SURFACE, borderRadius: 12,
           border: "1px solid " + BORDER, overflow: "hidden", position: "relative" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "auto" }}>
+          <div>
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
               <colgroup>
-                <col style={{ width: 100 }} />
-                <col style={{ minWidth: 120 }} />
-                <col style={{ minWidth: 100 }} />
-                <col style={{ minWidth: 140 }} />
-                <col style={{ minWidth: 110 }} />
-                <col style={{ width: 130 }} />
-                <col style={{ width: 110 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 110 }} />
-                <col style={{ width: showApprover ? 130 : 30 }} />
-                <col style={{ width: showNotes ? 200 : 30 }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: showApprover ? "7%" : "0%" }} />
+                <col style={{ width: showNotes ? "auto" : "0%" }} />
               </colgroup>
               <thead>
                 {(() => {
@@ -8673,6 +8673,7 @@ function AllInvestmentsView({ onNavigate }) {
                     borderBottom: rowBorder,
                     verticalAlign: "middle",
                     background: isEditing ? "#F0F7FF" : rowBg,
+                    overflow: "hidden",
                   };
 
                   return (
