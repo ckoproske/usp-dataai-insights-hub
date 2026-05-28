@@ -3498,6 +3498,11 @@ def create_source_round(source_id):
 #     archived_by        STRING
 #   );
 #
+# ── Pending ALTER TABLE migrations (run once in Databricks SQL) ───────────────
+#   ALTER TABLE usp_data.usp_strategy.investment_ideas ADD COLUMN approver_note STRING;
+#   ALTER TABLE usp_data.usp_strategy.investment_ideas ADD COLUMN designated_approver STRING;
+#   ALTER TABLE usp_data.usp_strategy.investment_ideas ADD COLUMN reviewer_note STRING;
+#
 #   CREATE TABLE usp_data.usp_strategy.investment_idea_comments (
 #     comment_id          STRING NOT NULL,
 #     idea_id             STRING,
@@ -3553,17 +3558,24 @@ def list_investment_ideas():
             WHERE COALESCE(archived, false) = false
             ORDER BY submitted_at DESC"""
     try:
-        rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note, designated_approver', 1)}")
+        rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note, designated_approver, reviewer_note', 1)}")
     except Exception:
         try:
-            rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note', 1)}")
+            rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note, designated_approver', 1)}")
             for r in (rows or []):
-                r["designated_approver"] = None
+                r["reviewer_note"] = None
         except Exception:
-            rows = query(f"SELECT {_base}")
-            for r in (rows or []):
-                r["approver_note"] = None
-                r["designated_approver"] = None
+            try:
+                rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note', 1)}")
+                for r in (rows or []):
+                    r["designated_approver"] = None
+                    r["reviewer_note"] = None
+            except Exception:
+                rows = query(f"SELECT {_base}")
+                for r in (rows or []):
+                    r["approver_note"] = None
+                    r["designated_approver"] = None
+                    r["reviewer_note"] = None
     return jsonify(rows or [])
 
 
@@ -3635,17 +3647,24 @@ def list_archived_investment_ideas():
             WHERE COALESCE(archived, false) = true
             ORDER BY archived_at DESC"""
     try:
-        rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note, designated_approver', 1)}")
+        rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note, designated_approver, reviewer_note', 1)}")
     except Exception:
         try:
-            rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note', 1)}")
+            rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note, designated_approver', 1)}")
             for r in (rows or []):
-                r["designated_approver"] = None
+                r["reviewer_note"] = None
         except Exception:
-            rows = query(f"SELECT {_base}")
-            for r in (rows or []):
-                r["approver_note"] = None
-                r["designated_approver"] = None
+            try:
+                rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note', 1)}")
+                for r in (rows or []):
+                    r["designated_approver"] = None
+                    r["reviewer_note"] = None
+            except Exception:
+                rows = query(f"SELECT {_base}")
+                for r in (rows or []):
+                    r["approver_note"] = None
+                    r["designated_approver"] = None
+                    r["reviewer_note"] = None
     return jsonify(rows or [])
 
 
@@ -3798,6 +3817,56 @@ def archive_investment_idea(idea_id):
         [archived_by, idea_id]
     )
     return jsonify({"status": "ok", "archived_by": archived_by})
+
+
+@app.route("/api/investment-ideas/<idea_id>/request-changes", methods=["POST"])
+def request_idea_changes(idea_id):
+    """Leadership/DMT/MLE only.
+    Sets stage='More Info Needed' and records a reviewer_note so the submitter
+    knows exactly what changes are needed before re-submitting for review.
+    A non-empty note is required."""
+    data  = request.json or {}
+    email = _actor(data)
+
+    member = query(
+        f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+        [email]
+    )
+    if not member or member[0].get("permission_level") not in ("Leadership", "DMT", "MLE"):
+        return jsonify({"error": "Insufficient permissions to request changes"}), 403
+
+    reviewer_note = (data.get("note") or "").strip()
+    if not reviewer_note:
+        return jsonify({"error": "A reviewer note is required when requesting changes"}), 400
+
+    rows = query(
+        f"SELECT * FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    if rows[0].get("archived"):
+        return jsonify({"error": "cannot request changes on an archived idea"}), 400
+
+    reviewed_by = member[0].get("display_name") or email
+    try:
+        execute(
+            f"""UPDATE {SCHEMA}.investment_ideas
+                SET stage         = 'More Info Needed',
+                    reviewer_note = ?
+                WHERE idea_id = ?""",
+            [reviewer_note, idea_id]
+        )
+    except Exception:
+        # reviewer_note column may not exist yet — update stage only
+        execute(
+            f"""UPDATE {SCHEMA}.investment_ideas
+                SET stage = 'More Info Needed'
+                WHERE idea_id = ?""",
+            [idea_id]
+        )
+
+    return jsonify({"status": "ok", "reviewed_by": reviewed_by})
 
 
 @app.route("/api/investment-ideas/<idea_id>", methods=["DELETE"])

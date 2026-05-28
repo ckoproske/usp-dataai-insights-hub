@@ -6327,6 +6327,9 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState(null);
   const [deletingCommentId, setDeletingCommentId] = useState(null);
+  const [requestChangesOpen, setRequestChangesOpen]   = useState(false);
+  const [requestChangesNote, setRequestChangesNote]   = useState("");
+  const [requestChangesSaving, setRequestChangesSaving] = useState(false);
 
   const handleFieldChange = (field, val) => setEditDraft(d => ({ ...d, [field]: val }));
 
@@ -6440,6 +6443,25 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
       // silent
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleRequestChanges = async () => {
+    if (!requestChangesNote.trim()) return;
+    setRequestChangesSaving(true);
+    try {
+      await apiFetch(`/api/investment-ideas/${idea.idea_id}/request-changes`, {
+        method: "POST",
+        body: JSON.stringify({ note: requestChangesNote }),
+      });
+      setRequestChangesOpen(false);
+      setRequestChangesNote("");
+      if (onApproved) onApproved(`Feedback sent — idea moved to "More Info Needed"`);
+      else onClose();
+    } catch {
+      // silent
+    } finally {
+      setRequestChangesSaving(false);
     }
   };
 
@@ -6627,11 +6649,21 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
 
             {/* Approve button — gated by canApprove */}
             {canApprove && idea.stage !== "Okay to Proceed" && idea.stage !== "Moved to Invest" && (
-              <button onClick={() => setApproveOpen(v => !v)}
+              <button onClick={() => { setApproveOpen(v => !v); setRequestChangesOpen(false); }}
                 style={{ padding: "7px 16px", borderRadius: 7, border: "none",
                   background: "#059669", color: "#fff", fontWeight: 700, fontSize: 13,
                   cursor: "pointer" }}>
                 ✓ Approve (Okay to Proceed)
+              </button>
+            )}
+
+            {/* Request Changes button — gated by canApprove */}
+            {canApprove && idea.stage !== "Okay to Proceed" && idea.stage !== "Moved to Invest" && (
+              <button onClick={() => { setRequestChangesOpen(v => !v); setApproveOpen(false); }}
+                style={{ padding: "7px 16px", borderRadius: 7, border: "none",
+                  background: "#D97706", color: "#fff", fontWeight: 700, fontSize: 13,
+                  cursor: "pointer" }}>
+                Request Changes
               </button>
             )}
 
@@ -6669,6 +6701,38 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
                   {approvingSaving ? "Approving…" : "Confirm Approval"}
                 </button>
                 <button onClick={() => setApproveOpen(false)}
+                  style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid " + BORDER,
+                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Request Changes inline form */}
+          {requestChangesOpen && (
+            <div style={{ marginTop: 12, background: "#FFFBEB", border: "1px solid #FDE68A",
+              borderRadius: 8, padding: "12px 14px" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E", marginBottom: 8 }}>
+                Note for the submitter (required):
+              </div>
+              <textarea value={requestChangesNote} onChange={e => setRequestChangesNote(e.target.value)}
+                placeholder="Describe what changes or additional information are needed…"
+                rows={3}
+                style={{ width: "100%", padding: "7px 10px", borderRadius: 6,
+                  border: "1px solid #FDE68A", fontSize: 12, fontFamily: "inherit",
+                  color: TEXT, background: "#fff", resize: "vertical",
+                  outline: "none", lineHeight: 1.5, boxSizing: "border-box", marginBottom: 8 }}/>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button onClick={handleRequestChanges}
+                  disabled={requestChangesSaving || !requestChangesNote.trim()}
+                  style={{ padding: "6px 16px", borderRadius: 6, border: "none",
+                    background: "#D97706", color: "#fff", fontWeight: 700, fontSize: 13,
+                    cursor: (requestChangesSaving || !requestChangesNote.trim()) ? "default" : "pointer",
+                    opacity: (requestChangesSaving || !requestChangesNote.trim()) ? 0.6 : 1 }}>
+                  {requestChangesSaving ? "Sending…" : "Send Feedback"}
+                </button>
+                <button onClick={() => setRequestChangesOpen(false)}
                   style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid " + BORDER,
                     background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
                   Cancel
@@ -6801,7 +6865,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     title: "", objective: "", stage: "", idea_type: "", submitted_by: "",
     primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "",
     est_total_amount: "", est_2026_amount: "", desired_start_date: "", est_duration: "",
-    notes: "", designated_approver: "", approver_note: "",
+    notes: "", designated_approver: "", approver_note: "", reviewer_note: "",
   };
   const [colFilters, setColFilters] = useState(_emptyFilters);
   const [reviewApproverFilter, setReviewApproverFilter] = useState(null);
@@ -7229,10 +7293,10 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                   </button>
                 </div>
               )}
-              <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 2000, tableLayout: "auto" }}>
+              <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 2200, tableLayout: "auto" }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 2 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Notes", "Approver", "Approver Note"].map(h => (
+                    {["Title", "Objective", "Stage", "Reviewer Note", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Notes", "Approver", "Approver Note"].map(h => (
                       <th key={h} style={{ padding: "8px 14px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -7279,6 +7343,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         {fTh(null)}
                         {/* Stage */}
                         {fSel("stage", IDEA_STAGES.map(s => <option key={s.name} value={s.name}>{s.name}</option>))}
+                        {/* Reviewer Note — no filter */}
+                        {fTh(null)}
                         {/* Type */}
                         {fSel("idea_type", IDEA_TYPES.map(t => <option key={t} value={t}>{t}</option>))}
                         {/* Submitted By */}
@@ -7392,6 +7458,13 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                               </div>
                             )}
                           </div>
+                        </td>
+                        <td style={{ padding: "9px 14px",
+                          minWidth: 200, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          color: idea.reviewer_note ? "#92400E" : TEXT_MUTED,
+                          fontStyle: idea.reviewer_note ? "normal" : "italic",
+                          background: idea.reviewer_note ? "#FFFBEB" : "inherit" }}>
+                          {idea.reviewer_note || "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 110 }}>
                           {idea.idea_type || "—"}
