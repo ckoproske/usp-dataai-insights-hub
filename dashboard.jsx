@@ -8084,6 +8084,7 @@ function AllInvestmentsView() {
           </div>
         );
       })()}
+      </React.Fragment>)}
     </div>
   );
 }
@@ -8408,7 +8409,6 @@ function DataModelExplorer() {
           </div>
         </div>
       )}
-      </React.Fragment>)}
     </div>
   );
 }
