@@ -2377,11 +2377,14 @@ def get_bow_full(bow_id):
             try:
                 ind_rows = _qc(cur,
                     f"""SELECT i.*,
-                               a.actual_value AS latest_actual,
-                               a.year         AS latest_actual_year
+                               a.actual_value  AS latest_actual,
+                               a.year          AS latest_actual_year,
+                               a.reading_date  AS latest_actual_date,
+                               a.loaded_by     AS latest_actual_by
                         FROM {SCHEMA}.bow_indicators i
                         LEFT JOIN (
                             SELECT indicator_id, actual_value, year,
+                                   reading_date, loaded_by,
                                    ROW_NUMBER() OVER (
                                        PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
                                    ) AS rn
@@ -2672,12 +2675,15 @@ def get_portfolio_full(portfolio_id):
                             COALESCE(b.data_quality_notes, i.data_quality_notes) AS data_quality_notes,
                             COALESCE(b.tracking_notes, i.tracking_notes) AS tracking_notes,
                             b.bow_id, b.outcome_id AS bow_outcome_id,
-                            a.actual_value AS latest_actual,
-                            a.year         AS latest_actual_year
+                            a.actual_value  AS latest_actual,
+                            a.year          AS latest_actual_year,
+                            a.reading_date  AS latest_actual_date,
+                            a.loaded_by     AS latest_actual_by
                         FROM {SCHEMA}.portfolio_indicators i
                         LEFT JOIN {SCHEMA}.bow_indicators b ON i.bow_indicator_id = b.indicator_id
                         LEFT JOIN (
                             SELECT indicator_id, actual_value, year,
+                                   reading_date, loaded_by,
                                    ROW_NUMBER() OVER (
                                        PARTITION BY indicator_id ORDER BY year DESC, loaded_at DESC
                                    ) AS rn

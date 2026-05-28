@@ -50,10 +50,11 @@ const PORT_COLORS = {
 };
 
 const PERIOD_OPTIONS = {
-  annual:    [],
-  quarterly: ["Q1", "Q2", "Q3", "Q4"],
-  bimonthly: ["Jan–Feb", "Mar–Apr", "May–Jun", "Jul–Aug", "Sep–Oct", "Nov–Dec"],
-  monthly:   ["M01","M02","M03","M04","M05","M06","M07","M08","M09","M10","M11","M12"],
+  annual:     [],
+  biannually: ["H1", "H2"],
+  quarterly:  ["Q1", "Q2", "Q3", "Q4"],
+  bimonthly:  ["Jan–Feb", "Mar–Apr", "May–Jun", "Jul–Aug", "Sep–Oct", "Nov–Dec"],
+  monthly:    ["M01","M02","M03","M04","M05","M06","M07","M08","M09","M10","M11","M12"],
 };
 
 const SOURCE_TYPES = [
@@ -3754,17 +3755,18 @@ function PortfolioPanel({ portfolio, user, onBack }) {
 
 // ─── Streamlined indicator row for data-update view ───────────────────────────
 function DataUpdateIndRow({ ind, accentColor, wasSubmitted, onOpen }) {
-  const unit = ind.unit ? ` ${ind.unit}` : "";
-  const currentTarget = ind[`target_${CURRENT_YEAR}`];
-  const chip = {
-    display: "inline-flex", alignItems: "center",
-    fontSize: 11, fontWeight: 500, color: TEXT_SUB,
-    background: BG, borderRadius: 10, padding: "2px 9px",
-    whiteSpace: "nowrap", border: `1px solid ${BORDER}`,
-  };
-  const hasChips = ind.status && ind.status !== "active"
-    || ind.collection_frequency || ind.unit
-    || currentTarget != null || ind.baseline != null;
+  // Build "last updated" note from latest actual submission
+  let lastNote = null;
+  if (ind.latest_actual_date || ind.latest_actual_by) {
+    const datePart = ind.latest_actual_date ? fmtDateShort(ind.latest_actual_date) : null;
+    const byPart   = ind.latest_actual_by   ? ind.latest_actual_by : null;
+    if (datePart && byPart)      lastNote = `Last updated ${datePart} by ${byPart}`;
+    else if (datePart)           lastNote = `Last updated ${datePart}`;
+    else if (byPart)             lastNote = `Last updated by ${byPart}`;
+  } else if (ind.latest_actual_year != null) {
+    lastNote = `Last updated ${ind.latest_actual_year}`;
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "stretch",
       borderBottom: `1px solid ${BORDER}`,
@@ -3774,12 +3776,20 @@ function DataUpdateIndRow({ ind, accentColor, wasSubmitted, onOpen }) {
       <div style={{ flex: 1, minWidth: 0, padding: "11px 10px 11px 14px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, margin: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: TEXT,
+              lineHeight: 1.4, margin: 0 }}>
               {ind.name || ind.text}
             </p>
             {ind.name && ind.text && ind.text !== ind.name && (
-              <p style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: "3px 0 0 0" }}>
+              <p style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5,
+                margin: "3px 0 0 0" }}>
                 {ind.text}
+              </p>
+            )}
+            {lastNote && (
+              <p style={{ fontSize: 11, color: TEXT_MUTED, margin: "5px 0 0 0",
+                fontStyle: "italic" }}>
+                {lastNote}
               </p>
             )}
           </div>
@@ -3796,26 +3806,6 @@ function DataUpdateIndRow({ ind, accentColor, wasSubmitted, onOpen }) {
             </button>
           )}
         </div>
-        {hasChips && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7,
-            justifyContent: "flex-end" }}>
-            {ind.status && ind.status !== "active" && <StatusBadge status={ind.status} />}
-            {ind.collection_frequency && (
-              <span style={chip}>{ind.collection_frequency}</span>
-            )}
-            {ind.unit && <span style={chip}>{ind.unit}</span>}
-            {currentTarget != null && (
-              <span style={{ ...chip, color: INFO, background: INFO_BG, border: "1px solid #BFDBFE" }}>
-                {CURRENT_YEAR} target: {currentTarget}{unit}
-              </span>
-            )}
-            {ind.baseline != null && (
-              <span style={{ ...chip, color: TEXT_MUTED }}>
-                Baseline: {ind.baseline}{unit}
-              </span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
