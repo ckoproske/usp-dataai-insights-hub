@@ -1601,8 +1601,8 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
                 if(d.Actual===null||d.Actual===undefined) return <circle key={props.index} r={0} cx={0} cy={0}/>;
                 return <circle key={props.index} cx={props.cx} cy={props.cy}
                   r={isBase?4:inActiveYr?5:2}
-                  fill={isBase?"#94A3B8":inActiveYr?sc.color:"#fff"}
-                  stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
+                  fill={isBase?"#EF4444":inActiveYr?sc.color:"#fff"}
+                  stroke={isBase?"#EF4444":sc.color} strokeWidth={1.5}/>;
               }}/>
             <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
           </LineChart>
@@ -1610,7 +1610,7 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
         <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:2}}>
           <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:12,height:2,background:sc.color,display:"inline-block",borderRadius:1}}/> Actual</span>
           <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:12,height:2,background:BORDER,display:"inline-block",borderRadius:1}}/> Target</span>
-          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:6,height:6,borderRadius:"50%",background:"#94A3B8",display:"inline-block"}}/> Baseline</span>
+          <span style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:TEXT}}><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block"}}/> Baseline</span>
         </div>
       </div>
     </div>
@@ -1663,7 +1663,7 @@ function IndicatorRow({ ind, iIdx, activeYear }) {
         dot={({payload:d,...p})=>{
           if(d.Actual===null||d.Actual===undefined) return <circle key={p.index} r={0} cx={0} cy={0}/>;
           const isBase=d.label==="Base", inYr=!isBase&&d.year===activeYear;
-          return <circle key={p.index} cx={p.cx} cy={p.cy} r={isBase?3:inYr?4:2} fill={isBase?"#94A3B8":inYr?sc.color:"#fff"} stroke={isBase?"#94A3B8":sc.color} strokeWidth={1.5}/>;
+          return <circle key={p.index} cx={p.cx} cy={p.cy} r={isBase?3:inYr?4:2} fill={isBase?"#EF4444":inYr?sc.color:"#fff"} stroke={isBase?"#EF4444":sc.color} strokeWidth={1.5}/>;
         }}/>
       <Line type="monotone" dataKey="Target" stroke={BORDER} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls/>
     </>
@@ -2676,7 +2676,7 @@ function OutcomeReportRow({ o, targets, indicators, reportYear, pc }) {
 
   const oRs = o.manualStatus&&STATUS[o.manualStatus] ? STATUS[o.manualStatus] : null;
   const statusIcon = c => c==="Complete"?"✓":c==="On Track"?"→":c==="Delayed"?"⚠":"○";
-  const statusColor = c => c==="Complete"?COMPLETION["Complete"].color:c==="On Track"?COMPLETION["On Track"].color:c==="Delayed"?COMPLETION["Delayed"].color:"#94A3B8";
+  const statusColor = c => c==="Complete"?COMPLETION["Complete"].color:c==="On Track"?COMPLETION["On Track"].color:c==="Delayed"?COMPLETION["Delayed"].color:"#EF4444";
 
   // Rating scale positions (for visual alignment)
   const SCALE = ["Below Expectations","Approaching Expectations","Meets Expectations","Exceeds Expectations"];
@@ -5319,7 +5319,7 @@ function GoalDetailChart({ g }) {
       philanthropic: "#0A2540",
       hyperscalers:  "#3086AB",
       vcImpact:      "#F59E0B",
-      public:        "#94A3B8",
+      public:        "#EF4444",
     };
     const LEVER_LABELS = {
       philanthropic: "Philanthropic Orgs.",
@@ -6082,8 +6082,8 @@ function MeasurementHierarchyView() {
 
         <svg width="100%" height="100%" style={{display:"block"}}>
           <defs>
-            <marker id="mh-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#94A3B8"/></marker>
-            <marker id="mh-arrow-sel" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill={sel?.color||"#94A3B8"}/></marker>
+            <marker id="mh-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#EF4444"/></marker>
+            <marker id="mh-arrow-sel" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill={sel?.color||"#EF4444"}/></marker>
             <marker id="mh-arrow-agg" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#7C3AED"/></marker>
           </defs>
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`} onClick={()=>setSelected(null)}>
@@ -6093,10 +6093,10 @@ function MeasurementHierarchyView() {
               const fn=NODES.find(n=>n.id===e.from), tn=NODES.find(n=>n.id===e.to);
               const cx=BOX_W/2, y1=fn.y+BOX_H, y2=tn.y, my=(y1+y2)/2;
               const isSel=selected&&(selected===e.from||selected===e.to);
-              const selColor=selected?(NODES.find(n=>n.id===selected)||{color:"#94A3B8"}).color:"#94A3B8";
+              const selColor=selected?(NODES.find(n=>n.id===selected)||{color:"#EF4444"}).color:"#EF4444";
               return (
                 <g key={i}>
-                  <line x1={cx} y1={y1} x2={cx} y2={y2} stroke={isSel?selColor:"#94A3B8"} strokeWidth={isSel?2:1} markerEnd={isSel?"url(#mh-arrow-sel)":"url(#mh-arrow)"} opacity={selected&&!isSel?0.2:0.8}/>
+                  <line x1={cx} y1={y1} x2={cx} y2={y2} stroke={isSel?selColor:"#EF4444"} strokeWidth={isSel?2:1} markerEnd={isSel?"url(#mh-arrow-sel)":"url(#mh-arrow)"} opacity={selected&&!isSel?0.2:0.8}/>
                   <text x={cx+8} y={my} fontSize={10} fill={isSel?selColor:TEXT_MUTED} fontStyle="italic" dominantBaseline="middle" opacity={selected&&!isSel?0.2:1}>{e.label}</text>
                 </g>
               );
@@ -6128,7 +6128,7 @@ function MeasurementHierarchyView() {
                 const isSel=selected===lat.id||selected===nodeId;
                 return (
                   <path key={nodeId} d={`M ${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-                    fill="none" stroke={isSel?lat.color:"#94A3B8"} strokeWidth={isSel?1.8:1}
+                    fill="none" stroke={isSel?lat.color:"#EF4444"} strokeWidth={isSel?1.8:1}
                     strokeDasharray="6 3" opacity={selected&&!isSel?0.12:0.7}
                     markerEnd="url(#mh-arrow)"/>
                 );
@@ -8071,7 +8071,7 @@ function AllInvestmentsView({ onNavigate }) {
               : hasInvs
               ? (isActive ? "#D1FAE5" : "#DBEAFE")
               : "#E8EEF5";
-            const labelCol  = isFiltered ? "rgba(255,255,255,0.8)" : hasInvs ? (isActive ? "#065F46" : "#1E4D8C") : "#94A3B8";
+            const labelCol  = isFiltered ? "rgba(255,255,255,0.8)" : hasInvs ? (isActive ? "#065F46" : "#1E4D8C") : "#EF4444";
             const countCol  = isFiltered ? "#fff" : hasInvs ? (isActive ? "#047857" : "#3086AB") : "#C0CAD6";
             const amtCol    = isFiltered ? "rgba(255,255,255,0.7)" : hasInvs ? "#64748B" : "#C0CAD6";
             const pl = isFirst ? 10 : N + 5;
@@ -8231,7 +8231,7 @@ function AllInvestmentsView({ onNavigate }) {
                                       return (
                                         <div key={p.id} title={`${p.name}: ${cnt}`}
                                           style={{ width: "100%", height: ((cnt / total) * 100) + "%",
-                                            background: PORT_COLORS[p.id]?.color || "#94A3B8" }} />
+                                            background: PORT_COLORS[p.id]?.color || "#EF4444" }} />
                                       );
                                     })}
                                   </div>
@@ -8250,7 +8250,7 @@ function AllInvestmentsView({ onNavigate }) {
                           {portList.filter(p => pipelineInvs.some(inv => inv.portfolio_id === p.id)).map(p => (
                             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               <div style={{ width: 9, height: 9, borderRadius: 2,
-                                background: PORT_COLORS[p.id]?.color || "#94A3B8", flexShrink: 0 }} />
+                                background: PORT_COLORS[p.id]?.color || "#EF4444", flexShrink: 0 }} />
                               <span style={{ fontSize: 10, color: TEXT_MUTED }}>{p.name}</span>
                             </div>
                           ))}
@@ -8943,7 +8943,7 @@ function DataModelDiagram({ onSelectTable }) {
       </div>
       <svg width="100%" height="100%" style={{display:"block"}}>
         <defs>
-          <marker id="dm-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#94A3B8"/></marker>
+          <marker id="dm-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#EF4444"/></marker>
           {DM_GROUPS.map(g=><marker key={g.id} id={"dm-arrow-"+g.id} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill={g.color}/></marker>)}
         </defs>
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`} onClick={()=>setHl(null)}>
@@ -8957,7 +8957,7 @@ function DataModelDiagram({ onSelectTable }) {
           {/* Edges */}
           {DM_EDGES.map((e,i)=>{ const p=dmEdgePath(e.from,e.to); if(!p) return null;
             const key=e.from+">"+e.to, isHl=hlEdgeKeys?hlEdgeKeys.has(key):false, fg=groupOfTable(e.from);
-            return <path key={i} d={p} fill="none" stroke={isHl?fg?.color||"#64748B":"#94A3B8"} strokeWidth={isHl?1.8:0.7} opacity={hl&&!isHl?0.12:isHl?1:0.55} markerEnd={isHl?"url(#dm-arrow-"+(fg?.id||"structure")+")":"url(#dm-arrow)"}/>;
+            return <path key={i} d={p} fill="none" stroke={isHl?fg?.color||"#64748B":"#EF4444"} strokeWidth={isHl?1.8:0.7} opacity={hl&&!isHl?0.12:isHl?1:0.55} markerEnd={isHl?"url(#dm-arrow-"+(fg?.id||"structure")+")":"url(#dm-arrow)"}/>;
           })}
           {/* Table boxes */}
           {Object.entries(DM_TABLE_POS).map(([tName,pos])=>{
