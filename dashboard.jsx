@@ -7258,7 +7258,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
           {/* Ideas list */}
           <div style={{
             flex: (selectedIdea || showNewForm) ? "0 0 55%" : "1 1 100%", flexShrink: 0,
-            overflowY: "auto", borderRight: (selectedIdea || showNewForm) ? "1px solid " + BORDER : "none",
+            overflow: "hidden", display: "flex", flexDirection: "column",
+            borderRight: (selectedIdea || showNewForm) ? "1px solid " + BORDER : "none",
             transition: "flex .15s",
           }}>
             {loading && (
@@ -7282,7 +7283,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               </div>
             )}
             {!loading && !error && displayIdeas.length > 0 && (
-              <div style={{ overflowX: "auto" }}>
+              <div style={{ overflow: "auto", flex: 1 }}>
               {hasColFilters && (
                 <div style={{ padding: "4px 0 6px 2px", display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 10, color: TEXT_MUTED }}>Filters active</span>
