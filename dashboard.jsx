@@ -2359,15 +2359,6 @@ function BowRatingsPopover({ bow, onUpdate }) {
               fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>
               {rs?.label || value}
             </span>
-            {isEstimate !== undefined && (
-              <span style={{ fontSize: 9, fontWeight: 600,
-                color: isEstimate ? "#D97706" : "#059669",
-                background: isEstimate ? "#FEF5E7" : "#ECFDF5",
-                borderRadius: 3, padding: "1px 5px",
-                border: "1px solid " + (isEstimate ? "#FDE68A" : "#A7F3D0") }}>
-                {isEstimate ? "Estimate" : "Confirmed"}
-              </span>
-            )}
             {rationale && (
               <div style={{ fontSize: 10, color: TEXT_MUTED, maxWidth: 120,
                 textAlign: "center", lineHeight: 1.4, marginTop: 2 }}>
@@ -2408,10 +2399,8 @@ function BowRatingsPopover({ bow, onUpdate }) {
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
               {bow.name} — Ratings by Year
             </div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5,
-              textAlign: "right", maxWidth: 200 }}>
-              Current year: Claude estimate<br />
-              Historical: confirmed in INVEST
+            <div style={{ fontSize: 11, color: TEXT_MUTED }}>
+              Ratings pulled from INVEST
             </div>
           </div>
  
@@ -2424,14 +2413,6 @@ function BowRatingsPopover({ bow, onUpdate }) {
                   <th key={yr} style={{ textAlign: "center", padding: "4px 8px 10px",
                     color: TEXT_SUB, fontWeight: 600, fontSize: 12 }}>
                     {yr}
-                    {ratingMap[yr]?.isEstimate && (
-                      <div style={{ fontSize: 9, color: "#D97706",
-                        fontWeight: 500, marginTop: 1 }}>estimate</div>
-                    )}
-                    {ratingMap[yr] && !ratingMap[yr].isEstimate && (
-                      <div style={{ fontSize: 9, color: "#059669",
-                        fontWeight: 500, marginTop: 1 }}>confirmed</div>
-                    )}
                   </th>
                 ))}
               </tr>
