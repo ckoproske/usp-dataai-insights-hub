@@ -6295,7 +6295,7 @@ function IdeaStageBadge({ stage }) {
   );
 }
 
-function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate }) {
+function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios, allBows }) {
   const canApprove = currentUser &&
     (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT" || currentUser.permission_level === "MLE");
 
@@ -6478,8 +6478,31 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           {fieldRow("Title", "title")}
           {fieldRow("Idea Type", "idea_type", "text", IDEA_TYPES)}
-          {fieldRow("Primary Portfolio", "primary_portfolio")}
-          {fieldRow("Primary BOW", "primary_bow")}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+              letterSpacing: 0.8, marginBottom: 4 }}>Primary Portfolio</div>
+            <select value={editDraft.primary_portfolio}
+              onChange={e => { handleFieldChange("primary_portfolio", e.target.value); handleFieldChange("primary_bow", ""); }}
+              style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+              <option value="">— Select Portfolio —</option>
+              {(portfolios || []).map(p => <option key={p.portfolio_id} value={p.portfolio_id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+              letterSpacing: 0.8, marginBottom: 4 }}>Primary BOW</div>
+            <select value={editDraft.primary_bow}
+              onChange={e => handleFieldChange("primary_bow", e.target.value)}
+              style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+              <option value="">— Select BOW —</option>
+              {((editDraft.primary_portfolio
+                ? (allBows || []).filter(b => b.portfolio_id === editDraft.primary_portfolio)
+                : (allBows || [])
+              )).map(b => <option key={b.bow_id} value={b.bow_id}>{b.name}</option>)}
+            </select>
+          </div>
           {fieldRow("Potential Partner", "potential_partner")}
           {fieldRow("Est. 2026 Amount ($)", "est_2026_amount", "number")}
         </div>
@@ -6695,18 +6718,27 @@ function InvestmentIdeaTracker({ currentUser }) {
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newDraft, setNewDraft]       = useState({
-    title: "", idea_type: "", primary_portfolio: "",
-    primary_bow: "", potential_partner: "", est_2026_amount: "",
-    description: "", stage: "Brainstorming",
+    title: "", stage: "Brainstorming", idea_type: "",
+    primary_portfolio: "", primary_bow: "", additional_bows: "",
+    potential_partner: "", est_total_amount: "", est_2026_amount: "",
+    co_funding_details: "", desired_start_date: "", est_duration: "",
+    objective: "", notes: "",
   });
   const [newSaving, setNewSaving]     = useState(false);
   const [newError, setNewError]       = useState(null);
+  const [portfolios, setPortfolios]   = useState([]);
+  const [allBows, setAllBows]         = useState([]);
 
   useEffect(() => {
     setLoading(true);
     apiFetch("/api/investment-ideas")
       .then(data => { setIdeas(data || []); setLoading(false); })
       .catch(() => { setError("Could not load investment ideas."); setLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    apiFetch("/api/portfolios").then(d => setPortfolios(d || [])).catch(() => {});
+    apiFetch("/api/bows").then(d => setAllBows(d || [])).catch(() => {});
   }, []);
 
   const handleUpdate = (updatedIdea) => {
@@ -6726,8 +6758,7 @@ function InvestmentIdeaTracker({ currentUser }) {
       });
       setIdeas(prev => [created, ...prev]);
       setShowNewForm(false);
-      setNewDraft({ title: "", idea_type: "", primary_portfolio: "", primary_bow: "",
-        potential_partner: "", est_2026_amount: "", description: "", stage: "Brainstorming" });
+      setNewDraft({ title: "", stage: "Brainstorming", idea_type: "", primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "", est_total_amount: "", est_2026_amount: "", co_funding_details: "", desired_start_date: "", est_duration: "", objective: "", notes: "" });
       setSelectedIdea(created);
     } catch {
       setNewError("Failed to create idea.");
@@ -6768,7 +6799,7 @@ function InvestmentIdeaTracker({ currentUser }) {
             <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>💡 Investment Idea Tracker</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => setShowNewForm(v => !v)}
+            <button onClick={() => { setShowNewForm(v => !v); setSelectedIdea(null); }}
               style={{ padding: "8px 18px", borderRadius: 8, border: "none",
                 background: "#6366F1", color: "#fff", fontWeight: 700, fontSize: 13,
                 cursor: "pointer" }}>
@@ -6776,72 +6807,6 @@ function InvestmentIdeaTracker({ currentUser }) {
             </button>
           </div>
         </div>
-
-        {/* New Idea Form (collapsible) */}
-        {showNewForm && (
-          <div style={{ background: "#F0F0FF", borderBottom: "1px solid #C7D2FE",
-            padding: "14px 24px", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#4338CA", marginBottom: 12 }}>
-              New Investment Idea
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px 14px" }}>
-              {[
-                { label: "Title *",             field: "title",             type: "text" },
-                { label: "Idea Type",           field: "idea_type",         type: "select", opts: IDEA_TYPES },
-                { label: "Primary Portfolio",   field: "primary_portfolio", type: "text" },
-                { label: "Primary BOW",         field: "primary_bow",       type: "text" },
-                { label: "Potential Partner",   field: "potential_partner", type: "text" },
-                { label: "Est. 2026 Amount ($)",field: "est_2026_amount",   type: "number" },
-              ].map(({ label, field, type, opts }) => (
-                <div key={field}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
-                    textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>{label}</div>
-                  {opts ? (
-                    <select value={newDraft[field]}
-                      onChange={e => setNewDraft(d => ({ ...d, [field]: e.target.value }))}
-                      style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: "1px solid " + BORDER,
-                        fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
-                      <option value="">— Select —</option>
-                      {opts.map(o => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  ) : (
-                    <input value={newDraft[field]} type={type}
-                      onChange={e => setNewDraft(d => ({ ...d, [field]: e.target.value }))}
-                      style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: "1px solid " + BORDER,
-                        fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none",
-                        boxSizing: "border-box" }}/>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
-                textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>Description</div>
-              <textarea value={newDraft.description}
-                onChange={e => setNewDraft(d => ({ ...d, description: e.target.value }))}
-                rows={2} placeholder="Brief description or rationale…"
-                style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: "1px solid " + BORDER,
-                  fontSize: 12, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
-                  outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
-            </div>
-            {newError && (
-              <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{newError}</div>
-            )}
-            <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-              <button onClick={handleCreateNew} disabled={newSaving}
-                style={{ padding: "6px 18px", borderRadius: 7, border: "none",
-                  background: "#6366F1", color: "#fff", fontWeight: 700, fontSize: 13,
-                  cursor: newSaving ? "default" : "pointer", opacity: newSaving ? 0.7 : 1 }}>
-                {newSaving ? "Creating…" : "Create Idea"}
-              </button>
-              <button onClick={() => setShowNewForm(false)}
-                style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid " + BORDER,
-                  background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Pipeline bar */}
         <div style={{ padding: "12px 24px", background: SURFACE,
@@ -6884,14 +6849,14 @@ function InvestmentIdeaTracker({ currentUser }) {
           )}
         </div>
 
-        {/* Main body: list + detail */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+        {/* Main body: list + detail/new-idea panel */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", minHeight: 0 }}>
 
           {/* Ideas list */}
           <div style={{
-            width: selectedIdea ? 440 : "100%", flexShrink: 0,
-            overflowY: "auto", borderRight: selectedIdea ? "1px solid " + BORDER : "none",
-            transition: "width .15s",
+            flex: (selectedIdea || showNewForm) ? "0 0 55%" : "1 1 100%", flexShrink: 0,
+            overflowY: "auto", borderRight: (selectedIdea || showNewForm) ? "1px solid " + BORDER : "none",
+            transition: "flex .15s",
           }}>
             {loading && (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
@@ -6910,7 +6875,7 @@ function InvestmentIdeaTracker({ currentUser }) {
             )}
             {!loading && !error && filteredIdeas.length === 0 && (
               <div style={{ padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
-                {stageFilter ? `No ideas in "${stageFilter}".` : "No ideas yet. Create one above!"}
+                {stageFilter ? `No ideas in "${stageFilter}".` : "No ideas yet. Click \"+ New Idea\" to create one!"}
               </div>
             )}
             {!loading && !error && filteredIdeas.length > 0 && (
@@ -6933,7 +6898,7 @@ function InvestmentIdeaTracker({ currentUser }) {
                     const isApproved = idea.stage === "Okay to Proceed";
                     return (
                       <tr key={idea.id}
-                        onClick={() => setSelectedIdea(isSelected ? null : idea)}
+                        onClick={() => { setSelectedIdea(isSelected ? null : idea); setShowNewForm(false); }}
                         style={{
                           cursor: "pointer",
                           background: isSelected
@@ -6981,16 +6946,201 @@ function InvestmentIdeaTracker({ currentUser }) {
             )}
           </div>
 
-          {/* Detail panel */}
-          {selectedIdea && (
-            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column",
-              minWidth: 0 }}>
-              <InvestmentIdeaDetail
-                idea={selectedIdea}
-                onClose={() => setSelectedIdea(null)}
-                currentUser={currentUser}
-                onUpdate={handleUpdate}
-              />
+          {/* Right panel — new idea OR detail */}
+          {(showNewForm || selectedIdea) && (
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", minWidth: 0, borderLeft: "1px solid " + BORDER }}>
+              {showNewForm ? (
+                /* ── New Idea Panel ── */
+                <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+                  {/* Header */}
+                  <div style={{ padding: "14px 20px", borderBottom: "1px solid " + BORDER, background: "#F0F0FF",
+                    borderTop: "3px solid #6366F1", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: TEXT }}>New Investment Idea</div>
+                    <button onClick={() => setShowNewForm(false)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, fontSize: 20, lineHeight: 1, padding: "2px 6px" }}>×</button>
+                  </div>
+                  {/* Scrollable form */}
+                  <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+                    {/* Section: Core Info */}
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                      letterSpacing: 1, marginBottom: 10 }}>Core Info</div>
+                    {/* Title */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Title *</div>
+                      <input value={newDraft.title} onChange={e => setNewDraft(d => ({...d, title: e.target.value}))}
+                        placeholder="Brief descriptive title"
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                    </div>
+                    {/* Stage + Idea Type row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 14px", marginBottom: 14 }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                          letterSpacing: 0.8, marginBottom: 4 }}>Stage</div>
+                        <select value={newDraft.stage} onChange={e => setNewDraft(d => ({...d, stage: e.target.value}))}
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+                          {IDEA_STAGES.filter(s => s.name !== "Okay to Proceed").map(s => (
+                            <option key={s.name} value={s.name}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                          letterSpacing: 0.8, marginBottom: 4 }}>Idea Type</div>
+                        <select value={newDraft.idea_type} onChange={e => setNewDraft(d => ({...d, idea_type: e.target.value}))}
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+                          <option value="">— Select —</option>
+                          {IDEA_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    {/* Section: Portfolio & BOW */}
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                      letterSpacing: 1, marginBottom: 10, marginTop: 6, paddingTop: 10, borderTop: "1px solid " + BORDER }}>Portfolio & BOW</div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Primary Portfolio</div>
+                      <select value={newDraft.primary_portfolio}
+                        onChange={e => setNewDraft(d => ({...d, primary_portfolio: e.target.value, primary_bow: ""}))}
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+                        <option value="">— Select Portfolio —</option>
+                        {portfolios.map(p => <option key={p.portfolio_id} value={p.portfolio_id}>{p.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Primary BOW</div>
+                      <select value={newDraft.primary_bow}
+                        onChange={e => setNewDraft(d => ({...d, primary_bow: e.target.value}))}
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none" }}>
+                        <option value="">— Select BOW —</option>
+                        {(newDraft.primary_portfolio
+                          ? allBows.filter(b => b.portfolio_id === newDraft.primary_portfolio)
+                          : allBows
+                        ).map(b => <option key={b.bow_id} value={b.bow_id}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Additional BOWs</div>
+                      <input value={newDraft.additional_bows}
+                        onChange={e => setNewDraft(d => ({...d, additional_bows: e.target.value}))}
+                        placeholder="Other BOWs involved (comma-separated)"
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                    </div>
+                    {/* Section: Investment Details */}
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                      letterSpacing: 1, marginBottom: 10, marginTop: 6, paddingTop: 10, borderTop: "1px solid " + BORDER }}>Investment Details</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 14px" }}>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                          letterSpacing: 0.8, marginBottom: 4 }}>Est. Total Amount ($)</div>
+                        <input type="number" value={newDraft.est_total_amount}
+                          onChange={e => setNewDraft(d => ({...d, est_total_amount: e.target.value}))}
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                          letterSpacing: 0.8, marginBottom: 4 }}>Est. 2026 Amount ($)</div>
+                        <input type="number" value={newDraft.est_2026_amount}
+                          onChange={e => setNewDraft(d => ({...d, est_2026_amount: e.target.value}))}
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                          letterSpacing: 0.8, marginBottom: 4 }}>Desired Start Date</div>
+                        <input type="date" value={newDraft.desired_start_date}
+                          onChange={e => setNewDraft(d => ({...d, desired_start_date: e.target.value}))}
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                          letterSpacing: 0.8, marginBottom: 4 }}>Est. Duration</div>
+                        <input type="text" value={newDraft.est_duration}
+                          onChange={e => setNewDraft(d => ({...d, est_duration: e.target.value}))}
+                          placeholder="e.g. 12 months"
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                            fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Potential Partner</div>
+                      <input type="text" value={newDraft.potential_partner}
+                        onChange={e => setNewDraft(d => ({...d, potential_partner: e.target.value}))}
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Co-funding Details</div>
+                      <input type="text" value={newDraft.co_funding_details}
+                        onChange={e => setNewDraft(d => ({...d, co_funding_details: e.target.value}))}
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                    </div>
+                    {/* Section: Description */}
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                      letterSpacing: 1, marginBottom: 10, marginTop: 6, paddingTop: 10, borderTop: "1px solid " + BORDER }}>Description</div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Objective / Intended Impact</div>
+                      <textarea value={newDraft.objective}
+                        onChange={e => setNewDraft(d => ({...d, objective: e.target.value}))}
+                        rows={3} placeholder="What is the intended impact or strategic objective?"
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
+                          outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Additional Notes</div>
+                      <textarea value={newDraft.notes}
+                        onChange={e => setNewDraft(d => ({...d, notes: e.target.value}))}
+                        rows={3} placeholder="Any other relevant context or notes"
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
+                          outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
+                    </div>
+                    {newError && (
+                      <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 10 }}>{newError}</div>
+                    )}
+                  </div>
+                  {/* Footer */}
+                  <div style={{ padding: "12px 20px", borderTop: "1px solid " + BORDER, background: SURFACE,
+                    display: "flex", gap: 8, flexShrink: 0 }}>
+                    <button onClick={handleCreateNew} disabled={newSaving}
+                      style={{ flex: 1, padding: "9px 16px", borderRadius: 8, border: "none",
+                        background: "#6366F1", color: "#fff", fontWeight: 700, fontSize: 13,
+                        cursor: newSaving ? "default" : "pointer", opacity: newSaving ? 0.7 : 1 }}>
+                      {newSaving ? "Creating…" : "Create Idea"}
+                    </button>
+                    <button onClick={() => setShowNewForm(false)}
+                      style={{ padding: "9px 16px", borderRadius: 8, border: "1px solid " + BORDER,
+                        background: SURFACE, color: TEXT_MUTED, fontSize: 13, cursor: "pointer" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : selectedIdea ? (
+                <InvestmentIdeaDetail
+                  idea={selectedIdea}
+                  onClose={() => setSelectedIdea(null)}
+                  currentUser={currentUser}
+                  onUpdate={handleUpdate}
+                  portfolios={portfolios}
+                  allBows={allBows}
+                />
+              ) : null}
             </div>
           )}
         </div>
