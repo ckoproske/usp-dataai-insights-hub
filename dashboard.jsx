@@ -6321,7 +6321,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const [approvingSaving, setApprovingSaving] = useState(false);
   const [movedOpen, setMovedOpen]   = useState(false);
   const [invNumber, setInvNumber]   = useState("");
-  const [archiveConfirm, setArchiveConfirm] = useState(false);
   const [localComments, setLocalComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -6423,22 +6422,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
       onUpdate({ ...idea, stage: "Moved to Invest", inv_number: invNumber });
       setMovedOpen(false);
       setInvNumber("");
-      onClose();
-    } catch {
-      // silent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleArchive = async () => {
-    setSaving(true);
-    try {
-      await apiFetch(`/api/investment-ideas/${idea.idea_id}/archive`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-      onUpdate({ ...idea, archived: true });
       onClose();
     } catch {
       // silent
@@ -6660,30 +6643,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
                   cursor: "pointer" }}>
                 🚀 Mark as Moved to INVEST
               </button>
-            )}
-
-            {/* Archive button */}
-            {!archiveConfirm ? (
-              <button onClick={() => setArchiveConfirm(true)}
-                style={{ padding: "5px 12px", borderRadius: 7,
-                  border: "1px solid " + BORDER, background: SURFACE,
-                  color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
-                Archive
-              </button>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 12, color: TEXT_SUB }}>Archive this idea?</span>
-                <button onClick={handleArchive} disabled={saving}
-                  style={{ padding: "4px 10px", borderRadius: 6, border: "none",
-                    background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  Yes, Archive
-                </button>
-                <button onClick={() => setArchiveConfirm(false)}
-                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + BORDER,
-                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
-                  Cancel
-                </button>
-              </div>
             )}
 
           </div>
@@ -6982,7 +6941,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
           <div>
             <div style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
               textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 2 }}>
-              Investment Pipeline Prep
+              USP Data & AI Pipeline Planning List
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>💡 Investment Idea Tracker</div>
           </div>
