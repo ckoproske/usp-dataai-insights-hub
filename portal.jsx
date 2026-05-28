@@ -6301,7 +6301,6 @@ function PortalApp() {
     : [
         { id: "content", label: "BOWs & Portfolios" },
         { id: "activity", label: "Activity" },
-        ...(canReview ? [{ id: "queue", label: `Review Queue${queue.length ? ` (${queue.length})` : ""}` }] : []),
       ];
 
   const handleSelectBow = bow => {
