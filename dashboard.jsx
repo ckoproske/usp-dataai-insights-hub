@@ -6295,7 +6295,7 @@ function IdeaStageBadge({ stage }) {
   );
 }
 
-function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios, allBows }) {
+function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios, allBows, onApproved, onDeleted }) {
   const canApprove = currentUser &&
     (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT" || currentUser.permission_level === "MLE");
 
@@ -6320,13 +6320,25 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const [movedOpen, setMovedOpen]   = useState(false);
   const [invNumber, setInvNumber]   = useState("");
   const [archiveConfirm, setArchiveConfirm] = useState(false);
+  const [localComments, setLocalComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleFieldChange = (field, val) => setEditDraft(d => ({ ...d, [field]: val }));
+
+  useEffect(() => {
+    if (!idea.idea_id) return;
+    setCommentsLoading(true);
+    apiFetch(`/api/investment-ideas/${idea.idea_id}/comments`)
+      .then(c => { setLocalComments(c || []); setCommentsLoading(false); })
+      .catch(() => setCommentsLoading(false));
+  }, [idea.idea_id]);
 
   const handleSave = async () => {
     setSaving(true); setSaveMsg(null);
     try {
-      const updated = await apiFetch(`/api/investment-ideas/${idea.id}`, {
+      const updated = await apiFetch(`/api/investment-ideas/${idea.idea_id}`, {
         method: "PATCH",
         body: JSON.stringify(editDraft),
       });
@@ -6344,22 +6356,19 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
     if (!commentText.trim()) return;
     setAddingComment(true);
     try {
-      const result = await apiFetch(`/api/investment-ideas/${idea.id}/comments`, {
+      const result = await apiFetch(`/api/investment-ideas/${idea.idea_id}/comments`, {
         method: "POST",
-        body: JSON.stringify({
-          comment: commentText,
-          author: currentUser?.display_name || currentUser?.email || "Unknown",
-        }),
+        body: JSON.stringify({ comment: commentText }),
       });
-      const newComment = result || {
-        id: Date.now(), comment: commentText,
-        author: currentUser?.display_name || currentUser?.email || "Unknown",
-        created_at: new Date().toISOString(),
-      };
-      onUpdate({ ...idea, comments: [...(idea.comments || []), newComment] });
+      const newComment = result?.comment_id
+        ? result
+        : { comment_id: Date.now(), idea_id: idea.idea_id, comment_text: commentText,
+            commented_by: currentUser?.display_name || currentUser?.email || "You",
+            commented_at: new Date().toISOString(), is_approval_comment: false };
+      setLocalComments(prev => [...prev, newComment]);
       setCommentText("");
     } catch {
-      // ignore
+      // silent
     } finally {
       setAddingComment(false);
     }
@@ -6368,15 +6377,16 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const handleApprove = async () => {
     setApprovingSaving(true);
     try {
-      const updated = await apiFetch(`/api/investment-ideas/${idea.id}/approve`, {
+      await apiFetch(`/api/investment-ideas/${idea.idea_id}/approve`, {
         method: "POST",
         body: JSON.stringify({ comment: approveComment }),
       });
-      onUpdate({ ...idea, stage: "Okay to Proceed", ...(updated || {}) });
+      onUpdate({ ...idea, stage: "Okay to Proceed", approved_by: currentUser?.display_name || currentUser?.email, approver_note: approveComment || null });
       setApproveOpen(false);
       setApproveComment("");
+      if (onApproved) onApproved(`✓ Idea approved — marked as "Okay to Proceed"${approveComment ? ' with note recorded' : ''}`);
     } catch {
-      // ignore
+      // silent
     } finally {
       setApprovingSaving(false);
     }
@@ -6385,15 +6395,16 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const handleMoveToInvest = async () => {
     setSaving(true);
     try {
-      const updated = await apiFetch(`/api/investment-ideas/${idea.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ stage: "Moved to Invest", inv_number: invNumber }),
+      await apiFetch(`/api/investment-ideas/${idea.idea_id}/move-to-invest`, {
+        method: "POST",
+        body: JSON.stringify({ inv_number: invNumber }),
       });
-      onUpdate({ ...idea, stage: "Moved to Invest", inv_number: invNumber, ...(updated || {}) });
+      onUpdate({ ...idea, stage: "Moved to Invest", inv_number: invNumber });
       setMovedOpen(false);
       setInvNumber("");
+      onClose();
     } catch {
-      // ignore
+      // silent
     } finally {
       setSaving(false);
     }
@@ -6402,16 +6413,29 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   const handleArchive = async () => {
     setSaving(true);
     try {
-      await apiFetch(`/api/investment-ideas/${idea.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ archived: true }),
+      await apiFetch(`/api/investment-ideas/${idea.idea_id}/archive`, {
+        method: "POST",
+        body: JSON.stringify({}),
       });
       onUpdate({ ...idea, archived: true });
       onClose();
     } catch {
-      // ignore
+      // silent
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await apiFetch(`/api/investment-ideas/${idea.idea_id}`, { method: "DELETE" });
+      if (onDeleted) onDeleted(`"${idea.title || 'Idea'}" permanently deleted`);
+      else onClose();
+    } catch {
+      // silent
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -6604,6 +6628,31 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
                 </button>
               </div>
             )}
+
+            {/* Delete button — hard delete with confirm */}
+            {!deleteConfirm ? (
+              <button onClick={() => setDeleteConfirm(true)}
+                style={{ padding: "5px 12px", borderRadius: 7,
+                  border: "1px solid #FCA5A5", background: "#FEF2F2",
+                  color: "#DC2626", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                🗑 Delete
+              </button>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "#DC2626", fontWeight: 600 }}>Permanently delete?</span>
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ padding: "4px 10px", borderRadius: 6, border: "none",
+                    background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700,
+                    cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.7 : 1 }}>
+                  {deleting ? "Deleting…" : "Yes, Delete"}
+                </button>
+                <button onClick={() => setDeleteConfirm(false)}
+                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + BORDER,
+                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Approve inline form */}
@@ -6670,23 +6719,23 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
         <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
             textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-            Comments ({(idea.comments || []).length})
+            Comments ({localComments.length})
           </div>
-          {(idea.comments || []).length === 0 && (
+          {localComments.length === 0 && (
             <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>No comments yet.</div>
           )}
-          {(idea.comments || []).map((c, i) => (
-            <div key={c.id || i} style={{
+          {localComments.map((c, i) => (
+            <div key={c.comment_id || i} style={{
               background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
               padding: "10px 12px", marginBottom: 8,
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{c.author}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{c.commented_by}</span>
                 <span style={{ fontSize: 10, color: TEXT_MUTED }}>
-                  {c.created_at ? new Date(c.created_at).toLocaleDateString() : ""}
+                  {c.commented_at ? new Date(c.commented_at).toLocaleDateString() : ""}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>{c.comment}</div>
+              <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>{c.comment_text}</div>
             </div>
           ))}
           <div style={{ marginTop: 8 }}>
@@ -6728,13 +6777,21 @@ function InvestmentIdeaTracker({ currentUser }) {
   const [newError, setNewError]       = useState(null);
   const [portfolios, setPortfolios]   = useState([]);
   const [allBows, setAllBows]         = useState([]);
+  const [toast, setToast] = useState(null); // {msg, type}
 
-  useEffect(() => {
+  const showToast = (msg, type = "success") => {
+    setToast({msg, type});
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const loadIdeas = () => {
     setLoading(true);
     apiFetch("/api/investment-ideas")
-      .then(data => { setIdeas(data || []); setLoading(false); })
+      .then(data => { setIdeas((data || []).map(i => ({...i, id: i.idea_id}))); setLoading(false); })
       .catch(() => { setError("Could not load investment ideas."); setLoading(false); });
-  }, []);
+  };
+
+  useEffect(() => { loadIdeas(); }, []);
 
   useEffect(() => {
     apiFetch("/api/portfolios").then(d => setPortfolios(d || [])).catch(() => {});
@@ -6742,8 +6799,8 @@ function InvestmentIdeaTracker({ currentUser }) {
   }, []);
 
   const handleUpdate = (updatedIdea) => {
-    setIdeas(prev => prev.map(i => i.id === updatedIdea.id ? updatedIdea : i));
-    if (selectedIdea && selectedIdea.id === updatedIdea.id) {
+    setIdeas(prev => prev.map(i => i.idea_id === updatedIdea.idea_id ? updatedIdea : i));
+    if (selectedIdea && selectedIdea.idea_id === updatedIdea.idea_id) {
       setSelectedIdea(updatedIdea);
     }
   };
@@ -6752,14 +6809,17 @@ function InvestmentIdeaTracker({ currentUser }) {
     if (!newDraft.title.trim()) { setNewError("Title is required."); return; }
     setNewSaving(true); setNewError(null);
     try {
-      const created = await apiFetch("/api/investment-ideas", {
+      const resp = await apiFetch("/api/investment-ideas", {
         method: "POST",
         body: JSON.stringify(newDraft),
       });
-      setIdeas(prev => [created, ...prev]);
+      const refreshed = await apiFetch("/api/investment-ideas");
+      const mapped = (refreshed || []).map(i => ({...i, id: i.idea_id}));
+      setIdeas(mapped);
       setShowNewForm(false);
       setNewDraft({ title: "", stage: "Brainstorming", idea_type: "", primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "", est_total_amount: "", est_2026_amount: "", co_funding_details: "", desired_start_date: "", est_duration: "", objective: "", notes: "" });
-      setSelectedIdea(created);
+      const newIdea = mapped.find(i => i.idea_id === resp.idea_id) || null;
+      setSelectedIdea(newIdea);
     } catch {
       setNewError("Failed to create idea.");
     } finally {
@@ -6807,6 +6867,19 @@ function InvestmentIdeaTracker({ currentUser }) {
             </button>
           </div>
         </div>
+
+        {/* Toast notification */}
+        {toast && (
+          <div style={{
+            padding: "12px 20px", flexShrink: 0,
+            background: toast.type === "success" ? "#059669" : "#DC2626",
+            color: "#fff", fontSize: 13, fontWeight: 600,
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <span style={{fontSize:18}}>{toast.type === "success" ? "✓" : "⚠"}</span>
+            {toast.msg}
+          </div>
+        )}
 
         {/* Pipeline bar */}
         <div style={{ padding: "12px 24px", background: SURFACE,
@@ -6882,7 +6955,7 @@ function InvestmentIdeaTracker({ currentUser }) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
-                    {["Title", "Stage", "Type", "Portfolio", "BOW", "Partner", "Est. 2026"].map(h => (
+                    {["Title", "Stage", "Type", "Portfolio", "BOW", "Partner", "Est. 2026", "Approver Note"].map(h => (
                       <th key={h} style={{ padding: "8px 10px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -6937,6 +7010,11 @@ function InvestmentIdeaTracker({ currentUser }) {
                         <td style={{ padding: "9px 10px", fontWeight: 600,
                           color: idea.est_2026_amount ? TEXT : TEXT_MUTED, whiteSpace: "nowrap" }}>
                           {fmtIdeaAmt(idea.est_2026_amount)}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, maxWidth: 160,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          fontStyle: idea.approver_note ? "normal" : "italic" }}>
+                          {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
                         </td>
                       </tr>
                     );
@@ -7139,6 +7217,8 @@ function InvestmentIdeaTracker({ currentUser }) {
                   onUpdate={handleUpdate}
                   portfolios={portfolios}
                   allBows={allBows}
+                  onApproved={(msg) => { setSelectedIdea(null); showToast(msg); loadIdeas(); }}
+                  onDeleted={(msg) => { setSelectedIdea(null); showToast(msg); loadIdeas(); }}
                 />
               ) : null}
             </div>

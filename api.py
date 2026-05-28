@@ -3546,7 +3546,8 @@ def list_investment_ideas():
               inv_number,
               COALESCE(archived, false)          AS archived,
               CAST(archived_at AS STRING)        AS archived_at,
-              archived_by
+              archived_by,
+              approver_note
             FROM {SCHEMA}.investment_ideas
             WHERE COALESCE(archived, false) = false
             ORDER BY submitted_at DESC"""
@@ -3666,13 +3667,15 @@ def approve_investment_idea(idea_id):
     if rows[0].get("archived"):
         return jsonify({"error": "cannot approve an archived idea"}), 400
 
+    approver_note = (data.get("comment") or "").strip() or None
     execute(
         f"""UPDATE {SCHEMA}.investment_ideas
             SET stage = 'Okay to Proceed',
                 approved_by = ?,
-                approved_at = current_timestamp()
+                approved_at = current_timestamp(),
+                approver_note = ?
             WHERE idea_id = ?""",
-        [approved_by, idea_id]
+        [approved_by, approver_note, idea_id]
     )
 
     # Optionally record an approval comment
@@ -3748,6 +3751,20 @@ def archive_investment_idea(idea_id):
         [archived_by, idea_id]
     )
     return jsonify({"status": "ok", "archived_by": archived_by})
+
+
+@app.route("/api/investment-ideas/<idea_id>", methods=["DELETE"])
+def delete_investment_idea(idea_id):
+    """Hard-delete an investment idea and its comments. Available to all authenticated users."""
+    rows = query(
+        f"SELECT idea_id FROM {SCHEMA}.investment_ideas WHERE idea_id = ?",
+        [idea_id]
+    )
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    execute(f"DELETE FROM {SCHEMA}.investment_idea_comments WHERE idea_id = ?", [idea_id])
+    execute(f"DELETE FROM {SCHEMA}.investment_ideas WHERE idea_id = ?", [idea_id])
+    return jsonify({"status": "ok"})
 
 
 @app.route("/api/investment-ideas/<idea_id>/comments", methods=["GET"])
