@@ -7119,11 +7119,11 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
             )}
             {!loading && !error && filteredIdeas.length > 0 && (
               <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 1200 }}>
+              <table style={{ borderCollapse: "collapse", fontSize: 12, minWidth: 2000, tableLayout: "auto" }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Designated Approver", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Approver Note", "Comments"].map(h => (
-                      <th key={h} style={{ padding: "8px 10px", textAlign: "left",
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Notes", "Designated Approver", "Approver Note", "Comments"].map(h => (
+                      <th key={h} style={{ padding: "8px 14px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
                         borderBottom: "1px solid " + BORDER, whiteSpace: "nowrap" }}>
@@ -7153,63 +7153,68 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                             ? "3px solid #059669"
                             : "3px solid transparent",
                         }}>
-                        <td style={{ padding: "9px 10px", fontWeight: 600, color: TEXT,
-                          maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "9px 14px", fontWeight: 600, color: TEXT,
+                          minWidth: 180, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {idea.title || "—"}
                         </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, maxWidth: 200,
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB,
+                          minWidth: 200, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {idea.objective || "—"}
                         </td>
-                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "9px 14px", whiteSpace: "nowrap" }}>
                           <IdeaStageBadge stage={idea.stage}/>
                         </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 110 }}>
                           {idea.idea_type || "—"}
                         </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 120 }}>
                           {idea.submitted_by || "—"}
                         </td>
-                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          minWidth: 160, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {portfolios.find(p => p.portfolio_id === idea.primary_portfolio)?.name || idea.primary_portfolio || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          minWidth: 160, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {allBows.find(b => b.bow_id === idea.primary_bow)?.name || idea.primary_bow || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          minWidth: 140, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {idea.additional_bows || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          minWidth: 130, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {idea.potential_partner || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 80 }}>
+                          {fmtIdeaAmt(idea.est_total_amount)}
+                        </td>
+                        <td style={{ padding: "9px 14px", fontWeight: 600, whiteSpace: "nowrap", minWidth: 80,
+                          color: idea.est_2026_amount ? TEXT : TEXT_MUTED }}>
+                          {fmtIdeaAmt(idea.est_2026_amount)}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 100 }}>
+                          {idea.desired_start_date || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 100 }}>
+                          {idea.est_duration || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB,
+                          minWidth: 200, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          fontStyle: idea.notes ? "normal" : "italic" }}>
+                          {idea.notes || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", whiteSpace: "nowrap", minWidth: 140 }}>
                           {idea.designated_approver
                             ? <span style={{ fontWeight: 700, color: "#7C3AED", fontSize: 11 }}>{idea.designated_approver}</span>
                             : <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}
                         </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {portfolios.find(p => p.portfolio_id === idea.primary_portfolio)?.name || idea.primary_portfolio || "—"}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {allBows.find(b => b.bow_id === idea.primary_bow)?.name || idea.primary_bow || "—"}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {idea.additional_bows || "—"}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {idea.potential_partner || "—"}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                          {fmtIdeaAmt(idea.est_total_amount)}
-                        </td>
-                        <td style={{ padding: "9px 10px", fontWeight: 600,
-                          color: idea.est_2026_amount ? TEXT : TEXT_MUTED, whiteSpace: "nowrap" }}>
-                          {fmtIdeaAmt(idea.est_2026_amount)}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                          {idea.desired_start_date || "—"}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                          {idea.est_duration || "—"}
-                        </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, maxWidth: 180,
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB,
+                          minWidth: 200, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                           fontStyle: idea.approver_note ? "normal" : "italic" }}>
                           {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
                         </td>
-                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}
+                        <td style={{ padding: "9px 14px", whiteSpace: "nowrap" }}
                           onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => toggleRowComments(idea.idea_id)}
@@ -7228,7 +7233,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                       </tr>
                       {expandedCommentRow === idea.idea_id && (
                         <tr key={idea.id + "-comments"}>
-                          <td colSpan={16}
+                          <td colSpan={17}
                             style={{ padding: "0 12px 14px 12px", background: "#F8FAFC",
                               borderBottom: "2px solid #6366F133" }}>
                             <div style={{ maxWidth: 700, paddingTop: 10 }}>
