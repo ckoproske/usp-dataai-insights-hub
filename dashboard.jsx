@@ -6967,6 +6967,13 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     return (Date.now() - new Date(i.moved_to_invest_at).getTime()) <= 60 * 24 * 60 * 60 * 1000;
   }).length;
 
+  // Ready-for-review counts per designated approver
+  const reviewByApprover = DESIGNATED_APPROVERS.map(name => ({
+    name,
+    count: activeIdeas.filter(i => i.stage === "Ready for Review" && i.designated_approver === name).length,
+  }));
+  const unassignedReview = activeIdeas.filter(i => i.stage === "Ready for Review" && !i.designated_approver).length;
+
   // Pipeline bar data
   const pipelineData = IDEA_STAGES.map(s => {
     if (s.name === "Moved to Invest") return { ...s, count: movedLast60, total: 0, isArchiveTile: true };
@@ -7016,6 +7023,65 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
             {toast.msg}
           </div>
         )}
+
+        {/* Review Queue — per-approver pending count */}
+        <div style={{
+          padding: "10px 24px", background: "#FAFAF7",
+          borderBottom: "1px solid " + BORDER, flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 1, whiteSpace: "nowrap", flexShrink: 0 }}>
+            Ready for Review
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {reviewByApprover.map(({ name, count }) => {
+              const hot = count > 0;
+              return (
+                <button key={name}
+                  onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    padding: "5px 12px", borderRadius: 20,
+                    border: hot ? "1.5px solid #D97706" : "1.5px solid " + BORDER,
+                    background: hot ? "#FFFBEB" : SURFACE,
+                    cursor: "pointer", transition: "all .12s",
+                  }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: hot ? "#92400E" : TEXT_MUTED }}>
+                    {name}
+                  </span>
+                  <span style={{
+                    minWidth: 20, height: 20, borderRadius: 10, display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    background: hot ? "#D97706" : BORDER,
+                    color: hot ? "#fff" : TEXT_MUTED,
+                    fontSize: 11, fontWeight: 800, lineHeight: 1,
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+            {unassignedReview > 0 && (
+              <button
+                onClick={() => setStageFilter(prev => prev === "Ready for Review" ? null : "Ready for Review")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 7,
+                  padding: "5px 12px", borderRadius: 20,
+                  border: "1.5px solid #DC2626", background: "#FEF2F2", cursor: "pointer",
+                }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#991B1B" }}>Unassigned</span>
+                <span style={{
+                  minWidth: 20, height: 20, borderRadius: 10, display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  background: "#DC2626", color: "#fff", fontSize: 11, fontWeight: 800,
+                }}>
+                  {unassignedReview}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Pipeline bar */}
         <div style={{ padding: "12px 24px", background: SURFACE,
