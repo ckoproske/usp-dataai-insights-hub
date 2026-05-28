@@ -6564,7 +6564,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
           </div>
         )}
 
-        {/* Save button */}
+        {/* Save + Delete row */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <button onClick={handleSave} disabled={saving}
             style={{ padding: "7px 20px", borderRadius: 7, border: "none",
@@ -6577,6 +6577,31 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
               {saveMsg}
             </span>
           )}
+          <div style={{ marginLeft: "auto" }}>
+            {!deleteConfirm ? (
+              <button onClick={() => setDeleteConfirm(true)}
+                style={{ padding: "7px 14px", borderRadius: 7,
+                  border: "1px solid #FCA5A5", background: "#FEF2F2",
+                  color: "#DC2626", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                🗑 Delete
+              </button>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "#DC2626", fontWeight: 600 }}>Permanently delete?</span>
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "none",
+                    background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700,
+                    cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.7 : 1 }}>
+                  {deleting ? "Deleting…" : "Yes, Delete"}
+                </button>
+                <button onClick={() => setDeleteConfirm(false)}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid " + BORDER,
+                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Actions */}
@@ -6629,30 +6654,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
               </div>
             )}
 
-            {/* Delete button — hard delete with confirm */}
-            {!deleteConfirm ? (
-              <button onClick={() => setDeleteConfirm(true)}
-                style={{ padding: "5px 12px", borderRadius: 7,
-                  border: "1px solid #FCA5A5", background: "#FEF2F2",
-                  color: "#DC2626", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                🗑 Delete
-              </button>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "#DC2626", fontWeight: 600 }}>Permanently delete?</span>
-                <button onClick={handleDelete} disabled={deleting}
-                  style={{ padding: "4px 10px", borderRadius: 6, border: "none",
-                    background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700,
-                    cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.7 : 1 }}>
-                  {deleting ? "Deleting…" : "Yes, Delete"}
-                </button>
-                <button onClick={() => setDeleteConfirm(false)}
-                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + BORDER,
-                    background: SURFACE, color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>
-                  Cancel
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Approve inline form */}
