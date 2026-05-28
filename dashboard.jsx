@@ -6805,6 +6805,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   };
   const [colFilters, setColFilters] = useState(_emptyFilters);
   const [reviewApproverFilter, setReviewApproverFilter] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ col: null, dir: null });
   const [moveRowId, setMoveRowId]   = useState(null);
   const [moveRowInv, setMoveRowInv] = useState("");
   const [moveRowSaving, setMoveRowSaving] = useState(false);
@@ -6918,6 +6919,23 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
 
   const activeIdeas = ideas.filter(i => !i.archived);
   const submittedByOptions = [...new Set(activeIdeas.map(i => i.submitted_by).filter(Boolean))].sort();
+  const titleOptions   = [...new Set(activeIdeas.map(i => i.title).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+  const partnerOptions = [...new Set(activeIdeas.map(i => i.potential_partner).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+
+  const fmtDate = (d) => {
+    if (!d) return "—";
+    const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[2]}/${m[3]}/${m[1].slice(-2)}`;
+    return d;
+  };
+
+  const toggleSort = (col, defaultDir = "desc") => {
+    setSortConfig(prev => {
+      if (prev.col !== col) return { col, dir: defaultDir };
+      if (prev.dir === defaultDir) return { col, dir: defaultDir === "desc" ? "asc" : "desc" };
+      return { col: null, dir: null };
+    });
+  };
 
   const filteredIdeas = activeIdeas.filter(idea => {
     if (stageFilter && idea.stage !== stageFilter) return false;
@@ -6945,6 +6963,29 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     if (cf.approver_note && !lc(idea.approver_note).includes(lc(cf.approver_note)))  return false;
     return true;
   });
+
+  // Apply sort to produce displayIdeas
+  const displayIdeas = (() => {
+    const sc = sortConfig;
+    if (!sc.col) return filteredIdeas;
+    return [...filteredIdeas].sort((a, b) => {
+      let va, vb;
+      if (sc.col === "est_total_amount" || sc.col === "est_2026_amount") {
+        va = parseFloat(a[sc.col]) || 0;
+        vb = parseFloat(b[sc.col]) || 0;
+      } else if (sc.col === "est_duration") {
+        va = parseFloat(a.est_duration) || 0;
+        vb = parseFloat(b.est_duration) || 0;
+      } else if (sc.col === "desired_start_date") {
+        const tA = a.desired_start_date ? new Date(a.desired_start_date).getTime() : (sc.dir === "asc" ? Infinity : -Infinity);
+        const tB = b.desired_start_date ? new Date(b.desired_start_date).getTime() : (sc.dir === "asc" ? Infinity : -Infinity);
+        va = tA; vb = tB;
+      }
+      if (va < vb) return sc.dir === "asc" ? -1 : 1;
+      if (va > vb) return sc.dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  })();
 
   // Count ideas moved to INVEST in the last 60 days
   const movedLast60 = archivedIdeas.filter(i => {
@@ -7171,12 +7212,12 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                 {error}
               </div>
             )}
-            {!loading && !error && filteredIdeas.length === 0 && (
+            {!loading && !error && displayIdeas.length === 0 && (
               <div style={{ padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
                 {stageFilter ? `No ideas in "${stageFilter}".` : "No ideas yet. Click \"+ New Idea\" to create one!"}
               </div>
             )}
-            {!loading && !error && filteredIdeas.length > 0 && (
+            {!loading && !error && displayIdeas.length > 0 && (
               <div style={{ overflowX: "auto" }}>
               {hasColFilters && (
                 <div style={{ padding: "4px 0 6px 2px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -7200,145 +7241,90 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                       </th>
                     ))}
                   </tr>
-                  {/* Filter row */}
-                  <tr style={{ background: "#F1F5F9", position: "sticky", top: 29, zIndex: 2 }}>
-                    {/* Title */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.title} onChange={e => setColFilter("title", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.title ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 100 }}/>
-                    </th>
-                    {/* Objective */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.objective} onChange={e => setColFilter("objective", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.objective ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 120 }}/>
-                    </th>
-                    {/* Stage */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <select value={colFilters.stage} onChange={e => setColFilter("stage", e.target.value)}
-                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.stage ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", background: SURFACE }}>
+                  {/* Filter / Sort row */}
+                  {(() => {
+                    const fTh = (child) => (
+                      <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>{child}</th>
+                    );
+                    const fSel = (key, opts) => fTh(
+                      <select value={colFilters[key]} onChange={e => setColFilter(key, e.target.value)}
+                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4, fontSize: 11,
+                          border: colFilters[key] ? "1px solid #6366F1" : "1px solid " + BORDER,
+                          outline: "none", fontFamily: "inherit", background: SURFACE }}>
                         <option value="">All</option>
-                        {IDEA_STAGES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                        {opts}
                       </select>
-                    </th>
-                    {/* Type */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <select value={colFilters.idea_type} onChange={e => setColFilter("idea_type", e.target.value)}
-                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.idea_type ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", background: SURFACE }}>
-                        <option value="">All</option>
-                        {IDEA_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </th>
-                    {/* Submitted By */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <select value={colFilters.submitted_by} onChange={e => setColFilter("submitted_by", e.target.value)}
-                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.submitted_by ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", background: SURFACE }}>
-                        <option value="">All</option>
-                        {submittedByOptions.map(n => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </th>
-                    {/* Portfolio */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <select value={colFilters.primary_portfolio} onChange={e => setColFilter("primary_portfolio", e.target.value)}
-                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.primary_portfolio ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", background: SURFACE }}>
-                        <option value="">All</option>
-                        {(portfolios || []).map(p => <option key={p.portfolio_id} value={p.portfolio_id}>{p.name}</option>)}
-                      </select>
-                    </th>
-                    {/* BOW */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <select value={colFilters.primary_bow} onChange={e => setColFilter("primary_bow", e.target.value)}
-                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.primary_bow ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", background: SURFACE }}>
-                        <option value="">All</option>
-                        {(colFilters.primary_portfolio
-                          ? (allBows || []).filter(b => b.portfolio_id === colFilters.primary_portfolio)
-                          : (allBows || [])
-                        ).map(b => <option key={b.bow_id} value={b.bow_id}>{b.name}</option>)}
-                      </select>
-                    </th>
-                    {/* Add'l BOWs */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.additional_bows} onChange={e => setColFilter("additional_bows", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.additional_bows ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 80 }}/>
-                    </th>
-                    {/* Partner */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.potential_partner} onChange={e => setColFilter("potential_partner", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.potential_partner ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 80 }}/>
-                    </th>
-                    {/* Total $ */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.est_total_amount} onChange={e => setColFilter("est_total_amount", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.est_total_amount ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 70 }}/>
-                    </th>
-                    {/* 2026 $ */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.est_2026_amount} onChange={e => setColFilter("est_2026_amount", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.est_2026_amount ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 70 }}/>
-                    </th>
-                    {/* Start Date */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.desired_start_date} onChange={e => setColFilter("desired_start_date", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.desired_start_date ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 80 }}/>
-                    </th>
-                    {/* Duration */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.est_duration} onChange={e => setColFilter("est_duration", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.est_duration ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 80 }}/>
-                    </th>
-                    {/* Notes */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.notes} onChange={e => setColFilter("notes", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.notes ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 100 }}/>
-                    </th>
-                    {/* Approver */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <select value={colFilters.designated_approver} onChange={e => setColFilter("designated_approver", e.target.value)}
-                        style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.designated_approver ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", background: SURFACE }}>
-                        <option value="">All</option>
-                        {DESIGNATED_APPROVERS.map(n => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </th>
-                    {/* Approver Note */}
-                    <th style={{ padding: "4px 6px", borderBottom: "1px solid " + BORDER }}>
-                      <input value={colFilters.approver_note} onChange={e => setColFilter("approver_note", e.target.value)}
-                        placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
-                          border: colFilters.approver_note ? "1px solid #6366F1" : "1px solid " + BORDER,
-                          fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 100 }}/>
-                    </th>
-                  </tr>
+                    );
+                    const fSort = (col, defaultDir, labels) => {
+                      const active = sortConfig.col === col;
+                      const lbl = active
+                        ? (sortConfig.dir === "desc" ? labels[0] : labels[1])
+                        : "↕";
+                      return fTh(
+                        <button onClick={() => toggleSort(col, defaultDir)}
+                          style={{ width: "100%", padding: "3px 6px", borderRadius: 4, cursor: "pointer",
+                            border: active ? "1px solid #6366F1" : "1px solid " + BORDER,
+                            background: active ? "#EEF2FF" : SURFACE, fontSize: 10,
+                            color: active ? "#4338CA" : TEXT_MUTED,
+                            fontWeight: active ? 700 : 400, textAlign: "center", whiteSpace: "nowrap" }}>
+                          {lbl}
+                        </button>
+                      );
+                    };
+                    return (
+                      <tr style={{ background: "#F1F5F9", position: "sticky", top: 29, zIndex: 2 }}>
+                        {/* Title — A-Z dropdown */}
+                        {fSel("title", titleOptions.map(t => <option key={t} value={t}>{t}</option>))}
+                        {/* Objective — no filter */}
+                        {fTh(null)}
+                        {/* Stage */}
+                        {fSel("stage", IDEA_STAGES.map(s => <option key={s.name} value={s.name}>{s.name}</option>))}
+                        {/* Type */}
+                        {fSel("idea_type", IDEA_TYPES.map(t => <option key={t} value={t}>{t}</option>))}
+                        {/* Submitted By */}
+                        {fSel("submitted_by", submittedByOptions.map(n => <option key={n} value={n}>{n}</option>))}
+                        {/* Portfolio */}
+                        {fSel("primary_portfolio", (portfolios || []).map(p => <option key={p.portfolio_id} value={p.portfolio_id}>{p.name}</option>))}
+                        {/* BOW — cascades off portfolio filter */}
+                        {fTh(
+                          <select value={colFilters.primary_bow} onChange={e => setColFilter("primary_bow", e.target.value)}
+                            style={{ width: "100%", padding: "3px 6px", borderRadius: 4, fontSize: 11,
+                              border: colFilters.primary_bow ? "1px solid #6366F1" : "1px solid " + BORDER,
+                              outline: "none", fontFamily: "inherit", background: SURFACE }}>
+                            <option value="">All</option>
+                            {(colFilters.primary_portfolio
+                              ? (allBows || []).filter(b => b.portfolio_id === colFilters.primary_portfolio)
+                              : (allBows || [])
+                            ).map(b => <option key={b.bow_id} value={b.bow_id}>{b.name}</option>)}
+                          </select>
+                        )}
+                        {/* Add'l BOWs */}
+                        {fTh(<input value={colFilters.additional_bows} onChange={e => setColFilter("additional_bows", e.target.value)}
+                          placeholder="Filter…" style={{ width: "100%", padding: "3px 6px", borderRadius: 4,
+                            border: colFilters.additional_bows ? "1px solid #6366F1" : "1px solid " + BORDER,
+                            fontSize: 11, outline: "none", fontFamily: "inherit", minWidth: 80 }}/>)}
+                        {/* Partner — A-Z dropdown */}
+                        {fSel("potential_partner", partnerOptions.map(p => <option key={p} value={p}>{p}</option>))}
+                        {/* Total $ — sort high→low */}
+                        {fSort("est_total_amount", "desc", ["High → Low ↓", "Low → High ↑"])}
+                        {/* 2026 $ — sort high→low */}
+                        {fSort("est_2026_amount", "desc", ["High → Low ↓", "Low → High ↑"])}
+                        {/* Start Date — sort nearest first */}
+                        {fSort("desired_start_date", "asc", ["Furthest ↓", "Nearest ↑"])}
+                        {/* Duration — sort high→low */}
+                        {fSort("est_duration", "desc", ["High → Low ↓", "Low → High ↑"])}
+                        {/* Notes — no filter */}
+                        {fTh(null)}
+                        {/* Approver */}
+                        {fSel("designated_approver", DESIGNATED_APPROVERS.map(n => <option key={n} value={n}>{n}</option>))}
+                        {/* Approver Note — no filter */}
+                        {fTh(null)}
+                      </tr>
+                    );
+                  })()}
                 </thead>
                 <tbody>
-                  {filteredIdeas.map((idea, idx) => {
+                  {displayIdeas.map((idea, idx) => {
                     const isSelected = selectedIdea && selectedIdea.id === idea.id;
                     const isApproved = idea.stage === "Okay to Proceed";
                     return (
@@ -7437,7 +7423,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           {fmtIdeaAmt(idea.est_2026_amount)}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 100 }}>
-                          {idea.desired_start_date || "—"}
+                          {fmtDate(idea.desired_start_date)}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 100 }}>
                           {idea.est_duration || "—"}
