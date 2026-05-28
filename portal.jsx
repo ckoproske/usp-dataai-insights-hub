@@ -261,6 +261,14 @@ function EmptyState({ message, action, onAction }) {
   );
 }
 
+// Format an ISO date string as MM/DD/YY (avoids UTC-shift by parsing components directly)
+function fmtDateShort(d) {
+  if (!d) return "—";
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return d;
+  return `${m[2]}/${m[3]}/${m[1].slice(-2)}`;
+}
+
 // Format a last-edited timestamp + email into a human-readable hint
 function formatLastEdited(by, at) {
   if (!by && !at) return null;
@@ -4130,8 +4138,8 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
 }
 
 // ─── Indicator detail side-panel (used inside SideDrawer) ─────────────────────
-function IndicatorDetailPanel({ ind }) {
-  const [actuals, setActuals]   = useState(null);
+function IndicatorDetailPanel({ ind, onGoEdit, onGoData }) {
+  const [actuals, setActuals]       = useState(null);
   const [actualsErr, setActualsErr] = useState(null);
 
   useEffect(() => {
@@ -4153,8 +4161,32 @@ function IndicatorDetailPanel({ ind }) {
     textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 };
   const FV = { fontSize: 13, color: TEXT, lineHeight: 1.5 };
 
+  const btnBase = {
+    flex: 1, padding: "9px 14px", borderRadius: 7, cursor: "pointer",
+    fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+    transition: "border-color 0.12s, box-shadow 0.12s",
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Navigation buttons */}
+      <div style={{ display: "flex", gap: 10 }}>
+        {onGoEdit && (
+          <button onClick={onGoEdit} style={{ ...btnBase,
+            background: SURFACE, color: TEXT, border: `1px solid ${BORDER}` }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; }}>
+            Edit Indicator
+          </button>
+        )}
+        {onGoData && (
+          <button onClick={onGoData} style={{ ...btnBase,
+            background: ACCENT, color: "#fff", border: "none" }}>
+            Update Data
+          </button>
+        )}
+      </div>
 
       {/* Context chips */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -4194,19 +4226,31 @@ function IndicatorDetailPanel({ ind }) {
         <div><div style={FL}>Measurement Level</div><div style={FV}>{ind.measurement_level || "—"}</div></div>
       </div>
 
-      {/* Source */}
+      {/* Source + URL */}
       <div>
         <div style={FL}>Source</div>
-        <div style={{ padding: "10px 12px", background: SURFACE, borderRadius: 6,
-          border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: TEXT }}>
-            {ind.source_name || <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>No source registered</span>}
-          </span>
+        <div style={{ borderRadius: 8, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+          <div style={{ padding: "10px 14px", background: SURFACE,
+            display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: TEXT }}>
+              {ind.source_name || <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>No source registered</span>}
+            </span>
+            <StatusBadge status={status} />
+          </div>
           {ind.source_url && (
-            <a href={ind.source_url} target="_blank" rel="noreferrer"
-              style={{ fontSize: 12, color: ACCENT, fontWeight: 600, textDecoration: "none" }}>
-              Open ↗
-            </a>
+            <div style={{ padding: "8px 14px", background: BG,
+              borderTop: `1px solid ${BORDER}`,
+              display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: TEXT_MUTED, flex: 1,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {ind.source_url}
+              </span>
+              <a href={ind.source_url} target="_blank" rel="noreferrer"
+                style={{ fontSize: 12, color: ACCENT, fontWeight: 600,
+                  textDecoration: "none", flexShrink: 0 }}>
+                Open ↗
+              </a>
+            </div>
           )}
         </div>
       </div>
@@ -4237,7 +4281,7 @@ function IndicatorDetailPanel({ ind }) {
         </div>
       )}
 
-      {/* Actuals */}
+      {/* Actuals — no Notes column, date as MM/DD/YY */}
       <div>
         <div style={FL}>Actual Figures</div>
         {actuals === null && <Skeleton height={56} />}
@@ -4250,7 +4294,7 @@ function IndicatorDetailPanel({ ind }) {
             <table style={{ width: "100%", borderCollapse: "collapse", background: SURFACE }}>
               <thead>
                 <tr style={{ background: BG }}>
-                  {["Year", "Period", "Value", "Date", "Notes"].map(h => (
+                  {["Year", "Period", "Value", "Date"].map(h => (
                     <th key={h} style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
                       textTransform: "uppercase", letterSpacing: "0.06em",
                       padding: "7px 10px", borderBottom: `1px solid ${BORDER}`,
@@ -4261,13 +4305,18 @@ function IndicatorDetailPanel({ ind }) {
               <tbody>
                 {actuals.map((a, i) => (
                   <tr key={i} style={{ background: i % 2 === 0 ? SURFACE : BG }}>
-                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT }}>{a.year}</td>
-                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.period || "—"}</td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT }}>
+                      {a.year}
+                    </td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>
+                      {a.period || "—"}
+                    </td>
                     <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, fontWeight: 700, color: TEXT }}>
                       {a.actual_value != null ? `${a.actual_value}${unit}` : "—"}
                     </td>
-                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.reading_date || "—"}</td>
-                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.source_notes || "—"}</td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>
+                      {fmtDateShort(a.reading_date)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -4289,7 +4338,7 @@ function IndicatorDetailPanel({ ind }) {
 }
 
 // ─── Indicator Catalog View ────────────────────────────────────────────────────
-function IndicatorCatalogView() {
+function IndicatorCatalogView({ onGoEdit, onGoData }) {
   const [rows, setRows]               = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
@@ -4484,7 +4533,13 @@ function IndicatorCatalogView() {
               : `Portfolio · ${selected.portfolio_name}`)
           : ""}
       >
-        {selected && <IndicatorDetailPanel ind={selected} />}
+        {selected && (
+          <IndicatorDetailPanel
+            ind={selected}
+            onGoEdit={onGoEdit ? () => { onGoEdit(); } : null}
+            onGoData={onGoData ? () => { onGoData(); } : null}
+          />
+        )}
       </SideDrawer>
     </div>
   );
@@ -6219,7 +6274,10 @@ function PortalApp() {
         )}
 
         {tab === "content" && mode === "catalog" && (
-          <IndicatorCatalogView />
+          <IndicatorCatalogView
+            onGoEdit={() => { setMode("edit"); setTab("content"); }}
+            onGoData={() => { setMode("data"); setTab("content"); }}
+          />
         )}
 
         {tab === "insight" && (
