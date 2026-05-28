@@ -6759,7 +6759,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   );
 }
 
-function InvestmentIdeaTracker({ currentUser }) {
+function InvestmentIdeaTracker({ currentUser, appData }) {
   const [ideas, setIdeas]             = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
@@ -6775,8 +6775,6 @@ function InvestmentIdeaTracker({ currentUser }) {
   });
   const [newSaving, setNewSaving]     = useState(false);
   const [newError, setNewError]       = useState(null);
-  const [portfolios, setPortfolios]   = useState([]);
-  const [allBows, setAllBows]         = useState([]);
   const [toast, setToast] = useState(null); // {msg, type}
 
   const showToast = (msg, type = "success") => {
@@ -6793,10 +6791,19 @@ function InvestmentIdeaTracker({ currentUser }) {
 
   useEffect(() => { loadIdeas(); }, []);
 
-  useEffect(() => {
-    apiFetch("/api/portfolios").then(d => setPortfolios(d || [])).catch(() => {});
-    apiFetch("/api/bows").then(d => setAllBows(d || [])).catch(() => {});
-  }, []);
+  // Derived from hardcoded PORTFOLIOS constant — guaranteed to match the app
+  const portfolios = PORTFOLIOS.map(p => ({ portfolio_id: p.id, name: p.label }));
+
+  // Derived from already-loaded appData — no extra fetch needed
+  const allBows = (appData && appData.portfolios)
+    ? PORTFOLIOS.flatMap(p =>
+        (appData.portfolios[p.id]?.bows || []).map(b => ({
+          bow_id: b.id,
+          name: b.name,
+          portfolio_id: p.id,
+        }))
+      )
+    : [];
 
   const handleUpdate = (updatedIdea) => {
     setIdeas(prev => prev.map(i => i.idea_id === updatedIdea.idea_id ? updatedIdea : i));
@@ -6955,7 +6962,7 @@ function InvestmentIdeaTracker({ currentUser }) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
-                    {["Title", "Stage", "Type", "Portfolio", "BOW", "Partner", "Est. 2026", "Approver Note"].map(h => (
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Approver Note"].map(h => (
                       <th key={h} style={{ padding: "8px 10px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -6986,8 +6993,12 @@ function InvestmentIdeaTracker({ currentUser }) {
                             : "3px solid transparent",
                         }}>
                         <td style={{ padding: "9px 10px", fontWeight: 600, color: TEXT,
-                          maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {idea.title || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, maxWidth: 200,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {idea.objective || "—"}
                         </td>
                         <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                           <IdeaStageBadge stage={idea.stage}/>
@@ -6995,23 +7006,39 @@ function InvestmentIdeaTracker({ currentUser }) {
                         <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
                           {idea.idea_type || "—"}
                         </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {idea.primary_portfolio || "—"}
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                          {idea.submitted_by || "—"}
                         </td>
                         <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {idea.primary_bow || "—"}
+                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {portfolios.find(p => p.portfolio_id === idea.primary_portfolio)?.name || idea.primary_portfolio || "—"}
                         </td>
                         <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {allBows.find(b => b.bow_id === idea.primary_bow)?.name || idea.primary_bow || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {idea.additional_bows || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap",
+                          maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>
                           {idea.potential_partner || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                          {fmtIdeaAmt(idea.est_total_amount)}
                         </td>
                         <td style={{ padding: "9px 10px", fontWeight: 600,
                           color: idea.est_2026_amount ? TEXT : TEXT_MUTED, whiteSpace: "nowrap" }}>
                           {fmtIdeaAmt(idea.est_2026_amount)}
                         </td>
-                        <td style={{ padding: "9px 10px", color: TEXT_SUB, maxWidth: 160,
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                          {idea.desired_start_date || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                          {idea.est_duration || "—"}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: TEXT_SUB, maxWidth: 180,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                           fontStyle: idea.approver_note ? "normal" : "italic" }}>
                           {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
@@ -7050,6 +7077,17 @@ function InvestmentIdeaTracker({ currentUser }) {
                         placeholder="Brief descriptive title"
                         style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
                           fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+                    </div>
+                    {/* Objective */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+                        letterSpacing: 0.8, marginBottom: 4 }}>Objective / Intended Impact</div>
+                      <textarea value={newDraft.objective}
+                        onChange={e => setNewDraft(d => ({...d, objective: e.target.value}))}
+                        rows={3} placeholder="What is the intended impact or strategic objective?"
+                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
+                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
+                          outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
                     </div>
                     {/* Stage + Idea Type row */}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 14px", marginBottom: 14 }}>
@@ -7169,16 +7207,6 @@ function InvestmentIdeaTracker({ currentUser }) {
                     {/* Section: Description */}
                     <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
                       letterSpacing: 1, marginBottom: 10, marginTop: 6, paddingTop: 10, borderTop: "1px solid " + BORDER }}>Description</div>
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
-                        letterSpacing: 0.8, marginBottom: 4 }}>Objective / Intended Impact</div>
-                      <textarea value={newDraft.objective}
-                        onChange={e => setNewDraft(d => ({...d, objective: e.target.value}))}
-                        rows={3} placeholder="What is the intended impact or strategic objective?"
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
-                          fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", resize: "vertical",
-                          outline: "none", lineHeight: 1.5, boxSizing: "border-box" }}/>
-                    </div>
                     <div style={{ marginBottom: 14 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
                         letterSpacing: 0.8, marginBottom: 4 }}>Additional Notes</div>
@@ -8984,7 +9012,7 @@ function App() {
             <AllInvestmentsView onNavigate={setActiveView}/>
           )}
           {activeView.type==="idea-tracker"&&(
-            <InvestmentIdeaTracker currentUser={currentUser}/>
+            <InvestmentIdeaTracker currentUser={currentUser} appData={data}/>
           )}
           {activeView.type==="budget-forecasts"&&(
             <BudgetForecastsView/>
