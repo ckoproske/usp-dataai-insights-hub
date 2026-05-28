@@ -6822,10 +6822,57 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   const [newSaving, setNewSaving]     = useState(false);
   const [newError, setNewError]       = useState(null);
   const [toast, setToast] = useState(null); // {msg, type}
+  const [expandedCommentRow, setExpandedCommentRow] = useState(null);
+  const [rowComments, setRowComments]               = useState({});
+  const [rowCommentInput, setRowCommentInput]       = useState("");
+  const [rowCommentSaving, setRowCommentSaving]     = useState(false);
 
   const showToast = (msg, type = "success") => {
     setToast({msg, type});
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const toggleRowComments = async (ideaId) => {
+    if (expandedCommentRow === ideaId) {
+      setExpandedCommentRow(null);
+      setRowCommentInput("");
+      return;
+    }
+    setExpandedCommentRow(ideaId);
+    setRowCommentInput("");
+    if (!rowComments[ideaId]) {
+      try {
+        const c = await apiFetch(`/api/investment-ideas/${ideaId}/comments`);
+        setRowComments(prev => ({ ...prev, [ideaId]: c || [] }));
+      } catch {
+        setRowComments(prev => ({ ...prev, [ideaId]: [] }));
+      }
+    }
+  };
+
+  const addRowComment = async (ideaId) => {
+    if (!rowCommentInput.trim()) return;
+    setRowCommentSaving(true);
+    try {
+      const result = await apiFetch(`/api/investment-ideas/${ideaId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ comment: rowCommentInput }),
+      });
+      const nc = {
+        comment_id:         result?.comment_id || String(Date.now()),
+        idea_id:            ideaId,
+        comment_text:       rowCommentInput,
+        commented_by:       currentUser?.display_name || currentUser?.email || "You",
+        commented_at:       new Date().toISOString(),
+        is_approval_comment: false,
+      };
+      setRowComments(prev => ({ ...prev, [ideaId]: [...(prev[ideaId] || []), nc] }));
+      setRowCommentInput("");
+    } catch {
+      // silent
+    } finally {
+      setRowCommentSaving(false);
+    }
   };
 
   const loadIdeas = () => {
@@ -7010,10 +7057,11 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               </div>
             )}
             {!loading && !error && filteredIdeas.length > 0 && (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 1200 }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 1 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Approver Note"].map(h => (
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Approver Note", "Comments"].map(h => (
                       <th key={h} style={{ padding: "8px 10px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -7094,11 +7142,87 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           fontStyle: idea.approver_note ? "normal" : "italic" }}>
                           {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
                         </td>
+                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}
+                          onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => toggleRowComments(idea.idea_id)}
+                            style={{
+                              padding: "3px 9px", borderRadius: 6,
+                              border: "1px solid " + (expandedCommentRow === idea.idea_id ? "#6366F1" : BORDER),
+                              background: expandedCommentRow === idea.idea_id ? "#EEF2FF" : SURFACE,
+                              color: expandedCommentRow === idea.idea_id ? "#6366F1" : TEXT_MUTED,
+                              fontSize: 11, fontWeight: 600, cursor: "pointer",
+                            }}>
+                            💬 {(rowComments[idea.idea_id] || []).length > 0
+                              ? (rowComments[idea.idea_id] || []).length
+                              : ""}
+                          </button>
+                        </td>
                       </tr>
+                      {expandedCommentRow === idea.idea_id && (
+                        <tr key={idea.id + "-comments"}>
+                          <td colSpan={15}
+                            style={{ padding: "0 12px 14px 12px", background: "#F8FAFC",
+                              borderBottom: "2px solid #6366F133" }}>
+                            <div style={{ maxWidth: 700, paddingTop: 10 }}>
+                              {/* Existing comments */}
+                              {!(rowComments[idea.idea_id]) && (
+                                <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>Loading…</div>
+                              )}
+                              {(rowComments[idea.idea_id] || []).length === 0 && rowComments[idea.idea_id] && (
+                                <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>No comments yet.</div>
+                              )}
+                              {(rowComments[idea.idea_id] || []).map((c, ci) => (
+                                <div key={c.comment_id || ci} style={{
+                                  background: SURFACE, border: "1px solid " + BORDER,
+                                  borderRadius: 7, padding: "8px 12px", marginBottom: 6,
+                                  display: "flex", gap: 10, alignItems: "flex-start",
+                                }}>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "baseline", marginBottom: 3 }}>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: TEXT }}>{c.commented_by}</span>
+                                      <span style={{ fontSize: 10, color: TEXT_MUTED }}>
+                                        {c.commented_at ? new Date(c.commented_at).toLocaleDateString() : ""}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>{c.comment_text}</div>
+                                  </div>
+                                </div>
+                              ))}
+                              {/* Add comment row */}
+                              <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "flex-start" }}>
+                                <textarea
+                                  value={rowCommentInput}
+                                  onChange={e => setRowCommentInput(e.target.value)}
+                                  placeholder="Add a comment…"
+                                  rows={2}
+                                  style={{
+                                    flex: 1, padding: "6px 10px", borderRadius: 7,
+                                    border: "1px solid " + BORDER, fontSize: 12,
+                                    fontFamily: "inherit", color: TEXT, background: SURFACE,
+                                    resize: "none", outline: "none", lineHeight: 1.5, boxSizing: "border-box",
+                                  }}/>
+                                <button
+                                  onClick={() => addRowComment(idea.idea_id)}
+                                  disabled={rowCommentSaving || !rowCommentInput.trim()}
+                                  style={{
+                                    padding: "7px 14px", borderRadius: 7, border: "none",
+                                    background: "#6366F1", color: "#fff", fontWeight: 700,
+                                    fontSize: 12, cursor: "pointer", flexShrink: 0,
+                                    opacity: (rowCommentSaving || !rowCommentInput.trim()) ? 0.5 : 1,
+                                  }}>
+                                  {rowCommentSaving ? "…" : "Post"}
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     );
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
 
