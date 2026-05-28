@@ -2016,7 +2016,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
 
       {outcomes.map(out => {
         const inds = out.indicators || [];
-        if (inds.length === 0) return null;
         return (
           <div key={out.outcome_id} style={{ marginBottom: 20 }}>
             {/* Outcome group header */}
@@ -2034,25 +2033,25 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
               </button>
             </div>
 
-            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden" }}>
-              {inds.map(ind => (
-                <IndicatorChipRow
-                  key={ind.indicator_id}
-                  ind={ind}
-                  accentColor={p?.color || ACCENT}
-                  onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
-                />
-              ))}
-            </div>
+            {inds.length > 0 ? (
+              <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden" }}>
+                {inds.map(ind => (
+                  <IndicatorChipRow
+                    key={ind.indicator_id}
+                    ind={ind}
+                    accentColor={p?.color || ACCENT}
+                    onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: TEXT_MUTED, fontStyle: "italic", margin: "4px 0 0 0" }}>
+                No indicators added yet.
+              </p>
+            )}
           </div>
         );
       })}
-
-      {outcomes.every(o => (o.indicators || []).length === 0) && (
-        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-          No indicators added yet.
-        </p>
-      )}
     </div>
   );
 
@@ -3388,7 +3387,6 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
           <tbody>
             {outcomes.map(out => {
               const inds = out.indicators || [];
-              if (inds.length === 0 && addingIndFor !== out.outcome_id) return null;
               return (
                 <React.Fragment key={out.outcome_id}>
                   {/* Outcome sub-header */}
