@@ -3530,9 +3530,10 @@ _IDEA_EDITABLE = {
 
 @app.route("/api/investment-ideas", methods=["GET"])
 def list_investment_ideas():
-    """Return all non-archived investment ideas, most-recently-submitted first."""
-    rows = query(
-        f"""SELECT
+    """Return all non-archived investment ideas, most-recently-submitted first.
+    approver_note is selected opportunistically — falls back gracefully if the
+    column has not yet been added via ALTER TABLE."""
+    _base = f"""
               idea_id, title, submitted_by,
               CAST(submitted_at AS STRING)       AS submitted_at,
               stage, idea_type, objective,
@@ -3546,13 +3547,17 @@ def list_investment_ideas():
               inv_number,
               COALESCE(archived, false)          AS archived,
               CAST(archived_at AS STRING)        AS archived_at,
-              archived_by,
-              approver_note
+              archived_by
             FROM {SCHEMA}.investment_ideas
             WHERE COALESCE(archived, false) = false
             ORDER BY submitted_at DESC"""
-    )
-    return jsonify(rows)
+    try:
+        rows = query(f"SELECT {_base.replace('archived_by', 'archived_by, approver_note', 1)}")
+    except Exception:
+        rows = query(f"SELECT {_base}")
+        for r in (rows or []):
+            r["approver_note"] = None
+    return jsonify(rows or [])
 
 
 @app.route("/api/investment-ideas", methods=["POST"])
