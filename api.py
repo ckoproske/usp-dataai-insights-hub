@@ -3967,6 +3967,87 @@ def delete_idea_comment(idea_id, comment_id):
     return jsonify({"status": "ok"})
 
 
+# ── BOW / Portfolio comments ──────────────────────────────────────────────────
+
+@app.route("/api/comments/<entity_type>/<entity_id>")
+def get_comments(entity_type, entity_id):
+    """Return all comments for a BOW or portfolio, oldest first."""
+    try:
+        rows = query(
+            f"""SELECT comment_id, entity_type, entity_id, author, author_email,
+                       body, CAST(created_at AS STRING) AS created_at
+                FROM {SCHEMA}.comments
+                WHERE entity_type = ? AND entity_id = ?
+                ORDER BY created_at ASC""",
+            [entity_type, entity_id]
+        )
+    except Exception:
+        rows = []
+    return jsonify(rows)
+
+
+@app.route("/api/comments/<entity_type>/<entity_id>", methods=["POST"])
+def add_comment(entity_type, entity_id):
+    """Post a new comment. Author resolved server-side from the session header."""
+    data = request.json or {}
+    body = (data.get("body") or "").strip()
+    if not body:
+        return jsonify({"error": "body required"}), 400
+
+    email = _actor()
+    member = []
+    if email and email != "unknown":
+        try:
+            member = query(
+                f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+                [email]
+            )
+        except Exception:
+            pass
+    if member:
+        author = member[0]["display_name"]
+    elif email and email != "unknown":
+        # Fall back to humanised email prefix
+        author = email.split("@")[0].replace(".", " ").title()
+    else:
+        author = "Unknown"
+
+    cid = new_id()
+    execute(
+        f"""INSERT INTO {SCHEMA}.comments
+            (comment_id, entity_type, entity_id, author, author_email, body, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, current_timestamp())""",
+        [cid, entity_type, entity_id, author, email or "", body]
+    )
+    # Return the saved row so the client can display it immediately
+    try:
+        row = query(
+            f"""SELECT comment_id, entity_type, entity_id, author, author_email,
+                       body, CAST(created_at AS STRING) AS created_at
+                FROM {SCHEMA}.comments WHERE comment_id = ?""",
+            [cid]
+        )
+        return jsonify(row[0] if row else {
+            "comment_id": cid, "entity_type": entity_type, "entity_id": entity_id,
+            "author": author, "author_email": email or "", "body": body, "created_at": ""
+        })
+    except Exception:
+        return jsonify({
+            "comment_id": cid, "entity_type": entity_type, "entity_id": entity_id,
+            "author": author, "author_email": email or "", "body": body, "created_at": ""
+        })
+
+
+@app.route("/api/comments/<comment_id>", methods=["DELETE"])
+def delete_comment(comment_id):
+    """Hard-delete a comment. Any team member may delete any comment."""
+    execute(
+        f"DELETE FROM {SCHEMA}.comments WHERE comment_id = ?",
+        [comment_id]
+    )
+    return jsonify({"deleted": comment_id})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

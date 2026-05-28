@@ -2195,6 +2195,202 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
   );
 }
 
+// ─── Comments Panel ────────────────────────────────────────────────────────────
+function CommentsPanel({ entityType, entityId }) {
+  const [open, setOpen]         = useState(false);
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [draft, setDraft]       = useState("");
+  const [saving, setSaving]     = useState(false);
+  const [deleting, setDeleting] = useState(null); // comment_id being deleted
+  const inputRef                = useRef(null);
+
+  const load = () => {
+    setLoading(true);
+    api(`/api/comments/${entityType}/${entityId}`)
+      .then(d => setComments(Array.isArray(d) ? d : []))
+      .catch(() => setComments([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [entityType, entityId]);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 280);
+  }, [open]);
+
+  const submit = async () => {
+    const body = draft.trim();
+    if (!body) return;
+    setSaving(true);
+    try {
+      const saved = await api(`/api/comments/${entityType}/${entityId}`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      });
+      setComments(prev => [...prev, saved]);
+      setDraft("");
+    } catch (e) { /* ignore */ }
+    finally { setSaving(false); }
+  };
+
+  const del = async (commentId) => {
+    setDeleting(commentId);
+    try {
+      await api(`/api/comments/${commentId}`, { method: "DELETE" });
+      setComments(prev => prev.filter(c => c.comment_id !== commentId));
+    } catch (e) { /* ignore */ }
+    finally { setDeleting(null); }
+  };
+
+  // Format timestamp as MM/DD/YY HH:MM TZ
+  const fmtTs = (ts) => {
+    if (!ts) return "";
+    try {
+      const d = new Date(ts);
+      if (isNaN(d)) return ts;
+      const mm  = String(d.getMonth() + 1).padStart(2, "0");
+      const dd  = String(d.getDate()).padStart(2, "0");
+      const yy  = String(d.getFullYear()).slice(-2);
+      const hh  = String(d.getHours()).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      const tzAbbr = d.toLocaleTimeString("en-US", { timeZoneName: "short" }).split(" ").pop();
+      return `${mm}/${dd}/${yy} ${hh}:${min} ${tzAbbr}`;
+    } catch (e) { return ts; }
+  };
+
+  const count = comments.length;
+
+  return (
+    <>
+      {/* Floating bubble — visible when panel is closed */}
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          title={count > 0 ? `${count} comment${count !== 1 ? "s" : ""}` : "Add a comment"}
+          style={{
+            position: "fixed", bottom: 32, right: 32, zIndex: 150,
+            minWidth: 48, height: 48, borderRadius: 24,
+            padding: "0 14px",
+            background: count > 0 ? BRAND : SURFACE,
+            color: count > 0 ? "#fff" : TEXT_MUTED,
+            border: `2px solid ${count > 0 ? BRAND : BORDER}`,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            boxShadow: "0 2px 12px rgba(48,58,68,0.18)",
+            transition: "opacity 0.2s",
+          }}>
+          <span style={{ fontSize: 18, lineHeight: 1 }}>💬</span>
+          {count > 0 && (
+            <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1 }}>{count}</span>
+          )}
+        </button>
+      )}
+
+      {/* Panel — no backdrop overlay, slides from right */}
+      <div style={{
+        position: "fixed", top: 56, right: 0, bottom: 0,
+        width: 360, zIndex: 120,
+        background: SURFACE, borderLeft: `1px solid ${BORDER}`,
+        display: "flex", flexDirection: "column",
+        transform: open ? "translateX(0)" : "translateX(100%)",
+        transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
+        boxShadow: open ? "-4px 0 24px rgba(48,58,68,0.10)" : "none",
+      }}>
+
+        {/* Panel header */}
+        <div style={{
+          padding: "14px 16px 12px", flexShrink: 0,
+          borderBottom: `1px solid ${BORDER}`, background: BG,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 16 }}>💬</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Comments</span>
+            {count > 0 && (
+              <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 400 }}>({count})</span>
+            )}
+          </div>
+          <button onClick={() => setOpen(false)}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 20, color: TEXT_MUTED, lineHeight: 1, padding: "2px 4px",
+              borderRadius: 4, fontFamily: "inherit" }}>×</button>
+        </div>
+
+        {/* Comment list */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px",
+          display: "flex", flexDirection: "column", gap: 10 }}>
+          {loading && [1, 2].map(i => <Skeleton key={i} height={68} />)}
+
+          {!loading && count === 0 && (
+            <p style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center",
+              marginTop: 40, lineHeight: 1.6 }}>
+              No comments yet.<br />Be the first to leave one below.
+            </p>
+          )}
+
+          {comments.map(c => (
+            <div key={c.comment_id} style={{
+              padding: "10px 12px", background: BG, borderRadius: 8,
+              border: `1px solid ${BORDER}`, position: "relative",
+            }}>
+              {/* Author + timestamp */}
+              <div style={{ display: "flex", alignItems: "baseline",
+                gap: 8, marginBottom: 6, paddingRight: 24 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT,
+                  flexShrink: 0 }}>{c.author || "Unknown"}</span>
+                <span style={{ fontSize: 10, color: TEXT_MUTED,
+                  whiteSpace: "nowrap" }}>{fmtTs(c.created_at)}</span>
+              </div>
+              {/* Body */}
+              <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.6, margin: 0,
+                whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {c.body}
+              </p>
+              {/* Delete button */}
+              <button
+                onClick={() => del(c.comment_id)}
+                disabled={deleting === c.comment_id}
+                title="Delete comment"
+                style={{
+                  position: "absolute", top: 8, right: 8,
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 12, color: TEXT_MUTED, lineHeight: 1,
+                  padding: "3px 5px", borderRadius: 4, fontFamily: "inherit",
+                  opacity: deleting === c.comment_id ? 0.4 : 1,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = DANGER; e.currentTarget.style.background = DANGER_BG; }}
+                onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = "none"; }}>
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Compose area */}
+        <div style={{ padding: "12px 16px", borderTop: `1px solid ${BORDER}`,
+          background: BG, flexShrink: 0 }}>
+          <textarea
+            ref={inputRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
+            placeholder="Add a comment… (Ctrl+Enter to post)"
+            rows={3}
+            style={{ ...inputStyle, resize: "none", width: "100%",
+              marginBottom: 8, boxSizing: "border-box" }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Btn size="sm" onClick={submit} disabled={!draft.trim() || saving}>
+              {saving ? "Posting…" : "Post comment"}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── BOW Panel ─────────────────────────────────────────────────────────────────
 function BowPanel({ bow, user, onBack }) {
   const [data, setData]           = useState(null);
@@ -2385,6 +2581,9 @@ function BowPanel({ bow, user, onBack }) {
             onCancel={closeDrawer} />
         )}
       </SideDrawer>
+
+      {/* Comments panel — floats independently of the edit drawer */}
+      <CommentsPanel entityType="bow" entityId={bow.bow_id} />
     </div>
   );
 }
@@ -3749,6 +3948,9 @@ function PortfolioPanel({ portfolio, user, onBack }) {
             onCancel={closeDrawer} />
         )}
       </SideDrawer>
+
+      {/* Comments panel — floats independently of the edit drawer */}
+      <CommentsPanel entityType="portfolio" entityId={portfolio.portfolio_id} />
     </div>
   );
 }
