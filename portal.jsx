@@ -6459,9 +6459,16 @@ function PortalApp() {
                 style={{ background: SURFACE, border: `2px solid ${BORDER}`,
                   borderRadius: 14, padding: "32px 28px", cursor: "pointer",
                   textAlign: "left", transition: "border-color 0.15s, box-shadow 0.15s",
-                  fontFamily: "inherit" }}
+                  fontFamily: "inherit", position: "relative" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = ACCENT_SHADOW; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = "none"; }}>
+                <span style={{
+                  position: "absolute", top: 14, right: 14,
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                  textTransform: "uppercase", color: "#92400E",
+                  background: "#FEF3C7", border: "1px solid #FDE68A",
+                  borderRadius: 6, padding: "3px 8px",
+                }}>Coming Soon</span>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>💡</div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
                   Share an Insight
