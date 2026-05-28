@@ -6088,165 +6088,142 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
 }
 
 // ─── Activity Feed ─────────────────────────────────────────────────────────────
-function ActivityFeed({ bows, portfolios }) {
-  const [feed, setFeed]         = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [bowFilter, setBowFilter]   = useState("");
+function ActivityFeed({ bows, user }) {
+  const [feed, setFeed]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [bowFilter, setBowFilter] = useState("");
+  const [deleting, setDeleting]   = useState(null);
+
+  const canDelete = user?.permission_level === "MLE";
 
   const load = () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (typeFilter !== "all") params.set("type", typeFilter);
+    const params = new URLSearchParams({ type: "edit", limit: "200" });
     if (bowFilter) params.set("bow_id", bowFilter);
     api(`/api/activity-feed?${params}`)
       .then(d => setFeed(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [typeFilter, bowFilter]);
+  useEffect(() => { load(); }, [bowFilter]);
 
-  const fmtDate = ts => {
-    if (!ts) return "—";
-    try { return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
-    catch { return ts.slice(0, 10); }
+  const del = async (id) => {
+    setDeleting(id);
+    const res = await api(`/api/activity/${id}`, { method: "DELETE" });
+    if (!res.error) setFeed(prev => prev.filter(x => x.id !== id));
+    setDeleting(null);
   };
 
-  const fmtActor = actor => actor?.split("@")[0] || actor || "Unknown";
+  const fmtTs = ts => {
+    if (!ts) return "—";
+    try {
+      const d = new Date(ts);
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        + "  " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    } catch { return ts.slice(0, 16); }
+  };
+
+  const actorName = a => {
+    if (!a) return "Unknown";
+    return a.split("@")[0].replace(/\./g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  };
 
   const entityLabel = type => ({
-    bow_outcome:           "BOW Outcome",
-    bow_indicator:         "BOW Indicator",
-    execution_target:      "Execution Target",
-    portfolio_outcome:     "Portfolio Outcome",
-    portfolio_indicator:   "Portfolio Indicator",
-  }[type] || type);
+    bow_outcome:            "BOW outcome",
+    bow_indicator:          "BOW indicator",
+    execution_target:       "execution target",
+    portfolio_outcome:      "portfolio outcome",
+    portfolio_indicator:    "portfolio indicator",
+    bow_description:        "BOW description",
+    portfolio_description:  "portfolio description",
+  }[type] || (type || "content").replace(/_/g, " "));
+
+  const fieldSummary = changes => {
+    try {
+      const c = typeof changes === "string" ? JSON.parse(changes) : (changes || {});
+      const fields = Object.keys(c);
+      if (!fields.length) return null;
+      return fields.map(f => f.replace(/_/g, " ")).join(", ");
+    } catch { return null; }
+  };
 
   return (
-    <div>
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 4 }}>
-          {[{ id: "all", label: "All activity" },
-            { id: "edit", label: "Content edits" },
-            { id: "submission", label: "Submissions" }].map(f => (
-            <button key={f.id} onClick={() => setTypeFilter(f.id)}
-              style={{ padding: "5px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600,
-                cursor: "pointer", border: `1px solid ${typeFilter === f.id ? ACCENT : BORDER}`,
-                background: typeFilter === f.id ? ACCENT_LIGHT : SURFACE,
-                color: typeFilter === f.id ? ACCENT : TEXT_SUB }}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+    <div style={{ maxWidth: 860 }}>
+      {/* Filter bar */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
         <select value={bowFilter} onChange={e => setBowFilter(e.target.value)}
-          style={{ ...inputStyle, width: "auto", fontSize: 13, padding: "5px 10px" }}>
-          <option value="">All BOWs</option>
+          style={{ ...inputStyle, width: "auto", minWidth: 180, fontSize: 13, padding: "5px 10px" }}>
+          <option value="">All BOWs & Portfolios</option>
           {bows.map(b => <option key={b.bow_id} value={b.bow_id}>{b.title}</option>)}
         </select>
         <Btn variant="secondary" size="sm" onClick={load}>Refresh</Btn>
+        <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: "auto" }}>
+          {feed.length} {feed.length === 1 ? "entry" : "entries"}
+        </span>
       </div>
 
       {loading ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Skeleton height={80} /><Skeleton height={80} /><Skeleton height={80} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <Skeleton height={44} /><Skeleton height={44} /><Skeleton height={44} /><Skeleton height={44} />
         </div>
       ) : feed.length === 0 ? (
-        <Card style={{ textAlign: "center", padding: 48 }}>
-          <p style={{ color: TEXT_MUTED, fontSize: 14 }}>No activity yet.</p>
-        </Card>
+        <div style={{ padding: "48px 0", textAlign: "center" }}>
+          <p style={{ color: TEXT_MUTED, fontSize: 14 }}>No changes recorded yet.</p>
+        </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {feed.map(item => {
-            const isEdit = item.type === "edit";
-            const borderColor = isEdit ? ACCENT : BRAND;
-            const changes = (() => {
-              try { return typeof item.changes === "string" ? JSON.parse(item.changes) : (item.changes || {}); }
-              catch { return {}; }
-            })();
-            const changedFields = Object.keys(changes);
-
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
+          {feed.map((item, i) => {
+            const fields = fieldSummary(item.changes);
+            const isLast = i === feed.length - 1;
             return (
-              <Card key={item.id} className="fade-in"
-                style={{ padding: "14px 18px", borderLeft: `4px solid ${borderColor}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between",
-                  alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Type tag + entity + BOW */}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 4,
-                        padding: "2px 7px",
-                        background: isEdit ? ACCENT_LIGHT : BG,
-                        color: isEdit ? ACCENT : TEXT_MUTED }}>
-                        {isEdit ? entityLabel(item.entity_type) : "Submission"}
-                      </span>
-                      {item.bow_title && (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED }}>
-                          {item.bow_title}
-                        </span>
-                      )}
-                      {!isEdit && item.status && (
-                        <Badge status={item.status} />
-                      )}
-                    </div>
+              <div key={item.id}
+                style={{ display: "flex", alignItems: "center", gap: 16,
+                  padding: "11px 18px", background: i % 2 === 0 ? SURFACE : BG,
+                  borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
 
-                    {/* Main content */}
-                    {isEdit ? (
-                      <div>
-                        {changedFields.length > 0 ? changedFields.map(f => (
-                          <div key={f} style={{ marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                              textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              {f.replace(/_/g, " ")}
-                            </span>
-                            {changes[f].new && (
-                              <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.4, marginTop: 2 }}>
-                                {String(changes[f].new).length > 120
-                                  ? String(changes[f].new).slice(0, 120) + "…"
-                                  : changes[f].new}
-                              </p>
-                            )}
-                          </div>
-                        )) : (
-                          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-                            Content updated
-                          </p>
-                        )}
-                        {item.rationale && (
-                          <p style={{ fontSize: 12, color: TEXT_SUB, marginTop: 6,
-                            fontStyle: "italic" }}>
-                            Rationale: {item.rationale}
-                          </p>
-                        )}
-                        {item.revision_reason && (
-                          <p style={{ fontSize: 12, color: TEXT_SUB, marginTop: 4 }}>
-                            Reason: {REVISION_REASONS.find(r => r.value === item.revision_reason)?.label
-                              || item.revision_reason}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.4 }}>
-                          {item.indicator_text || `${item.entity_id}`}
-                        </p>
-                        <p style={{ fontSize: 13, color: TEXT_SUB, marginTop: 3 }}>
-                          Value:{" "}
-                          <strong style={{ color: ACCENT }}>{item.submitted_value}</strong>
-                          {item.period && <span> · {item.period}</span>}
-                          {item.year  && <span> · {item.year}</span>}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>
-                      {fmtActor(item.actor)}
-                    </p>
-                    <p style={{ fontSize: 11, color: TEXT_MUTED }}>{fmtDate(item.ts)}</p>
-                  </div>
-                </div>
-              </Card>
+                {/* Timestamp */}
+                <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, minWidth: 150 }}>
+                  {fmtTs(item.ts)}
+                </span>
+
+                {/* Actor */}
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT,
+                  flexShrink: 0, minWidth: 110 }}>
+                  {actorName(item.actor)}
+                </span>
+
+                {/* What changed */}
+                <span style={{ fontSize: 13, color: TEXT, flex: 1, minWidth: 0 }}>
+                  <span style={{ color: TEXT_MUTED }}>Edited </span>
+                  <span style={{ fontWeight: 500 }}>{entityLabel(item.entity_type)}</span>
+                  {item.bow_title && (
+                    <span style={{ color: TEXT_MUTED }}> · {item.bow_title}</span>
+                  )}
+                  {fields && (
+                    <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}> ({fields})</span>
+                  )}
+                  {item.rationale && (
+                    <span style={{ color: TEXT_MUTED }}> — {item.rationale}</span>
+                  )}
+                </span>
+
+                {/* Delete (MLE only) */}
+                {canDelete && (
+                  <button
+                    onClick={() => del(item.id)}
+                    disabled={deleting === item.id}
+                    title="Delete entry"
+                    style={{ flexShrink: 0, background: "none", border: "none",
+                      cursor: deleting === item.id ? "default" : "pointer",
+                      fontSize: 13, color: TEXT_MUTED, padding: "2px 6px",
+                      opacity: deleting === item.id ? 0.35 : 1,
+                      borderRadius: 4, transition: "color 0.12s, background 0.12s" }}
+                    onMouseEnter={e => { if (deleting !== item.id) { e.currentTarget.style.color = DANGER; e.currentTarget.style.background = DANGER_BG; }}}
+                    onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = "none"; }}>
+                    {deleting === item.id ? "…" : "Delete"}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -6577,7 +6554,7 @@ function PortalApp() {
             <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 24 }}>
               Activity
             </h1>
-            <ActivityFeed bows={bows} portfolios={portfolios} />
+            <ActivityFeed bows={bows} user={user} />
           </>
         )}
 

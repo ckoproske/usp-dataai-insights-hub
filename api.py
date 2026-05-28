@@ -3257,6 +3257,15 @@ def get_activity_feed():
     return jsonify(combined)
 
 
+@app.route("/api/activity/<log_id>", methods=["DELETE"])
+def delete_activity(log_id):
+    execute(
+        f"DELETE FROM {SCHEMA}.content_edit_log WHERE log_id = ?",
+        [log_id]
+    )
+    return jsonify({"deleted": log_id})
+
+
 # ── Sources registry ──────────────────────────────────────────────────────────
 # Schema (run once in Databricks):
 #   CREATE TABLE usp_data.usp_strategy.sources (
