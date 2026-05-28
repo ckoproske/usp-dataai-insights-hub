@@ -949,10 +949,12 @@ async function loadFromAPI() {
             const key = `${t.outcome_id || "__none"}|${t.year}`;
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push({
-              target_id:  t.target_id,
-              text:       t.text,
-              completion: t.completion || "Not Started",
-              notes:      t.notes || "",
+              target_id:   t.target_id,
+              text:        t.text,
+              completion:  t.completion || "Not Started",
+              notes:       t.notes || "",
+              last_updated: t.last_updated || null,
+              updated_by:  t.updated_by || null,
             });
           });
           bow.outcomes.forEach(o => {
@@ -1777,6 +1779,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
   const [activeYear,setActiveYear] = useState(2026);
   const [editingInd,setEditingInd] = useState(null);
   const [saveState,setSaveState] = useState("idle"); // "idle"|"saving"|"saved"|"error"
+  const [lastSaved,setLastSaved] = useState(null); // {at:Date, by:string}
   const manualRs = outcome.manualStatus&&STATUS[outcome.manualStatus] ? STATUS[outcome.manualStatus] : null;
   const updInd = (iIdx,f,v) => onUpdate({...outcome,impactIndicators:outcome.impactIndicators.map((ind,i)=>i!==iIdx?ind:{...ind,[f]:v})});
   const targets = (outcome.executionTargets[activeYear]||[]).map(t=>typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)});
@@ -1796,6 +1799,7 @@ function BowOutcomePanel({ outcome, onUpdate }) {
         }).then(r => { if (!r.ok) throw new Error("HTTP "+r.status); })
       ));
       setSaveState("saved");
+      setLastSaved({at: new Date(), by: "you"});
       setTimeout(() => setSaveState("idle"), 2500);
     } catch(e) {
       setSaveState("error");
@@ -1851,32 +1855,53 @@ function BowOutcomePanel({ outcome, onUpdate }) {
               </button>;
             })}
           </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-            <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8}}>Execution Targets — {activeYear}</div>
-            <button onClick={saveTargets} disabled={saveState==="saving"||saveState==="saved"}
-              style={{fontSize:11,fontWeight:600,padding:"4px 12px",borderRadius:6,border:"1px solid "+(saveState==="saved"?"#059669":saveState==="error"?"#DC2626":BORDER),background:saveState==="saved"?"#ECFDF5":saveState==="error"?"#FEF2F2":SURFACE,color:saveState==="saved"?"#059669":saveState==="error"?"#DC2626":TEXT_MUTED,cursor:saveState==="saving"||saveState==="saved"?"default":"pointer",transition:"all .2s"}}>
-              {saveState==="saving"?"Saving…":saveState==="saved"?"✓ Saved":saveState==="error"?"Error — retry":"Save"}
-            </button>
-          </div>
+          <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.8,marginBottom:10}}>Execution Targets — {activeYear}</div>
           {targetsArePlaceholder ? (
             <NotYetLoaded label="Execution targets"/>
           ) : (
-            <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden"}}>
-              {targets.length===0&&<div style={{padding:"14px 16px",color:TEXT_SUB,fontSize:13}}>No targets for {activeYear} yet.</div>}
-              {targets.map((t,i)=>{
-                const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
-                const isDone=t.completion==="Complete";
-                return (
-                  <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
-                    <span style={{width:7,height:7,borderRadius:"50%",background:c.color,flexShrink:0,marginTop:5,display:"inline-block"}}/>
-                    <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
-                      <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
+            <>
+              <div style={{background:SURFACE,border:"1px solid "+BORDER,borderRadius:10,overflow:"hidden",marginBottom:12}}>
+                {targets.length===0&&<div style={{padding:"14px 16px",color:TEXT_SUB,fontSize:13}}>No targets for {activeYear} yet.</div>}
+                {targets.map((t,i)=>{
+                  const c=COMPLETION[t.completion]||COMPLETION["Not Started"];
+                  const isDone=t.completion==="Complete";
+                  return (
+                    <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"11px 14px",borderBottom:i<targets.length-1?"1px solid "+BORDER:"none",background:isDone?"#F0FDF6":SURFACE,transition:"background .2s"}}>
+                      <span style={{width:7,height:7,borderRadius:"50%",background:c.color,flexShrink:0,marginTop:5,display:"inline-block"}}/>
+                      <div style={{flex:1,paddingTop:1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.45:1,transition:"all .2s",fontSize:13}}>
+                        <EditableCell value={t.text} onChange={v=>updExec(i,"text",v)} multiline placeholder="Enter execution target"/>
+                      </div>
+                      <CompletionCycler value={t.completion} onChange={v=>updExec(i,"completion",v)}/>
                     </div>
-                    <CompletionCycler value={t.completion} onChange={v=>updExec(i,"completion",v)}/>
+                  );
+                })}
+              </div>
+              {/* Prominent save button */}
+              <button onClick={saveTargets} disabled={saveState==="saving"||saveState==="saved"}
+                style={{width:"100%",padding:"11px 16px",borderRadius:8,border:"none",
+                  background:saveState==="saved"?"#059669":saveState==="error"?"#DC2626":ACCENT,
+                  color:"#fff",fontSize:14,fontWeight:700,cursor:saveState==="saving"||saveState==="saved"?"default":"pointer",
+                  transition:"all .2s",opacity:saveState==="saving"?0.7:1,letterSpacing:0.2,boxShadow:"0 2px 8px rgba(45,191,173,0.18)"}}>
+                {saveState==="saving"?"Saving…":saveState==="saved"?"✓ Changes Saved":saveState==="error"?"⚠ Error — retry":"Save Changes"}
+              </button>
+              {/* Last updated info */}
+              {(()=>{
+                const dbUpdate = targets.reduce((best,t)=>{
+                  if(!t.last_updated) return best;
+                  return (!best||t.last_updated>best.at) ? {at:t.last_updated,by:t.updated_by||"unknown"} : best;
+                }, null);
+                const info = lastSaved || (dbUpdate ? {at:new Date(dbUpdate.at), by:dbUpdate.by} : null);
+                if(!info) return null;
+                const diff = (Date.now()-new Date(info.at).getTime())/1000;
+                const timeStr = diff<60?"just now":diff<3600?`${Math.round(diff/60)}m ago`:diff<86400?`${Math.round(diff/3600)}h ago`:new Date(info.at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+                return (
+                  <div style={{marginTop:8,fontSize:11,color:TEXT_MUTED,display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{opacity:0.5}}>✓</span>
+                    <span>Last saved <strong style={{color:TEXT_SUB}}>{timeStr}</strong> by <strong style={{color:TEXT_SUB}}>{info.by==="you"?"you":info.by}</strong></span>
                   </div>
                 );
-              })}
-            </div>
+              })()}
+            </>
           )}
         </div>
 
@@ -4732,7 +4757,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                     <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:12}}>Execution Targets — {CURRENT_YEAR}</div>
                     <div style={{display:"flex",alignItems:"center",gap:14}}>
                       <PieChart width={80} height={80} style={{flexShrink:0}}>
-                        <Pie data={pieData} cx={40} cy={40} innerRadius={24} outerRadius={40} dataKey="value" strokeWidth={0}>
+                        <Pie data={pieData} cx={40} cy={40} innerRadius={22} outerRadius={36} dataKey="value" strokeWidth={0}>
                           {pieData.map((entry,i)=><Cell key={i} fill={entry.color}/>)}
                         </Pie>
                       </PieChart>
