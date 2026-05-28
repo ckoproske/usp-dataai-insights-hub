@@ -6791,16 +6791,21 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
 
   useEffect(() => { loadIdeas(); }, []);
 
-  // Derived from hardcoded PORTFOLIOS constant — guaranteed to match the app
-  const portfolios = PORTFOLIOS.map(p => ({ portfolio_id: p.id, name: p.label }));
+  // Derived from appData — names come from the DB, not hardcoded
+  const portfolios = (appData && appData.portfolios)
+    ? Object.entries(appData.portfolios).map(([id, pd]) => ({
+        portfolio_id: id,
+        name: pd.portfolio?.name || PORT_COLORS[id]?.label || id,
+      }))
+    : [];
 
-  // Derived from already-loaded appData — no extra fetch needed
+  // BOWs also from appData — filtered by portfolio when one is selected
   const allBows = (appData && appData.portfolios)
-    ? PORTFOLIOS.flatMap(p =>
-        (appData.portfolios[p.id]?.bows || []).map(b => ({
+    ? Object.entries(appData.portfolios).flatMap(([portId, pd]) =>
+        (pd.bows || []).map(b => ({
           bow_id: b.id,
           name: b.name,
-          portfolio_id: p.id,
+          portfolio_id: portId,
         }))
       )
     : [];
