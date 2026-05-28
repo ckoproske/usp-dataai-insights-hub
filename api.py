@@ -2055,15 +2055,30 @@ def reject_actual(pending_id):
 
 @app.route("/api/indicators/<indicator_id>/actuals")
 def get_indicator_actuals(indicator_id):
-    """Returns all actuals on record for a single indicator, ordered by year and period."""
-    rows = query(
-        f"""SELECT year, period, actual_value, reading_date, source_notes
-            FROM {SCHEMA}.bow_indicator_actuals
-            WHERE indicator_id = ?
-            ORDER BY year, period""",
-        [indicator_id]
-    )
-    return jsonify(rows)
+    """Returns all actuals on record for a single indicator (BOW or portfolio), ordered by year and period."""
+    rows = []
+    for table in ["bow_indicator_actuals", "portfolio_indicator_actuals"]:
+        try:
+            r = query(
+                f"""SELECT year, period, actual_value, reading_date, source_notes
+                    FROM {SCHEMA}.{table}
+                    WHERE indicator_id = ?
+                    ORDER BY year, period""",
+                [indicator_id]
+            )
+            rows.extend(r)
+        except Exception:
+            pass
+    # Deduplicate by (year, period, actual_value) and sort
+    seen = set()
+    unique = []
+    for r in rows:
+        key = (r.get("year"), r.get("period"), r.get("actual_value"))
+        if key not in seen:
+            seen.add(key)
+            unique.append(r)
+    unique.sort(key=lambda r: (r.get("year") or 0, r.get("period") or ""))
+    return jsonify(unique)
 
 @app.route("/api/indicators/<indicator_id>/context")
 def get_indicator_context(indicator_id):

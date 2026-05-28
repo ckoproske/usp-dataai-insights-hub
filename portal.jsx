@@ -4004,16 +4004,175 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
   );
 }
 
+// ─── Indicator detail side-panel (used inside SideDrawer) ─────────────────────
+function IndicatorDetailPanel({ ind }) {
+  const [actuals, setActuals]   = useState(null);
+  const [actualsErr, setActualsErr] = useState(null);
+
+  useEffect(() => {
+    setActuals(null);
+    setActualsErr(null);
+    api(`/api/indicators/${ind.indicator_id}/actuals`)
+      .then(d => setActuals(d))
+      .catch(() => { setActualsErr("Could not load actuals."); setActuals([]); });
+  }, [ind.indicator_id]);
+
+  const unit    = ind.unit ? ` ${ind.unit}` : "";
+  const targets = [2026, 2027, 2028, 2029, 2030]
+    .map(y => ({ year: y, val: ind[`target_${y}`] }))
+    .filter(t => t.val != null);
+  const status = ind.status || "draft";
+  const pc     = PORT_COLORS[ind.portfolio_id];
+
+  const FL = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 };
+  const FV = { fontSize: 13, color: TEXT, lineHeight: 1.5 };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Context chips */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <StatusBadge status={status} />
+        {pc && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: 11, fontWeight: 500, color: pc.dark,
+            background: pc.light, borderRadius: 12, padding: "3px 10px",
+            border: `1px solid ${pc.color}33` }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%",
+              background: pc.color, flexShrink: 0, display: "inline-block" }} />
+            {pc.label}
+          </span>
+        )}
+        {ind.entity_type === "bow" && ind.entity_name && (
+          <span style={{ fontSize: 11, color: TEXT_SUB, background: BG,
+            borderRadius: 12, padding: "3px 10px", border: `1px solid ${BORDER}` }}>
+            {ind.entity_name}
+          </span>
+        )}
+      </div>
+
+      {/* Description if distinct from name */}
+      {ind.description && ind.description !== ind.name && (
+        <div>
+          <div style={FL}>Description</div>
+          <p style={{ ...FV, margin: 0 }}>{ind.description}</p>
+        </div>
+      )}
+
+      {/* Meta grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14,
+        padding: 14, background: BG, borderRadius: 8, border: `1px solid ${BORDER}` }}>
+        <div><div style={FL}>Unit</div><div style={FV}>{ind.unit || "—"}</div></div>
+        <div><div style={FL}>Collection Frequency</div><div style={FV}>{ind.collection_frequency || "—"}</div></div>
+        <div><div style={FL}>Type</div><div style={FV}>{ind.entity_type === "bow" ? "BOW" : "Portfolio"}</div></div>
+        <div><div style={FL}>Measurement Level</div><div style={FV}>{ind.measurement_level || "—"}</div></div>
+      </div>
+
+      {/* Source */}
+      <div>
+        <div style={FL}>Source</div>
+        <div style={{ padding: "10px 12px", background: SURFACE, borderRadius: 6,
+          border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: TEXT }}>
+            {ind.source_name || <span style={{ color: TEXT_MUTED, fontWeight: 400 }}>No source registered</span>}
+          </span>
+          {ind.source_url && (
+            <a href={ind.source_url} target="_blank" rel="noreferrer"
+              style={{ fontSize: 12, color: ACCENT, fontWeight: 600, textDecoration: "none" }}>
+              Open ↗
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Baseline & targets bar */}
+      {(ind.baseline != null || targets.length > 0) && (
+        <div>
+          <div style={FL}>Baseline &amp; Targets</div>
+          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden",
+            border: `1px solid ${BORDER}`, background: SURFACE }}>
+            {ind.baseline != null && (
+              <div style={{ flex: 1, textAlign: "center", padding: "10px 8px",
+                borderRight: `1px solid ${BORDER}`, background: INFO_BG }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: INFO,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Baseline</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: INFO }}>{ind.baseline}{unit}</div>
+              </div>
+            )}
+            {targets.map((t, i) => (
+              <div key={t.year} style={{ flex: 1, textAlign: "center", padding: "10px 8px",
+                borderRight: i < targets.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{t.year}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{t.val}{unit}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Actuals */}
+      <div>
+        <div style={FL}>Actual Figures</div>
+        {actuals === null && <Skeleton height={56} />}
+        {actualsErr && <p style={{ fontSize: 13, color: DANGER, margin: 0 }}>{actualsErr}</p>}
+        {actuals !== null && actuals.length === 0 && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, margin: 0 }}>No actuals on record yet.</p>
+        )}
+        {actuals !== null && actuals.length > 0 && (
+          <div style={{ borderRadius: 8, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: SURFACE }}>
+              <thead>
+                <tr style={{ background: BG }}>
+                  {["Year", "Period", "Value", "Date", "Notes"].map(h => (
+                    <th key={h} style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                      textTransform: "uppercase", letterSpacing: "0.06em",
+                      padding: "7px 10px", borderBottom: `1px solid ${BORDER}`,
+                      textAlign: "left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {actuals.map((a, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? SURFACE : BG }}>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT }}>{a.year}</td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.period || "—"}</td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, fontWeight: 700, color: TEXT }}>
+                      {a.actual_value != null ? `${a.actual_value}${unit}` : "—"}
+                    </td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.reading_date || "—"}</td>
+                    <td style={{ fontSize: 12, padding: "8px 10px", borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.source_notes || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Support ID footer */}
+      <div style={{ fontSize: 11, color: TEXT_MUTED, paddingTop: 10,
+        borderTop: `1px solid ${BORDER}`, lineHeight: 1.8 }}>
+        ID: <code style={{ fontFamily: "monospace", userSelect: "all" }}>{ind.indicator_id}</code>
+        {ind.source_id && (
+          <> &nbsp;·&nbsp; Source ID: <code style={{ fontFamily: "monospace", userSelect: "all" }}>{ind.source_id}</code></>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Indicator Catalog View ────────────────────────────────────────────────────
 function IndicatorCatalogView() {
-  const [rows, setRows]             = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [search, setSearch]         = useState("");
-  const [filterSource, setFSrc]     = useState("all");
-  const [filterEntity, setFEntity]  = useState("all");
-  const [filterStatus, setFStatus]  = useState("all");
-  const [expanded, setExpanded]     = useState(new Set());
+  const [rows, setRows]               = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [search, setSearch]           = useState("");
+  const [filterSource, setFSrc]       = useState("all");
+  const [filterPortfolio, setFPort]   = useState("all");
+  const [filterStatus, setFStatus]    = useState("all");
+  const [selected, setSelected]       = useState(null); // indicator object or null
 
   useEffect(() => {
     api("/api/indicators/catalog")
@@ -4021,22 +4180,15 @@ function IndicatorCatalogView() {
       .catch(() => { setError("Failed to load indicators."); setLoading(false); });
   }, []);
 
-  const toggle = id => setExpanded(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-
-  // Build filter option lists
   const sources = useMemo(() => {
     const seen = new Map();
     rows.forEach(r => { if (r.source_id && !seen.has(r.source_id)) seen.set(r.source_id, r.source_name || r.source_id); });
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [rows]);
 
-  const entities = useMemo(() => {
+  const portfolios = useMemo(() => {
     const seen = new Map();
-    rows.forEach(r => { if (r.entity_id && !seen.has(r.entity_id)) seen.set(r.entity_id, `${r.entity_name} (${r.entity_type})`); });
+    rows.forEach(r => { if (r.portfolio_id && !seen.has(r.portfolio_id)) seen.set(r.portfolio_id, r.portfolio_name || r.portfolio_id); });
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [rows]);
 
@@ -4044,23 +4196,38 @@ function IndicatorCatalogView() {
     const q = search.toLowerCase();
     return rows.filter(r => {
       if (filterSource !== "all" && r.source_id !== filterSource) return false;
-      if (filterEntity !== "all" && r.entity_id !== filterEntity) return false;
+      if (filterPortfolio !== "all" && r.portfolio_id !== filterPortfolio) return false;
       if (filterStatus !== "all" && (r.status || "draft") !== filterStatus) return false;
       if (q && !((r.name || r.description || "").toLowerCase().includes(q)) &&
                !(r.entity_name || "").toLowerCase().includes(q) &&
                !(r.source_name || "").toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, filterSource, filterEntity, filterStatus]);
+  }, [rows, search, filterSource, filterPortfolio, filterStatus]);
 
   if (loading) return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-      {[1,2,3,4].map(i => <Skeleton key={i} height={72} />)}
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 24 }}>
+      {[1,2,3,4,5].map(i => <Skeleton key={i} height={44} />)}
     </div>
   );
   if (error) return <p style={{ color: DANGER, marginTop: 24 }}>{error}</p>;
 
-  const selectStyle = { ...inputStyle, appearance: "auto", fontSize: 13, padding: "7px 10px" };
+  const selStyle = { ...inputStyle, appearance: "auto", fontSize: 13, padding: "7px 10px" };
+
+  const TH = {
+    fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+    textTransform: "uppercase", letterSpacing: "0.06em",
+    padding: "9px 14px", background: BG,
+    borderBottom: `2px solid ${BORDER}`,
+    whiteSpace: "nowrap", textAlign: "left",
+    position: "sticky", top: 0, zIndex: 1,
+  };
+  const TD = {
+    fontSize: 13, color: TEXT,
+    padding: "11px 14px",
+    borderBottom: `1px solid ${BORDER}`,
+    verticalAlign: "middle",
+  };
 
   return (
     <div>
@@ -4069,25 +4236,25 @@ function IndicatorCatalogView() {
           Indicator Catalog
         </h1>
         <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
-          Browse all indicators across BOWs and portfolios — view source details, collection schedules, and targets.
+          Browse all indicators — click any row to see full details and latest figures.
         </p>
       </div>
 
       {/* Filter bar */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16, alignItems: "center" }}>
         <input
           type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search indicators, sources, entities..."
-          style={{ ...inputStyle, fontSize: 13, padding: "7px 10px", minWidth: 240, flex: 1 }} />
-        <select value={filterSource} onChange={e => setFSrc(e.target.value)} style={selectStyle}>
+          placeholder="Search indicators, sources…"
+          style={{ ...inputStyle, fontSize: 13, padding: "7px 10px", minWidth: 220, flex: 1 }} />
+        <select value={filterPortfolio} onChange={e => setFPort(e.target.value)} style={selStyle}>
+          <option value="all">All portfolios</option>
+          {portfolios.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        </select>
+        <select value={filterSource} onChange={e => setFSrc(e.target.value)} style={selStyle}>
           <option value="all">All sources</option>
           {sources.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
         </select>
-        <select value={filterEntity} onChange={e => setFEntity(e.target.value)} style={selectStyle}>
-          <option value="all">All BOWs & portfolios</option>
-          {entities.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFStatus(e.target.value)} style={selectStyle}>
+        <select value={filterStatus} onChange={e => setFStatus(e.target.value)} style={selStyle}>
           <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="draft">Draft</option>
@@ -4097,179 +4264,103 @@ function IndicatorCatalogView() {
         </span>
       </div>
 
-      {/* Indicator rows */}
       {filtered.length === 0 && (
         <EmptyState
           message={rows.length === 0
             ? "No indicators loaded — check that the catalog endpoint is reachable."
-            : "No indicators match the current filters. Try clearing a filter above."}
+            : "No indicators match the current filters."}
         />
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {filtered.map(ind => {
-          const isOpen = expanded.has(ind.indicator_id);
-          const status = ind.status || "draft";
-          const targets = [2026,2027,2028,2029,2030]
-            .map(y => ({ year: y, val: ind[`target_${y}`] }))
-            .filter(t => t.val != null);
-          const unit = ind.unit ? ` ${ind.unit}` : "";
 
-          return (
-            <div key={ind.indicator_id}
-              style={{ border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE,
-                borderLeft: `4px solid ${status === "active" ? STATUS_ACTIVE_TEXT : STATUS_DRAFT_BORDER}` }}>
-
-              {/* Summary row — always visible */}
-              <button onClick={() => toggle(ind.indicator_id)}
-                style={{ width: "100%", textAlign: "left", background: "none", border: "none",
-                  cursor: "pointer", padding: "12px 14px", fontFamily: "inherit",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 180px 180px 90px 28px",
-                  gap: 12, alignItems: "center" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{ind.name}</span>
-                    <StatusBadge status={status} />
-                  </div>
-                  {ind.collection_frequency && (
-                    <span style={{ fontSize: 11, color: TEXT_MUTED }}>{ind.collection_frequency}</span>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, color: TEXT_SUB }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
-                    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>
-                    {ind.entity_type === "bow" ? "BOW" : "Portfolio"}
-                  </div>
-                  {ind.entity_name}
-                </div>
-                <div style={{ fontSize: 12, color: TEXT_SUB }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
-                    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Source</div>
-                  {ind.source_url
-                    ? <a href={ind.source_url} target="_blank" rel="noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        style={{ color: ACCENT }}>{ind.source_name || ind.source_id || "—"}</a>
-                    : (ind.source_name || ind.source_id || <span style={{ color: TEXT_MUTED }}>—</span>)}
-                </div>
-                <div style={{ fontSize: 12, color: TEXT_SUB }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
-                    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Baseline</div>
-                  {ind.baseline != null
-                    ? <strong>{ind.baseline}{unit}</strong>
-                    : <span style={{ color: TEXT_MUTED }}>—</span>}
-                </div>
-                <span style={{ color: TEXT_MUTED, fontSize: 16, lineHeight: 1 }}>
-                  {isOpen ? "▲" : "▼"}
-                </span>
-              </button>
-
-              {/* Expanded detail panel */}
-              {isOpen && (
-                <div style={{ borderTop: `1px solid ${BORDER}`, padding: "14px 16px",
-                  display: "flex", flexDirection: "column", gap: 12 }}>
-
-                  {/* Description */}
-                  {ind.description && ind.description !== ind.name && (
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
-                        Description
+      {filtered.length > 0 && (
+        <div style={{ overflowX: "auto", borderRadius: 8, border: `1px solid ${BORDER}` }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: SURFACE }}>
+            <thead>
+              <tr>
+                <th style={TH}>Indicator Name</th>
+                <th style={TH}>Source</th>
+                <th style={{ ...TH, width: 80 }}>Unit</th>
+                <th style={{ ...TH, width: 150 }}>Frequency</th>
+                <th style={{ ...TH, width: 170 }}>Portfolio</th>
+                <th style={{ ...TH, width: 200 }}>Body of Work</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((ind, i) => {
+                const status = ind.status || "draft";
+                const pc = PORT_COLORS[ind.portfolio_id];
+                const isSelected = selected?.indicator_id === ind.indicator_id;
+                const rowBg = isSelected ? ACCENT_LIGHT : (i % 2 === 0 ? SURFACE : BG);
+                return (
+                  <tr key={ind.indicator_id}
+                    onClick={() => setSelected(isSelected ? null : ind)}
+                    style={{ cursor: "pointer", background: rowBg, transition: "background 0.1s" }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#FEF0E6"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = rowBg; }}
+                  >
+                    {/* Name */}
+                    <td style={{ ...TD, borderLeft: isSelected ? `3px solid ${ACCENT}` : `3px solid transparent` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {status !== "active" && <StatusBadge status={status} />}
+                        <span style={{ fontWeight: 500 }}>{ind.name || ind.description || "—"}</span>
                       </div>
-                      <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>{ind.description}</p>
-                    </div>
-                  )}
-
-                  {/* Meta grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
-                        Portfolio
-                      </div>
-                      <span style={{ fontSize: 13, color: TEXT }}>{ind.portfolio_name || "—"}</span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
-                        {ind.entity_type === "bow" ? "Body of Work" : "Portfolio"}
-                      </div>
-                      <span style={{ fontSize: 13, color: TEXT }}>{ind.entity_name || "—"}</span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
-                        Collection Frequency
-                      </div>
-                      <span style={{ fontSize: 13, color: TEXT }}>{ind.collection_frequency || "—"}</span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 3 }}>
-                        Unit
-                      </div>
-                      <span style={{ fontSize: 13, color: TEXT }}>{ind.unit || "—"}</span>
-                    </div>
-                  </div>
-
-                  {/* Source details */}
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                      textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-                      Source
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 12px", background: BG, borderRadius: 6,
-                      border: `1px solid ${BORDER}` }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, flex: 1 }}>
-                        {ind.source_name || ind.source_id || "No source registered"}
-                      </span>
-                      {ind.source_url && (
-                        <a href={ind.source_url} target="_blank" rel="noreferrer"
-                          style={{ fontSize: 12, color: ACCENT, fontWeight: 600,
-                            textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                          Open source ↗
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Targets */}
-                  {(ind.baseline != null || targets.length > 0) && (
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
-                        Baseline & Targets
-                      </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {ind.baseline != null && (
-                          <span style={{ fontSize: T_META, padding: "3px 9px", borderRadius: 6,
-                            background: INFO_BG, color: INFO, fontWeight: 600 }}>
-                            Baseline: {ind.baseline}{unit}
+                    </td>
+                    {/* Source */}
+                    <td style={{ ...TD, color: TEXT_SUB }}>
+                      {ind.source_url
+                        ? <a href={ind.source_url} target="_blank" rel="noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            style={{ color: ACCENT, textDecoration: "none" }}>
+                            {ind.source_name || "—"}
+                          </a>
+                        : (ind.source_name || <span style={{ color: TEXT_MUTED }}>—</span>)}
+                    </td>
+                    {/* Unit */}
+                    <td style={{ ...TD, color: TEXT_SUB }}>
+                      {ind.unit || <span style={{ color: TEXT_MUTED }}>—</span>}
+                    </td>
+                    {/* Frequency */}
+                    <td style={{ ...TD, color: TEXT_SUB }}>
+                      {ind.collection_frequency || <span style={{ color: TEXT_MUTED }}>—</span>}
+                    </td>
+                    {/* Portfolio */}
+                    <td style={TD}>
+                      {pc
+                        ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5,
+                            fontSize: 12, color: pc.dark, fontWeight: 500 }}>
+                            <span style={{ width: 7, height: 7, borderRadius: "50%",
+                              background: pc.color, flexShrink: 0, display: "inline-block" }} />
+                            {pc.label}
                           </span>
-                        )}
-                        {targets.map(t => (
-                          <span key={t.year} style={{ fontSize: T_META, padding: "3px 9px", borderRadius: 6,
-                            background: INFO_BG, color: INFO, fontWeight: 600 }}>
-                            {t.year}: {t.val}{unit}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        : <span style={{ fontSize: 12, color: TEXT_MUTED }}>{ind.portfolio_name || "—"}</span>}
+                    </td>
+                    {/* BOW */}
+                    <td style={{ ...TD, fontSize: 12, color: TEXT_SUB }}>
+                      {ind.entity_type === "bow"
+                        ? ind.entity_name
+                        : <span style={{ color: TEXT_MUTED }}>—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-                  {/* Indicator ID for support */}
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
-                    ID: <code style={{ fontFamily: "monospace", userSelect: "all" }}>{ind.indicator_id}</code>
-                    {ind.source_id && (
-                      <> &nbsp;·&nbsp; Source ID: <code style={{ fontFamily: "monospace", userSelect: "all" }}>{ind.source_id}</code></>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Detail drawer */}
+      <SideDrawer
+        isOpen={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected ? (selected.name || selected.description || "Indicator") : ""}
+        subtitle={selected
+          ? (selected.entity_type === "bow"
+              ? `BOW · ${selected.entity_name}`
+              : `Portfolio · ${selected.portfolio_name}`)
+          : ""}
+      >
+        {selected && <IndicatorDetailPanel ind={selected} />}
+      </SideDrawer>
     </div>
   );
 }
