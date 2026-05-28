@@ -4401,12 +4401,12 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
       {view === "bows" && bowsByPortfolio.map(({ portfolio, bows: pbows }) => {
         const p = PORT_COLORS[portfolio.portfolio_id];
         return (
-          <div key={portfolio.portfolio_id} style={{ marginBottom: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
-                background: p.color, display: "inline-block" }} />}
-              <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED,
-                textTransform: "uppercase", letterSpacing: "0.07em" }}>
+          <div key={portfolio.portfolio_id} style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10,
+              paddingBottom: 6, borderBottom: `1px solid ${BORDER}` }}>
+              {p && <span style={{ width: 8, height: 8, borderRadius: "50%",
+                background: p.color, display: "inline-block", flexShrink: 0 }} />}
+              <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
                 {p?.label || portfolio.portfolio_id}
               </p>
             </div>
@@ -4415,21 +4415,28 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
                 No BOWs in this portfolio.
               </p>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {pbows.map(bow => (
-                <div key={bow.bow_id} onClick={() => onSelectBow(bow)}
+                <div key={bow.bow_id}
                   style={{ display: "flex", alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "14px 18px", background: SURFACE, borderRadius: 9,
+                    padding: "12px 16px", background: SURFACE, borderRadius: 8,
                     border: `1px solid ${BORDER}`, cursor: "pointer",
-                    borderLeft: `4px solid ${p?.color || BRAND}`,
-                    transition: "box-shadow 0.15s" }}
-                  onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                    borderLeft: `3px solid ${p?.color || BRAND}`,
+                    transition: "box-shadow 0.12s" }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.08)"}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{bow.title}</p>
-                  </div>
-                  <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginLeft: 12 }}>Open →</span>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: TEXT, margin: 0 }}>{bow.title}</p>
+                  <button onClick={() => onSelectBow(bow)}
+                    style={{ flexShrink: 0, marginLeft: 16, padding: "5px 14px",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      background: "none", border: `1px solid ${BORDER}`,
+                      borderRadius: 6, color: TEXT_SUB,
+                      transition: "border-color 0.12s, color 0.12s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_SUB; }}>
+                    Open
+                  </button>
                 </div>
               ))}
             </div>
@@ -4438,30 +4445,36 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
       })}
 
       {view === "portfolios" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {portfolios.map(portfolio => {
             const p = PORT_COLORS[portfolio.portfolio_id];
             return (
               <div key={portfolio.portfolio_id}
-                onClick={() => onSelectPortfolio(portfolio)}
                 style={{ display: "flex", alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "16px 20px", background: SURFACE, borderRadius: 9,
+                  padding: "12px 16px", background: SURFACE, borderRadius: 8,
                   border: `1px solid ${BORDER}`, cursor: "pointer",
-                  borderLeft: `4px solid ${p?.color || BRAND}`,
-                  transition: "box-shadow 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                  borderLeft: `3px solid ${p?.color || BRAND}`,
+                  transition: "box-shadow 0.12s" }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.08)"}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 2 }}>
-                    {p && <span style={{ width: 12, height: 12, borderRadius: "50%",
-                      background: p.color, display: "inline-block", flexShrink: 0 }} />}
-                    <p style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
-                      {p?.label || portfolio.title}
-                    </p>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {p && <span style={{ width: 8, height: 8, borderRadius: "50%",
+                    background: p.color, display: "inline-block", flexShrink: 0 }} />}
+                  <p style={{ fontSize: 14, fontWeight: 500, color: TEXT, margin: 0 }}>
+                    {p?.label || portfolio.title}
+                  </p>
                 </div>
-                <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginLeft: 12 }}>Open →</span>
+                <button onClick={() => onSelectPortfolio(portfolio)}
+                  style={{ flexShrink: 0, marginLeft: 16, padding: "5px 14px",
+                    fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    background: "none", border: `1px solid ${BORDER}`,
+                    borderRadius: 6, color: TEXT_SUB,
+                    transition: "border-color 0.12s, color 0.12s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_SUB; }}>
+                  Open
+                </button>
               </div>
             );
           })}
