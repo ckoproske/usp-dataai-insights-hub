@@ -620,7 +620,8 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
 
   const handleSourceSel = (val) => {
     if (val === "__new__") { setCreating(true); return; }
-    onChange(val || null, null);
+    const src = sources.find(s => s.source_id === val);
+    onChange(val || null, null, src?.source_name || null);
   };
 
   const createSource = async () => {
@@ -635,7 +636,7 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
     if (!res.error) {
       const added = { source_id: res.source_id, source_name: newName, source_type: newType };
       setSources(prev => [...prev, added]);
-      onChange(res.source_id, null);
+      onChange(res.source_id, null, newName);
       setCreating(false);
       setNewName(""); setNewType(""); setNewUrl(""); setNewOwner(""); setNewCoverage("");
     }
@@ -829,6 +830,155 @@ function InlineEditIndicatorLinked({ indicator, onCancel, onDeleted }) {
   );
 }
 
+// ─── SideDrawer ────────────────────────────────────────────────────────────────
+function SideDrawer({ isOpen, onClose, title, subtitle, children }) {
+  React.useEffect(() => {
+    if (isOpen) { document.body.style.overflow = "hidden"; }
+    else { document.body.style.overflow = ""; }
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: "fixed", inset: 0, background: "rgba(30,30,30,0.22)",
+        zIndex: 200, opacity: isOpen ? 1 : 0,
+        pointerEvents: isOpen ? "auto" : "none",
+        transition: "opacity 0.2s",
+      }} />
+      <div style={{
+        position: "fixed", top: 0, right: 0, width: 500, height: "100vh",
+        background: "#FFFFFF", zIndex: 201, display: "flex", flexDirection: "column",
+        boxShadow: "-6px 0 32px rgba(0,0,0,0.13)",
+        transform: isOpen ? "translateX(0)" : "translateX(100%)",
+        transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
+      }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}`,
+          display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+          flexShrink: 0 }}>
+          <div>
+            {subtitle && <p style={{ fontSize: 11, color: TEXT_MUTED, textTransform: "uppercase",
+              letterSpacing: 0.6, fontWeight: 700, marginBottom: 3 }}>{subtitle}</p>}
+            <p style={{ fontSize: 16, fontWeight: 700, color: TEXT, margin: 0, lineHeight: 1.3 }}>{title}</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 22, color: TEXT_MUTED, lineHeight: 1, padding: "0 2px",
+            marginTop: -2, flexShrink: 0 }}>×</button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BowDescEditor({ bow, data, user, onSaved, onCancel }) {
+  const [draft, setDraft]   = useState(data?.desc || "");
+  const [saving, setSaving] = useState(false);
+  const save = () => {
+    setSaving(true);
+    api(`/api/bows/${bow.bow_id}/description`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: draft, edited_by: user?.email }),
+    }).then(() => onSaved()).finally(() => setSaving(false));
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Field label="Description">
+        <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+          rows={6} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function PortDescEditor({ portfolioId, initial, user, onSaved, onCancel }) {
+  const [draft, setDraft]   = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const save = () => {
+    setSaving(true);
+    api(`/api/portfolios/${portfolioId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: draft, edited_by: user?.email }),
+    }).then(() => onSaved()).finally(() => setSaving(false));
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Field label="Description">
+        <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+          rows={6} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function PortProblemEditor({ portfolioId, initial, user, onSaved, onCancel }) {
+  const [draft, setDraft]   = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const save = () => {
+    setSaving(true);
+    api(`/api/toa/problem-statement`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ portfolio_id: portfolioId, problem_statement: draft, updated_by: user?.email }),
+    }).then(() => onSaved()).finally(() => setSaving(false));
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Field label="Problem / Gap Statement">
+        <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+          rows={8} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function InvestmentsInputsEditor({ outcome, toaActivities, user, onSaved, onCancel }) {
+  const existing = outcome.investments_inputs || "";
+  const toaText  = (toaActivities || []).map(a => a.activity_text).join("\n");
+  const [draft, setDraft]   = useState(existing || toaText);
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    await api(`/api/portfolio-outcomes/${outcome.outcome_id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ investments_inputs: draft, edited_by: user?.email }),
+    });
+    onSaved(draft);
+    setSaving(false);
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <p style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 1.6, margin: 0 }}>
+        Describe the investments and inputs driving this outcome. Overrides Theory of Action text.
+      </p>
+      <Field label="Investments & Inputs">
+        <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+          rows={8} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Btn>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
 function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isPortfolio }) {
   // For linked portfolio indicators, use the simplified targets-only form
   if (isPortfolio && indicator.bow_indicator_id) {
@@ -844,6 +994,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
   const [qualityNotes, setQN]       = useState(indicator.data_quality_notes || "");
   const [trackingNotes, setTN]  = useState(indicator.tracking_notes || "");
   const [sourceId, setSourceId] = useState(indicator.source_id || null);
+  const [sourceName, setSourceName] = useState(indicator.source_name || "");
   const [unit, setUnit]           = useState(indicator.unit || "");
   const [freq, setFreq]           = useState(indicator.collection_frequency || "");
   const [baseline, setBase]       = useState(String(indicator.baseline ?? ""));
@@ -887,7 +1038,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
     try {
       const res = await api(endpoint, { method: "PATCH", body: JSON.stringify(body) });
       if (res.error) { setError(res.error); return; }
-      onSave({ ...indicator, ...body });
+      onSave({ ...indicator, ...body, source_name: sourceName || "" });
     } catch (e) {
       setError("Save failed — please try again.");
     } finally {
@@ -935,7 +1086,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       {/* ── Source ── */}
       <Field label="Source">
         <SourcePickerInline sourceId={sourceId} roundId={null}
-          onChange={(sid) => setSourceId(sid)}
+          onChange={(sid, _rid, sname) => { setSourceId(sid); if (sname !== undefined) setSourceName(sname || ""); }}
           user={user} />
       </Field>
 
@@ -1562,15 +1713,11 @@ function ExecutionTargetsSection({ targets: initTargets, bow, outcomes, user }) 
 // ─── BOW Content Table ────────────────────────────────────────────────────────
 // Mirrors the slide layout: outcome rows × year columns for execution targets,
 // then indicators as rows × year columns for targets & actuals.
-function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
+function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onOpenDrawer }) {
   const p = PORT_COLORS[bow.portfolio_id];
 
   // Editing state
-  const [editOutId, setEditOutId]       = useState(null);
   const [editTargetId, setEditTargetId] = useState(null);
-  const [editIndId, setEditIndId]       = useState(null);
-  const [addingOutcome, setAddingOutcome] = useState(false);
-  const [addingIndFor, setAddingIndFor] = useState(null); // outcome_id
   const [addingTargetFor, setAddingTargetFor] = useState(null); // {outcome_id, year}
   const [confirmDelOut, setConfirmDelOut]     = useState(null);
   const [confirmDelTarget, setConfirmDelTarget] = useState(null);
@@ -1611,21 +1758,15 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
       <div style={{ display: "flex", justifyContent: "space-between",
         alignItems: "center", marginBottom: 10 }}>
         <SectionLabel>Outcomes & Execution Targets</SectionLabel>
-        <Btn variant="ghost" size="sm" onClick={() => setAddingOutcome(true)}
+        <Btn variant="ghost" size="sm" onClick={() => onOpenDrawer({ type: "add-outcome" })}
           style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
           + Add outcome
         </Btn>
       </div>
 
-      {addingOutcome && (
-        <AddOutcomeForm bow={bow}
-          onSaved={() => { setAddingOutcome(false); onRefresh(); }}
-          onCancel={() => setAddingOutcome(false)} />
-      )}
-
-      {outcomes.length === 0 && !addingOutcome && (
+      {outcomes.length === 0 && (
         <EmptyState message="No outcomes added yet."
-          action="Add outcome" onAction={() => setAddingOutcome(true)} />
+          action="Add outcome" onAction={() => onOpenDrawer({ type: "add-outcome" })} />
       )}
 
       {outcomes.length > 0 && (
@@ -1646,7 +1787,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
             </thead>
             <tbody>
               {outcomes.map((out, i) => {
-                const isEditingOut = editOutId === out.outcome_id;
                 return (
                   <React.Fragment key={out.outcome_id}>
                     {/* Outcome row */}
@@ -1654,55 +1794,47 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                       {/* Left cell — outcome description */}
                       <td style={{ ...tdStyle, background: BG, verticalAlign: "top",
                         borderRight: `2px solid ${BORDER}` }}>
-                        {isEditingOut ? (
-                          <InlineEditOutcome outcome={out} user={user}
-                            onSave={() => { setEditOutId(null); onRefresh(); }}
-                            onCancel={() => setEditOutId(null)} />
-                        ) : (
-                          <>
-                            <div style={{ display: "flex", alignItems: "flex-start",
-                              justifyContent: "space-between", gap: 6, marginBottom: 4 }}>
-                              <span style={{ fontSize: 11, fontWeight: 800,
-                                background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
-                                borderRadius: 3, padding: "2px 6px", flexShrink: 0 }}>
-                                O{out.displayNumber ?? (i + 1)}
-                              </span>
-                              <div style={{ display: "flex", gap: 3 }}>
-                                <button onClick={() => setEditOutId(out.outcome_id)}
+                        <div style={{ display: "flex", alignItems: "flex-start",
+                          justifyContent: "space-between", gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800,
+                            background: p?.light || ACCENT_LIGHT, color: p?.dark || ACCENT,
+                            borderRadius: 3, padding: "2px 6px", flexShrink: 0 }}>
+                            O{out.displayNumber ?? (i + 1)}
+                          </span>
+                          <div style={{ display: "flex", gap: 3 }}>
+                            <button onClick={() => onOpenDrawer({ type: "outcome", item: out })}
+                              style={{ background: "none", border: "none", cursor: "pointer",
+                                fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
+                              title="Edit outcome">✎</button>
+                            {confirmDelOut === out.outcome_id ? (
+                              <>
+                                <button onClick={async () => {
+                                  await api(`/api/bow-outcomes/${out.outcome_id}`, { method: "DELETE" });
+                                  setConfirmDelOut(null); onRefresh();
+                                }} style={{ background: "none", border: "none", cursor: "pointer",
+                                  fontSize: 11, color: DANGER, padding: "2px 4px", fontWeight: 700 }}>
+                                  ✓ Remove
+                                </button>
+                                <button onClick={() => setConfirmDelOut(null)}
                                   style={{ background: "none", border: "none", cursor: "pointer",
-                                    fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
-                                  title="Edit outcome">✎</button>
-                                {confirmDelOut === out.outcome_id ? (
-                                  <>
-                                    <button onClick={async () => {
-                                      await api(`/api/bow-outcomes/${out.outcome_id}`, { method: "DELETE" });
-                                      setConfirmDelOut(null); onRefresh();
-                                    }} style={{ background: "none", border: "none", cursor: "pointer",
-                                      fontSize: 11, color: DANGER, padding: "2px 4px", fontWeight: 700 }}>
-                                      ✓ Remove
-                                    </button>
-                                    <button onClick={() => setConfirmDelOut(null)}
-                                      style={{ background: "none", border: "none", cursor: "pointer",
-                                        fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}>✕</button>
-                                  </>
-                                ) : (
-                                  <button onClick={() => setConfirmDelOut(out.outcome_id)}
-                                    style={{ background: "none", border: "none", cursor: "pointer",
-                                      fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
-                                    title="Remove outcome">✕</button>
-                                )}
-                              </div>
-                            </div>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: TEXT,
-                              lineHeight: 1.4, marginBottom: out.text ? 6 : 0 }}>
-                              {out.title}
-                            </p>
-                            {out.text && (
-                              <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>
-                                {out.text}
-                              </p>
+                                    fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}>✕</button>
+                              </>
+                            ) : (
+                              <button onClick={() => setConfirmDelOut(out.outcome_id)}
+                                style={{ background: "none", border: "none", cursor: "pointer",
+                                  fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
+                                title="Remove outcome">✕</button>
                             )}
-                          </>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: TEXT,
+                          lineHeight: 1.4, marginBottom: out.text ? 6 : 0 }}>
+                          {out.title}
+                        </p>
+                        {out.text && (
+                          <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5 }}>
+                            {out.text}
+                          </p>
                         )}
                       </td>
 
@@ -1801,7 +1933,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
 
       {outcomes.map(out => {
         const inds = out.indicators || [];
-        if (inds.length === 0 && addingIndFor !== out.outcome_id) return null;
+        if (inds.length === 0) return null;
         return (
           <div key={out.outcome_id} style={{ marginBottom: 20 }}>
             {/* Outcome group header */}
@@ -1812,37 +1944,26 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                 {out.title}
               </span>
               <button
-                onClick={() => setAddingIndFor(addingIndFor === out.outcome_id ? null : out.outcome_id)}
+                onClick={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: out.outcome_id } })}
                 style={{ background: "none", border: "none", cursor: "pointer",
                   fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
-                {addingIndFor === out.outcome_id ? "Cancel" : "+ Add indicator"}
+                + Add indicator
               </button>
             </div>
 
-            {addingIndFor === out.outcome_id && (
-              <div style={{ marginBottom: 10, padding: "14px 16px", background: BG,
-                border: `1px solid ${BORDER}`, borderRadius: 6 }}>
-                <AddIndicatorInline bow={bow} outcomeId={out.outcome_id} user={user}
-                  onSaved={() => { setAddingIndFor(null); onRefresh(); }}
-                  onCancel={() => setAddingIndFor(null)} />
-              </div>
-            )}
-
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {inds.map(ind => {
-                const isEditing = editIndId === ind.indicator_id;
                 const unit = ind.unit ? ` ${ind.unit}` : "";
                 const targets = TARGET_YEARS.map(y => ({ year: y, val: ind[`target_${y}`] }))
                   .filter(t => t.val != null);
                 return (
                   <div key={ind.indicator_id}
-                    style={{ border: `1px solid ${BORDER}`, borderRadius: 8,
-                      borderLeft: `4px solid ${p?.color || ACCENT}`,
-                      background: SURFACE, overflow: "hidden" }}>
+                    style={{ borderLeft: `3px solid ${p?.color || ACCENT}`,
+                      background: "#FAFAFA", borderRadius: "0 6px 6px 0",
+                      overflow: "hidden", marginBottom: 0 }}>
 
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
-                      padding: "12px 14px",
-                      borderBottom: isEditing ? `1px solid ${BORDER}` : "none" }}>
+                      padding: "10px 14px" }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                           <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, margin: 0 }}>
@@ -1901,22 +2022,13 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
                         )}
                       </div>
                       <button
-                        onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                        onClick={() => onOpenDrawer({ type: "indicator", item: ind })}
                         style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
                           background: SURFACE, color: TEXT_SUB, border: `1px solid ${BORDER}`,
                           borderRadius: 4, padding: "3px 8px", marginTop: 2 }}>
-                        {isEditing ? "Cancel" : "Edit"}
+                        Edit
                       </button>
                     </div>
-
-                    {isEditing && (
-                      <div style={{ padding: "16px 20px", background: BG }}>
-                        <InlineEditIndicator indicator={ind} user={user}
-                          onSave={() => { setEditIndId(null); onRefresh(); }}
-                          onCancel={() => setEditIndId(null)}
-                          onDeleted={() => { setEditIndId(null); onRefresh(); }} />
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -1925,8 +2037,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh }) {
         );
       })}
 
-      {outcomes.every(o => (o.indicators || []).length === 0) &&
-        outcomes.every(o => addingIndFor !== o.outcome_id) && (
+      {outcomes.every(o => (o.indicators || []).length === 0) && (
         <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
           No indicators added yet.
         </p>
@@ -2079,9 +2190,9 @@ function BowPanel({ bow, user, onBack }) {
   const [loading, setLoading]     = useState(true);
   const [outcomes, setOutcomes]   = useState([]);
   const [activeOId, setActiveOId] = useState(null);
-  const [descEditing, setDescEditing] = useState(false);
-  const [descDraft,   setDescDraft]   = useState("");
-  const [descSaving,  setDescSaving]  = useState(false);
+  const [drawerCtx, setDrawerCtx] = useState(null);
+  const openDrawer  = ctx => setDrawerCtx(ctx);
+  const closeDrawer = ()  => setDrawerCtx(null);
 
   const load = () => {
     setLoading(true);
@@ -2156,59 +2267,18 @@ function BowPanel({ bow, user, onBack }) {
       {/* ── BOW Description ── */}
       {(() => {
         const desc = data?.bow?.description ?? bow.description ?? "";
-        const saveDesc = () => {
-          setDescSaving(true);
-          api(`/api/bows/${bow.bow_id}/description`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description: descDraft, edited_by: user?.email }),
-          })
-            .then(() => { load(); setDescEditing(false); })
-            .finally(() => setDescSaving(false));
-        };
         return (
           <div style={{ marginBottom: 20 }}>
-            {descEditing ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <textarea
-                  autoFocus
-                  value={descDraft}
-                  onChange={e => setDescDraft(e.target.value)}
-                  rows={3}
-                  style={{
-                    width: "100%", fontSize: 13, padding: "8px 10px",
-                    border: `1px solid ${BORDER}`, borderRadius: 6,
-                    fontFamily: "inherit", resize: "vertical", color: TEXT,
-                  }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn size="sm" onClick={saveDesc} disabled={descSaving}>
-                    {descSaving ? "Saving…" : "Save"}
-                  </Btn>
-                  <Btn variant="secondary" size="sm" onClick={() => setDescEditing(false)}>
-                    Cancel
-                  </Btn>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <p style={{
-                  fontSize: 13, color: desc ? TEXT : TEXT_MUTED,
-                  fontStyle: desc ? "normal" : "italic", lineHeight: 1.6, flex: 1,
-                }}>
-                  {desc || "No description yet."}
-                </p>
-                <button
-                  title="Edit description"
-                  onClick={() => { setDescDraft(desc); setDescEditing(true); }}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px",
-                  }}>
-                  ✎
-                </button>
-              </div>
-            )}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
+                fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, flex: 1, margin: 0 }}>
+                {desc || "No description yet. Click ✎ to add one."}
+              </p>
+              <button title="Edit description"
+                onClick={() => openDrawer({ type: "bow-desc", item: { desc } })}
+                style={{ background: "none", border: "none", cursor: "pointer",
+                  color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+            </div>
           </div>
         );
       })()}
@@ -2260,7 +2330,50 @@ function BowPanel({ bow, user, onBack }) {
         executionTargets={visibleTargets}
         bow={bow} user={user}
         onRefresh={load}
+        onOpenDrawer={openDrawer}
       />
+
+      {/* ── Side Drawer ── */}
+      <SideDrawer
+        isOpen={!!drawerCtx}
+        onClose={closeDrawer}
+        title={
+          drawerCtx?.type === "indicator"     ? "Edit Indicator"    :
+          drawerCtx?.type === "add-indicator" ? "Add Indicator"     :
+          drawerCtx?.type === "outcome"       ? "Edit Outcome"      :
+          drawerCtx?.type === "add-outcome"   ? "Add Outcome"       :
+          drawerCtx?.type === "bow-desc"      ? "Edit Description"  :
+          "Edit"
+        }
+        subtitle={bow.title}
+      >
+        {drawerCtx?.type === "indicator" && (
+          <InlineEditIndicator indicator={drawerCtx.item} user={user}
+            onSave={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer}
+            onDeleted={() => { closeDrawer(); load(); }} />
+        )}
+        {drawerCtx?.type === "add-indicator" && (
+          <AddIndicatorInline bow={bow} outcomeId={drawerCtx.extra?.outcomeId} user={user}
+            onSaved={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "outcome" && (
+          <InlineEditOutcome outcome={drawerCtx.item} user={user}
+            onSave={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "add-outcome" && (
+          <AddOutcomeForm bow={bow}
+            onSaved={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "bow-desc" && (
+          <BowDescEditor bow={bow} data={drawerCtx.item} user={user}
+            onSaved={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+      </SideDrawer>
     </div>
   );
 }
@@ -2754,35 +2867,10 @@ const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
 
 // ─── Portfolio Outcome Pane (single outcome, shown when tab is active) ──────────
-function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted }) {
+function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted, onOpenDrawer }) {
   const p = PORT_COLORS[portfolio.portfolio_id];
-  const [editingOutcome,  setEditingOutcome]  = useState(false);
-  const [editingII,       setEditingII]       = useState(false);
-  const [iiDraft,         setIIDraft]         = useState("");
-  const [iiSaving,        setIISaving]        = useState(false);
-  const [editIndId,       setEditIndId]       = useState(null);
-  const [addingInd,       setAddingInd]       = useState(false);
   const [confirmDel,      setConfirmDel]      = useState(false);
   const [deleting,        setDeleting]        = useState(false);
-
-  const saveII = async () => {
-    setIISaving(true);
-    await api(`/api/portfolio-outcomes/${outcome.outcome_id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ investments_inputs: iiDraft, edited_by: user?.email }),
-    });
-    onOutcomeChange({ ...outcome, investments_inputs: iiDraft });
-    setEditingII(false);
-    setIISaving(false);
-  };
-
-  const openIIEdit = () => {
-    // Pre-fill with existing override, or fall back to TOA activities as starting text
-    const existing = outcome.investments_inputs || "";
-    const toaText  = (toaActivities || []).map(a => a.activity_text).join("\n");
-    setIIDraft(existing || toaText);
-    setEditingII(true);
-  };
 
   const thStyle = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
     textTransform: "uppercase", letterSpacing: "0.06em", background: BG,
@@ -2806,75 +2894,47 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
 
       {/* ── Outcome title + text ── */}
       <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: `1px solid ${BORDER}` }}>
-        {editingOutcome ? (
-          <InlineEditOutcome outcome={outcome} user={user} isPortfolio
-            onSave={updated => { onOutcomeChange({ ...outcome, ...updated }); setEditingOutcome(false); }}
-            onCancel={() => setEditingOutcome(false)} />
-        ) : (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.4 }}>
-                {outcome.title || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No title set</span>}
-              </h3>
-              {(outcome.text || outcome.outcome) ? (
-                <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7 }}>
-                  {outcome.text || outcome.outcome}
-                </p>
-              ) : (
-                <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>
-                  No description yet.
-                </p>
-              )}
-              <LastEdited by={outcome.last_edited_by} at={outcome.last_edited_at}
-                style={{ display: "block", marginTop: 8 }} />
-            </div>
-            <button onClick={() => setEditingOutcome(true)}
-              title="Edit title and description"
-              style={{ background: "none", border: "none", cursor: "pointer",
-                color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.4 }}>
+              {outcome.title || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No title set</span>}
+            </h3>
+            {(outcome.text || outcome.outcome) ? (
+              <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7 }}>
+                {outcome.text || outcome.outcome}
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No description yet.</p>
+            )}
+            <LastEdited by={outcome.last_edited_by} at={outcome.last_edited_at} style={{ display: "block", marginTop: 8 }} />
           </div>
-        )}
+          <button onClick={() => onOpenDrawer({ type: "outcome", item: outcome })}
+            title="Edit title and description"
+            style={{ background: "none", border: "none", cursor: "pointer",
+              color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+        </div>
       </div>
 
       {/* ── Investments & Inputs ── */}
       <div style={{ marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${BORDER}` }}>
-        <SectionLabel style={{ marginBottom: 10 }}>Investments & Inputs</SectionLabel>
-
-        {/* TOA activities (read-only, sourced from Theory of Action) */}
-        {editingII ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <textarea value={iiDraft} onChange={e => setIIDraft(e.target.value)} rows={6}
-              autoFocus style={{ ...inputStyle, resize: "vertical" }} />
-            <div style={{ display: "flex", gap: 8 }}>
-              <Btn size="sm" onClick={saveII} disabled={iiSaving}>{iiSaving ? "Saving…" : "Save"}</Btn>
-              <Btn variant="secondary" size="sm" onClick={() => setEditingII(false)}>Cancel</Btn>
-            </div>
-          </div>
-        ) : outcome.investments_inputs ? (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.7, flex: 1, whiteSpace: "pre-wrap" }}>
-              {outcome.investments_inputs}
-            </p>
-            <button onClick={openIIEdit}
-              style={{ background: "none", border: "none", cursor: "pointer",
-                color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <SectionLabel>Investments & Inputs</SectionLabel>
+          <button onClick={() => onOpenDrawer({ type: "investments", item: outcome, extra: { toaActivities } })}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
+        </div>
+        {outcome.investments_inputs ? (
+          <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+            {outcome.investments_inputs}
+          </p>
         ) : toaActivities && toaActivities.length > 0 ? (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <ul style={{ margin: 0, paddingLeft: 18, flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-              {toaActivities.map(a => (
-                <li key={a.activity_id} style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>
-                  {a.activity_text}
-                </li>
-              ))}
-            </ul>
-            <button onClick={openIIEdit} title="Edit investments & inputs"
-              style={{ background: "none", border: "none", cursor: "pointer",
-                color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
-          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
+            {toaActivities.map(a => (
+              <li key={a.activity_id} style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>{a.activity_text}</li>
+            ))}
+          </ul>
         ) : (
-          <EmptyState message="No investments & inputs defined yet."
-            action="Add content" onAction={openIIEdit} />
+          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No investments & inputs defined yet.</p>
         )}
       </div>
 
@@ -2882,43 +2942,32 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
       <div style={{ display: "flex", justifyContent: "space-between",
         alignItems: "center", marginBottom: 10 }}>
         <SectionLabel>Impact Indicators</SectionLabel>
-        <button onClick={() => setAddingInd(v => !v)}
+        <button onClick={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontSize: 12, color: ACCENT, fontWeight: 700 }}>
-          {addingInd ? "Cancel" : "+ Add indicator"}
+          + Add indicator
         </button>
       </div>
 
-      {addingInd && (
-        <div style={{ marginBottom: 12, padding: "14px 16px", background: BG,
-          border: `1px solid ${BORDER}`, borderRadius: 6 }}>
-          <AddPortfolioIndicatorInline portfolio={portfolio} outcomeId={outcome.outcome_id}
-            user={user}
-            onSaved={() => { setAddingInd(false); onRefresh(); }}
-            onCancel={() => setAddingInd(false)} />
-        </div>
-      )}
-
-      {inds.length === 0 && !addingInd && (
+      {inds.length === 0 && (
         <EmptyState message="No indicators for this outcome yet."
-          action="Add indicator" onAction={() => setAddingInd(true)} />
+          action="Add indicator" onAction={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })} />
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
         {inds.map(ind => {
-          const isEditing = editIndId === ind.indicator_id;
           const unit = ind.unit ? ` ${ind.unit}` : "";
           const targets = PORT_TABLE_YEARS.map(y => ({ year: y, val: ind[`target_${y}`] }))
             .filter(t => t.val != null);
           return (
             <div key={ind.indicator_id}
-              style={{ border: `1px solid ${BORDER}`, borderRadius: 8,
-                borderLeft: `4px solid ${p?.color || ACCENT}`,
-                background: SURFACE, overflow: "hidden" }}>
+              style={{ borderLeft: `3px solid ${p?.color || ACCENT}`,
+                background: "#FAFAFA", borderRadius: "0 6px 6px 0",
+                overflow: "hidden" }}>
 
               {/* Card header */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
-                padding: "12px 14px", borderBottom: isEditing ? `1px solid ${BORDER}` : "none" }}>
+                padding: "10px 14px" }}>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, marginBottom: 4 }}>
                     {ind.name || ind.text}
@@ -2969,32 +3018,15 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                  <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
+                  <button onClick={() => onOpenDrawer({ type: "indicator", item: ind })}
                     style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
                       background: SURFACE, color: TEXT_SUB,
                       border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
-                    {isEditing ? "Cancel" : "Edit"}
+                    Edit
                   </button>
                   <LastEdited by={ind.last_edited_by} at={ind.last_edited_at} />
                 </div>
               </div>
-
-              {isEditing && (
-                <div style={{ padding: "16px 20px", background: BG }}>
-                  <InlineEditIndicator indicator={ind} user={user} isPortfolio
-                    onSave={updated => {
-                      onOutcomeChange({ ...outcome, indicators: inds.map(i =>
-                        i.indicator_id === ind.indicator_id ? { ...i, ...updated } : i) });
-                      setEditIndId(null);
-                    }}
-                    onCancel={() => setEditIndId(null)}
-                    onDeleted={() => {
-                      onOutcomeChange({ ...outcome,
-                        indicators: inds.filter(i => i.indicator_id !== ind.indicator_id) });
-                      setEditIndId(null);
-                    }} />
-                </div>
-              )}
             </div>
           );
         })}
@@ -3503,12 +3535,9 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   const [addingOut, setAddingOut]   = useState(false);
   const [newOutTitle, setNewOutTitle] = useState("");
   const [saving, setSaving]         = useState(false);
-  const [descEditing, setDescEditing]     = useState(false);
-  const [descDraft, setDescDraft]         = useState("");
-  const [descSaving, setDescSaving]       = useState(false);
-  const [problemEditing, setProblemEditing] = useState(false);
-  const [problemDraft, setProblemDraft]     = useState("");
-  const [problemSaving, setProblemSaving]   = useState(false);
+  const [drawerCtx, setDrawerCtx]   = useState(null);
+  const openDrawer  = ctx => setDrawerCtx(ctx);
+  const closeDrawer = ()  => setDrawerCtx(null);
 
   const p = PORT_COLORS[portfolio.portfolio_id];
 
@@ -3584,93 +3613,42 @@ function PortfolioPanel({ portfolio, user, onBack }) {
       {/* ── Portfolio Description ── */}
       {(() => {
         const desc = data?.portfolio?.description ?? "";
-        const saveDesc = () => {
-          setDescSaving(true);
-          api(`/api/portfolios/${portfolio.portfolio_id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description: descDraft, edited_by: user?.email }),
-          })
-            .then(() => { load(); setDescEditing(false); })
-            .finally(() => setDescSaving(false));
-        };
         return (
-          <div style={{ marginBottom: 16 }}>
-            {descEditing ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <textarea
-                  autoFocus
-                  value={descDraft}
-                  onChange={e => setDescDraft(e.target.value)}
-                  rows={3}
-                  style={{ width: "100%", fontSize: 13, padding: "8px 10px",
-                    border: `1px solid ${BORDER}`, borderRadius: 6,
-                    fontFamily: "inherit", resize: "vertical", color: TEXT }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn size="sm" onClick={saveDesc} disabled={descSaving}>{descSaving ? "Saving…" : "Save"}</Btn>
-                  <Btn variant="secondary" size="sm" onClick={() => setDescEditing(false)}>Cancel</Btn>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <p style={{ fontSize: 13, color: desc ? TEXT : TEXT_MUTED,
-                  fontStyle: desc ? "normal" : "italic", lineHeight: 1.6, flex: 1 }}>
-                  {desc || "No description yet — click to add."}
-                </p>
-                <button title="Edit description" onClick={() => { setDescDraft(desc); setDescEditing(true); }}
-                  style={{ background: "none", border: "none", cursor: "pointer",
-                    color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
-              </div>
-            )}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
+                fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, flex: 1, margin: 0 }}>
+                {desc || "No description yet."}
+              </p>
+              <button onClick={() => openDrawer({ type: "port-desc", item: { desc } })}
+                style={{ background: "none", border: "none", cursor: "pointer",
+                  color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+            </div>
           </div>
         );
       })()}
 
       {/* ── Problem / Gap Statement ── */}
       {(() => {
-        const problem = data?.problem_statement ?? "";
-        const saveProblem = () => {
-          setProblemSaving(true);
-          api(`/api/toa/${portfolio.portfolio_id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ problem_statement: problemDraft, edited_by: user?.email }),
-          })
-            .then(() => { load(); setProblemEditing(false); })
-            .finally(() => setProblemSaving(false));
-        };
+        const ps = data?.problem_statement ?? "";
         return (
-          <div style={{ marginBottom: 24, padding: "14px 16px", background: BG,
-            borderRadius: 8, border: `1px solid ${BORDER}` }}>
-            <SectionLabel>Problem / Gap Statement</SectionLabel>
-            {problemEditing ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <textarea
-                  autoFocus
-                  value={problemDraft}
-                  onChange={e => setProblemDraft(e.target.value)}
-                  rows={3}
-                  style={{ width: "100%", fontSize: 13, padding: "8px 10px",
-                    border: `1px solid ${BORDER}`, borderRadius: 6,
-                    fontFamily: "inherit", resize: "vertical", color: TEXT }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn size="sm" onClick={saveProblem} disabled={problemSaving}>{problemSaving ? "Saving…" : "Save"}</Btn>
-                  <Btn variant="secondary" size="sm" onClick={() => setProblemEditing(false)}>Cancel</Btn>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <p style={{ fontSize: 13, color: problem ? TEXT : TEXT_MUTED,
-                  fontStyle: problem ? "normal" : "italic", lineHeight: 1.6, flex: 1 }}>
-                  {problem || "No problem statement yet — click to add."}
+          <div style={{ padding: "14px 18px", background: BG, border: `1px solid ${BORDER}`,
+            borderRadius: 8, marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                  Problem / Gap Statement
                 </p>
-                <button title="Edit problem statement" onClick={() => { setProblemDraft(problem); setProblemEditing(true); }}
-                  style={{ background: "none", border: "none", cursor: "pointer",
-                    color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+                <p style={{ fontSize: 13, color: ps ? TEXT : TEXT_MUTED,
+                  fontStyle: ps ? "normal" : "italic", lineHeight: 1.7, margin: 0 }}>
+                  {ps || "No problem statement yet."}
+                </p>
               </div>
-            )}
+              <button onClick={() => openDrawer({ type: "port-problem", item: { ps } })}
+                style={{ background: "none", border: "none", cursor: "pointer",
+                  color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
+            </div>
           </div>
         );
       })()}
@@ -3756,12 +3734,76 @@ function PortfolioPanel({ portfolio, user, onBack }) {
             setActiveOId(remaining[0]?.outcome_id ?? null);
             if (remaining.length === 0) setActiveTab("toa");
           }}
+          onOpenDrawer={openDrawer}
         />
       )}
 
       {activeTab === "outcome" && !activeOutcome && outcomes.length === 0 && (
         <EmptyState message='No outcomes yet — use "+ Add outcome" in the tab strip above to get started.' />
       )}
+
+      {/* ── Side Drawer ── */}
+      <SideDrawer
+        isOpen={!!drawerCtx}
+        onClose={closeDrawer}
+        title={
+          drawerCtx?.type === "indicator"     ? "Edit Indicator"         :
+          drawerCtx?.type === "add-indicator" ? "Add Indicator"          :
+          drawerCtx?.type === "outcome"       ? "Edit Outcome"           :
+          drawerCtx?.type === "investments"   ? "Investments & Inputs"   :
+          drawerCtx?.type === "port-desc"     ? "Edit Description"       :
+          drawerCtx?.type === "port-problem"  ? "Edit Problem Statement" :
+          "Edit"
+        }
+        subtitle={p?.label || portfolio.title}
+      >
+        {drawerCtx?.type === "indicator" && (
+          <InlineEditIndicator indicator={drawerCtx.item} user={user} isPortfolio
+            onSave={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer}
+            onDeleted={() => { closeDrawer(); load(); }} />
+        )}
+        {drawerCtx?.type === "add-indicator" && (
+          <AddPortfolioIndicatorInline portfolio={portfolio} outcomeId={drawerCtx.extra?.outcomeId}
+            user={user}
+            onSaved={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "outcome" && (
+          <InlineEditOutcome outcome={drawerCtx.item} user={user} isPortfolio
+            onSave={updated => {
+              closeDrawer();
+              setOutcomes(prev => prev.map(o =>
+                o.outcome_id === drawerCtx.item.outcome_id ? { ...o, ...updated } : o
+              ));
+            }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "investments" && (
+          <InvestmentsInputsEditor
+            outcome={drawerCtx.item} toaActivities={drawerCtx.extra?.toaActivities || []}
+            user={user}
+            onSaved={updated => {
+              closeDrawer();
+              setOutcomes(prev => prev.map(o =>
+                o.outcome_id === drawerCtx.item.outcome_id ? { ...o, investments_inputs: updated } : o
+              ));
+            }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "port-desc" && (
+          <PortDescEditor portfolioId={portfolio.portfolio_id} initial={drawerCtx.item?.desc || ""}
+            user={user}
+            onSaved={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "port-problem" && (
+          <PortProblemEditor portfolioId={portfolio.portfolio_id} initial={drawerCtx.item?.ps || ""}
+            user={user}
+            onSaved={() => { closeDrawer(); load(); }}
+            onCancel={closeDrawer} />
+        )}
+      </SideDrawer>
     </div>
   );
 }
@@ -5830,7 +5872,7 @@ function PortalApp() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: BG }}>
+    <div style={{ minHeight: "100vh", background: "#FFFFFF" }}>
 
       {/* Toast notification */}
       {toast && (
@@ -5884,7 +5926,7 @@ function PortalApp() {
 
       {/* Landing screen */}
       {mode === null && (
-        <div style={{ minHeight: "calc(100vh - 56px)", background: BG,
+        <div style={{ minHeight: "calc(100vh - 56px)", background: "#FFFFFF",
           display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 32px" }}>
           <div style={{ width: "100%", maxWidth: 680 }}>
             <h1 style={{ fontSize: 24, fontWeight: 700, color: TEXT,

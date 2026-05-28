@@ -163,44 +163,57 @@ if (warnPort.length) {
   lines.push("");
 }
 
-for (const r of records) {
-  if (!r.is_invested) {
+// ── Active records: single multi-row INSERT ───────────────────────────────────
+if (active.length) {
+  lines.push(
+    `INSERT INTO ${SCHEMA}.investment_ideas\n` +
+    `    (idea_id, title, submitted_by, submitted_at,\n` +
+    `     stage, idea_type, objective,\n` +
+    `     primary_portfolio, primary_bow,\n` +
+    `     potential_partner, est_total_amount, est_2026_amount,\n` +
+    `     co_funding_details, desired_start_date, est_duration,\n` +
+    `     notes, approver_note, archived)\nVALUES`
+  );
+  active.forEach((r, i) => {
+    const trail = i < active.length - 1 ? "," : ";";
     lines.push(
-      `INSERT INTO ${SCHEMA}.investment_ideas\n` +
-      `    (idea_id, title, submitted_by, submitted_at,\n` +
-      `     stage, idea_type, objective,\n` +
-      `     primary_portfolio, primary_bow,\n` +
-      `     potential_partner, est_total_amount, est_2026_amount,\n` +
-      `     co_funding_details, desired_start_date, est_duration,\n` +
-      `     notes, approver_note, archived)\n` +
-      `VALUES (${S(r.idea_id)}, ${S(r.title)}, ${S(r.submitted_by)}, current_timestamp(),\n` +
-      `        ${S(r.stage)}, ${S(r.idea_type)}, ${S(r.objective)},\n` +
-      `        ${S(r.primary_portfolio)}, ${S(r.primary_bow)},\n` +
-      `        ${S(r.potential_partner)}, ${N(r.est_total_amount)}, ${N(r.est_2026_amount)},\n` +
-      `        ${S(r.co_funding_details)}, ${S(r.desired_start_date)}, ${S(r.est_duration)},\n` +
-      `        ${S(r.notes)}, ${S(r.approver_note)}, false);`
+      `  (${S(r.idea_id)}, ${S(r.title)}, ${S(r.submitted_by)}, current_timestamp(),\n` +
+      `   ${S(r.stage)}, ${S(r.idea_type)}, ${S(r.objective)},\n` +
+      `   ${S(r.primary_portfolio)}, ${S(r.primary_bow)},\n` +
+      `   ${S(r.potential_partner)}, ${N(r.est_total_amount)}, ${N(r.est_2026_amount)},\n` +
+      `   ${S(r.co_funding_details)}, ${S(r.desired_start_date)}, ${S(r.est_duration)},\n` +
+      `   ${S(r.notes)}, ${S(r.approver_note)}, false)${trail}`
     );
-  } else {
+  });
+  lines.push("");
+}
+
+// ── Archived records: single multi-row INSERT (if any) ────────────────────────
+if (archived.length) {
+  lines.push(
+    `INSERT INTO ${SCHEMA}.investment_ideas\n` +
+    `    (idea_id, title, submitted_by, submitted_at,\n` +
+    `     stage, idea_type, objective,\n` +
+    `     primary_portfolio, primary_bow,\n` +
+    `     potential_partner, est_total_amount, est_2026_amount,\n` +
+    `     co_funding_details, desired_start_date, est_duration,\n` +
+    `     notes, approver_note, inv_number,\n` +
+    `     archived, archived_at,\n` +
+    `     moved_to_invest, moved_to_invest_at)\nVALUES`
+  );
+  archived.forEach((r, i) => {
+    const trail = i < archived.length - 1 ? "," : ";";
     lines.push(
-      `INSERT INTO ${SCHEMA}.investment_ideas\n` +
-      `    (idea_id, title, submitted_by, submitted_at,\n` +
-      `     stage, idea_type, objective,\n` +
-      `     primary_portfolio, primary_bow,\n` +
-      `     potential_partner, est_total_amount, est_2026_amount,\n` +
-      `     co_funding_details, desired_start_date, est_duration,\n` +
-      `     notes, approver_note, inv_number,\n` +
-      `     archived, archived_at,\n` +
-      `     moved_to_invest, moved_to_invest_at)\n` +
-      `VALUES (${S(r.idea_id)}, ${S(r.title)}, ${S(r.submitted_by)}, current_timestamp(),\n` +
-      `        ${S(r.stage)}, ${S(r.idea_type)}, ${S(r.objective)},\n` +
-      `        ${S(r.primary_portfolio)}, ${S(r.primary_bow)},\n` +
-      `        ${S(r.potential_partner)}, ${N(r.est_total_amount)}, ${N(r.est_2026_amount)},\n` +
-      `        ${S(r.co_funding_details)}, ${S(r.desired_start_date)}, ${S(r.est_duration)},\n` +
-      `        ${S(r.notes)}, ${S(r.approver_note)}, ${S(r.inv_number)},\n` +
-      `        true, current_timestamp(),\n` +
-      `        true, current_timestamp());`
+      `  (${S(r.idea_id)}, ${S(r.title)}, ${S(r.submitted_by)}, current_timestamp(),\n` +
+      `   ${S(r.stage)}, ${S(r.idea_type)}, ${S(r.objective)},\n` +
+      `   ${S(r.primary_portfolio)}, ${S(r.primary_bow)},\n` +
+      `   ${S(r.potential_partner)}, ${N(r.est_total_amount)}, ${N(r.est_2026_amount)},\n` +
+      `   ${S(r.co_funding_details)}, ${S(r.desired_start_date)}, ${S(r.est_duration)},\n` +
+      `   ${S(r.notes)}, ${S(r.approver_note)}, ${S(r.inv_number)},\n` +
+      `   true, current_timestamp(),\n` +
+      `   true, current_timestamp())${trail}`
     );
-  }
+  });
   lines.push("");
 }
 
