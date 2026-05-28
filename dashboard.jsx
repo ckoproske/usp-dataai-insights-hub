@@ -7814,7 +7814,7 @@ function AllInvestmentsView({ onNavigate }) {
   const [viewMode, setViewMode]                     = useState("table");
   const [selectedOwner, setSelectedOwner]           = useState("all");
   const [showApprover, setShowApprover]             = useState(true);
-  const [showNotes, setShowNotes]                   = useState(true);
+  const [showNotes, setShowNotes]                   = useState(false);
   const [paymentPopover, setPaymentPopover]         = useState(null);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
@@ -8364,7 +8364,7 @@ function AllInvestmentsView({ onNavigate }) {
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
-                <col style={{ width: showApprover ? "7%" : "0%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: showNotes ? "auto" : "0%" }} />
               </colgroup>
               <thead>
@@ -8518,15 +8518,8 @@ function AllInvestmentsView({ onNavigate }) {
                           </>
                         )}
                       </th>
-                      {/* Approver — collapsible */}
-                      <th onClick={() => setShowApprover(v => !v)}
-                        style={{ ...hStyle(false), borderRight: "1px solid " + BORDER, cursor: "pointer",
-                          userSelect: "none", padding: showApprover ? "9px 12px" : "9px 6px",
-                          textAlign: showApprover ? "left" : "center", whiteSpace: "nowrap", overflow: "hidden" }}>
-                        {showApprover
-                          ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Approver <span style={{ fontSize: 9, opacity: 0.5 }}>◀</span></span>
-                          : <span style={{ fontSize: 11, color: TEXT_MUTED }} title="Expand Approver">+</span>}
-                      </th>
+                      {/* Approver — always visible */}
+                      {plainCol("Approver", false)}
                       {/* Notes — collapsible */}
                       <th onClick={() => setShowNotes(v => !v)}
                         style={{ ...hStyle(false), borderRight: "none", cursor: "pointer",
