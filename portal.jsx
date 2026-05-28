@@ -1724,11 +1724,7 @@ function ExecutionTargetsSection({ targets: initTargets, bow, outcomes, user }) 
 }
 
 // ─── IndicatorChipRow ─────────────────────────────────────────────────────────
-function IndicatorChipRow({ ind, accentColor, onEdit, yearSet }) {
-  const unit    = ind.unit ? ` ${ind.unit}` : "";
-  const years   = yearSet || TARGET_YEARS;
-  const targets = years.map(y => ({ year: y, val: ind[`target_${y}`] })).filter(t => t.val != null);
-
+function IndicatorChipRow({ ind, accentColor, onEdit }) {
   const chip = {
     display: "inline-flex", alignItems: "center",
     fontSize: 11, fontWeight: 500, color: TEXT_SUB,
@@ -1736,8 +1732,7 @@ function IndicatorChipRow({ ind, accentColor, onEdit, yearSet }) {
     padding: "2px 9px", whiteSpace: "nowrap",
   };
 
-  const hasChips = (ind.status && ind.status !== "active") || ind.collection_frequency ||
-    ind.source_name || ind.source_id || ind.baseline != null || targets.length > 0;
+  const sourceLabel = ind.source_name || ind.source_id;
 
   return (
     <div style={{ display: "flex", alignItems: "stretch", borderBottom: `1px solid ${BORDER}` }}>
@@ -1763,31 +1758,23 @@ function IndicatorChipRow({ ind, accentColor, onEdit, yearSet }) {
               borderRadius: 4, lineHeight: 1, marginTop: 1 }}
             title="Edit indicator">✎</button>
         </div>
-        {/* Chips row — pushed right */}
-        {hasChips && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7, justifyContent: "flex-end" }}>
-            {ind.status && ind.status !== "active" && <StatusBadge status={ind.status} />}
-            {ind.collection_frequency && (
-              <span style={chip}>{ind.collection_frequency}</span>
-            )}
-            {(ind.source_name || ind.source_id) && (
-              <span style={chip}>
-                {ind.source_url
+        {/* Chips row — source + frequency only */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7, justifyContent: "flex-end" }}>
+          {ind.status && ind.status !== "active" && <StatusBadge status={ind.status} />}
+          {ind.collection_frequency && (
+            <span style={chip}>{ind.collection_frequency}</span>
+          )}
+          <span style={{ ...chip, color: sourceLabel ? TEXT_SUB : TEXT_MUTED }}>
+            {sourceLabel
+              ? (ind.source_url
                   ? <a href={ind.source_url} target="_blank" rel="noreferrer"
                       style={{ color: TEXT_SUB, textDecoration: "none" }}>
-                      {ind.source_name || ind.source_id}
+                      {sourceLabel}
                     </a>
-                  : (ind.source_name || ind.source_id)}
-              </span>
-            )}
-            {ind.baseline != null && (
-              <span style={chip}>Baseline: <strong style={{ marginLeft: 3 }}>{ind.baseline}{unit}</strong></span>
-            )}
-            {targets.map(t => (
-              <span key={t.year} style={chip}>{t.year}: <strong style={{ marginLeft: 3 }}>{t.val}{unit}</strong></span>
-            ))}
-          </div>
-        )}
+                  : sourceLabel)
+              : "Source: Unknown"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -3426,17 +3413,21 @@ function PortfolioContentTable({ outcomes, portfolio, user, onRefresh, onOutcome
                       <React.Fragment key={ind.indicator_id}>
                         <tr>
                           <td style={{ ...tdStyle, background: p?.light || ACCENT_LIGHT, borderRight: `2px solid ${BORDER}` }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND, lineHeight: 1.4, marginBottom: 5 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: p?.dark || BRAND, lineHeight: 1.4, marginBottom: 4 }}>
                               {ind.name || ind.text}
                             </p>
-                            {ind.baseline != null && (
-                              <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 5 }}>
-                                Baseline: {ind.baseline}{ind.unit ? ` ${ind.unit}` : ""}
+                            <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 2 }}>
+                              {ind.source_name || ind.source_id || "Source: Unknown"}
+                            </p>
+                            {ind.collection_frequency && (
+                              <p style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>
+                                {ind.collection_frequency}
                               </p>
                             )}
                             <button onClick={() => setEditIndId(isEditing ? null : ind.indicator_id)}
                               style={{ fontSize: 11, fontWeight: 600, cursor: "pointer", background: SURFACE,
-                                color: TEXT_SUB, border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px" }}>
+                                color: TEXT_SUB, border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px",
+                                marginTop: ind.collection_frequency ? 0 : 4 }}>
                               Edit Indicator
                             </button>
                           </td>
