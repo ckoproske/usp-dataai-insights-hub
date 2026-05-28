@@ -4428,7 +4428,6 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
                   onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
                   <div>
                     <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{bow.title}</p>
-                    <CompletenessChips stats={completeness.bow?.[bow.bow_id]} />
                   </div>
                   <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginLeft: 12 }}>Open →</span>
                 </div>
@@ -4460,9 +4459,6 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
                     <p style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
                       {p?.label || portfolio.title}
                     </p>
-                  </div>
-                  <div style={{ paddingLeft: 22 }}>
-                    <CompletenessChips stats={completeness.portfolio?.[portfolio.portfolio_id]} />
                   </div>
                 </div>
                 <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginLeft: 12 }}>Open →</span>
