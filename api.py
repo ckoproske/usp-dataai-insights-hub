@@ -3619,20 +3619,33 @@ def create_investment_idea():
 
 @app.route("/api/investment-ideas/archive", methods=["GET"])
 def list_archived_investment_ideas():
-    """Return all archived investment ideas (moved to INVEST), most-recently archived first."""
-    rows = query(f"""
-        SELECT
-          idea_id, title, submitted_by,
-          CAST(submitted_at AS STRING)       AS submitted_at,
-          stage, idea_type, objective,
-          primary_portfolio, primary_bow, additional_bows,
-          inv_number,
-          CAST(moved_to_invest_at AS STRING) AS moved_to_invest_at,
-          CAST(archived_at AS STRING)        AS archived_at
-        FROM {SCHEMA}.investment_ideas
-        WHERE COALESCE(archived, false) = true
-        ORDER BY archived_at DESC
-    """)
+    """Return all archived investment ideas with full column set, most-recently archived first."""
+    _base = f"""
+              idea_id, title, submitted_by,
+              CAST(submitted_at AS STRING)       AS submitted_at,
+              stage, idea_type, objective,
+              primary_portfolio, primary_bow, additional_bows,
+              potential_partner, est_total_amount, est_2026_amount,
+              co_funding_details, desired_start_date, est_duration, notes,
+              inv_number,
+              CAST(moved_to_invest_at AS STRING) AS moved_to_invest_at,
+              CAST(archived_at AS STRING)        AS archived_at,
+              approved_by
+            FROM {SCHEMA}.investment_ideas
+            WHERE COALESCE(archived, false) = true
+            ORDER BY archived_at DESC"""
+    try:
+        rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note, designated_approver', 1)}")
+    except Exception:
+        try:
+            rows = query(f"SELECT {_base.replace('approved_by', 'approved_by, approver_note', 1)}")
+            for r in (rows or []):
+                r["designated_approver"] = None
+        except Exception:
+            rows = query(f"SELECT {_base}")
+            for r in (rows or []):
+                r["approver_note"] = None
+                r["designated_approver"] = None
     return jsonify(rows or [])
 
 

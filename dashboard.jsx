@@ -6296,7 +6296,7 @@ function IdeaStageBadge({ stage }) {
   );
 }
 
-function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios, allBows, onApproved, onDeleted }) {
+function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios, allBows, onApproved, onDeleted, onMoved }) {
   const canApprove = currentUser &&
     (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT" || currentUser.permission_level === "MLE");
 
@@ -6419,10 +6419,10 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
         method: "POST",
         body: JSON.stringify({ inv_number: invNumber }),
       });
-      onUpdate({ ...idea, stage: "Moved to Invest", inv_number: invNumber });
       setMovedOpen(false);
       setInvNumber("");
-      onClose();
+      if (onMoved) onMoved(`"${idea.title || 'Idea'}" moved to INVEST — archived ✓`);
+      else onClose();
     } catch {
       // silent
     } finally {
@@ -6807,6 +6807,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   const [moveRowId, setMoveRowId]   = useState(null);
   const [moveRowInv, setMoveRowInv] = useState("");
   const [moveRowSaving, setMoveRowSaving] = useState(false);
+  const [archiveDeleteId, setArchiveDeleteId]     = useState(null);
+  const [archiveDeleting, setArchiveDeleting]     = useState(false);
 
   const showToast = (msg, type = "success") => {
     setToast({msg, type});
@@ -6816,6 +6818,20 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   const setColFilter = (key, val) => setColFilters(prev => ({ ...prev, [key]: val }));
   const clearColFilters = () => setColFilters(_emptyFilters);
   const hasColFilters = Object.values(colFilters).some(v => v !== "");
+
+  const handleArchiveDelete = async (ideaId, title) => {
+    setArchiveDeleting(true);
+    try {
+      await apiFetch(`/api/investment-ideas/${ideaId}`, { method: "DELETE" });
+      setArchivedIdeas(prev => prev.filter(i => i.idea_id !== ideaId));
+      setArchiveDeleteId(null);
+      showToast(`"${title || 'Idea'}" permanently deleted`);
+    } catch {
+      showToast("Failed to delete", "error");
+    } finally {
+      setArchiveDeleting(false);
+    }
+  };
 
   const handleMoveRow = async (ideaId) => {
     setMoveRowSaving(true);
@@ -7647,6 +7663,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                   allBows={allBows}
                   onApproved={(msg) => { setSelectedIdea(null); showToast(msg); loadIdeas(); }}
                   onDeleted={(msg) => { setSelectedIdea(null); showToast(msg); loadIdeas(); }}
+                  onMoved={(msg)   => { setSelectedIdea(null); showToast(msg); loadIdeas(); }}
                 />
               ) : null}
             </div>
@@ -7701,11 +7718,11 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
+                  <table style={{ borderCollapse: "collapse", fontSize: 12, minWidth: 2100 }}>
                     <thead>
-                      <tr style={{ background: BG, position: "sticky", top: 0 }}>
-                        {["Title","Objective","Type","Portfolio","BOW","INV #","Submitted By","Moved to INVEST"].map(h => (
-                          <th key={h} style={{ padding: "8px 12px", textAlign: "left",
+                      <tr style={{ background: BG, position: "sticky", top: 0, zIndex: 1 }}>
+                        {["Title","Objective","Type","Submitted By","Portfolio","BOW","Add'l BOWs","Partner","Total $","2026 $","Start Date","Duration","Notes","Approver","Approver Note","INV #","Moved to INVEST",""].map(h => (
+                          <th key={h} style={{ padding: "8px 14px", textAlign: "left",
                             fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                             textTransform: "uppercase", letterSpacing: 0.6,
                             borderBottom: "1px solid " + BORDER, whiteSpace: "nowrap" }}>
@@ -7717,48 +7734,92 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                     <tbody>
                       {archivedIdeas.map((idea, idx) => {
                         const rowBg = idx % 2 === 0 ? SURFACE : BG;
+                        const td = (content, extra = {}) => (
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                            color: TEXT_SUB, whiteSpace: "nowrap", ...extra }}>
+                            {content}
+                          </td>
+                        );
                         const mtiDate = idea.moved_to_invest_at
                           ? new Date(idea.moved_to_invest_at).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })
                           : "—";
+                        const isConfirming = archiveDeleteId === idea.idea_id;
                         return (
                           <tr key={idea.idea_id} style={{ background: rowBg }}>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              fontWeight: 700, color: TEXT, maxWidth: 220 }}>
-                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {idea.title}
-                              </div>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              fontWeight: 700, color: TEXT, minWidth: 180, maxWidth: 240,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {idea.title || "—"}
                             </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, maxWidth: 200 }}>
-                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {idea.objective || "—"}
-                              </div>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, minWidth: 200, maxWidth: 260,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {idea.objective || "—"}
                             </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                              {idea.idea_type || "—"}
+                            {td(idea.idea_type || "—", { minWidth: 110 })}
+                            {td(idea.submitted_by || "—", { minWidth: 120 })}
+                            {td(portfolios.find(p => p.portfolio_id === idea.primary_portfolio)?.name || idea.primary_portfolio || "—", { minWidth: 150 })}
+                            {td(allBows.find(b => b.bow_id === idea.primary_bow)?.name || idea.primary_bow || "—", { minWidth: 150 })}
+                            {td(idea.additional_bows || "—", { minWidth: 120 })}
+                            {td(idea.potential_partner || "—", { minWidth: 120 })}
+                            {td(fmtIdeaAmt(idea.est_total_amount), { minWidth: 80 })}
+                            {td(fmtIdeaAmt(idea.est_2026_amount), { minWidth: 80, fontWeight: 600, color: idea.est_2026_amount ? TEXT : TEXT_MUTED })}
+                            {td(idea.desired_start_date || "—", { minWidth: 100 })}
+                            {td(idea.est_duration || "—", { minWidth: 90 })}
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, minWidth: 180, maxWidth: 240,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {idea.notes || "—"}
                             </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                              {idea.primary_portfolio || "—"}
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              whiteSpace: "nowrap", minWidth: 130 }}>
+                              {idea.designated_approver
+                                ? <span style={{ fontWeight: 700, color: "#7C3AED" }}>{idea.designated_approver}</span>
+                                : <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}
                             </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                              {idea.primary_bow || "—"}
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, minWidth: 180, maxWidth: 240,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              fontStyle: idea.approver_note ? "normal" : "italic" }}>
+                              {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
                             </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              whiteSpace: "nowrap", minWidth: 100 }}>
                               {idea.inv_number
                                 ? <span style={{ fontWeight: 700, color: "#7C3AED" }}>{idea.inv_number}</span>
                                 : <span style={{ color: TEXT_MUTED, fontStyle: "italic" }}>—</span>}
                             </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
-                              {idea.submitted_by || "—"}
-                            </td>
-                            <td style={{ padding: "9px 12px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, whiteSpace: "nowrap" }}>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              whiteSpace: "nowrap", minWidth: 120 }}>
                               <span style={{ fontWeight: 600, color: "#7C3AED" }}>{mtiDate}</span>
+                            </td>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              whiteSpace: "nowrap", minWidth: 130 }}>
+                              {!isConfirming ? (
+                                <button onClick={() => setArchiveDeleteId(idea.idea_id)}
+                                  style={{ padding: "3px 10px", borderRadius: 6,
+                                    border: "1px solid #FECACA", background: "#FEF2F2",
+                                    color: "#DC2626", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                  🗑 Delete
+                                </button>
+                              ) : (
+                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <span style={{ fontSize: 11, color: TEXT_SUB }}>Sure?</span>
+                                  <button onClick={() => handleArchiveDelete(idea.idea_id, idea.title)}
+                                    disabled={archiveDeleting}
+                                    style={{ padding: "3px 9px", borderRadius: 5, border: "none",
+                                      background: "#DC2626", color: "#fff", fontSize: 11,
+                                      fontWeight: 700, cursor: "pointer" }}>
+                                    Yes
+                                  </button>
+                                  <button onClick={() => setArchiveDeleteId(null)}
+                                    style={{ padding: "3px 7px", borderRadius: 5,
+                                      border: "1px solid " + BORDER, background: "transparent",
+                                      color: TEXT_MUTED, fontSize: 11, cursor: "pointer" }}>
+                                    No
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
