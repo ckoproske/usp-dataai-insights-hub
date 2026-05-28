@@ -394,7 +394,7 @@ const REVISION_REASONS = [
 const TARGET_YEARS = [2026, 2027, 2028, 2029, 2030];
 
 // ─── Inline Submit Form ────────────────────────────────────────────────────────
-function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
+function InlineSubmitForm({ indicator, bow, onClose, onSubmitted, noBox = false }) {
   const freq = indicator.collection_frequency || "annual";
   const periodOptions = PERIOD_OPTIONS[freq] || [];
   const presetSource = indicator.source_name || "";
@@ -441,9 +441,13 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted }) {
     }
   };
 
+  const outerStyle = noBox ? {} : {
+    marginTop: 10, padding: "18px 20px",
+    background: ACCENT_LIGHT, borderRadius: 8, border: `1px solid ${ACCENT_MID}`,
+  };
+
   return (
-    <div className="fade-in" style={{ marginTop: 10, padding: "18px 20px", background: ACCENT_LIGHT,
-      borderRadius: 8, border: `1px solid ${ACCENT_MID}` }}>
+    <div className="fade-in" style={outerStyle}>
 
       {/* Value + year + period */}
       <div style={{ display: "grid",
@@ -3740,19 +3744,198 @@ function PortfolioPanel({ portfolio, user, onBack }) {
   );
 }
 
+// ─── Streamlined indicator row for data-update view ───────────────────────────
+function DataUpdateIndRow({ ind, accentColor, wasSubmitted, onOpen }) {
+  const unit = ind.unit ? ` ${ind.unit}` : "";
+  const currentTarget = ind[`target_${CURRENT_YEAR}`];
+  const chip = {
+    display: "inline-flex", alignItems: "center",
+    fontSize: 11, fontWeight: 500, color: TEXT_SUB,
+    background: BG, borderRadius: 10, padding: "2px 9px",
+    whiteSpace: "nowrap", border: `1px solid ${BORDER}`,
+  };
+  const hasChips = ind.status && ind.status !== "active"
+    || ind.collection_frequency || ind.unit
+    || currentTarget != null || ind.baseline != null;
+  return (
+    <div style={{ display: "flex", alignItems: "stretch",
+      borderBottom: `1px solid ${BORDER}`,
+      background: wasSubmitted ? "#f0faf5" : SURFACE }}>
+      <div style={{ width: 3, flexShrink: 0,
+        background: wasSubmitted ? SUCCESS : (accentColor || ACCENT) }} />
+      <div style={{ flex: 1, minWidth: 0, padding: "11px 10px 11px 14px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, margin: 0 }}>
+              {ind.name || ind.text}
+            </p>
+            {ind.name && ind.text && ind.text !== ind.name && (
+              <p style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: "3px 0 0 0" }}>
+                {ind.text}
+              </p>
+            )}
+          </div>
+          {wasSubmitted ? (
+            <span style={{ fontSize: 12, color: SUCCESS, fontWeight: 700,
+              flexShrink: 0, paddingTop: 2 }}>✓ Submitted</span>
+          ) : (
+            <button onClick={onOpen}
+              style={{ fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                background: ACCENT, color: "#fff", border: "none",
+                borderRadius: 6, padding: "5px 12px", marginTop: 1,
+                fontFamily: "inherit" }}>
+              Submit Data
+            </button>
+          )}
+        </div>
+        {hasChips && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7,
+            justifyContent: "flex-end" }}>
+            {ind.status && ind.status !== "active" && <StatusBadge status={ind.status} />}
+            {ind.collection_frequency && (
+              <span style={chip}>{ind.collection_frequency}</span>
+            )}
+            {ind.unit && <span style={chip}>{ind.unit}</span>}
+            {currentTarget != null && (
+              <span style={{ ...chip, color: INFO, background: INFO_BG, border: "1px solid #BFDBFE" }}>
+                {CURRENT_YEAR} target: {currentTarget}{unit}
+              </span>
+            )}
+            {ind.baseline != null && (
+              <span style={{ ...chip, color: TEXT_MUTED }}>
+                Baseline: {ind.baseline}{unit}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Drawer content for Submit Data ───────────────────────────────────────────
+function SubmitDrawerContent({ ind, bow, onClose, onSubmitted }) {
+  const [actuals, setActuals]   = useState(null);
+  const [actualsLoading, setAL] = useState(true);
+
+  useEffect(() => {
+    setActuals(null); setAL(true);
+    api(`/api/indicators/${ind.indicator_id}/actuals`)
+      .then(d => setActuals(Array.isArray(d) ? d : []))
+      .catch(() => setActuals([]))
+      .finally(() => setAL(false));
+  }, [ind.indicator_id]);
+
+  const unit    = ind.unit ? ` ${ind.unit}` : "";
+  const targets = [2026, 2027, 2028, 2029, 2030]
+    .map(y => ({ year: y, val: ind[`target_${y}`] }))
+    .filter(t => t.val != null);
+
+  const FL = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Targets bar */}
+      {(ind.baseline != null || targets.length > 0) && (
+        <div>
+          <div style={FL}>Targets</div>
+          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden",
+            border: `1px solid ${BORDER}`, background: SURFACE }}>
+            {ind.baseline != null && (
+              <div style={{ flex: 1, textAlign: "center", padding: "8px 6px",
+                borderRight: `1px solid ${BORDER}`, background: INFO_BG }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: INFO,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Baseline</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: INFO }}>{ind.baseline}{unit}</div>
+              </div>
+            )}
+            {targets.map((t, i) => (
+              <div key={t.year} style={{ flex: 1, textAlign: "center", padding: "8px 6px",
+                borderRight: i < targets.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{t.year}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{t.val}{unit}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Latest actuals */}
+      <div>
+        <div style={FL}>Values on Record</div>
+        {actualsLoading && <Skeleton height={52} />}
+        {!actualsLoading && (!actuals || actuals.length === 0) && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, margin: 0 }}>
+            No values on record yet — be the first to submit.
+          </p>
+        )}
+        {!actualsLoading && actuals && actuals.length > 0 && (
+          <div style={{ borderRadius: 8, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: SURFACE }}>
+              <thead>
+                <tr style={{ background: BG }}>
+                  {["Year", "Period", "Value", "Date"].map(h => (
+                    <th key={h} style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                      textTransform: "uppercase", letterSpacing: "0.06em",
+                      padding: "6px 10px", borderBottom: `1px solid ${BORDER}`,
+                      textAlign: "left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...actuals].reverse().map((a, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? SURFACE : BG }}>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, color: TEXT }}>{a.year}</td>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.period || "—"}</td>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, fontWeight: 700, color: TEXT }}>
+                      {a.actual_value != null ? `${a.actual_value}${unit}` : "—"}
+                    </td>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.reading_date || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Divider before form */}
+      <div style={{ borderTop: `2px solid ${BORDER}` }} />
+
+      {/* Submit form */}
+      <div>
+        <div style={FL}>Submit New Value</div>
+        <InlineSubmitForm
+          indicator={ind} bow={bow}
+          onClose={onClose}
+          onSubmitted={onSubmitted}
+          noBox
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Update Data View ─────────────────────────────────────────────────────────
 function DataUpdateView({ bows, portfolios, user, loading }) {
   const [view, setView]               = useState("bows");
   const [selected, setSelected]       = useState(null); // { type: "bow"|"portfolio", entity }
   const [data, setData]               = useState(null);
   const [loadingData, setLoadingData] = useState(false);
-  const [submitIndId, setSubmitIndId] = useState(null);
+  const [drawerInd, setDrawerInd]     = useState(null); // indicator object for the side drawer
   const [submitted, setSubmitted]     = useState(new Set());
 
   useEffect(() => {
     if (!selected) { setData(null); return; }
     setLoadingData(true);
-    setSubmitIndId(null);
+    setDrawerInd(null);
     const url = selected.type === "bow"
       ? `/api/bow/${selected.entity.bow_id}/full`
       : `/api/portfolio/${selected.entity.portfolio_id}/full`;
@@ -3853,15 +4036,15 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
   }
 
   // ── Indicator data-entry view ──
-  const entity = selected.entity;
-  const p = PORT_COLORS[entity.portfolio_id || entity.portfolio_id];
-  const portColor = PORT_COLORS[
-    selected.type === "bow" ? entity.portfolio_id : entity.portfolio_id
-  ];
-  const outcomes = data?.outcomes || [];
-  const allInds = outcomes.flatMap(o =>
-    (o.indicators || []).map(i => ({ ...i, outcome_title: o.title, outcome_id: o.outcome_id }))
+  const entity    = selected.entity;
+  const portColor = PORT_COLORS[entity.portfolio_id];
+  const outcomes  = data?.outcomes || [];
+  const allInds   = outcomes.flatMap(o =>
+    (o.indicators || []).map(i => ({ ...i, outcome_title: o.title }))
   );
+  const bowArg = selected.type === "bow"
+    ? entity
+    : { portfolio_id: entity.portfolio_id };
 
   return (
     <div className="fade-in">
@@ -3884,7 +4067,7 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
 
       {loadingData && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Skeleton height={80} /><Skeleton height={80} /><Skeleton height={80} />
+          {[1,2,3].map(i => <Skeleton key={i} height={52} />)}
         </div>
       )}
 
@@ -3892,114 +4075,56 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
         <EmptyState message={`No indicators found for this ${selected.type === "bow" ? "Body of Work" : "Portfolio"}. Indicators must be added in Edit Content before data can be submitted.`} />
       )}
 
-      {!loadingData && outcomes.map(out => {
-        const inds = (out.indicators || []);
+      {!loadingData && outcomes.map((out, oi) => {
+        const inds = out.indicators || [];
         if (inds.length === 0) return null;
+        const prefix = selected.type === "bow" ? "O" : "PO";
         return (
           <div key={out.outcome_id} style={{ marginBottom: 28 }}>
-            {/* Outcome header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12,
-              paddingBottom: 8, borderBottom: `2px solid ${portColor?.color || BORDER}` }}>
+            {/* Outcome label */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10,
+              paddingBottom: 7, borderBottom: `2px solid ${portColor?.color || BORDER}` }}>
               <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 4,
-                background: portColor?.color || ACCENT, color: "#fff" }}>
-                {selected.type === "bow" ? "O" : "PO"}{outcomes.indexOf(out) + 1}
+                background: portColor?.color || ACCENT, color: "#fff", flexShrink: 0 }}>
+                {prefix}{oi + 1}
               </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
-                {out.title}
-              </span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{out.title}</span>
             </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {inds.map(ind => {
-                const isSubmitting = submitIndId === ind.indicator_id;
-                const wasSubmitted = submitted.has(ind.indicator_id);
-                const unit = ind.unit ? ` ${ind.unit}` : "";
-                const currentTarget = ind[`target_${CURRENT_YEAR}`];
-
-                return (
-                  <div key={ind.indicator_id}
-                    style={{ border: `1px solid ${wasSubmitted ? "#a0d8b8" : BORDER}`,
-                      borderRadius: 8, background: wasSubmitted ? "#f0faf5" : SURFACE,
-                      borderLeft: `4px solid ${wasSubmitted ? SUCCESS : (portColor?.color || ACCENT)}`,
-                      overflow: "hidden" }}>
-
-                    {/* Card header */}
-                    <div style={{ padding: "12px 14px",
-                      borderBottom: isSubmitting ? `1px solid ${BORDER}` : "none" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, lineHeight: 1.4, margin: 0 }}>
-                              {ind.name || ind.text}
-                            </p>
-                            {(() => {
-                              return (
-                                <StatusBadge status={ind.status} />
-                              );
-                            })()}
-                          </div>
-                          {ind.name && ind.text && ind.text !== ind.name && (
-                            <p style={{ fontSize: 12, color: TEXT_SUB, lineHeight: 1.5, marginBottom: 6 }}>
-                              {ind.text}
-                            </p>
-                          )}
-                          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-                            {ind.collection_frequency && (
-                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                                <strong>Frequency:</strong> {ind.collection_frequency}
-                              </span>
-                            )}
-                            {currentTarget != null && (
-                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                                <strong>{CURRENT_YEAR} target:</strong> {currentTarget}{unit}
-                              </span>
-                            )}
-                            {ind.baseline != null && (
-                              <span style={{ fontSize: 11, color: TEXT_MUTED }}>
-                                <strong>Baseline:</strong> {ind.baseline}{unit}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {wasSubmitted ? (
-                          <span style={{ fontSize: 12, color: SUCCESS, fontWeight: 700,
-                            flexShrink: 0, paddingTop: 2 }}>✓ Submitted</span>
-                        ) : (
-                          <button
-                            onClick={() => setSubmitIndId(isSubmitting ? null : ind.indicator_id)}
-                            style={{ fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0,
-                              background: isSubmitting ? SURFACE : ACCENT,
-                              color: isSubmitting ? TEXT_SUB : "#fff",
-                              border: `1px solid ${isSubmitting ? BORDER : ACCENT}`,
-                              borderRadius: 6, padding: "5px 14px", marginTop: 2,
-                              fontFamily: "inherit" }}>
-                            {isSubmitting ? "Cancel" : "Submit Data"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {isSubmitting && (
-                      <div style={{ padding: "0 14px 14px" }}>
-                        <InlineSubmitForm
-                          indicator={ind}
-                          bow={selected.type === "bow" ? entity : { portfolio_id: entity.portfolio_id }}
-                          onClose={() => setSubmitIndId(null)}
-                          onSubmitted={() => {
-                            setSubmitted(prev => new Set([...prev, ind.indicator_id]));
-                            setSubmitIndId(null);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Streamlined indicator rows */}
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}>
+              {inds.map(ind => (
+                <DataUpdateIndRow
+                  key={ind.indicator_id}
+                  ind={ind}
+                  accentColor={portColor?.color}
+                  wasSubmitted={submitted.has(ind.indicator_id)}
+                  onOpen={() => setDrawerInd(ind)}
+                />
+              ))}
             </div>
           </div>
         );
       })}
+
+      {/* Submit Data drawer */}
+      <SideDrawer
+        isOpen={!!drawerInd}
+        onClose={() => setDrawerInd(null)}
+        title={drawerInd ? (drawerInd.name || drawerInd.text || "Submit Data") : ""}
+        subtitle={drawerInd?.outcome_title || ""}
+      >
+        {drawerInd && (
+          <SubmitDrawerContent
+            ind={drawerInd}
+            bow={bowArg}
+            onClose={() => setDrawerInd(null)}
+            onSubmitted={() => {
+              setSubmitted(prev => new Set([...prev, drawerInd.indicator_id]));
+              setDrawerInd(null);
+            }}
+          />
+        )}
+      </SideDrawer>
     </div>
   );
 }
