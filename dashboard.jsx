@@ -7703,12 +7703,12 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           <tr key={idea.idea_id} style={{ background: rowBg }}>
                             <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
                               fontWeight: 700, color: TEXT, minWidth: 180, maxWidth: 240,
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              whiteSpace: "normal", lineHeight: 1.45 }}>
                               {idea.title || "—"}
                             </td>
                             <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
                               color: TEXT_SUB, minWidth: 200, maxWidth: 260,
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              whiteSpace: "normal", lineHeight: 1.45 }}>
                               {idea.objective || "—"}
                             </td>
                             {td(idea.idea_type || "—", { minWidth: 110 })}
@@ -7716,14 +7716,17 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                             {td(portfolios.find(p => p.portfolio_id === idea.primary_portfolio)?.name || idea.primary_portfolio || "—", { minWidth: 150 })}
                             {td(allBows.find(b => b.bow_id === idea.primary_bow)?.name || idea.primary_bow || "—", { minWidth: 150 })}
                             {td(idea.additional_bows || "—", { minWidth: 120 })}
-                            {td(idea.potential_partner || "—", { minWidth: 120 })}
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
+                              color: TEXT_SUB, minWidth: 120, whiteSpace: "normal", lineHeight: 1.45 }}>
+                              {idea.potential_partner || "—"}
+                            </td>
                             {td(fmtIdeaAmt(idea.est_total_amount), { minWidth: 80 })}
                             {td(fmtIdeaAmt(idea.est_2026_amount), { minWidth: 80, fontWeight: 600, color: idea.est_2026_amount ? TEXT : TEXT_MUTED })}
                             {td(idea.desired_start_date || "—", { minWidth: 100 })}
                             {td(idea.est_duration || "—", { minWidth: 90 })}
                             <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
                               color: TEXT_SUB, minWidth: 180, maxWidth: 240,
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              whiteSpace: "normal", lineHeight: 1.45 }}>
                               {idea.notes || "—"}
                             </td>
                             <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
@@ -7734,7 +7737,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                             </td>
                             <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
                               color: TEXT_SUB, minWidth: 180, maxWidth: 240,
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              whiteSpace: "normal", lineHeight: 1.45,
                               fontStyle: idea.approver_note ? "normal" : "italic" }}>
                               {idea.approver_note || (idea.approved_by ? `Approved by ${idea.approved_by}` : "—")}
                             </td>
