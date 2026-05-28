@@ -9475,12 +9475,13 @@ function Sidebar({ activeView, onNavigate, currentUser }) {
           active={isAllInvActive}
           onClick={()=>onNavigate({type:"all-investments"})}
         />
-        <NavItem
-          label="Investment Idea Tracker"
-          icon={<span style={{fontSize:13}}>💡</span>}
-          active={isIdeaTrackerActive}
-          onClick={()=>onNavigate({type:"idea-tracker"})}
-        />
+        <div style={{paddingLeft:14}}>
+          <NavItem
+            label="Idea Tracker"
+            active={isIdeaTrackerActive}
+            onClick={()=>onNavigate({type:"idea-tracker"})}
+          />
+        </div>
         <NavItem
           label="Budget Forecast"
           icon={<IconBarChart/>}
