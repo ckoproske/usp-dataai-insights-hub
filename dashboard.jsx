@@ -7298,7 +7298,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           {idea.title || "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB,
-                          minWidth: 200, maxWidth: 280, whiteSpace: "normal", lineHeight: 1.45 }}>
+                          minWidth: 320, maxWidth: 500, whiteSpace: "normal", lineHeight: 1.45 }}>
                           {idea.objective || "—"}
                         </td>
                         <td style={{ padding: "9px 14px" }} onClick={e => { if (idea.stage === "Okay to Proceed") e.stopPropagation(); }}>
@@ -7707,7 +7707,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                               {idea.title || "—"}
                             </td>
                             <td style={{ padding: "9px 14px", borderBottom: "1px solid " + BORDER,
-                              color: TEXT_SUB, minWidth: 200, maxWidth: 260,
+                              color: TEXT_SUB, minWidth: 320, maxWidth: 500,
                               whiteSpace: "normal", lineHeight: 1.45 }}>
                               {idea.objective || "—"}
                             </td>
