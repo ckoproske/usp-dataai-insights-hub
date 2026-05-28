@@ -3270,17 +3270,26 @@ def delete_activity(log_id):
 
 @app.route("/api/feedback", methods=["POST"])
 def submit_feedback():
-    data    = request.json or {}
-    actor   = _actor()
-    fb_id   = str(uuid.uuid4())
+    data        = request.json or {}
+    actor_email = _actor()
+    # Look up display name from team_members
+    author_name = None
+    if actor_email and actor_email != "unknown":
+        member = query(
+            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [actor_email]
+        )
+        if member:
+            author_name = member[0]["display_name"]
+    fb_id = str(uuid.uuid4())
     execute(
         f"""INSERT INTO {SCHEMA}.feedback
                (feedback_id, submitted_by, author_name, submitted_at,
                 source, rating, working_well, improve)
             VALUES (?, ?, ?, current_timestamp(), ?, ?, ?, ?)""",
         [fb_id,
-         actor.get("email"),
-         actor.get("name"),
+         actor_email,
+         author_name,
          data.get("source") or "unknown",
          int(data.get("rating") or 0),
          data.get("working_well") or None,

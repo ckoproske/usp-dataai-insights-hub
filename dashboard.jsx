@@ -9387,6 +9387,11 @@ function FeedbackInboxView() {
                   <span style={{ fontSize:13, fontWeight:600, color:TEXT }}>
                     {item.author_name || (item.submitted_by || "").split("@")[0] || "Anonymous"}
                   </span>
+                  {item.submitted_by && (
+                    <span style={{ fontSize:11, color:TEXT_MUTED, marginLeft:6 }}>
+                      {item.submitted_by}
+                    </span>
+                  )}
                   <span style={{ fontSize:11, color:TEXT_MUTED, marginLeft:10 }}>
                     {fmtDate(item.submitted_at)}
                   </span>
