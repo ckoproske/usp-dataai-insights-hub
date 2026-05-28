@@ -9594,7 +9594,7 @@ function App() {
       <style>{FONT_CSS}</style>
       <Sidebar activeView={activeView} onNavigate={setActiveView} data={data}/>
 
-      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,maxHeight:"100vh",overflowY:"auto"}}>
+      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,height:"100vh",overflowY:"auto"}}>
 
         {/* Top bar */}
         <div style={{
