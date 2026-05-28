@@ -589,7 +589,15 @@ def update_target_status(target_id):
     year       = data.get("year")
     completion = data.get("completion")
     notes      = data.get("notes")
-    updated_by = _actor(data) or data.get("updated_by", "dashboard")
+    email = request.headers.get("X-Forwarded-Email", "").strip() or None
+    if email:
+        member = query(
+            f"SELECT display_name FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
+            [email]
+        )
+        updated_by = (member[0]["display_name"] if member and member[0].get("display_name") else email)
+    else:
+        updated_by = data.get("updated_by") or "unknown"
     # M-1: verify parent execution_targets row exists before writing status
     parent = query(
         f"SELECT 1 FROM {SCHEMA}.execution_targets WHERE target_id = ? AND `year` = ?",
