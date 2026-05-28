@@ -43,10 +43,10 @@ const RETIRED_BOW_IDS = new Set(["ai-infra-bow3"]);
 
 
 const PORT_COLORS = {
-  "ai-infra":      { color: "#3086AB", light: "#EBF4F9", dark: "#1F5F80", label: "AI Infrastructure" },
-  "sfl":           { color: "#4EAB9A", light: "#ECF7F5", dark: "#337A6C", label: "System Feedback Loops" },
-  "cross-cutting": { color: "#A49A8C", light: "#F5F3ED", dark: "#7A7068", label: "Cross-Cutting Supports" },
-  "hub":           { color: "#FBAE40", light: "#FEF5E7", dark: "#C07D10", label: "Data & AI Enablement Hub" },
+  "ai-infra":      { color: "#0891B2", light: "#CFFAFE", dark: "#0E7490", label: "AI Infrastructure" },
+  "sfl":           { color: "#EC4899", light: "#FCE7F3", dark: "#BE185D", label: "System Feedback Loops" },
+  "cross-cutting": { color: "#64748B", light: "#F1F5F9", dark: "#475569", label: "Cross-Cutting Supports" },
+  "hub":           { color: "#9333EA", light: "#F3E8FF", dark: "#7E22CE", label: "Data & AI Enablement Hub" },
 };
 
 const PERIOD_OPTIONS = {
@@ -1723,25 +1723,36 @@ function IndicatorChipRow({ ind, accentColor, onEdit, yearSet }) {
     padding: "2px 9px", whiteSpace: "nowrap",
   };
 
+  const hasChips = (ind.status && ind.status !== "active") || ind.collection_frequency ||
+    ind.source_name || ind.source_id || ind.baseline != null || targets.length > 0;
+
   return (
     <div style={{ display: "flex", alignItems: "stretch", borderBottom: `1px solid ${BORDER}` }}>
       {/* Accent bar */}
-      <div style={{ width: 3, flexShrink: 0, background: accentColor || ACCENT, borderRadius: "2px 0 0 2px" }} />
+      <div style={{ width: 3, flexShrink: 0, background: accentColor || ACCENT }} />
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, padding: "10px 12px 10px 14px",
-        display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Name */}
-          <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, margin: "0 0 5px 0" }}>
-            {ind.name || ind.text}
-          </p>
-          {ind.name && ind.text && ind.text !== ind.name && (
-            <p style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: "0 0 5px 0" }}>
-              {ind.text}
+      <div style={{ flex: 1, minWidth: 0, padding: "11px 10px 11px 14px" }}>
+        {/* Name row */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: 1.4, margin: 0 }}>
+              {ind.name || ind.text}
             </p>
-          )}
-          {/* Meta chips */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {ind.name && ind.text && ind.text !== ind.name && (
+              <p style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5, margin: "3px 0 0 0" }}>
+                {ind.text}
+              </p>
+            )}
+          </div>
+          <button onClick={onEdit}
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 14, color: TEXT_MUTED, padding: "2px 4px", flexShrink: 0,
+              borderRadius: 4, lineHeight: 1, marginTop: 1 }}
+            title="Edit indicator">✎</button>
+        </div>
+        {/* Chips row — pushed right */}
+        {hasChips && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7, justifyContent: "flex-end" }}>
             {ind.status && ind.status !== "active" && <StatusBadge status={ind.status} />}
             {ind.collection_frequency && (
               <span style={chip}>{ind.collection_frequency}</span>
@@ -1763,13 +1774,7 @@ function IndicatorChipRow({ ind, accentColor, onEdit, yearSet }) {
               <span key={t.year} style={chip}>{t.year}: <strong style={{ marginLeft: 3 }}>{t.val}{unit}</strong></span>
             ))}
           </div>
-        </div>
-        {/* Edit button */}
-        <button onClick={onEdit}
-          style={{ background: "none", border: "none", cursor: "pointer",
-            fontSize: 14, color: TEXT_MUTED, padding: "4px 6px", flexShrink: 0,
-            borderRadius: 4, lineHeight: 1 }}
-          title="Edit indicator">✎</button>
+        )}
       </div>
     </div>
   );
