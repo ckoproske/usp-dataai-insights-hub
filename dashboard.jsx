@@ -8369,7 +8369,7 @@ function AllInvestmentsView({ onNavigate }) {
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: showNotes ? "auto" : "0%" }} />
+                <col style={{ width: showNotes ? "auto" : "32px" }} />
               </colgroup>
               <thead>
                 {(() => {
