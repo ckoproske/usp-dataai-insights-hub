@@ -6326,6 +6326,127 @@ function ActivityFeed({ bows, user }) {
   );
 }
 
+// ─── Feedback Modal ───────────────────────────────────────────────────────────
+function FeedbackModal({ onClose }) {
+  const [rating,  setRating]  = useState(0);
+  const [hov,     setHov]     = useState(0);
+  const [working, setWorking] = useState("");
+  const [improve, setImprove] = useState("");
+  const [saving,  setSaving]  = useState(false);
+  const [done,    setDone]    = useState(false);
+
+  const submit = async () => {
+    if (!rating) return;
+    setSaving(true);
+    await api("/api/feedback", {
+      method: "POST",
+      body: JSON.stringify({ rating, working_well: working.trim() || null, improve: improve.trim() || null, source: "portal" }),
+    });
+    setSaving(false);
+    setDone(true);
+  };
+
+  const STAR_C = "#F59E0B";
+  const starCol = (i) => (hov || rating) >= i ? STAR_C : BORDER;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex",
+      alignItems: "center", justifyContent: "center",
+      background: "rgba(15,23,42,0.45)", backdropFilter: "blur(2px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "32px 36px",
+        width: 480, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+        position: "relative" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16,
+          background: "none", border: "none", cursor: "pointer", fontSize: 20,
+          color: TEXT_MUTED, lineHeight: 1, padding: 4 }}>×</button>
+
+        {done ? (
+          <div style={{ textAlign: "center", padding: "16px 0" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🙏</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT, marginBottom: 8 }}>Thanks for the feedback!</div>
+            <div style={{ fontSize: 14, color: TEXT_SUB, marginBottom: 24, lineHeight: 1.6 }}>
+              Your input helps shape what gets built next.
+            </div>
+            <button onClick={onClose} style={{ padding: "8px 24px", borderRadius: 8, border: "none",
+              background: ACCENT, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT, marginBottom: 4 }}>Share your feedback</div>
+            <div style={{ fontSize: 13, color: TEXT_SUB, marginBottom: 24, lineHeight: 1.6 }}>
+              We're actively improving this tool — tell us what's working and what you'd like to see.
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, marginBottom: 10 }}>
+                How useful is this tool for your work right now?{" "}
+                <span style={{ color: DANGER }}>*</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {[1,2,3,4,5].map(i => (
+                  <span key={i} onClick={() => setRating(i)}
+                    onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(0)}
+                    style={{ fontSize: 30, cursor: "pointer", color: starCol(i),
+                      transition: "color 0.1s", lineHeight: 1, userSelect: "none" }}>★</span>
+                ))}
+                {rating > 0 && (
+                  <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: 4 }}>
+                    {["","Not useful","Slightly useful","Useful","Very useful","Essential"][rating]}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, marginBottom: 6 }}>
+                What's working well?{" "}
+                <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 400 }}>(optional)</span>
+              </div>
+              <textarea value={working} onChange={e => setWorking(e.target.value)} rows={2}
+                placeholder="e.g. The investment tracker is really handy…"
+                style={{ width: "100%", border: `1px solid ${BORDER}`, borderRadius: 8,
+                  padding: "8px 12px", fontSize: 13, fontFamily: "inherit", resize: "vertical",
+                  outline: "none", color: TEXT, background: SURFACE, boxSizing: "border-box", lineHeight: 1.5 }} />
+            </div>
+
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, marginBottom: 6 }}>
+                What would make this better, or what feature would you like to see?{" "}
+                <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 400 }}>(optional)</span>
+              </div>
+              <textarea value={improve} onChange={e => setImprove(e.target.value)} rows={3}
+                placeholder="e.g. I'd love to be able to filter by…"
+                style={{ width: "100%", border: `1px solid ${BORDER}`, borderRadius: 8,
+                  padding: "8px 12px", fontSize: 13, fontFamily: "inherit", resize: "vertical",
+                  outline: "none", color: TEXT, background: SURFACE, boxSizing: "border-box", lineHeight: 1.5 }} />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8,
+                border: `1px solid ${BORDER}`, background: SURFACE, color: TEXT_SUB,
+                fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={submit} disabled={!rating || saving}
+                style={{ padding: "8px 22px", borderRadius: 8, border: "none",
+                  background: rating ? ACCENT : BORDER,
+                  color: rating ? "#fff" : TEXT_MUTED,
+                  fontSize: 13, fontWeight: 700,
+                  cursor: rating ? "pointer" : "default",
+                  transition: "background 0.15s" }}>
+                {saving ? "Sending…" : "Submit Feedback"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── App shell ────────────────────────────────────────────────────────────────
 function PortalApp() {
   injectStyle();
@@ -6343,6 +6464,7 @@ function PortalApp() {
   const [selectedBow, setSelectedBow]           = useState(null);
   const [selectedPortfolio, setSelectedPortfolio] = useState(null);
   const [toast, setToast]                       = useState(null); // { message, variant }
+  const [showFeedback, setShowFeedback]         = useState(false);
   const toastTimer = useRef(null);
 
   const showToast = (message, variant = "success") => {
@@ -6446,17 +6568,29 @@ function PortalApp() {
             ← Dashboard
           </a>
         </div>
-        {user && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
-              {user.display_name}
-            </span>
-            <span style={{ fontSize: T_META, background: INFO_BG, color: INFO,
-              padding: "2px 9px", borderRadius: 10, fontWeight: 700 }}>
-              {user.permission_level}
-            </span>
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => setShowFeedback(true)}
+            style={{ display: "flex", alignItems: "center", gap: 6,
+              padding: "5px 14px", borderRadius: 7, cursor: "pointer",
+              background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
+              color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+              transition: "background 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.18)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+            💬 Give Feedback
+          </button>
+          {user && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
+                {user.display_name}
+              </span>
+              <span style={{ fontSize: T_META, background: INFO_BG, color: INFO,
+                padding: "2px 9px", borderRadius: 10, fontWeight: 700 }}>
+                {user.permission_level}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Landing screen */}
@@ -6666,6 +6800,8 @@ function PortalApp() {
         )}
       </div>
       )}
+
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }

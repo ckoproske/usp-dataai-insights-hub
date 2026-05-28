@@ -9204,12 +9204,239 @@ function BudgetForecastsView() {
   );
 }
 
-function Sidebar({ activeView, onNavigate, data }) {
+// ── FeedbackModal ─────────────────────────────────────────────────────────────
+function FeedbackModal({ onClose, source }) {
+  const [rating,   setRating]   = useState(0);
+  const [hov,      setHov]      = useState(0);
+  const [working,  setWorking]  = useState("");
+  const [improve,  setImprove]  = useState("");
+  const [saving,   setSaving]   = useState(false);
+  const [done,     setDone]     = useState(false);
+
+  const submit = async () => {
+    if (!rating) return;
+    setSaving(true);
+    try {
+      await apiFetch("/api/feedback", {
+        method: "POST",
+        body: JSON.stringify({ rating, working_well: working.trim() || null, improve: improve.trim() || null, source }),
+      });
+      setDone(true);
+    } catch {}
+    setSaving(false);
+  };
+
+  const STAR_C = "#F59E0B";
+  const starCol = (i) => (hov || rating) >= i ? STAR_C : BORDER;
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:9999, display:"flex",
+      alignItems:"center", justifyContent:"center",
+      background:"rgba(15,23,42,0.45)", backdropFilter:"blur(2px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px",
+        width:480, maxWidth:"90vw", boxShadow:"0 20px 60px rgba(0,0,0,0.18)",
+        position:"relative" }}>
+        <button onClick={onClose} style={{ position:"absolute", top:16, right:16,
+          background:"none", border:"none", cursor:"pointer", fontSize:20,
+          color:TEXT_MUTED, lineHeight:1, padding:4 }}>×</button>
+
+        {done ? (
+          <div style={{ textAlign:"center", padding:"16px 0" }}>
+            <div style={{ fontSize:36, marginBottom:12 }}>🙏</div>
+            <div style={{ fontSize:18, fontWeight:700, color:TEXT, marginBottom:8 }}>Thanks for the feedback!</div>
+            <div style={{ fontSize:14, color:TEXT_SUB, marginBottom:24, lineHeight:1.6 }}>
+              Your input helps shape what gets built next.
+            </div>
+            <button onClick={onClose} style={{ padding:"8px 24px", borderRadius:8, border:"none",
+              background:ACCENT, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize:18, fontWeight:700, color:TEXT, marginBottom:4 }}>Share your feedback</div>
+            <div style={{ fontSize:13, color:TEXT_SUB, marginBottom:24, lineHeight:1.6 }}>
+              We're actively improving this tool — tell us what's working and what you'd like to see.
+            </div>
+
+            {/* Star rating */}
+            <div style={{ marginBottom:24 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:TEXT, marginBottom:10 }}>
+                How useful is this tool for your work right now?{" "}
+                <span style={{ color:"#EF4444" }}>*</span>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                {[1,2,3,4,5].map(i => (
+                  <span key={i} onClick={() => setRating(i)}
+                    onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(0)}
+                    style={{ fontSize:30, cursor:"pointer", color:starCol(i),
+                      transition:"color 0.1s", lineHeight:1, userSelect:"none" }}>★</span>
+                ))}
+                {rating > 0 && (
+                  <span style={{ fontSize:12, color:TEXT_MUTED, marginLeft:4 }}>
+                    {["","Not useful","Slightly useful","Useful","Very useful","Essential"][rating]}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* What's working */}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:TEXT, marginBottom:6 }}>
+                What's working well?{" "}
+                <span style={{ fontSize:11, color:TEXT_MUTED, fontWeight:400 }}>(optional)</span>
+              </div>
+              <textarea value={working} onChange={e => setWorking(e.target.value)} rows={2}
+                placeholder="e.g. The investment tracker is really handy…"
+                style={{ width:"100%", border:"1px solid "+BORDER, borderRadius:8,
+                  padding:"8px 12px", fontSize:13, fontFamily:"inherit", resize:"vertical",
+                  outline:"none", color:TEXT, background:SURFACE, boxSizing:"border-box", lineHeight:1.5 }}/>
+            </div>
+
+            {/* Improve / feature */}
+            <div style={{ marginBottom:28 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:TEXT, marginBottom:6 }}>
+                What would make this better, or what feature would you like to see?{" "}
+                <span style={{ fontSize:11, color:TEXT_MUTED, fontWeight:400 }}>(optional)</span>
+              </div>
+              <textarea value={improve} onChange={e => setImprove(e.target.value)} rows={3}
+                placeholder="e.g. I'd love to be able to filter by…"
+                style={{ width:"100%", border:"1px solid "+BORDER, borderRadius:8,
+                  padding:"8px 12px", fontSize:13, fontFamily:"inherit", resize:"vertical",
+                  outline:"none", color:TEXT, background:SURFACE, boxSizing:"border-box", lineHeight:1.5 }}/>
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
+              <button onClick={onClose} style={{ padding:"8px 18px", borderRadius:8,
+                border:"1px solid "+BORDER, background:SURFACE, color:TEXT_SUB,
+                fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={submit} disabled={!rating || saving}
+                style={{ padding:"8px 22px", borderRadius:8, border:"none",
+                  background: rating ? ACCENT : BORDER,
+                  color: rating ? "#fff" : TEXT_MUTED,
+                  fontSize:13, fontWeight:700,
+                  cursor: rating ? "pointer" : "default",
+                  transition:"background 0.15s" }}>
+                {saving ? "Sending…" : "Submit Feedback"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── FeedbackInboxView (MLE only) ──────────────────────────────────────────────
+function FeedbackInboxView() {
+  const [items,   setItems]   = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch("/api/feedback")
+      .then(d => setItems(Array.isArray(d) ? d : []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const fmtDate = ts => {
+    if (!ts) return "—";
+    try {
+      const d = new Date(ts);
+      return d.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })
+        + "  " + d.toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit" });
+    } catch { return ts.slice(0, 16); }
+  };
+
+  const avgRating = items.length
+    ? (items.reduce((s, i) => s + (i.rating || 0), 0) / items.length).toFixed(1)
+    : null;
+
+  const STAR_C = "#F59E0B";
+
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:800 }}>
+      <div style={{ marginBottom:28 }}>
+        <h1 style={{ fontSize:22, fontWeight:700, color:TEXT, marginBottom:6 }}>Feedback Inbox</h1>
+        <p style={{ fontSize:14, color:TEXT_SUB }}>
+          {items.length} submission{items.length !== 1 ? "s" : ""}
+          {avgRating && (
+            <span> · avg rating{" "}
+              <strong style={{ color:STAR_C }}>★ {avgRating}</strong>
+            </span>
+          )}
+        </p>
+      </div>
+
+      {loading ? (
+        <div style={{ color:TEXT_MUTED, fontSize:14 }}>Loading…</div>
+      ) : items.length === 0 ? (
+        <div style={{ padding:"48px 0", textAlign:"center", color:TEXT_MUTED, fontSize:14 }}>
+          No feedback yet — share the link with the team!
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {items.map(item => (
+            <div key={item.feedback_id}
+              style={{ background:SURFACE, border:"1px solid "+BORDER, borderRadius:12, padding:"18px 22px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between",
+                alignItems:"flex-start", marginBottom: (item.working_well || item.improve) ? 14 : 0 }}>
+                <div>
+                  <span style={{ fontSize:13, fontWeight:600, color:TEXT }}>
+                    {item.author_name || (item.submitted_by || "").split("@")[0] || "Anonymous"}
+                  </span>
+                  <span style={{ fontSize:11, color:TEXT_MUTED, marginLeft:10 }}>
+                    {fmtDate(item.submitted_at)}
+                  </span>
+                  {item.source && (
+                    <span style={{ fontSize:10, fontWeight:600, color:TEXT_MUTED,
+                      background:"#F1F5F9", borderRadius:4, padding:"1px 6px",
+                      marginLeft:8, textTransform:"capitalize" }}>
+                      {item.source}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display:"flex", gap:1, flexShrink:0 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <span key={i} style={{ fontSize:16, color:item.rating >= i ? STAR_C : BORDER }}>★</span>
+                  ))}
+                </div>
+              </div>
+              {item.working_well && (
+                <div style={{ marginBottom: item.improve ? 12 : 0 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:TEXT_MUTED,
+                    textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
+                    What's working
+                  </div>
+                  <p style={{ fontSize:13, color:TEXT, lineHeight:1.6, margin:0 }}>{item.working_well}</p>
+                </div>
+              )}
+              {item.improve && (
+                <div>
+                  <div style={{ fontSize:10, fontWeight:700, color:TEXT_MUTED,
+                    textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
+                    Improve / Feature request
+                  </div>
+                  <p style={{ fontSize:13, color:TEXT, lineHeight:1.6, margin:0 }}>{item.improve}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Sidebar({ activeView, onNavigate, currentUser }) {
   const isStrategyActive  = activeView.type==="strategy";
   const isAllInvActive    = activeView.type==="all-investments";
   const isIdeaTrackerActive = activeView.type==="idea-tracker";
   const isBudgetActive    = activeView.type==="budget-forecasts";
   const isPortActive = (id) => activeView.type==="portfolio" && activeView.portId===id;
+  const isMLE = currentUser?.permission_level === "MLE";
 
   return (
     <div style={{
@@ -9310,8 +9537,16 @@ function Sidebar({ activeView, onNavigate, data }) {
       </div>
 
       {/* Footer */}
-      <div style={{padding:"14px 20px", borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{fontSize:10, color:"rgba(255,255,255,0.2)", letterSpacing:0.5}}>Draft · Do Not Distribute</div>
+      <div style={{padding:"14px 20px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", gap:8}}>
+        {isMLE && (
+          <NavItem
+            label="Feedback Inbox"
+            icon={<span style={{fontSize:12}}>📬</span>}
+            active={activeView.type==="feedback-inbox"}
+            onClick={()=>onNavigate({type:"feedback-inbox"})}
+          />
+        )}
+        <div style={{fontSize:10, color:"rgba(255,255,255,0.2)", letterSpacing:0.5, paddingLeft:10}}>Draft · Do Not Distribute</div>
       </div>
     </div>
   );
@@ -9374,6 +9609,7 @@ function App() {
 
   const [usingPlaceholder, setUsingPlaceholder] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false); // "ok" | "db-error" | false
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     apiFetch("/api/me").then(u => { if (u) setCurrentUser(u); }).catch(() => {});
@@ -9476,7 +9712,7 @@ function App() {
   return (
     <div style={{fontFamily:"Calibri,'Segoe UI',Arial,sans-serif",minHeight:"100vh",background:BG,display:"flex",color:TEXT}}>
       <style>{FONT_CSS}</style>
-      <Sidebar activeView={activeView} onNavigate={setActiveView} data={data}/>
+      <Sidebar activeView={activeView} onNavigate={setActiveView} data={data} currentUser={currentUser}/>
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,height:"100vh",overflowY:"auto"}}>
 
@@ -9502,6 +9738,19 @@ function App() {
               {saveStatus==="saving"&&<><span style={{width:5,height:5,borderRadius:"50%",background:YELLOW,display:"inline-block",animation:"pulse 1s ease-in-out infinite"}}/><span>Saving</span></>}
               {saveStatus==="saved"&&<><span style={{width:5,height:5,borderRadius:"50%",background:"#10B981",display:"inline-block"}}/><span>Saved</span></>}
             </div>
+            {/* Give Feedback button */}
+            <button onClick={() => setShowFeedback(true)}
+              style={{
+                display:"flex",alignItems:"center",gap:6,
+                padding:"7px 14px", background:SURFACE,
+                border:"1px solid "+BORDER, borderRadius:8,
+                fontSize:12, fontWeight:600, cursor:"pointer",
+                color:TEXT_SUB, transition:"border-color .15s, color .15s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=ACCENT;e.currentTarget.style.color=ACCENT;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.color=TEXT_SUB;}}>
+              💬 Give Feedback
+            </button>
             {/* Submit Data button */}
             <a
               href="/portal"
@@ -9553,6 +9802,9 @@ function App() {
           {activeView.type==="budget-forecasts"&&(
             <BudgetForecastsView/>
           )}
+          {activeView.type==="feedback-inbox"&&(
+            <FeedbackInboxView/>
+          )}
           {activeView.type==="portfolio"&&activePortData&&(
             <PortfolioDashboard
               portId={activePortId}
@@ -9568,6 +9820,8 @@ function App() {
           )}
         </div>
       </div>
+
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} source="dashboard" />}
     </div>
   );
 }

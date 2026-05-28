@@ -3266,6 +3266,42 @@ def delete_activity(log_id):
     return jsonify({"deleted": log_id})
 
 
+# ── Feedback ──────────────────────────────────────────────────────────────────
+
+@app.route("/api/feedback", methods=["POST"])
+def submit_feedback():
+    data    = request.json or {}
+    actor   = _actor()
+    fb_id   = str(uuid.uuid4())
+    execute(
+        f"""INSERT INTO {SCHEMA}.feedback
+               (feedback_id, submitted_by, author_name, submitted_at,
+                source, rating, working_well, improve)
+            VALUES (?, ?, ?, current_timestamp(), ?, ?, ?, ?)""",
+        [fb_id,
+         actor.get("email"),
+         actor.get("name"),
+         data.get("source") or "unknown",
+         int(data.get("rating") or 0),
+         data.get("working_well") or None,
+         data.get("improve")      or None]
+    )
+    return jsonify({"feedback_id": fb_id})
+
+
+@app.route("/api/feedback", methods=["GET"])
+def get_feedback():
+    rows = query(
+        f"""SELECT feedback_id, submitted_by, author_name,
+                   CAST(submitted_at AS STRING) AS submitted_at,
+                   source, rating, working_well, improve
+              FROM {SCHEMA}.feedback
+             ORDER BY submitted_at DESC
+             LIMIT 200"""
+    )
+    return jsonify(rows or [])
+
+
 # ── Sources registry ──────────────────────────────────────────────────────────
 # Schema (run once in Databricks):
 #   CREATE TABLE usp_data.usp_strategy.sources (
