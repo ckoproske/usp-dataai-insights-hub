@@ -1012,7 +1012,9 @@ async function loadFromAPI() {
             byOutcome[ind.outcome_id][ind.indicator_id] = {
               id:          ind.indicator_id,
               text:        ind.text || "",
-              source:      ind.data_source || "",
+              source:      ind.source_name || ind.data_source || "",
+              source_name: ind.source_name || "",
+              source_url:  ind.source_url  || "",
               baseline:    ind.baseline !== null ? String(ind.baseline) : "",
               updateFreq:  ind.collection_frequency || "",
               lastUpdated: "",   // populated below from most recent reading_date
@@ -1084,7 +1086,9 @@ async function loadFromAPI() {
           indsByOutcome[a.outcome_id][a.indicator_id] = {
             id:          a.indicator_id,
             text:        a.text || "",
-            source:      a.data_source || "",
+            source:      a.source_name || a.data_source || "",
+            source_name: a.source_name || "",
+            source_url:  a.source_url  || "",
             baseline:    a.baseline !== null ? String(a.baseline) : "",
             manualStatus: null,
             targets: {

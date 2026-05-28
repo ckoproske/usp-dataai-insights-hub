@@ -661,21 +661,25 @@ def get_indicators(bow_id):
                   i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
                   i.baseline, i.collection_frequency, i.unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  i.source_id,
+                  s.source_name, s.source_url,
                   a.year, a.period, a.actual_value, a.reading_date, a.source_notes
                 FROM {SCHEMA}.bow_indicators i
                 {actuals_join}
+                LEFT JOIN {SCHEMA}.sources s ON i.source_id = s.source_id
                 WHERE i.bow_id = ?
                   AND COALESCE(i.is_active, true) = true
                 ORDER BY i.outcome_id, i.indicator_id, a.year, a.period""",
             [bow_id]
         )
     except Exception:
-        # Fallback: omit optional columns (unit) if migration hasn't run yet
+        # Fallback: omit optional columns if migration hasn't run yet
         rows = query(
             f"""SELECT
                   i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
                   i.baseline, i.collection_frequency, NULL AS unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
+                  NULL AS source_id, NULL AS source_name, NULL AS source_url,
                   a.year, a.period, a.actual_value, a.reading_date, a.source_notes
                 FROM {SCHEMA}.bow_indicators i
                 {actuals_join}
@@ -700,10 +704,14 @@ def get_portfolio_actuals(portfolio_id):
               i.target_2028,
               i.target_2029,
               i.target_2030,
+              i.source_id,
+              s.source_name,
+              s.source_url,
               a.year,
               a.actual_value,
               a.reading_date
             FROM {SCHEMA}.portfolio_indicators i
+            LEFT JOIN {SCHEMA}.sources s ON i.source_id = s.source_id
             LEFT JOIN (
               SELECT a1.*
               FROM {SCHEMA}.portfolio_indicator_actuals a1
