@@ -8361,19 +8361,19 @@ function AllInvestmentsView({ onNavigate }) {
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
               <colgroup>
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "5%" }} />
                 <col style={{ width: "13%" }} />
-                <col style={{ width: "9%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "10%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "7%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: showNotes ? "auto" : "32px" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: showNotes ? "13%" : "32px" }} />
               </colgroup>
               <thead>
                 {(() => {
