@@ -6314,32 +6314,18 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
   });
   const [saving, setSaving]         = useState(false);
   const [saveMsg, setSaveMsg]       = useState(null);
-  const [commentText, setCommentText] = useState("");
-  const [addingComment, setAddingComment] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
   const [approveComment, setApproveComment] = useState("");
   const [approvingSaving, setApprovingSaving] = useState(false);
   const [movedOpen, setMovedOpen]   = useState(false);
   const [invNumber, setInvNumber]   = useState("");
-  const [localComments, setLocalComments] = useState([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState(null);
-  const [deletingCommentId, setDeletingCommentId] = useState(null);
   const [requestChangesOpen, setRequestChangesOpen]   = useState(false);
   const [requestChangesNote, setRequestChangesNote]   = useState("");
   const [requestChangesSaving, setRequestChangesSaving] = useState(false);
 
   const handleFieldChange = (field, val) => setEditDraft(d => ({ ...d, [field]: val }));
-
-  useEffect(() => {
-    if (!idea.idea_id) return;
-    setCommentsLoading(true);
-    apiFetch(`/api/investment-ideas/${idea.idea_id}/comments`)
-      .then(c => { setLocalComments(c || []); setCommentsLoading(false); })
-      .catch(() => setCommentsLoading(false));
-  }, [idea.idea_id]);
 
   const handleSave = async () => {
     setSaving(true); setSaveMsg(null);
@@ -6358,44 +6344,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
     }
   };
 
-  const handleAddComment = async () => {
-    if (!commentText.trim()) return;
-    setAddingComment(true);
-    try {
-      const result = await apiFetch(`/api/investment-ideas/${idea.idea_id}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ comment: commentText }),
-      });
-      // Always build the full comment object locally — the API only returns {status, comment_id}
-      const newComment = {
-        comment_id: result?.comment_id || String(Date.now()),
-        idea_id: idea.idea_id,
-        comment_text: commentText,
-        commented_by: currentUser?.display_name || currentUser?.email || "You",
-        commented_at: new Date().toISOString(),
-        is_approval_comment: false,
-      };
-      setLocalComments(prev => [...prev, newComment]);
-      setCommentText("");
-    } catch {
-      // silent
-    } finally {
-      setAddingComment(false);
-    }
-  };
-
-  const handleDeleteComment = async (commentId) => {
-    setDeletingCommentId(commentId);
-    try {
-      await apiFetch(`/api/investment-ideas/${idea.idea_id}/comments/${commentId}`, { method: "DELETE" });
-      setLocalComments(prev => prev.filter(c => c.comment_id !== commentId));
-    } catch {
-      // silent
-    } finally {
-      setDeletingCommentId(null);
-      setConfirmDeleteCommentId(null);
-    }
-  };
 
   const handleApprove = async () => {
     setApprovingSaving(true);
@@ -6771,71 +6719,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
           )}
         </div>
 
-        {/* Comments */}
-        <div style={{ borderTop: "1px solid " + BORDER, paddingTop: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
-            textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
-            Comments ({localComments.length})
-          </div>
-          {localComments.length === 0 && (
-            <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>No comments yet.</div>
-          )}
-          {localComments.map((c, i) => (
-            <div key={c.comment_id || i} style={{
-              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
-              padding: "10px 12px", marginBottom: 8,
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                <div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{c.commented_by}</span>
-                  <span style={{ fontSize: 10, color: TEXT_MUTED, marginLeft: 8 }}>
-                    {c.commented_at ? new Date(c.commented_at).toLocaleDateString() : ""}
-                  </span>
-                </div>
-                {confirmDeleteCommentId === c.comment_id ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 10, color: "#DC2626", fontWeight: 600 }}>Delete?</span>
-                    <button onClick={() => handleDeleteComment(c.comment_id)}
-                      disabled={deletingCommentId === c.comment_id}
-                      style={{ padding: "2px 7px", borderRadius: 4, border: "none",
-                        background: "#DC2626", color: "#fff", fontSize: 10, fontWeight: 700,
-                        cursor: "pointer", opacity: deletingCommentId === c.comment_id ? 0.6 : 1 }}>
-                      {deletingCommentId === c.comment_id ? "…" : "Yes"}
-                    </button>
-                    <button onClick={() => setConfirmDeleteCommentId(null)}
-                      style={{ padding: "2px 7px", borderRadius: 4, border: "1px solid " + BORDER,
-                        background: BG, color: TEXT_MUTED, fontSize: 10, cursor: "pointer" }}>
-                      No
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={() => setConfirmDeleteCommentId(c.comment_id)}
-                    style={{ background: "none", border: "none", cursor: "pointer",
-                      color: TEXT_MUTED, fontSize: 14, lineHeight: 1, padding: "0 2px",
-                      opacity: 0.4, flexShrink: 0 }}>
-                    ×
-                  </button>
-                )}
-              </div>
-              <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.5 }}>{c.comment_text}</div>
-            </div>
-          ))}
-          <div style={{ marginTop: 8 }}>
-            <textarea value={commentText} onChange={e => setCommentText(e.target.value)}
-              placeholder="Add a comment…" rows={2}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 7,
-                border: "1px solid " + BORDER, fontSize: 13, fontFamily: "inherit",
-                color: TEXT, background: SURFACE, resize: "vertical",
-                outline: "none", lineHeight: 1.5, boxSizing: "border-box", marginBottom: 6 }}/>
-            <button onClick={handleAddComment} disabled={addingComment || !commentText.trim()}
-              style={{ padding: "6px 16px", borderRadius: 7, border: "none",
-                background: accentColor, color: "#fff", fontWeight: 700, fontSize: 12,
-                cursor: (addingComment || !commentText.trim()) ? "default" : "pointer",
-                opacity: (addingComment || !commentText.trim()) ? 0.6 : 1 }}>
-              {addingComment ? "Adding…" : "Add Comment"}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -7411,7 +7294,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                             : "3px solid transparent",
                         }}>
                         <td style={{ padding: "9px 14px", fontWeight: 600, color: TEXT,
-                          minWidth: 180, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          minWidth: 180, maxWidth: 240, whiteSpace: "normal", lineHeight: 1.45 }}>
                           {idea.title || "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB,
@@ -7478,8 +7361,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                           minWidth: 140, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
                           {idea.additional_bows || "—"}
                         </td>
-                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
-                          minWidth: 130, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB,
+                          minWidth: 130, maxWidth: 180, whiteSpace: "normal", lineHeight: 1.45 }}>
                           {idea.potential_partner || "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 80 }}>
