@@ -7075,7 +7075,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   return (
     <div style={{
       display: "flex", flexDirection: "column",
-      height: "100%", minHeight: 0, position: "relative",
+      flex: 1, minHeight: 0, position: "relative",
     }}>
 
         {/* Header */}
@@ -9653,7 +9653,7 @@ function App() {
         </div>
 
         {/* Page content */}
-        <div style={{flex:1,padding:activeView.type==="data-model"?"0":"32px 36px",maxWidth:activeView.type==="data-model"?"100%":1600,width:"100%",margin:"0 auto",boxSizing:"border-box",display:"flex",flexDirection:"column"}}>
+        <div style={{flex:1,minHeight:0,padding:(activeView.type==="data-model"||activeView.type==="idea-tracker")?"0":"32px 36px",maxWidth:(activeView.type==="data-model"||activeView.type==="idea-tracker")?"100%":1600,width:"100%",margin:"0 auto",boxSizing:"border-box",display:"flex",flexDirection:"column",overflow:(activeView.type==="idea-tracker")?"hidden":"visible"}}>
           {activeView.type==="data-model"&&(
             <DataModelExplorer/>
           )}
