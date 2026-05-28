@@ -30,7 +30,7 @@ COMMENT 'Unit of measurement — e.g. %, #, $, schools, learners, partners';
 -- How often data is collected — drives period selector in submission portal
 ALTER TABLE usp_data.usp_strategy.bow_indicators
 ADD COLUMN IF NOT EXISTS collection_frequency STRING
-COMMENT 'annual | quarterly | bimonthly | monthly — drives period selector in submission portal';
+COMMENT 'annual | biannually | quarterly | bimonthly | monthly — drives period selector in submission portal';
 
 -- FK to sources table — resolves to source_name / source_url at query time
 ALTER TABLE usp_data.usp_strategy.bow_indicators
@@ -81,7 +81,7 @@ COMMENT 'Unit of measurement — e.g. %, #, $, schools, learners, partners';
 
 ALTER TABLE usp_data.usp_strategy.portfolio_indicators
 ADD COLUMN IF NOT EXISTS collection_frequency STRING
-COMMENT 'annual | quarterly | bimonthly | monthly';
+COMMENT 'annual | biannually | quarterly | bimonthly | monthly';
 
 ALTER TABLE usp_data.usp_strategy.portfolio_indicators
 ADD COLUMN IF NOT EXISTS source_id STRING
