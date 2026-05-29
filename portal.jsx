@@ -601,8 +601,9 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
 }
 
 // ─── Source Picker (with inline create) ────────────────────────────────────────
-function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = false }) {
+function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = false, bowId }) {
   const [sources, setSources]           = useState([]);
+  const [bowSources, setBowSources]     = useState([]);
   const [rounds, setRounds]             = useState([]);
   const [creating, setCreating]         = useState(false);
   const [creatingRound, setCreatingRound] = useState(false);
@@ -622,6 +623,12 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
   useEffect(() => {
     api("/api/sources").then(d => setSources(Array.isArray(d) ? d : []));
   }, []);
+
+  useEffect(() => {
+    if (bowId) {
+      api(`/api/bow/${bowId}/sources`).then(d => setBowSources(Array.isArray(d) ? d : []));
+    }
+  }, [bowId]);
 
   useEffect(() => {
     if (sourceId) {
@@ -652,6 +659,9 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
       onChange(res.source_id, null, newName);
       setCreating(false);
       setNewName(""); setNewType(""); setNewUrl(""); setNewOwner(""); setNewCoverage("");
+      if (bowId) {
+        api(`/api/bow/${bowId}/sources`).then(d => setBowSources(Array.isArray(d) ? d : []));
+      }
     }
     setSaving(false);
   };
@@ -677,17 +687,36 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
 
   return (
     <div>
-      {!creating ? (
-        <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
-          style={{ ...inputStyle, appearance: "auto" }}>
-          <option value="">No source linked</option>
-          {sources.map(s => (
-            <option key={s.source_id} value={s.source_id}>{s.source_name}
-              {s.source_type ? ` — ${SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}` : ""}
-            </option>
-          ))}
-          <option value="__new__">+ Create new source…</option>
-        </select>
+      {!creating ? (() => {
+        const bowSourceIds = new Set(bowSources.map(s => s.source_id));
+        const otherSources = sources.filter(s => !bowSourceIds.has(s.source_id));
+        const renderOpt = s => (
+          <option key={s.source_id} value={s.source_id}>
+            {s.source_name}{s.source_type ? ` — ${SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}` : ""}
+          </option>
+        );
+        return (
+          <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">No source linked</option>
+            {bowId && bowSources.length > 0 && (
+              <optgroup label="This BOW">
+                {bowSources.map(renderOpt)}
+              </optgroup>
+            )}
+            {bowId ? (
+              otherSources.length > 0 && (
+                <optgroup label="Other sources">
+                  {otherSources.map(renderOpt)}
+                </optgroup>
+              )
+            ) : (
+              sources.map(renderOpt)
+            )}
+            <option value="__new__">+ Create new source…</option>
+          </select>
+        );
+      })()
       ) : (
         <div style={{ padding: 12, background: BG, border: `1px solid ${BORDER}`,
           borderRadius: 6, marginTop: 4 }}>
@@ -992,7 +1021,7 @@ function InvestmentsInputsEditor({ outcome, toaActivities, user, onSaved, onCanc
   );
 }
 
-function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isPortfolio }) {
+function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isPortfolio, bowId }) {
   // For linked portfolio indicators, use the simplified targets-only form
   if (isPortfolio && indicator.bow_indicator_id) {
     return <InlineEditIndicatorLinked indicator={indicator} onSave={onSave}
@@ -1100,7 +1129,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       <Field label="Source">
         <SourcePickerInline sourceId={sourceId} roundId={null}
           onChange={(sid, _rid, sname) => { setSourceId(sid); if (sname !== undefined) setSourceName(sname || ""); }}
-          user={user} />
+          user={user} bowId={bowId} />
       </Field>
 
       {/* ── Classification ── */}
@@ -2450,6 +2479,234 @@ function CommentsPanel({ entityType, entityId }) {
   );
 }
 
+// ─── BOW Sources Manager ────────────────────────────────────────────────────────
+function BowSourcesManager({ bow, user }) {
+  const [sources, setSources]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [editId, setEditId]         = useState(null);
+  const [editFields, setEditFields] = useState({});
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [deleting, setDeleting]     = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [creating, setCreating]     = useState(false);
+  const [newFields, setNewFields]   = useState({ name: "", type: "", url: "", owner: "", coverage: "" });
+  const [saving, setSaving]         = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    api(`/api/bow/${bow.bow_id}/sources`)
+      .then(d => setSources(Array.isArray(d) ? d : []))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, [bow.bow_id]);
+
+  const startEdit = s => {
+    setEditId(s.source_id);
+    setEditFields({ name: s.source_name, type: s.source_type || "",
+      url: s.source_url || "", owner: s.owner || "", coverage: s.coverage_notes || "" });
+  };
+
+  const saveEdit = async () => {
+    if (!editFields.name.trim()) return;
+    setSaving(true);
+    await api(`/api/sources/${editId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ source_name: editFields.name, source_type: editFields.type || null,
+        source_url: editFields.url || null, owner: editFields.owner || null,
+        coverage_notes: editFields.coverage || null }),
+    });
+    setEditId(null);
+    load();
+    setSaving(false);
+  };
+
+  const doDelete = async id => {
+    setDeleting(id); setDeleteError(null);
+    const res = await api(`/api/sources/${id}`, { method: "DELETE" });
+    if (res.error) { setDeleteError(res.error); setDeleting(null); return; }
+    setConfirmDel(null);
+    load();
+    setDeleting(null);
+  };
+
+  const createSource = async () => {
+    if (!newFields.name.trim()) return;
+    setSaving(true);
+    await api("/api/sources", {
+      method: "POST",
+      body: JSON.stringify({ source_name: newFields.name, source_type: newFields.type || null,
+        source_url: newFields.url || null, owner: newFields.owner || null,
+        coverage_notes: newFields.coverage || null, created_by: user?.email }),
+    });
+    setCreating(false);
+    setNewFields({ name: "", type: "", url: "", owner: "", coverage: "" });
+    load();
+    setSaving(false);
+  };
+
+  const typeLabel = v => SOURCE_TYPES.find(t => t.value === v)?.label || v;
+
+  return (
+    <div style={{ padding: "4px 0" }}>
+      {loading ? (
+        <Skeleton height={120} />
+      ) : sources.length === 0 && !creating ? (
+        <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", marginBottom: 16 }}>
+          No sources linked to indicators in this BOW yet.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          {sources.map(s => (
+            <div key={s.source_id} style={{ border: `1px solid ${BORDER}`, borderRadius: 7,
+              padding: "12px 14px", background: BG }}>
+              {editId === s.source_id ? (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+                    <Field label="Source name" required>
+                      <input value={editFields.name} onChange={e => setEditFields(p => ({ ...p, name: e.target.value }))}
+                        style={inputStyle} />
+                    </Field>
+                    <Field label="Type">
+                      <select value={editFields.type} onChange={e => setEditFields(p => ({ ...p, type: e.target.value }))}
+                        style={{ ...inputStyle, appearance: "auto" }}>
+                        <option value="">Select…</option>
+                        {SOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                    <Field label="URL / file link">
+                      <input value={editFields.url} onChange={e => setEditFields(p => ({ ...p, url: e.target.value }))}
+                        placeholder="https://…" style={inputStyle} />
+                    </Field>
+                    <Field label="Owner / contact">
+                      <input value={editFields.owner} onChange={e => setEditFields(p => ({ ...p, owner: e.target.value }))}
+                        style={inputStyle} />
+                    </Field>
+                  </div>
+                  <Field label="Coverage notes">
+                    <input value={editFields.coverage} onChange={e => setEditFields(p => ({ ...p, coverage: e.target.value }))}
+                      style={inputStyle} />
+                  </Field>
+                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <Btn size="sm" onClick={saveEdit} disabled={!editFields.name.trim() || saving}>
+                      {saving ? "Saving…" : "Save"}
+                    </Btn>
+                    <Btn variant="secondary" size="sm" onClick={() => setEditId(null)}>Cancel</Btn>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: "flex", alignItems: "flex-start",
+                    justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 2 }}>
+                        {s.source_name}
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 12px" }}>
+                        {s.source_type && (
+                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>{typeLabel(s.source_type)}</span>
+                        )}
+                        {s.owner && (
+                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>Owner: {s.owner}</span>
+                        )}
+                        {s.source_url && (
+                          <a href={s.source_url} target="_blank" rel="noreferrer"
+                            style={{ fontSize: 11, color: ACCENT }}>
+                            Link ↗
+                          </a>
+                        )}
+                        <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                          {s.usage_count} indicator{s.usage_count !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      {s.coverage_notes && (
+                        <p style={{ fontSize: 11, color: TEXT_SUB, marginTop: 4, lineHeight: 1.4 }}>
+                          {s.coverage_notes}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      <Btn variant="ghost" size="sm" onClick={() => startEdit(s)}>Edit</Btn>
+                      {deleting === s.source_id ? (
+                        <span style={{ fontSize: 12, color: TEXT_MUTED, padding: "4px 6px",
+                          fontStyle: "italic" }}>Deleting…</span>
+                      ) : confirmDel === s.source_id ? (
+                        <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: TEXT_MUTED }}>Delete?</span>
+                          <Btn variant="danger" size="sm" onClick={() => doDelete(s.source_id)}>Yes</Btn>
+                          <Btn variant="ghost" size="sm"
+                            onClick={() => { setConfirmDel(null); setDeleteError(null); }}>No</Btn>
+                        </span>
+                      ) : (
+                        <Btn variant="ghost" size="sm"
+                          onClick={() => { setConfirmDel(s.source_id); setDeleteError(null); }}
+                          style={{ color: DANGER }}>Delete</Btn>
+                      )}
+                    </div>
+                  </div>
+                  {deleteError && confirmDel === s.source_id && (
+                    <p style={{ fontSize: 12, color: DANGER, marginTop: 6 }}>{deleteError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {creating ? (
+        <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 7, padding: "14px 16px",
+          background: SURFACE }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: ACCENT, textTransform: "uppercase",
+            letterSpacing: 0.5, marginBottom: 10 }}>New source</p>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+            <Field label="Source name" required>
+              <input value={newFields.name} onChange={e => setNewFields(p => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Annual Team Survey 2025" style={inputStyle} />
+            </Field>
+            <Field label="Type">
+              <select value={newFields.type} onChange={e => setNewFields(p => ({ ...p, type: e.target.value }))}
+                style={{ ...inputStyle, appearance: "auto" }}>
+                <option value="">Select…</option>
+                {SOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <Field label="URL / file link">
+              <input value={newFields.url} onChange={e => setNewFields(p => ({ ...p, url: e.target.value }))}
+                placeholder="https://…" style={inputStyle} />
+            </Field>
+            <Field label="Owner / contact">
+              <input value={newFields.owner} onChange={e => setNewFields(p => ({ ...p, owner: e.target.value }))}
+                style={inputStyle} />
+            </Field>
+          </div>
+          <Field label="Coverage notes">
+            <input value={newFields.coverage} onChange={e => setNewFields(p => ({ ...p, coverage: e.target.value }))}
+              placeholder="e.g. Covers grantees in SSA, 2023–present" style={inputStyle} />
+          </Field>
+          <p style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 8, fontStyle: "italic" }}>
+            After saving, select this source on an indicator to link it to this BOW.
+          </p>
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <Btn size="sm" onClick={createSource} disabled={!newFields.name.trim() || saving}>
+              {saving ? "Saving…" : "Save source"}
+            </Btn>
+            <Btn variant="secondary" size="sm" onClick={() => setCreating(false)}>Cancel</Btn>
+          </div>
+        </div>
+      ) : (
+        <Btn variant="ghost" size="sm" onClick={() => setCreating(true)}
+          style={{ color: ACCENT, fontWeight: 700 }}>
+          + Add source
+        </Btn>
+      )}
+    </div>
+  );
+}
+
 // ─── BOW Panel ─────────────────────────────────────────────────────────────────
 function BowPanel({ bow, user, onBack }) {
   const [data, setData]           = useState(null);
@@ -2528,6 +2785,11 @@ function BowPanel({ bow, user, onBack }) {
           <h2 style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{bow.title}</h2>
           {p && <PortfolioPill portfolioId={bow.portfolio_id} />}
         </div>
+        <Btn variant="ghost" size="sm"
+          onClick={() => openDrawer({ type: "manage-sources" })}
+          style={{ flexShrink: 0, color: TEXT_MUTED, fontSize: 12 }}>
+          Manage sources
+        </Btn>
       </div>
 
       {/* ── BOW Description ── */}
@@ -2604,17 +2866,19 @@ function BowPanel({ bow, user, onBack }) {
         isOpen={!!drawerCtx}
         onClose={closeDrawer}
         title={
-          drawerCtx?.type === "indicator"     ? "Edit Indicator"    :
-          drawerCtx?.type === "add-indicator" ? "Add Indicator"     :
-          drawerCtx?.type === "outcome"       ? "Edit Outcome"      :
-          drawerCtx?.type === "add-outcome"   ? "Add Outcome"       :
-          drawerCtx?.type === "bow-desc"      ? "Edit Description"  :
+          drawerCtx?.type === "indicator"        ? "Edit Indicator"    :
+          drawerCtx?.type === "add-indicator"    ? "Add Indicator"     :
+          drawerCtx?.type === "outcome"          ? "Edit Outcome"      :
+          drawerCtx?.type === "add-outcome"      ? "Add Outcome"       :
+          drawerCtx?.type === "bow-desc"         ? "Edit Description"  :
+          drawerCtx?.type === "manage-sources"   ? "Manage Sources"    :
           "Edit"
         }
         subtitle={bow.title}
       >
         {drawerCtx?.type === "indicator" && (
           <InlineEditIndicator indicator={drawerCtx.item} user={user}
+            bowId={bow.bow_id}
             onSave={() => { closeDrawer(); load(); }}
             onCancel={closeDrawer}
             onDeleted={() => { closeDrawer(); load(); }} />
@@ -2638,6 +2902,9 @@ function BowPanel({ bow, user, onBack }) {
           <BowDescEditor bow={bow} data={drawerCtx.item} user={user}
             onSaved={() => { closeDrawer(); load(); }}
             onCancel={closeDrawer} />
+        )}
+        {drawerCtx?.type === "manage-sources" && (
+          <BowSourcesManager bow={bow} user={user} />
         )}
       </SideDrawer>
 

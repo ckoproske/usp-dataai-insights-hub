@@ -3493,6 +3493,48 @@ def create_source():
     return jsonify({"status": "ok", "source_id": sid})
 
 
+@app.route("/api/bow/<bow_id>/sources")
+def list_bow_sources(bow_id):
+    try:
+        rows = query(
+            f"""SELECT s.source_id, s.source_name, s.source_type, s.source_url,
+                       s.owner, s.coverage_notes,
+                       COUNT(i.indicator_id) AS usage_count
+                FROM {SCHEMA}.sources s
+                INNER JOIN {SCHEMA}.bow_indicators i ON i.source_id = s.source_id
+                WHERE i.bow_id = ?
+                GROUP BY s.source_id, s.source_name, s.source_type, s.source_url,
+                         s.owner, s.coverage_notes
+                ORDER BY s.source_name""",
+            [bow_id]
+        )
+    except Exception:
+        rows = []
+    return jsonify(rows)
+
+
+@app.route("/api/sources/<source_id>", methods=["DELETE"])
+def delete_source(source_id):
+    try:
+        bow_rows  = query(
+            f"SELECT COUNT(*) AS cnt FROM {SCHEMA}.bow_indicators WHERE source_id = ?",
+            [source_id]
+        )
+        port_rows = query(
+            f"SELECT COUNT(*) AS cnt FROM {SCHEMA}.portfolio_indicators WHERE source_id = ?",
+            [source_id]
+        )
+        total = (bow_rows[0]["cnt"] if bow_rows else 0) + (port_rows[0]["cnt"] if port_rows else 0)
+        if total > 0:
+            noun = "indicator" if total == 1 else "indicators"
+            return jsonify({"error": f"This source is linked to {total} {noun}. Unlink it from all indicators before deleting."}), 400
+        execute(f"DELETE FROM {SCHEMA}.source_rounds WHERE source_id = ?", [source_id])
+        execute(f"DELETE FROM {SCHEMA}.sources WHERE source_id = ?", [source_id])
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/sources/<source_id>", methods=["PATCH"])
 def update_source(source_id):
     data    = request.json or {}
