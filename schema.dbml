@@ -23,11 +23,10 @@ Table strategy_goals {
 }
 
 Table portfolios {
-  portfolio_id      string [pk]
-  title             string
-  description       string
-  problem_statement string
-  sort_order        int
+  portfolio_id  string [pk]
+  title         string
+  description   string
+  sort_order    int
 }
 
 Table portfolio_goal_links {
