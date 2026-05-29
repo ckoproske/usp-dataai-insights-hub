@@ -3493,6 +3493,32 @@ def create_source():
     return jsonify({"status": "ok", "source_id": sid})
 
 
+@app.route("/api/sources/browse")
+def browse_sources():
+    """Returns all sources with portfolio/BOW context, optionally excluding one BOW."""
+    exclude_bow = request.args.get("exclude_bow")
+    try:
+        where  = "WHERE b.bow_id != ?" if exclude_bow else ""
+        params = [exclude_bow] if exclude_bow else []
+        rows = query(
+            f"""SELECT DISTINCT
+                    s.source_id, s.source_name, s.source_type, s.source_url,
+                    s.owner, s.coverage_notes,
+                    b.bow_id, b.title AS bow_title,
+                    b.portfolio_id, p.label AS portfolio_label
+                FROM {SCHEMA}.sources s
+                JOIN {SCHEMA}.bow_indicators i ON i.source_id = s.source_id
+                JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
+                JOIN {SCHEMA}.portfolios p ON p.portfolio_id = b.portfolio_id
+                {where}
+                ORDER BY p.label, b.title, s.source_name""",
+            params
+        )
+    except Exception:
+        rows = []
+    return jsonify(rows)
+
+
 @app.route("/api/bow/<bow_id>/sources")
 def list_bow_sources(bow_id):
     try:

@@ -620,6 +620,11 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
   const [newRoundDocUrl, setNewRoundDocUrl] = useState("");
   const [newRoundNotes, setNewRoundNotes]   = useState("");
 
+  const [browsing, setBrowsing]         = useState(false);
+  const [browseData, setBrowseData]     = useState(null);
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browseSearch, setBrowseSearch] = useState("");
+
   useEffect(() => {
     api("/api/sources").then(d => setSources(Array.isArray(d) ? d : []));
   }, []);
@@ -638,9 +643,21 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
     }
   }, [sourceId]);
 
+  const openBrowse = () => {
+    setBrowsing(true);
+    if (browseData === null) {
+      setBrowseLoading(true);
+      api(`/api/sources/browse${bowId ? `?exclude_bow=${encodeURIComponent(bowId)}` : ""}`)
+        .then(d => setBrowseData(Array.isArray(d) ? d : []))
+        .finally(() => setBrowseLoading(false));
+    }
+  };
+
   const handleSourceSel = (val) => {
     if (val === "__new__") { setCreating(true); return; }
-    const src = sources.find(s => s.source_id === val);
+    const src = bowSources.find(s => s.source_id === val)
+      || sources.find(s => s.source_id === val)
+      || browseData?.find(s => s.source_id === val);
     onChange(val || null, null, src?.source_name || null);
   };
 
@@ -686,35 +703,125 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
   };
 
   const bowSourceIds = new Set(bowSources.map(s => s.source_id));
-  const otherSources = sources.filter(s => !bowSourceIds.has(s.source_id));
   const renderSourceOpt = s => (
     <option key={s.source_id} value={s.source_id}>
       {s.source_name}{s.source_type ? ` — ${SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}` : ""}
     </option>
   );
 
+  // Source selected from another BOW — keep it visible in the dropdown
+  const selectedNotInBow = bowId && sourceId && !bowSourceIds.has(sourceId);
+  const selectedSrc = selectedNotInBow ? sources.find(s => s.source_id === sourceId) : null;
+
+  // Build portfolio → BOW → sources hierarchy for browse panel
+  const filteredBrowse = (browseData || []).filter(s => {
+    if (!browseSearch.trim()) return true;
+    const q = browseSearch.toLowerCase();
+    return s.source_name.toLowerCase().includes(q)
+      || (s.bow_title || "").toLowerCase().includes(q)
+      || (s.portfolio_label || "").toLowerCase().includes(q);
+  });
+  const portfolioGroups = (() => {
+    const map = {};
+    filteredBrowse.forEach(s => {
+      if (!map[s.portfolio_id]) map[s.portfolio_id] = { id: s.portfolio_id, label: s.portfolio_label, bows: {} };
+      const bk = s.bow_id || "__p__";
+      if (!map[s.portfolio_id].bows[bk])
+        map[s.portfolio_id].bows[bk] = { id: s.bow_id, title: s.bow_title, sources: [] };
+      if (!map[s.portfolio_id].bows[bk].sources.find(x => x.source_id === s.source_id))
+        map[s.portfolio_id].bows[bk].sources.push(s);
+    });
+    return Object.values(map).map(p => ({ ...p, bows: Object.values(p.bows) }));
+  })();
+
   return (
     <div>
-      {!creating ? (
-        <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
-          style={{ ...inputStyle, appearance: "auto" }}>
-          <option value="">No source linked</option>
-          {bowId && bowSources.length > 0 && (
-            <optgroup label="This BOW">
-              {bowSources.map(renderSourceOpt)}
-            </optgroup>
-          )}
-          {bowId ? (
-            otherSources.length > 0 && (
-              <optgroup label="Other sources">
-                {otherSources.map(renderSourceOpt)}
+      {browsing ? (
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, background: BG,
+          overflow: "hidden" }}>
+          <div style={{ padding: "8px 10px", borderBottom: `1px solid ${BORDER}` }}>
+            <input value={browseSearch} onChange={e => setBrowseSearch(e.target.value)}
+              placeholder="Search sources, BOWs, portfolios…"
+              style={{ ...inputStyle, marginBottom: 0 }} autoFocus />
+          </div>
+          <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            {browseLoading ? (
+              <p style={{ padding: "12px", fontSize: 12, color: TEXT_MUTED }}>Loading…</p>
+            ) : portfolioGroups.length === 0 ? (
+              <p style={{ padding: "12px", fontSize: 12, color: TEXT_MUTED, fontStyle: "italic" }}>
+                No sources found in other BOWs.
+              </p>
+            ) : portfolioGroups.map(pg => {
+              const pc = PORT_COLORS[pg.id];
+              return (
+                <div key={pg.id}>
+                  <p style={{ padding: "5px 10px", fontSize: 10, fontWeight: 800,
+                    textTransform: "uppercase", letterSpacing: "0.06em", margin: 0,
+                    color: pc?.dark || ACCENT, background: pc?.light || ACCENT_LIGHT,
+                    borderBottom: `1px solid ${BORDER}` }}>
+                    {pg.label}
+                  </p>
+                  {pg.bows.map(bw => (
+                    <div key={bw.id || "__p__"}>
+                      <p style={{ padding: "5px 10px 2px 14px", fontSize: 11, fontWeight: 600,
+                        color: TEXT_SUB, margin: 0 }}>
+                        {bw.title || "Portfolio-level"}
+                      </p>
+                      {bw.sources.map(s => (
+                        <button key={s.source_id}
+                          onClick={() => {
+                            onChange(s.source_id, null, s.source_name);
+                            setBrowsing(false); setBrowseSearch("");
+                          }}
+                          style={{ display: "block", width: "100%", textAlign: "left",
+                            padding: "5px 10px 5px 22px", background: "none", border: "none",
+                            cursor: "pointer", fontSize: 12, color: TEXT, lineHeight: 1.4 }}
+                          onMouseEnter={e => e.currentTarget.style.background = SURFACE}
+                          onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                          {s.source_name}
+                          {s.source_type && (
+                            <span style={{ color: TEXT_MUTED, marginLeft: 6, fontSize: 11 }}>
+                              {SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "6px 10px", borderTop: `1px solid ${BORDER}` }}>
+            <button onClick={() => { setBrowsing(false); setBrowseSearch(""); }}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                fontSize: 12, color: TEXT_MUTED }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : !creating ? (
+        <>
+          <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">No source linked</option>
+            {selectedSrc && (
+              <optgroup label="Linked from another BOW">
+                {renderSourceOpt(selectedSrc)}
               </optgroup>
-            )
-          ) : (
-            sources.map(renderSourceOpt)
+            )}
+            {bowId ? bowSources.map(renderSourceOpt) : sources.map(renderSourceOpt)}
+            <option value="__new__">+ Create new source…</option>
+          </select>
+          {bowId && (
+            <button onClick={openBrowse}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                fontSize: 11, color: TEXT_MUTED, marginTop: 5, padding: 0,
+                display: "block", textDecoration: "underline" }}>
+              Browse sources from other BOWs / Portfolios →
+            </button>
           )}
-          <option value="__new__">+ Create new source…</option>
-        </select>
+        </>
       ) : (
         <div style={{ padding: 12, background: BG, border: `1px solid ${BORDER}`,
           borderRadius: 6, marginTop: 4 }}>
@@ -2037,8 +2144,14 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
   // ── Impact Indicators cards ──────────────────────────────────────────────────
   const renderIndicatorsTable = () => (
     <div>
-      <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center",
+        justifyContent: "space-between", marginBottom: 10 }}>
         <SectionLabel>Impact Indicators</SectionLabel>
+        <button onClick={() => onOpenDrawer({ type: "manage-sources" })}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
+          Manage sources
+        </button>
       </div>
 
       {outcomes.map(out => {
@@ -2783,11 +2896,6 @@ function BowPanel({ bow, user, onBack }) {
           <h2 style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{bow.title}</h2>
           {p && <PortfolioPill portfolioId={bow.portfolio_id} />}
         </div>
-        <Btn variant="ghost" size="sm"
-          onClick={() => openDrawer({ type: "manage-sources" })}
-          style={{ flexShrink: 0, color: TEXT_MUTED, fontSize: 12 }}>
-          Manage sources
-        </Btn>
       </div>
 
       {/* ── BOW Description ── */}
