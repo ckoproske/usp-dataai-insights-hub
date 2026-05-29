@@ -3509,9 +3509,14 @@ def browse_sources():
         if not usage:
             return jsonify([])
 
-        # Step 2: bow metadata
-        bows_map = {b["bow_id"]: b for b in
-                    query(f"SELECT bow_id, title, portfolio_id FROM {SCHEMA}.bows")}
+        # Step 2: bow metadata — index by both exact and normalised key for resilience
+        bows_raw = query(f"SELECT bow_id, title, portfolio_id FROM {SCHEMA}.bows")
+        bows_map = {}
+        for b in bows_raw:
+            bows_map[b["bow_id"]] = b
+            norm = (b["bow_id"] or "").strip().lower()
+            if norm != b["bow_id"]:
+                bows_map[norm] = b
 
         # Step 3: portfolio labels
         port_map = {p["portfolio_id"]: p["label"] for p in
@@ -3527,6 +3532,10 @@ def browse_sources():
         )}
 
         # Step 5: assemble, deduplicate, sort
+        # bow lookup: exact match first, normalised fallback, then graceful missing
+        def _bow(bid):
+            return bows_map.get(bid) or bows_map.get((bid or "").strip().lower())
+
         seen, results = set(), []
         for row in usage:
             key = (row["source_id"], row["bow_id"])
@@ -3534,15 +3543,16 @@ def browse_sources():
                 continue
             seen.add(key)
             src = src_map.get(row["source_id"])
-            bow = bows_map.get(row["bow_id"])
-            if not src or not bow:
+            if not src:
                 continue
+            bow          = _bow(row["bow_id"])
+            portfolio_id = bow.get("portfolio_id", "") if bow else ""
             results.append({
                 **src,
                 "bow_id":          row["bow_id"],
-                "bow_title":       bow.get("title", ""),
-                "portfolio_id":    bow.get("portfolio_id", ""),
-                "portfolio_label": port_map.get(bow.get("portfolio_id", ""), ""),
+                "bow_title":       bow.get("title", row["bow_id"]) if bow else row["bow_id"],
+                "portfolio_id":    portfolio_id,
+                "portfolio_label": port_map.get(portfolio_id, "Other"),
             })
         results.sort(key=lambda x: (x["portfolio_label"], x["bow_title"], x["source_name"]))
     except Exception:
