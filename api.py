@@ -2659,8 +2659,24 @@ def get_bow_edit_summary(bow_id):
 
     by_type = {r["entity_type"]: r for r in rows}
 
-    # outcomes_targets: pick the more recent of bow_outcome vs execution_target
+    # outcomes_targets: start with log-based candidates (bow_outcome, execution_target)
     ot_candidates = [by_type[k] for k in ("bow_outcome", "execution_target") if k in by_type]
+
+    # Also read last_updated / updated_by directly from execution_targets as a reliable
+    # fallback — this is always stamped by the PATCH endpoint even if _log_edit fails.
+    try:
+        tgt_rows = query(
+            f"""SELECT CAST(MAX(last_updated) AS STRING) AS edited_at, updated_by AS edited_by
+                FROM {SCHEMA}.execution_targets
+                WHERE bow_id = ?
+                HAVING MAX(last_updated) IS NOT NULL""",
+            [bow_id]
+        )
+        if tgt_rows and tgt_rows[0].get("edited_at"):
+            ot_candidates.append(tgt_rows[0])
+    except Exception:
+        pass
+
     ot = max(ot_candidates, key=lambda r: r.get("edited_at") or "") if ot_candidates else {}
 
     ind = by_type.get("bow_indicator", {})
@@ -3023,8 +3039,10 @@ def update_execution_target(target_id):
     if not rationale:
         return jsonify({"error": "rationale required for execution target text changes"}), 400
 
-    execute(f"UPDATE {SCHEMA}.execution_targets SET `text` = ? WHERE target_id = ?",
-            [changes["text"]["new"], target_id])
+    execute(
+        f"UPDATE {SCHEMA}.execution_targets SET `text` = ?, last_updated = current_timestamp(), updated_by = ? WHERE target_id = ?",
+        [changes["text"]["new"], user, target_id]
+    )
     logged = _log_edit("execution_target", target_id, old["bow_id"], None, changes, rationale, None, user)
     resp = {"status": "ok"}
     if not logged:
