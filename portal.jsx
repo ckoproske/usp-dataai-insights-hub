@@ -2144,14 +2144,8 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
   // ── Impact Indicators cards ──────────────────────────────────────────────────
   const renderIndicatorsTable = () => (
     <div>
-      <div style={{ display: "flex", alignItems: "center",
-        justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ marginBottom: 10 }}>
         <SectionLabel>Impact Indicators</SectionLabel>
-        <button onClick={() => onOpenDrawer({ type: "manage-sources" })}
-          style={{ background: "none", border: "none", cursor: "pointer",
-            fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
-          Manage sources
-        </button>
       </div>
 
       {outcomes.map(out => {
@@ -2165,12 +2159,20 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
                 textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {out.title}
               </span>
-              <button
-                onClick={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: out.outcome_id } })}
-                style={{ background: "none", border: "none", cursor: "pointer",
-                  fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
-                + Add indicator
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button
+                  onClick={() => onOpenDrawer({ type: "manage-sources" })}
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                    fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
+                  Manage sources
+                </button>
+                <button
+                  onClick={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: out.outcome_id } })}
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                    fontSize: 11, color: ACCENT, fontWeight: 700, padding: "2px 0" }}>
+                  + Add indicator
+                </button>
+              </div>
             </div>
 
             {inds.length > 0 ? (
