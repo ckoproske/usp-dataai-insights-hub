@@ -2456,7 +2456,7 @@ def get_bow_full(bow_id):
                     FROM {SCHEMA}.execution_targets t
                     LEFT JOIN {SCHEMA}.execution_target_status s
                       ON t.target_id = s.target_id AND t.year = s.year
-                    WHERE t.bow_id = ?
+                    WHERE t.bow_id = ? AND COALESCE(t.is_active, true) = true
                     ORDER BY t.year, t.sort_order""",
                 [bow_id]
             )
@@ -3011,12 +3011,15 @@ def add_bow_indicator():
 @app.route("/api/bow-indicators/<indicator_id>", methods=["DELETE"])
 def delete_bow_indicator(indicator_id):
     rows = query(f"SELECT * FROM {SCHEMA}.bow_indicators WHERE indicator_id = ?", [indicator_id])
+    user = _actor()
     if rows:
         ind = rows[0]
-        user = _actor()
         _log_edit("bow_indicator", indicator_id, ind.get("bow_id"), None,
                   {"text": {"old": ind.get("text"), "new": None}}, "Indicator removed", None, user)
-    execute(f"UPDATE {SCHEMA}.bow_indicators SET is_active = false WHERE indicator_id = ?", [indicator_id])
+    execute(
+        f"UPDATE {SCHEMA}.bow_indicators SET is_active = false, last_updated = current_timestamp(), updated_by = ? WHERE indicator_id = ?",
+        [user, indicator_id]
+    )
     return jsonify({"status": "ok"})
 
 
@@ -3080,13 +3083,17 @@ def add_execution_target():
 @app.route("/api/execution-targets/<target_id>", methods=["DELETE"])
 def delete_execution_target(target_id):
     rows = query(f"SELECT * FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
+    user = _actor()
     if rows:
         t = rows[0]
-        user = _actor()
         _log_edit("execution_target", target_id, t.get("bow_id"), None,
                   {"text": {"old": t.get("text"), "new": None}},
                   "Target removed", None, user)
-    execute(f"DELETE FROM {SCHEMA}.execution_targets WHERE target_id = ?", [target_id])
+    # Soft-delete so last_updated stays readable for the section timestamp
+    execute(
+        f"UPDATE {SCHEMA}.execution_targets SET is_active = false, last_updated = current_timestamp(), updated_by = ? WHERE target_id = ?",
+        [user, target_id]
+    )
     execute(f"DELETE FROM {SCHEMA}.execution_target_status WHERE target_id = ?", [target_id])
     return jsonify({"status": "ok"})
 
