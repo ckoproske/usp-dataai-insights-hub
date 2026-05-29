@@ -3428,8 +3428,8 @@ def get_indicators_catalog():
 
     # ── Portfolio name lookup (separate simple query) ─────────────────────────
     try:
-        port_label_rows = query(f"SELECT portfolio_id, label FROM {SCHEMA}.portfolios")
-        port_label_map = {r["portfolio_id"]: r["label"] for r in port_label_rows}
+        port_label_rows = query(f"SELECT portfolio_id, title FROM {SCHEMA}.portfolios")
+        port_label_map = {r["portfolio_id"]: r["title"] for r in port_label_rows}
     except Exception:
         port_label_map = {}
     for r in all_rows:
@@ -3518,9 +3518,9 @@ def browse_sources():
                     bows_map[key] = b
                     bows_map[key.strip().lower()] = b
 
-        # Step 3: portfolio labels
-        port_map = {p["portfolio_id"]: p["label"] for p in
-                    query(f"SELECT portfolio_id, label FROM {SCHEMA}.portfolios")}
+        # Step 3: portfolio titles
+        port_map = {p["portfolio_id"]: p["title"] for p in
+                    query(f"SELECT portfolio_id, title FROM {SCHEMA}.portfolios")}
 
         # Step 4: source details for every source_id we found
         src_ids = list({r["source_id"] for r in usage})
