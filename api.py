@@ -2643,43 +2643,41 @@ def delete_toa_lane_indicator(indicator_id):
 
 # ── BOW edit summary (passive timestamps) ─────────────────────────────────────
 
-@app.route("/api/bow/<bow_id>/edit-summary")
-def get_bow_edit_summary(bow_id):
-    """Return the most-recent edit per section for passive timestamp display."""
+def _latest_stamp(table, bow_id):
+    """Return {edited_by, edited_at} for the most recently updated row in
+    table for this BOW.  Reads last_updated / updated_by directly — no
+    dependency on content_edit_log."""
     try:
         rows = query(
-            f"""SELECT entity_type, edited_by, CAST(edited_at AS STRING) AS edited_at
-                FROM {SCHEMA}.content_edit_log
-                WHERE bow_id = ?
-                QUALIFY ROW_NUMBER() OVER (PARTITION BY entity_type ORDER BY edited_at DESC) = 1""",
+            f"""SELECT updated_by AS edited_by,
+                       CAST(last_updated AS STRING) AS edited_at
+                FROM {SCHEMA}.{table}
+                WHERE bow_id = ? AND last_updated IS NOT NULL
+                QUALIFY ROW_NUMBER() OVER (ORDER BY last_updated DESC) = 1""",
             [bow_id]
         )
+        return rows[0] if rows else {}
     except Exception:
-        rows = []
+        return {}
 
-    by_type = {r["entity_type"]: r for r in rows}
 
-    # outcomes_targets: start with log-based candidates (bow_outcome, execution_target)
-    ot_candidates = [by_type[k] for k in ("bow_outcome", "execution_target") if k in by_type]
+@app.route("/api/bow/<bow_id>/edit-summary")
+def get_bow_edit_summary(bow_id):
+    """Return the most-recent edit per section for passive timestamp display.
+    Reads last_updated / updated_by directly from each entity table so the
+    timestamp is always in sync with the most recent write — no dependency
+    on content_edit_log."""
 
-    # Also read last_updated / updated_by directly from execution_targets as a reliable
-    # fallback — this is always stamped by the PATCH endpoint even if _log_edit fails.
-    try:
-        tgt_rows = query(
-            f"""SELECT CAST(MAX(last_updated) AS STRING) AS edited_at, updated_by AS edited_by
-                FROM {SCHEMA}.execution_targets
-                WHERE bow_id = ?
-                HAVING MAX(last_updated) IS NOT NULL""",
-            [bow_id]
-        )
-        if tgt_rows and tgt_rows[0].get("edited_at"):
-            ot_candidates.append(tgt_rows[0])
-    except Exception:
-        pass
+    # Outcomes & Execution Targets: pick the more recent of bow_outcomes vs execution_targets
+    ot_candidates = [
+        _latest_stamp("bow_outcomes",      bow_id),
+        _latest_stamp("execution_targets", bow_id),
+    ]
+    ot_candidates = [c for c in ot_candidates if c.get("edited_at")]
+    ot = max(ot_candidates, key=lambda r: r["edited_at"]) if ot_candidates else {}
 
-    ot = max(ot_candidates, key=lambda r: r.get("edited_at") or "") if ot_candidates else {}
-
-    ind = by_type.get("bow_indicator", {})
+    # Indicators
+    ind = _latest_stamp("bow_indicators", bow_id)
 
     return jsonify({
         "outcomes_targets": {
@@ -2897,8 +2895,8 @@ def update_bow_outcome(outcome_id):
     if has_major and not rationale:
         return jsonify({"error": "rationale required for text field changes"}), 400
 
-    sets   = ", ".join(f"`{f}` = ?" for f in changes)
-    vals   = [changes[f]["new"] for f in changes] + [outcome_id]
+    sets = ", ".join(f"`{f}` = ?" for f in changes) + ", last_updated = current_timestamp(), updated_by = ?"
+    vals = [changes[f]["new"] for f in changes] + [user, outcome_id]
     execute(f"UPDATE {SCHEMA}.bow_outcomes SET {sets} WHERE outcome_id = ?", vals)
     _log_edit("bow_outcome", outcome_id, old["bow_id"], None, changes, rationale, None, user)
     return jsonify({"status": "ok", "changes": changes})
@@ -2917,9 +2915,9 @@ def add_bow_outcome():
     oid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.bow_outcomes
-            (outcome_id, bow_id, title, `text`, sort_order)
-            VALUES (?, ?, ?, ?, ?)""",
-        [oid, bow_id, title, data.get("text", ""), sort_order]
+            (outcome_id, bow_id, title, `text`, sort_order, last_updated, updated_by)
+            VALUES (?, ?, ?, ?, ?, current_timestamp(), ?)""",
+        [oid, bow_id, title, data.get("text", ""), sort_order, user]
     )
     _log_edit("bow_outcome", oid, bow_id, None,
               {"title": {"old": None, "new": title}}, "New outcome added", None, user)
@@ -2970,8 +2968,8 @@ def update_bow_indicator(indicator_id):
     if has_target and not revision_reason:
         return jsonify({"error": "revision_reason required for target changes"}), 400
 
-    sets = ", ".join(f"`{f}` = ?" for f in changes)
-    vals = [changes[f]["new"] for f in changes] + [indicator_id]
+    sets = ", ".join(f"`{f}` = ?" for f in changes) + ", last_updated = current_timestamp(), updated_by = ?"
+    vals = [changes[f]["new"] for f in changes] + [user, indicator_id]
     execute(f"UPDATE {SCHEMA}.bow_indicators SET {sets} WHERE indicator_id = ?", vals)
     _log_edit("bow_indicator", indicator_id, old["bow_id"], None, changes, rationale, revision_reason, user)
     return jsonify({"status": "ok", "changes": changes})
@@ -2992,8 +2990,9 @@ def add_bow_indicator():
             (indicator_id, bow_id, outcome_id, `name`, `text`, purpose, unit, collection_frequency,
              baseline, source_id, measurement_level, `status`,
              data_quality_notes, tracking_notes,
-             target_2026, target_2027, target_2028, target_2029, target_2030, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)""",
+             target_2026, target_2027, target_2028, target_2029, target_2030,
+             is_active, last_updated, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true, current_timestamp(), ?)""",
         [iid, bow_id, outcome_id or None,
          data.get("name") or None, text, data.get("purpose") or None,
          data.get("unit") or None, data.get("collection_frequency") or None,
@@ -3002,7 +3001,7 @@ def add_bow_indicator():
          data.get("data_quality_notes") or None, data.get("tracking_notes") or None,
          data.get("target_2026") or None, data.get("target_2027") or None,
          data.get("target_2028") or None, data.get("target_2029") or None,
-         data.get("target_2030") or None]
+         data.get("target_2030") or None, user]
     )
     _log_edit("bow_indicator", iid, bow_id, None,
               {"name": {"old": None, "new": data.get("name") or text}}, "New indicator added", None, user)
@@ -3068,9 +3067,9 @@ def add_execution_target():
     tid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.execution_targets
-            (target_id, bow_id, outcome_id, `year`, `text`, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?)""",
-        [tid, bow_id, outcome_id or None, year, text, sort_order]
+            (target_id, bow_id, outcome_id, `year`, `text`, sort_order, last_updated, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?, current_timestamp(), ?)""",
+        [tid, bow_id, outcome_id or None, year, text, sort_order, user]
     )
     _log_edit("execution_target", tid, bow_id, None,
               {"text": {"old": None, "new": text}, "year": {"old": None, "new": year}},

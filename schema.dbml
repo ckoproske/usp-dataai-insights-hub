@@ -56,13 +56,15 @@ Table portfolio_outcomes {
 }
 
 Table bow_outcomes {
-  outcome_id  string [pk]
-  bow_id      string [ref: > bows.bow_id]
-  number      int
-  short_title string
-  title       string
-  text        string
-  sort_order  int
+  outcome_id   string [pk]
+  bow_id       string [ref: > bows.bow_id]
+  number       int
+  short_title  string
+  title        string
+  text         string
+  sort_order   int
+  last_updated timestamp
+  updated_by   string
 }
 
 Table bow_portfolio_outcome_links {
@@ -102,6 +104,8 @@ Table bow_indicators {
   indicator_owner      string
   last_reviewed_date   date
   is_active            boolean [default: true]
+  last_updated         timestamp
+  updated_by           string
 }
 
 Table bow_indicator_actuals {
