@@ -1791,6 +1791,7 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
   const [addingTargetFor, setAddingTargetFor] = useState(null); // {outcome_id, year}
   const [confirmDelOut, setConfirmDelOut]     = useState(null);
   const [confirmDelTarget, setConfirmDelTarget] = useState(null);
+  const [deletingTarget, setDeletingTarget]   = useState(null);
 
   // Group execution targets by outcome_id → year → [targets]
   const tByOY = {};
@@ -1937,22 +1938,34 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
                                           cursor: "pointer", fontSize: 10,
                                           color: TEXT_MUTED, padding: "0 3px" }}
                                         title="Edit">✎</button>
-                                      {confirmDelTarget === t.target_id ? (
-                                        <>
+                                      {deletingTarget === t.target_id ? (
+                                        <span style={{ fontSize: 10, color: TEXT_MUTED,
+                                          padding: "0 3px", fontStyle: "italic" }}>
+                                          Removing…
+                                        </span>
+                                      ) : confirmDelTarget === t.target_id ? (
+                                        <span style={{ display: "flex", alignItems: "center",
+                                          gap: 2, fontSize: 10 }}>
+                                          <span style={{ color: TEXT_MUTED, marginRight: 2 }}>
+                                            Delete?
+                                          </span>
                                           <button onClick={async () => {
+                                            setDeletingTarget(t.target_id);
+                                            setConfirmDelTarget(null);
                                             await api(`/api/execution-targets/${t.target_id}`,
                                               { method: "DELETE" });
-                                            setConfirmDelTarget(null); onRefresh();
+                                            setDeletingTarget(null);
+                                            onRefresh();
                                           }} style={{ background: "none", border: "none",
                                             cursor: "pointer", fontSize: 10,
-                                            color: DANGER, fontWeight: 700, padding: "0 3px" }}>
-                                            ✓
+                                            color: DANGER, fontWeight: 700, padding: "0 2px" }}>
+                                            Yes
                                           </button>
                                           <button onClick={() => setConfirmDelTarget(null)}
                                             style={{ background: "none", border: "none",
                                               cursor: "pointer", fontSize: 10,
-                                              color: TEXT_MUTED, padding: "0 3px" }}>✕</button>
-                                        </>
+                                              color: TEXT_MUTED, padding: "0 2px" }}>No</button>
+                                        </span>
                                       ) : (
                                         <button onClick={() => setConfirmDelTarget(t.target_id)}
                                           style={{ background: "none", border: "none",
