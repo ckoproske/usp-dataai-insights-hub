@@ -253,6 +253,9 @@ def update_portfolio(portfolio_id):
         return jsonify({"status": "no_change"})
     vals.append(portfolio_id)
     execute(f"UPDATE {SCHEMA}.portfolios SET {', '.join(sets)} WHERE portfolio_id = ?", vals)
+    if "description" in data:
+        _log_edit("portfolio_description", portfolio_id, None, portfolio_id,
+                  {"description": {"new": data["description"]}}, None, None, user)
     return jsonify({"status": "ok"})
 
 @app.route("/api/portfolios/<portfolio_id>/goals")
@@ -2541,6 +2544,7 @@ def get_portfolio_toa(portfolio_id):
 @app.route("/api/toa/<portfolio_id>", methods=["PATCH"])
 def update_portfolio_toa(portfolio_id):
     data    = request.json or {}
+    user    = _actor(data)
     allowed = {
         "problem_statement", "col1_label", "col2_label",
         "cross_indicators_json", "cross_indicators_label",
@@ -2555,6 +2559,9 @@ def update_portfolio_toa(portfolio_id):
         return jsonify({"status": "no_change"})
     vals.append(portfolio_id)
     execute(f"UPDATE {SCHEMA}.portfolio_toa SET {', '.join(sets)} WHERE portfolio_id = ?", vals)
+    if "problem_statement" in data:
+        _log_edit("portfolio_problem_statement", portfolio_id, None, portfolio_id,
+                  {"problem_statement": {"new": data["problem_statement"]}}, None, None, user)
     return jsonify({"status": "ok"})
 
 
@@ -2838,18 +2845,16 @@ def get_portfolio_edit_summary(portfolio_id):
         rows = []
 
     by_type = {r["entity_type"]: r for r in rows}
-    outcomes = by_type.get("portfolio_outcome", {})
-    indicators = by_type.get("portfolio_indicator", {})
+
+    def _entry(key):
+        r = by_type.get(key, {})
+        return {"edited_by": r.get("edited_by"), "edited_at": r.get("edited_at")}
 
     return jsonify({
-        "outcomes": {
-            "edited_by": outcomes.get("edited_by"),
-            "edited_at": outcomes.get("edited_at"),
-        },
-        "indicators": {
-            "edited_by": indicators.get("edited_by"),
-            "edited_at": indicators.get("edited_at"),
-        },
+        "description":       _entry("portfolio_description"),
+        "problem_statement": _entry("portfolio_problem_statement"),
+        "outcomes":          _entry("portfolio_outcome"),
+        "indicators":        _entry("portfolio_indicator"),
     })
 
 

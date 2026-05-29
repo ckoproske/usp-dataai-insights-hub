@@ -3578,7 +3578,13 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
       {/* ── Investments & Inputs ── */}
       <div style={{ marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <SectionLabel>Investments & Inputs</SectionLabel>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <SectionLabel>Investments & Inputs</SectionLabel>
+            <LastEdited
+              by={editSummary?.outcomes?.edited_by}
+              at={editSummary?.outcomes?.edited_at}
+            />
+          </div>
           <button onClick={() => onOpenDrawer({ type: "investments", item: outcome, extra: { toaActivities } })}
             style={{ background: "none", border: "none", cursor: "pointer",
               color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
@@ -4222,10 +4228,17 @@ function PortfolioPanel({ portfolio, user, onBack }) {
         return (
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-              <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
-                fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, flex: 1, margin: 0 }}>
-                {desc || "No description yet."}
-              </p>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
+                  fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, margin: 0 }}>
+                  {desc || "No description yet."}
+                </p>
+                <LastEdited
+                  by={editSummary?.description?.edited_by}
+                  at={editSummary?.description?.edited_at}
+                  style={{ display: "block", marginTop: 6 }}
+                />
+              </div>
               <button onClick={() => openDrawer({ type: "port-desc", item: { desc } })}
                 style={{ background: "none", border: "none", cursor: "pointer",
                   color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
@@ -4242,10 +4255,16 @@ function PortfolioPanel({ portfolio, user, onBack }) {
             borderRadius: 8, marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                  textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                  Problem / Gap Statement
-                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                    textTransform: "uppercase", letterSpacing: 0.5, margin: 0 }}>
+                    Problem / Gap Statement
+                  </p>
+                  <LastEdited
+                    by={editSummary?.problem_statement?.edited_by}
+                    at={editSummary?.problem_statement?.edited_at}
+                  />
+                </div>
                 <p style={{ fontSize: 13, color: ps ? TEXT : TEXT_MUTED,
                   fontStyle: ps ? "normal" : "italic", lineHeight: 1.7, margin: 0 }}>
                   {ps || "No problem statement yet."}
