@@ -2653,7 +2653,8 @@ def _latest_stamp(table, bow_id):
                        CAST(last_updated AS STRING) AS edited_at
                 FROM {SCHEMA}.{table}
                 WHERE bow_id = ? AND last_updated IS NOT NULL
-                QUALIFY ROW_NUMBER() OVER (ORDER BY last_updated DESC) = 1""",
+                ORDER BY last_updated DESC
+                LIMIT 1""",
             [bow_id]
         )
         return rows[0] if rows else {}

@@ -277,7 +277,11 @@ function formatLastEdited(by, at) {
     ? by.split("@")[0].split(".").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
     : null;
   if (!at) return name ? `Updated by ${name}` : null;
-  const d = new Date(at);
+  // Databricks CAST(timestamp AS STRING) returns "YYYY-MM-DD HH:MM:SS" with no timezone
+  // marker. Browsers parse that as local time, which shifts the epoch value and breaks
+  // the day-diff calculation for users outside UTC. Force UTC by normalising to ISO 8601.
+  const atUtc = /Z|[+-]\d{2}:?\d{2}$/.test(at) ? at : at.replace(" ", "T") + "Z";
+  const d = new Date(atUtc);
   if (isNaN(d)) return name ? `Updated by ${name}` : null;
   const diffDays = Math.floor((Date.now() - d) / 86400000);
   const when = diffDays === 0 ? "today"
@@ -566,6 +570,7 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
           rationale: rationale || undefined, edited_by: user?.email }),
       });
       if (res.error) { setError(res.error); return; }
+      if (res.status === "no_change") { onCancel(); return; }
       onSave({ ...outcome, title, text });
     } catch (e) {
       setError("Save failed — please try again.");
