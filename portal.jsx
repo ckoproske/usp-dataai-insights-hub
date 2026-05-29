@@ -685,38 +685,36 @@ function SourcePickerInline({ sourceId, roundId, onChange, user, showRounds = fa
     setSaving(false);
   };
 
+  const bowSourceIds = new Set(bowSources.map(s => s.source_id));
+  const otherSources = sources.filter(s => !bowSourceIds.has(s.source_id));
+  const renderSourceOpt = s => (
+    <option key={s.source_id} value={s.source_id}>
+      {s.source_name}{s.source_type ? ` — ${SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}` : ""}
+    </option>
+  );
+
   return (
     <div>
-      {!creating ? (() => {
-        const bowSourceIds = new Set(bowSources.map(s => s.source_id));
-        const otherSources = sources.filter(s => !bowSourceIds.has(s.source_id));
-        const renderOpt = s => (
-          <option key={s.source_id} value={s.source_id}>
-            {s.source_name}{s.source_type ? ` — ${SOURCE_TYPES.find(t => t.value === s.source_type)?.label || s.source_type}` : ""}
-          </option>
-        );
-        return (
-          <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
-            style={{ ...inputStyle, appearance: "auto" }}>
-            <option value="">No source linked</option>
-            {bowId && bowSources.length > 0 && (
-              <optgroup label="This BOW">
-                {bowSources.map(renderOpt)}
+      {!creating ? (
+        <select value={sourceId || ""} onChange={e => handleSourceSel(e.target.value)}
+          style={{ ...inputStyle, appearance: "auto" }}>
+          <option value="">No source linked</option>
+          {bowId && bowSources.length > 0 && (
+            <optgroup label="This BOW">
+              {bowSources.map(renderSourceOpt)}
+            </optgroup>
+          )}
+          {bowId ? (
+            otherSources.length > 0 && (
+              <optgroup label="Other sources">
+                {otherSources.map(renderSourceOpt)}
               </optgroup>
-            )}
-            {bowId ? (
-              otherSources.length > 0 && (
-                <optgroup label="Other sources">
-                  {otherSources.map(renderOpt)}
-                </optgroup>
-              )
-            ) : (
-              sources.map(renderOpt)
-            )}
-            <option value="__new__">+ Create new source…</option>
-          </select>
-        );
-      })()
+            )
+          ) : (
+            sources.map(renderSourceOpt)
+          )}
+          <option value="__new__">+ Create new source…</option>
+        </select>
       ) : (
         <div style={{ padding: 12, background: BG, border: `1px solid ${BORDER}`,
           borderRadius: 6, marginTop: 4 }}>
