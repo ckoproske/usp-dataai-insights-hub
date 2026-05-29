@@ -273,7 +273,9 @@ function fmtDateShort(d) {
 // Format a last-edited timestamp + email into a human-readable hint
 function formatLastEdited(by, at) {
   if (!by && !at) return null;
-  const name = by ? by.split("@")[0].replace(/\./g, " ") : null;
+  const name = by
+    ? by.split("@")[0].split(".").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    : null;
   if (!at) return name ? `Updated by ${name}` : null;
   const d = new Date(at);
   if (isNaN(d)) return name ? `Updated by ${name}` : null;
