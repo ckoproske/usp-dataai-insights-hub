@@ -4193,7 +4193,7 @@ function PortfolioByTheNumbers({ portId, portColor, bows }) {
   const loading = stats === null;
   const STATS = [
     { label:"Active Investments", value: loading ? "…" : String(stats.count||"0"),   sub:"grants & contracts" },
-    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,    sub:"active investments with a co-funding team", teams: stats?.coFundingTeams || [] },
+    { label:"% Co-funded",        value: loading ? "…" : `${stats.coFundedPct}%`,    sub:"active investments with a USP co-funding team", teams: stats?.coFundingTeams || [] },
     { label:"Partners",           value: loading ? "…" : String(stats.partners||"0"),sub:"discrete grantees / vendors" },
     { label:"Bodies of Work",     value: String((bows||[]).length),                   sub:"active workstreams in this portfolio" },
   ];
