@@ -6510,25 +6510,40 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
 }
 
 // ─── Activity Feed ─────────────────────────────────────────────────────────────
-function ActivityFeed({ bows, user }) {
-  const [feed, setFeed]           = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [bowFilter, setBowFilter] = useState("");
-  const [deleting, setDeleting]   = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
+function ActivityFeed({ bows, portfolios, user }) {
+  const [feed, setFeed]                   = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [bowFilter, setBowFilter]         = useState("");
+  const [portfolioFilter, setPortFilter]  = useState("");
+  const [userFilter, setUserFilter]       = useState("");
+  const [allUsers, setAllUsers]           = useState([]);
+  const [deleting, setDeleting]           = useState(null);
+  const [expandedId, setExpandedId]       = useState(null);
 
   const canDelete = user?.permission_level === "MLE";
 
   const load = () => {
     setLoading(true);
     const params = new URLSearchParams({ type: "edit", limit: "200" });
-    if (bowFilter) params.set("bow_id", bowFilter);
+    if (bowFilter)       params.set("bow_id",       bowFilter);
+    if (portfolioFilter) params.set("portfolio_id", portfolioFilter);
+    if (userFilter)      params.set("actor",        userFilter);
     api(`/api/activity-feed?${params}`)
-      .then(d => setFeed(Array.isArray(d) ? d : []))
+      .then(d => {
+        const data = Array.isArray(d) ? d : [];
+        setFeed(data);
+        // Populate user list from unfiltered loads only so the dropdown is always complete
+        if (!bowFilter && !portfolioFilter && !userFilter) {
+          setAllUsers(prev => {
+            const merged = [...new Set([...prev, ...data.map(x => x.actor).filter(Boolean)])].sort();
+            return merged;
+          });
+        }
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [bowFilter]);
+  useEffect(() => { load(); }, [bowFilter, portfolioFilter, userFilter]);
 
   const del = async (id) => {
     setDeleting(id);
@@ -6572,17 +6587,60 @@ function ActivityFeed({ bows, user }) {
     return fields.length ? fields.map(f => f.replace(/_/g, " ")).join(", ") : null;
   };
 
+  const filterActive = !!(bowFilter || portfolioFilter || userFilter);
+
   return (
     <div style={{ maxWidth: 900 }}>
+
+      {/* 100-day retention notice */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px",
+        background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 7, marginBottom: 18 }}>
+        <span style={{ fontSize: 15 }}>⏳</span>
+        <p style={{ fontSize: 12, color: "#92400E", margin: 0, lineHeight: 1.5 }}>
+          Activity records are automatically deleted after <strong>100 days</strong>.
+        </p>
+      </div>
+
       {/* Filter bar */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
-        <select value={bowFilter} onChange={e => setBowFilter(e.target.value)}
-          style={{ ...inputStyle, width: "auto", minWidth: 180, fontSize: 13, padding: "5px 10px" }}>
-          <option value="">All BOWs & Portfolios</option>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+        {/* User filter */}
+        <select value={userFilter} onChange={e => setUserFilter(e.target.value)}
+          style={{ ...inputStyle, width: "auto", minWidth: 160, fontSize: 13, padding: "5px 10px" }}>
+          <option value="">All users</option>
+          {allUsers.map(u => (
+            <option key={u} value={u}>
+              {u.split("@")[0].split(".").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+            </option>
+          ))}
+        </select>
+
+        {/* Portfolio filter */}
+        <select value={portfolioFilter} onChange={e => { setPortFilter(e.target.value); setBowFilter(""); }}
+          style={{ ...inputStyle, width: "auto", minWidth: 160, fontSize: 13, padding: "5px 10px" }}>
+          <option value="">All portfolios</option>
+          {(portfolios || []).map(p => (
+            <option key={p.portfolio_id} value={p.portfolio_id}>{p.title}</option>
+          ))}
+        </select>
+
+        {/* BOW filter */}
+        <select value={bowFilter} onChange={e => { setBowFilter(e.target.value); setPortFilter(""); }}
+          style={{ ...inputStyle, width: "auto", minWidth: 160, fontSize: 13, padding: "5px 10px" }}>
+          <option value="">All BOWs</option>
           {bows.map(b => <option key={b.bow_id} value={b.bow_id}>{b.title}</option>)}
         </select>
-        <Btn variant="secondary" size="sm" onClick={load}>Refresh</Btn>
-        <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: "auto" }}>
+
+        {filterActive && (
+          <Btn variant="secondary" size="sm"
+            onClick={() => { setBowFilter(""); setPortFilter(""); setUserFilter(""); }}>
+            Clear filters
+          </Btn>
+        )}
+
+        <Btn variant="secondary" size="sm" onClick={load} style={{ marginLeft: filterActive ? 0 : "auto" }}>
+          Refresh
+        </Btn>
+        <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: filterActive ? "auto" : 0 }}>
           {feed.length} {feed.length === 1 ? "entry" : "entries"}
         </span>
       </div>
@@ -6938,7 +6996,7 @@ function PortalApp() {
     ? [{ id: "content", label: "Share an Insight" }]
     : [
         { id: "content", label: "BOWs & Portfolios" },
-        { id: "activity", label: "Activity" },
+        { id: "activity", label: "Activity Log" },
       ];
 
   const handleSelectBow = bow => {
@@ -7200,10 +7258,17 @@ function PortalApp() {
 
         {tab === "activity" && (
           <>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 24 }}>
-              Activity
-            </h1>
-            <ActivityFeed bows={bows} user={user} />
+            <div style={{ marginBottom: 24 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 8 }}>
+                Activity Log
+              </h1>
+              <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.6, maxWidth: 680 }}>
+                A record of all content edits made through the portal — including changes to
+                outcomes, indicators, execution targets, and descriptions. Use the filters below
+                to narrow by user, portfolio, or BOW.
+              </p>
+            </div>
+            <ActivityFeed bows={bows} portfolios={portfolios} user={user} />
           </>
         )}
 

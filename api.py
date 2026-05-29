@@ -3248,6 +3248,15 @@ def delete_portfolio_indicator(indicator_id):
 
 @app.route("/api/activity-feed")
 def get_activity_feed():
+    # Prune records older than 100 days on every load (no scheduler needed)
+    try:
+        execute(
+            f"DELETE FROM {SCHEMA}.content_edit_log"
+            f" WHERE edited_at < CURRENT_TIMESTAMP() - INTERVAL 100 DAYS"
+        )
+    except Exception as e:
+        print(f"[activity-feed] cleanup warning: {e}")
+
     bow_filter       = request.args.get("bow_id")
     portfolio_filter = request.args.get("portfolio_id")
     type_filter      = request.args.get("type")       # 'edit' | 'submission'
