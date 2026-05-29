@@ -3509,14 +3509,14 @@ def browse_sources():
         if not usage:
             return jsonify([])
 
-        # Step 2: bow metadata — index by both exact and normalised key for resilience
-        bows_raw = query(f"SELECT bow_id, title, portfolio_id FROM {SCHEMA}.bows")
+        # Step 2: bow metadata — index by bow_id AND invest_bow_id (seeded data may use either)
+        bows_raw = query(f"SELECT bow_id, invest_bow_id, title, portfolio_id FROM {SCHEMA}.bows")
         bows_map = {}
         for b in bows_raw:
-            bows_map[b["bow_id"]] = b
-            norm = (b["bow_id"] or "").strip().lower()
-            if norm != b["bow_id"]:
-                bows_map[norm] = b
+            for key in [b.get("bow_id"), b.get("invest_bow_id")]:
+                if key:
+                    bows_map[key] = b
+                    bows_map[key.strip().lower()] = b
 
         # Step 3: portfolio labels
         port_map = {p["portfolio_id"]: p["label"] for p in
