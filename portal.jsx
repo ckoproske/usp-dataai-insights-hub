@@ -2222,16 +2222,29 @@ function EditTargetInline({ target, user, onSave, onCancel }) {
   const [text, setText]           = useState(target.text || "");
   const [rationale, setRationale] = useState("");
   const [saving, setSaving]       = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const save = async () => {
     if (!rationale.trim()) return;
     setSaving(true);
+    setSaveError(null);
     const res = await api(`/api/execution-targets/${target.target_id}`, {
       method: "PATCH",
       body: JSON.stringify({ text, rationale, edited_by: user?.email }),
     });
-    if (!res.error) onSave();
     setSaving(false);
+    if (res.error) {
+      setSaveError(res.error);
+    } else if (res.status === "no_change") {
+      // text was identical to what's stored — nothing was saved, so just close
+      // without triggering a refresh (the existing timestamp is already correct)
+      onCancel();
+    } else {
+      if (res.log_warning) {
+        console.warn("[EditTargetInline] edit saved but audit log write failed — timestamp may not update");
+      }
+      onSave();
+    }
   };
 
   return (
@@ -2242,6 +2255,9 @@ function EditTargetInline({ target, user, onSave, onCancel }) {
         placeholder="Rationale for change (required)..."
         rows={2} style={{ ...inputStyle, fontSize: 12, marginBottom: 6,
           borderColor: ACCENT, resize: "vertical" }} />
+      {saveError && (
+        <div style={{ color: "#DC2626", fontSize: 11, marginBottom: 4 }}>{saveError}</div>
+      )}
       <div style={{ display: "flex", gap: 4 }}>
         <Btn size="sm" onClick={save} disabled={!text.trim() || !rationale.trim() || saving}>
           {saving ? "…" : "Save"}

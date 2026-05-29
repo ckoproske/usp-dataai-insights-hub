@@ -2342,7 +2342,7 @@ def _fetch_edit_map(entity_ids, cursor=None):
 
 def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, rationale, revision_reason, edited_by):
     if not LOGGING_ENABLED:
-        return
+        return True
     # L-7: wrap in try/except so a log failure never kills the parent data write
     try:
         execute(
@@ -2353,8 +2353,10 @@ def _log_edit(entity_type, entity_id, bow_id, portfolio_id, changes_dict, ration
             [new_id(), entity_type, entity_id, bow_id, portfolio_id,
              _json.dumps(changes_dict), rationale or None, revision_reason or None, edited_by]
         )
+        return True
     except Exception as e:
         print(f"[_log_edit] WARNING: audit trail write failed for {entity_type}/{entity_id}: {e}")
+        return False
 
 def _build_changes(old_row, new_data, allowed_fields):
     """Returns dict of {field: {old, new}} for fields that actually changed."""
@@ -3023,8 +3025,11 @@ def update_execution_target(target_id):
 
     execute(f"UPDATE {SCHEMA}.execution_targets SET `text` = ? WHERE target_id = ?",
             [changes["text"]["new"], target_id])
-    _log_edit("execution_target", target_id, old["bow_id"], None, changes, rationale, None, user)
-    return jsonify({"status": "ok"})
+    logged = _log_edit("execution_target", target_id, old["bow_id"], None, changes, rationale, None, user)
+    resp = {"status": "ok"}
+    if not logged:
+        resp["log_warning"] = True
+    return jsonify(resp)
 
 
 @app.route("/api/execution-targets", methods=["POST"])
