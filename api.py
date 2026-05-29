@@ -3495,28 +3495,59 @@ def create_source():
 
 @app.route("/api/sources/browse")
 def browse_sources():
-    """Returns all sources with portfolio/BOW context, optionally excluding one BOW."""
+    """Returns all sources with portfolio/BOW context, optionally excluding one BOW.
+    Uses separate lookups to avoid JOIN failures caused by bow_id format mismatches."""
     exclude_bow = request.args.get("exclude_bow")
     try:
-        where  = "WHERE b.bow_id != ?" if exclude_bow else ""
+        # Step 1: source_id + bow_id pairs from bow_indicators only (no bows JOIN)
+        where  = "WHERE source_id IS NOT NULL" + (" AND bow_id != ?" if exclude_bow else "")
         params = [exclude_bow] if exclude_bow else []
-        rows = query(
-            f"""SELECT DISTINCT
-                    s.source_id, s.source_name, s.source_type, s.source_url,
-                    s.owner, s.coverage_notes,
-                    b.bow_id, b.title AS bow_title,
-                    b.portfolio_id, p.label AS portfolio_label
-                FROM {SCHEMA}.sources s
-                JOIN {SCHEMA}.bow_indicators i ON i.source_id = s.source_id
-                JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
-                JOIN {SCHEMA}.portfolios p ON p.portfolio_id = b.portfolio_id
-                {where}
-                ORDER BY p.label, b.title, s.source_name""",
+        usage  = query(
+            f"SELECT DISTINCT source_id, bow_id FROM {SCHEMA}.bow_indicators {where}",
             params
         )
+        if not usage:
+            return jsonify([])
+
+        # Step 2: bow metadata
+        bows_map = {b["bow_id"]: b for b in
+                    query(f"SELECT bow_id, title, portfolio_id FROM {SCHEMA}.bows")}
+
+        # Step 3: portfolio labels
+        port_map = {p["portfolio_id"]: p["label"] for p in
+                    query(f"SELECT portfolio_id, label FROM {SCHEMA}.portfolios")}
+
+        # Step 4: source details for every source_id we found
+        src_ids = list({r["source_id"] for r in usage})
+        ph      = ", ".join("?" * len(src_ids))
+        src_map = {s["source_id"]: s for s in query(
+            f"SELECT source_id, source_name, source_type, source_url, owner, coverage_notes "
+            f"FROM {SCHEMA}.sources WHERE source_id IN ({ph})",
+            src_ids
+        )}
+
+        # Step 5: assemble, deduplicate, sort
+        seen, results = set(), []
+        for row in usage:
+            key = (row["source_id"], row["bow_id"])
+            if key in seen:
+                continue
+            seen.add(key)
+            src = src_map.get(row["source_id"])
+            bow = bows_map.get(row["bow_id"])
+            if not src or not bow:
+                continue
+            results.append({
+                **src,
+                "bow_id":          row["bow_id"],
+                "bow_title":       bow.get("title", ""),
+                "portfolio_id":    bow.get("portfolio_id", ""),
+                "portfolio_label": port_map.get(bow.get("portfolio_id", ""), ""),
+            })
+        results.sort(key=lambda x: (x["portfolio_label"], x["bow_title"], x["source_name"]))
     except Exception:
-        rows = []
-    return jsonify(rows)
+        results = []
+    return jsonify(results)
 
 
 @app.route("/api/bow/<bow_id>/sources")
