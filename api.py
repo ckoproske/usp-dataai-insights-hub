@@ -2632,6 +2632,42 @@ def delete_toa_lane_indicator(indicator_id):
     return jsonify({"status": "ok"})
 
 
+# ── BOW edit summary (passive timestamps) ─────────────────────────────────────
+
+@app.route("/api/bow/<bow_id>/edit-summary")
+def get_bow_edit_summary(bow_id):
+    """Return the most-recent edit per section for passive timestamp display."""
+    try:
+        rows = query(
+            f"""SELECT entity_type, edited_by, CAST(edited_at AS STRING) AS edited_at
+                FROM {SCHEMA}.content_edit_log
+                WHERE bow_id = ?
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY entity_type ORDER BY edited_at DESC) = 1""",
+            [bow_id]
+        )
+    except Exception:
+        rows = []
+
+    by_type = {r["entity_type"]: r for r in rows}
+
+    # outcomes_targets: pick the more recent of bow_outcome vs execution_target
+    ot_candidates = [by_type[k] for k in ("bow_outcome", "execution_target") if k in by_type]
+    ot = max(ot_candidates, key=lambda r: r.get("edited_at") or "") if ot_candidates else {}
+
+    ind = by_type.get("bow_indicator", {})
+
+    return jsonify({
+        "outcomes_targets": {
+            "edited_by": ot.get("edited_by"),
+            "edited_at": ot.get("edited_at"),
+        },
+        "indicators": {
+            "edited_by": ind.get("edited_by"),
+            "edited_at": ind.get("edited_at"),
+        },
+    })
+
+
 # ── Portfolio full detail ───────────────────────────────────────────────────────
 
 @app.route("/api/portfolio/<portfolio_id>/full")
@@ -2782,6 +2818,38 @@ def get_portfolio_full(portfolio_id):
         "portfolio": portfolio,
         "outcomes": outcomes,
         "problem_statement": problem_statement,
+    })
+
+
+# ── Portfolio edit summary (passive timestamps) ────────────────────────────────
+
+@app.route("/api/portfolio/<portfolio_id>/edit-summary")
+def get_portfolio_edit_summary(portfolio_id):
+    """Return the most-recent edit per section for passive timestamp display."""
+    try:
+        rows = query(
+            f"""SELECT entity_type, edited_by, CAST(edited_at AS STRING) AS edited_at
+                FROM {SCHEMA}.content_edit_log
+                WHERE portfolio_id = ?
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY entity_type ORDER BY edited_at DESC) = 1""",
+            [portfolio_id]
+        )
+    except Exception:
+        rows = []
+
+    by_type = {r["entity_type"]: r for r in rows}
+    outcomes = by_type.get("portfolio_outcome", {})
+    indicators = by_type.get("portfolio_indicator", {})
+
+    return jsonify({
+        "outcomes": {
+            "edited_by": outcomes.get("edited_by"),
+            "edited_at": outcomes.get("edited_at"),
+        },
+        "indicators": {
+            "edited_by": indicators.get("edited_by"),
+            "edited_at": indicators.get("edited_at"),
+        },
     })
 
 

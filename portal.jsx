@@ -1917,7 +1917,7 @@ function IndicatorChipRow({ ind, accentColor, onEdit }) {
 // ─── BOW Content Table ────────────────────────────────────────────────────────
 // Mirrors the slide layout: outcome rows × year columns for execution targets,
 // then indicators as rows × year columns for targets & actuals.
-function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onOpenDrawer }) {
+function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onOpenDrawer, editSummary }) {
   const p = PORT_COLORS[bow.portfolio_id];
 
   // Editing state
@@ -1962,7 +1962,13 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
     <div style={{ marginBottom: 36 }}>
       <div style={{ display: "flex", justifyContent: "space-between",
         alignItems: "center", marginBottom: 10 }}>
-        <SectionLabel>Outcomes & Execution Targets</SectionLabel>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <SectionLabel>Outcomes & Execution Targets</SectionLabel>
+          <LastEdited
+            by={editSummary?.outcomes_targets?.edited_by}
+            at={editSummary?.outcomes_targets?.edited_at}
+          />
+        </div>
         <Btn variant="ghost" size="sm" onClick={() => onOpenDrawer({ type: "add-outcome" })}
           style={{ color: ACCENT, fontWeight: 700, fontSize: 12 }}>
           + Add outcome
@@ -2144,8 +2150,12 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
   // ── Impact Indicators cards ──────────────────────────────────────────────────
   const renderIndicatorsTable = () => (
     <div>
-      <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
         <SectionLabel>Impact Indicators</SectionLabel>
+        <LastEdited
+          by={editSummary?.indicators?.edited_by}
+          at={editSummary?.indicators?.edited_at}
+        />
       </div>
 
       {outcomes.map(out => {
@@ -2822,25 +2832,28 @@ function BowSourcesManager({ bow, user }) {
 
 // ─── BOW Panel ─────────────────────────────────────────────────────────────────
 function BowPanel({ bow, user, onBack }) {
-  const [data, setData]           = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [outcomes, setOutcomes]   = useState([]);
-  const [activeOId, setActiveOId] = useState(null);
-  const [drawerCtx, setDrawerCtx] = useState(null);
+  const [data, setData]             = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [outcomes, setOutcomes]     = useState([]);
+  const [activeOId, setActiveOId]   = useState(null);
+  const [drawerCtx, setDrawerCtx]   = useState(null);
+  const [editSummary, setEditSummary] = useState(null);
   const openDrawer  = ctx => setDrawerCtx(ctx);
   const closeDrawer = ()  => setDrawerCtx(null);
 
   const load = () => {
     setLoading(true);
-    api(`/api/bow/${bow.bow_id}/full`)
-      .then(d => {
-        const outs = d.outcomes || [];
-        setData(d);
-        setOutcomes(outs);
-        // Set first tab on initial load only
-        setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      api(`/api/bow/${bow.bow_id}/full`),
+      api(`/api/bow/${bow.bow_id}/edit-summary`).catch(() => null),
+    ]).then(([d, summary]) => {
+      const outs = d.outcomes || [];
+      setData(d);
+      setOutcomes(outs);
+      // Set first tab on initial load only
+      setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
+      if (summary) setEditSummary(summary);
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, [bow.bow_id]);
@@ -2967,6 +2980,7 @@ function BowPanel({ bow, user, onBack }) {
         bow={bow} user={user}
         onRefresh={load}
         onOpenDrawer={openDrawer}
+        editSummary={editSummary}
       />
 
       {/* ── Side Drawer ── */}
@@ -3511,7 +3525,7 @@ const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
 
 // ─── Portfolio Outcome Pane (single outcome, shown when tab is active) ──────────
-function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted, onOpenDrawer }) {
+function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted, onOpenDrawer, editSummary }) {
   const p = PORT_COLORS[portfolio.portfolio_id];
   const [confirmDel,      setConfirmDel]      = useState(false);
   const [deleting,        setDeleting]        = useState(false);
@@ -3585,7 +3599,13 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
       {/* ── Impact Indicators ── */}
       <div style={{ display: "flex", justifyContent: "space-between",
         alignItems: "center", marginBottom: 10 }}>
-        <SectionLabel>Impact Indicators</SectionLabel>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <SectionLabel>Impact Indicators</SectionLabel>
+          <LastEdited
+            by={editSummary?.indicators?.edited_by}
+            at={editSummary?.indicators?.edited_at}
+          />
+        </div>
         <button onClick={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontSize: 12, color: ACCENT, fontWeight: 700 }}>
@@ -4108,15 +4128,16 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
 }
 
 function PortfolioPanel({ portfolio, user, onBack }) {
-  const [data, setData]             = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [outcomes, setOutcomes]     = useState([]);
-  const [activeOId, setActiveOId]   = useState(null);
-  const [activeTab, setActiveTab]   = useState("outcome");
-  const [addingOut, setAddingOut]   = useState(false);
+  const [data, setData]               = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [outcomes, setOutcomes]       = useState([]);
+  const [activeOId, setActiveOId]     = useState(null);
+  const [activeTab, setActiveTab]     = useState("outcome");
+  const [addingOut, setAddingOut]     = useState(false);
   const [newOutTitle, setNewOutTitle] = useState("");
-  const [saving, setSaving]         = useState(false);
-  const [drawerCtx, setDrawerCtx]   = useState(null);
+  const [saving, setSaving]           = useState(false);
+  const [drawerCtx, setDrawerCtx]     = useState(null);
+  const [editSummary, setEditSummary] = useState(null);
   const openDrawer  = ctx => setDrawerCtx(ctx);
   const closeDrawer = ()  => setDrawerCtx(null);
 
@@ -4124,14 +4145,16 @@ function PortfolioPanel({ portfolio, user, onBack }) {
 
   const load = () => {
     setLoading(true);
-    api(`/api/portfolio/${portfolio.portfolio_id}/full`)
-      .then(d => {
-        const outs = d.outcomes || [];
-        setData(d);
-        setOutcomes(outs);
-        setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      api(`/api/portfolio/${portfolio.portfolio_id}/full`),
+      api(`/api/portfolio/${portfolio.portfolio_id}/edit-summary`).catch(() => null),
+    ]).then(([d, summary]) => {
+      const outs = d.outcomes || [];
+      setData(d);
+      setOutcomes(outs);
+      setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
+      if (summary) setEditSummary(summary);
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, [portfolio.portfolio_id]);
@@ -4316,6 +4339,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
             if (remaining.length === 0) setActiveTab("toa");
           }}
           onOpenDrawer={openDrawer}
+          editSummary={editSummary}
         />
       )}
 
