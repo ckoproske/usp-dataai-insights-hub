@@ -1,8 +1,10 @@
 // =============================================================================
 // USP Data & AI Strategy — Database Schema
 // Database: usp_data.usp_strategy (Databricks Delta Lake)
-// Last updated: April 2026
+// Last updated: May 2026
+// Source of truth: usp_data.information_schema.columns
 // =============================================================================
+
 
 // =============================================================================
 // STRATEGY STRUCTURE
@@ -10,6 +12,9 @@
 
 Table strategy_goals {
   goal_id       string [pk]
+  title         string
+  target_text   string
+  number        int
   metric        string
   unit          string
   goal_2030     float
@@ -18,9 +23,11 @@ Table strategy_goals {
 }
 
 Table portfolios {
-  portfolio_id  string [pk]
-  title         string
-  sort_order    int
+  portfolio_id      string [pk]
+  title             string
+  description       string
+  problem_statement string
+  sort_order        int
 }
 
 Table portfolio_goal_links {
@@ -29,36 +36,41 @@ Table portfolio_goal_links {
 }
 
 Table bows {
-  bow_id          string [pk]
-  portfolio_id    string [ref: > portfolios.portfolio_id]
-  title           string
-  description     string
-  invest_bow_id   string [note: 'INVEST BoW_ID e.g. B06039']
-  sort_order      int
+  bow_id        string [pk]
+  portfolio_id  string [ref: > portfolios.portfolio_id]
+  title         string
+  description   string
+  invest_bow_id string [note: 'INVEST BoW_ID e.g. B06039 — used to join to invest_bow_* tables']
+  sort_order    int
 }
 
 Table portfolio_outcomes {
-  outcome_id    string [pk]
-  portfolio_id  string [ref: > portfolios.portfolio_id]
-  short_title   string
-  activity      string
-  outcome       string
-  sort_order    int
+  outcome_id         string [pk]
+  portfolio_id       string [ref: > portfolios.portfolio_id]
+  title              string
+  short_title        string
+  activity           string
+  activity_text      string
+  outcome            string
+  investments_inputs string
+  sort_order         int
 }
 
 Table bow_outcomes {
   outcome_id  string [pk]
   bow_id      string [ref: > bows.bow_id]
+  number      int
+  short_title string
   title       string
-  description string
+  text        string
   sort_order  int
 }
 
 Table bow_portfolio_outcome_links {
-  bow_outcome_id        string [ref: > bow_outcomes.outcome_id]
-  portfolio_outcome_id  string [ref: > portfolio_outcomes.outcome_id]
-  contribution_type     string [note: 'direct | indirect']
-  sort_order            int
+  bow_outcome_id       string [ref: > bow_outcomes.outcome_id]
+  portfolio_outcome_id string [ref: > portfolio_outcomes.outcome_id]
+  contribution_type    string [note: 'direct | indirect']
+  sort_order           int
 }
 
 
@@ -70,69 +82,93 @@ Table bow_indicators {
   indicator_id         string [pk]
   bow_id               string [ref: > bows.bow_id]
   outcome_id           string [ref: > bow_outcomes.outcome_id]
+  name                 string
   text                 string
+  purpose              string
   data_source          string
-  baseline             float
-  target_2026          float
-  target_2027          float
-  target_2028          float
-  target_2029          float
-  target_2030          float
-  collection_frequency string [note: 'annual | quarterly | bimonthly | monthly']
+  source_id            string [ref: > sources.source_id]
+  measurement_level    string
+  baseline             double
+  target_2026          string
+  target_2027          string
+  target_2028          string
+  target_2029          string
+  target_2030          string
+  unit                 string [note: 'e.g. %, #, $, schools, learners, partners']
+  collection_frequency string [note: 'annual | biannually | quarterly | bimonthly | monthly']
+  thematic_tags        string
+  status               string
+  data_quality_notes   string
+  tracking_notes       string
+  indicator_owner      string
+  last_reviewed_date   date
   is_active            boolean [default: true]
 }
 
 Table bow_indicator_actuals {
-  actual_id     string [pk]
-  indicator_id  string [ref: > bow_indicators.indicator_id]
-  bow_id        string [ref: > bows.bow_id]
-  outcome_id    string [ref: > bow_outcomes.outcome_id]
-  year          int
-  period        string [note: 'Q1 | Q2 | Q3 | Q4 | M01-M12 — null for annual']
-  actual_value  float
-  reading_date  date
-  source_notes  string
-  loaded_by     string
-  loaded_at     timestamp
+  actual_id    string [pk]
+  indicator_id string [ref: > bow_indicators.indicator_id]
+  bow_id       string [ref: > bows.bow_id]
+  outcome_id   string [ref: > bow_outcomes.outcome_id]
+  year         int
+  period       string [note: 'Q1 | Q2 | Q3 | Q4 | M01–M12 — null for annual']
+  actual_value double
+  reading_date date
+  source_notes string
+  loaded_by    string
+  loaded_at    timestamp
 }
 
 Table portfolio_indicators {
-  indicator_id  string [pk]
-  portfolio_id  string [ref: > portfolios.portfolio_id]
-  outcome_id    string [ref: > portfolio_outcomes.outcome_id]
-  text          string
-  data_source   string
-  baseline      float
-  target_2026   float
-  target_2027   float
-  target_2028   float
-  target_2029   float
-  target_2030   float
+  indicator_id         string [pk]
+  portfolio_id         string [ref: > portfolios.portfolio_id]
+  outcome_id           string [ref: > portfolio_outcomes.outcome_id]
+  name                 string
+  text                 string
+  purpose              string
+  data_source          string
+  source_id            string [ref: > sources.source_id]
+  measurement_level    string
+  baseline             double
+  target_2026          string
+  target_2027          string
+  target_2028          string
+  target_2029          string
+  target_2030          string
+  unit                 string [note: 'e.g. %, #, $, schools, learners, partners']
+  collection_frequency string [note: 'annual | biannually | quarterly | bimonthly | monthly']
+  thematic_tags        string
+  status               string
+  data_quality_notes   string
+  tracking_notes       string
+  indicator_owner      string
+  last_reviewed_date   date
+  is_active            boolean
 }
 
 Table portfolio_indicator_actuals {
-  actual_id     string [pk]
-  indicator_id  string [ref: > portfolio_indicators.indicator_id]
-  portfolio_id  string [ref: > portfolios.portfolio_id]
-  outcome_id    string [ref: > portfolio_outcomes.outcome_id]
-  year          int
-  period        string [note: 'Q1 | Q2 | Q3 | Q4 | M01-M12 — null for annual']
-  actual_value  float
-  reading_date  date
-  source_notes  string
-  loaded_by     string
-  loaded_at     timestamp
+  actual_id    string [pk]
+  indicator_id string [ref: > portfolio_indicators.indicator_id]
+  portfolio_id string [ref: > portfolios.portfolio_id]
+  outcome_id   string [ref: > portfolio_outcomes.outcome_id]
+  year         int
+  period       string [note: 'Q1 | Q2 | Q3 | Q4 | M01–M12 — null for annual']
+  actual_value double
+  reading_date date
+  source_notes string
+  loaded_by    string
+  loaded_at    timestamp
 }
 
 Table strategy_goal_actuals {
-  actual_id     string [pk]
-  goal_id       string [ref: > strategy_goals.goal_id]
-  year          int
-  actual_value  float
-  reading_date  date
-  source_notes  string
-  loaded_by     string
-  loaded_at     timestamp
+  actual_id    string [pk]
+  goal_id      string [ref: > strategy_goals.goal_id]
+  year         int
+  actual_value double
+  reading_date date
+  source_notes string
+  loaded_by    string
+  loaded_at    timestamp
 }
 
 
@@ -141,22 +177,53 @@ Table strategy_goal_actuals {
 // =============================================================================
 
 Table execution_targets {
-  target_id   string [pk]
-  bow_id      string [ref: > bows.bow_id]
-  outcome_id  string [ref: > bow_outcomes.outcome_id]
-  year        int
-  text        string
-  sort_order  int
-  is_active   boolean [default: true]
+  target_id    string [pk]
+  bow_id       string [ref: > bows.bow_id]
+  outcome_id   string [ref: > bow_outcomes.outcome_id]
+  year         int
+  text         string
+  completion   string
+  notes        string
+  sort_order   int
+  is_active    boolean [default: true]
+  last_updated timestamp
+  updated_by   string
 }
 
 Table execution_target_status {
-  target_id     string [ref: > execution_targets.target_id]
-  year          int
-  completion    string [note: 'Complete | On track | At risk | Not started']
-  notes         string
-  last_updated  timestamp
-  updated_by    string
+  target_id    string [ref: > execution_targets.target_id]
+  year         int
+  completion   string [note: 'Complete | On track | At risk | Not started']
+  notes        string
+  last_updated timestamp
+  updated_by   string [note: 'Auto-populated from Databricks login']
+}
+
+
+// =============================================================================
+// SOURCES
+// =============================================================================
+
+Table sources {
+  source_id      string [pk]
+  source_name    string
+  source_type    string
+  source_url     string
+  owner          string
+  coverage_notes string
+  created_at     timestamp
+  created_by     string
+}
+
+Table source_rounds {
+  round_id        string [pk]
+  source_id       string [ref: > sources.source_id]
+  round_label     string
+  collection_date date
+  document_url    string
+  notes           string
+  created_at      timestamp
+  created_by      string
 }
 
 
@@ -165,44 +232,44 @@ Table execution_target_status {
 // =============================================================================
 
 Table bow_ratings {
-  rating_id                   string [pk]
-  bow_id                      string [ref: > bows.bow_id]
-  year                        int
-  impact_rating               string
-  impact_rationale            string
-  impact_override             boolean
-  impact_override_reasoning   string
-  execution_rating            string
-  execution_rationale         string
-  execution_override          boolean
+  rating_id                    string [pk]
+  bow_id                       string [ref: > bows.bow_id]
+  year                         int
+  impact_rating                string
+  impact_rationale             string
+  impact_override              boolean
+  impact_override_reasoning    string
+  execution_rating             string
+  execution_rationale          string
+  execution_override           boolean
   execution_override_reasoning string
-  assessed_by                 string
-  assessed_at                 timestamp
+  assessed_by                  string
+  assessed_at                  timestamp
 }
 
 Table portfolio_outcome_ratings {
-  rating_id   string [pk]
-  outcome_id  string [ref: > portfolio_outcomes.outcome_id]
-  year        int
-  rating      string
-  rationale   string
-  assessed_by string
-  assessed_at timestamp
+  rating_id          string [pk]
+  outcome_id         string [ref: > portfolio_outcomes.outcome_id]
+  year               int
+  rating             string
+  rationale          string
+  human_override     boolean
+  override_reasoning string
+  assessed_by        string
+  assessed_at        timestamp
 }
 
 Table goal_ratings {
-  rating_id   string [pk]
-  goal_id     string [ref: > strategy_goals.goal_id]
-  year        int
-  rating      string
-  rationale   string
-  assessed_by string
-  assessed_at timestamp
+  rating_id          string [pk]
+  goal_id            string [ref: > strategy_goals.goal_id]
+  year               int
+  rating             string
+  rationale          string
+  human_override     boolean
+  override_reasoning string
+  assessed_by        string
+  assessed_at        timestamp
 }
-
-// Views (read-only — not writable)
-// current_bow_ratings     — latest bow_ratings row per bow_id + year
-// current_assumption_confidence — latest assumption_confidence row per assumption_id
 
 
 // =============================================================================
@@ -213,16 +280,16 @@ Table assumptions {
   assumption_id        string [pk]
   assumption_type      string [note: 'field | impact']
   portfolio_outcome_id string [ref: > portfolio_outcomes.outcome_id]
-  bow_id               string [ref: > bows.bow_id, note: 'nullable — for BOW-scoped assumptions']
+  bow_id               string [ref: > bows.bow_id, note: 'nullable — BOW-scoped assumptions only']
   assumption_claim     string [note: 'if/then causal statement']
-  decision_gate        string [note: 'pre-specified review point and decision type']
+  decision_gate        string
   high_threshold       string
   medium_threshold     string
   low_threshold        string
   signal_weights       string [note: 'JSON — relative weighting of linked indicators/targets']
-  data_source_notes    string [note: 'especially for field assumptions using Hub/external sources']
+  data_source_notes    string
   is_active            boolean [default: true]
-  version              int [default: 1]
+  version              int     [default: 1]
   effective_from       date
   created_by           string
   created_at           timestamp
@@ -236,10 +303,10 @@ Table assumption_confidence {
   confidence         string [note: 'High | Medium | Low | Untested | Data gap']
   rationale          string
   data_considered    string
-  human_override     boolean [note: 'true when a human has overridden the AI-generated rating']
+  human_override     boolean
   override_reasoning string
   rating_source      string [note: 'tyton_baseline | ai_generated | human_override']
-  evidence_snapshot  string [note: 'JSON — indicator values and criteria version used at assessment time']
+  evidence_snapshot  string [note: 'JSON — indicator values and criteria version at assessment time']
   assessed_by        string
   assessed_at        timestamp
 }
@@ -247,31 +314,30 @@ Table assumption_confidence {
 Table assumption_indicator_links {
   link_id         string [pk]
   assumption_id   string [ref: > assumptions.assumption_id]
-  indicator_id    string [note: 'logical FK — references bow_indicators or portfolio_indicators depending on indicator_level']
-  indicator_level string [not null, note: 'bow | portfolio']
-  signal_role     string [note: 'primary | secondary']
+  indicator_id    string [note: 'logical FK — bow_indicators or portfolio_indicators per indicator_level']
+  indicator_level string [note: 'bow | portfolio']
+  signal_role     string
   sort_order      int
 }
 
 Table assumption_target_links {
-  link_id        string [pk]
-  assumption_id  string [ref: > assumptions.assumption_id]
-  target_id      string [ref: > execution_targets.target_id]
-  signal_role    string [note: 'primary | secondary']
-  sort_order     int
+  link_id       string [pk]
+  assumption_id string [ref: > assumptions.assumption_id]
+  target_id     string [ref: > execution_targets.target_id]
+  signal_role   string
+  sort_order    int
 }
 
 Table assumption_rating_criteria {
   criteria_id      string [pk]
   assumption_type  string [note: 'field | impact']
-  bow_id           string [ref: > bows.bow_id, note: 'set for BOW-level assumptions; null otherwise']
-  portfolio_id     string [ref: > portfolios.portfolio_id, note: 'set for portfolio-level assumptions; null otherwise']
+  bow_id           string [ref: > bows.bow_id, note: 'set for BOW-level; null otherwise']
   high_threshold   string
   medium_threshold string
   low_threshold    string
   data_gap_trigger string
   signal_weights   string [note: 'JSON — default weighting template']
-  version          int [default: 1]
+  version          int    [default: 1]
   last_updated     timestamp
   updated_by       string
 }
@@ -319,24 +385,24 @@ Table field_signal_sources {
 // =============================================================================
 
 Table key_decisions {
-  decision_id       string [pk]
-  bow_id            string [ref: > bows.bow_id]
-  portfolio_id      string [ref: > portfolios.portfolio_id, note: 'populated when level = portfolio']
-  goal_id           string [ref: > strategy_goals.goal_id, note: 'populated when level = strategy']
-  level             string [note: 'strategy | portfolio | bow']
-  question          string
-  decision_text     string
-  timing            string
-  signals           string
-  decision_priority string [note: 'H | M | L']
-  decision_maker    string
-  resolution_type   string [note: 'invest | scale | adapt | stop']
+  decision_id        string [pk]
+  level              string    [note: 'strategy | portfolio | bow']
+  bow_id             string    [ref: > bows.bow_id, note: 'populated when level = bow']
+  portfolio_id       string    [ref: > portfolios.portfolio_id, note: 'populated when level = portfolio']
+  goal_id            string    [ref: > strategy_goals.goal_id, note: 'populated when level = goal']
+  question           string
+  decision_text      string
+  timing             string
+  signals            string
+  decision_priority  string    [note: 'H | M | L']
+  decision_maker     string
+  resolution_type    string    [note: 'invest | scale | adapt | stop']
   decision_rationale string
-  recorded_outcome  string
-  status            string
-  is_active         boolean [default: true]
-  last_updated      timestamp
-  updated_by        string
+  recorded_outcome   string
+  status             string
+  is_active          boolean
+  last_updated       timestamp
+  updated_by         string
 }
 
 Table decision_assumption_links {
@@ -344,8 +410,56 @@ Table decision_assumption_links {
   decision_id       string [ref: > key_decisions.decision_id]
   assumption_id     string [ref: > assumptions.assumption_id]
   signal_role       string [note: 'primary | secondary']
-  trigger_threshold string [note: 'confidence level that auto-flags: High | Medium | Low | Untested | Data gap']
+  trigger_threshold string
   rationale         string
+}
+
+
+// =============================================================================
+// THEORY OF ACTION
+// =============================================================================
+
+Table portfolio_toa {
+  portfolio_id           string [pk, ref: > portfolios.portfolio_id]
+  col1_label             string
+  col2_label             string
+  problem_statement      string
+  cross_indicators_json  string [note: 'JSON']
+  cross_indicators_label string
+  amb45_intro_text       string
+  amb45_label            string
+  amb45_full_text        string
+  amb45_buckets_json     string [note: 'JSON']
+  is_active              boolean
+}
+
+Table portfolio_toa_lanes {
+  lane_id       string [pk]
+  portfolio_id  string [ref: > portfolios.portfolio_id]
+  label         string
+  icon          string
+  color         string
+  outcome_text  string
+  is_tbd        boolean
+  is_multiplier boolean
+  sort_order    int
+  is_active     boolean
+}
+
+Table portfolio_toa_activities {
+  activity_id   string [pk]
+  lane_id       string [ref: > portfolio_toa_lanes.lane_id]
+  portfolio_id  string [ref: > portfolios.portfolio_id]
+  activity_text string
+  sort_order    int
+}
+
+Table portfolio_toa_lane_indicators {
+  indicator_id   string [pk]
+  lane_id        string [ref: > portfolio_toa_lanes.lane_id]
+  portfolio_id   string [ref: > portfolios.portfolio_id]
+  indicator_text string
+  sort_order     int
 }
 
 
@@ -354,42 +468,199 @@ Table decision_assumption_links {
 // =============================================================================
 
 Table invest_investments {
-  Investment_ID               string [pk]
-  Investment_Name             string
-  Investment_Owner            string
-  Grant_Description           string
-  Amount                      float
-  Status                      string
-  Stage                       string
-  Investment_Payment_Year     int
-  Investment_Payment_Status   string
+  Investment_ID                    string [pk]
+  Investment_URL                   string
+  Investment_Name                  string
+  Grantee_Vendor                   string
+  Primary_Contact                  string
+  Authorized_External_Signer       string
+  Type                             string
+  Subtype                          string
+  Start_Date                       date
+  End_Date                         date
+  Deep_Engagement_Countries        string
+  Investment_Amount                decimal [note: 'formula field']
+  Investment_Owner                 string
+  Investment_Owner_Title           string
+  Secondary_Investment_Owner       string
+  Secondary_Investment_Owner_Title string
+  Investment_Coordinator           string
+  Managing_Team                    string  [note: 'formula field']
+  Supporting_Team                  string
+  Status                           string
+  Workflow_Step                    string
+  Forecasted_Approval_Date         date
+  Legal_Entity                     string
+  Benefiting_Entity                string
+  Confidential_Agreement           boolean
+  Payment_Entity                   string
+  End_Date_Type                    string
+  Vendor_Paper                     boolean
+  Strategic_Fit                    string
+  Project_Overview                 string
+  Public_Description               string
+  Analysis_and_Recommendation      string
+  ER_Status                        string
+  Approved_Investment_Amount       decimal
+  Paid_Amount                      double  [note: 'formula field']
+  Outstanding_Balance              double  [note: 'formula field']
+  Total_Amount_Grand_Total         decimal [note: 'formula field']
+  Unscheduled_Investment_Amount    double  [note: 'formula field']
+  Funding_Team                     string
 }
 
 Table invest_bow_allocation {
-  Investment_ID                        string [ref: > invest_investments.Investment_ID]
-  BoW_ID                               string
-  "Investment_Payment_Allocation Amount" float  [note: 'column name has a space — quote in SQL']
-  Investment_Payment_Allocation_Type   string
-  Investment_Payment_Status            string
-  Investment_Payment_Year              int
-  Investment_Payment_Date              date
+  Investment_ID                          string [ref: > invest_investments.Investment_ID]
+  BoW_Funding_ID                         string
+  BoW_ID                                 string
+  Investment_Payment_Allocation_Type     string [note: 'formula field']
+  Investment_Payment_ID                  string
+  Investment_Payment_Date                date
+  Investment_Payment_Year                int
+  Investment_Payment_Status              string
+  "Investment_Payment_Allocation Amount" decimal
 }
 
 Table invest_bow_details {
-  BoW_ID                              string [pk]
-  Impact_Performance_Rating           string
-  Impact_Performance_Rating_Rationale string
-  Execution_Performance_Rating        string
-  Execution_Performance_Rating_Rationale string
+  BoW_ID                                   string [pk]
+  BoW_URL                                  string
+  BoW_Name                                 string
+  BoW_Type                                 string
+  BoW_Status                               string
+  BoW_Owner                                string
+  BoW_Director                             string
+  "BoW_Managing Division"                  string [note: 'formula field']
+  BoW_Managing_Strategy                    string
+  BoW_Managing_Group                       string
+  BoW_Managing_Subgroup                    string
+  Strategy_Taxonomy                        string
+  Strategy_Taxonomy_Optional               string
+  Description_and_Foundation_Role          string
+  "Outputs/Outcomes"                       string
+  Short_term_Results_Optional              string
+  Relevant_Strategic_Goals_Optional        string
+  Impact_Performance_Rating                string
+  Impact_Perfomance_Investment_Average     string
+  Impact_Performance_Rating_Rationale      string
+  Execution_Performance_Rating             string
+  Execution_Performance_Investment_Average string
+  Execution_Performance_Rating_Rationale   string
+  Input_from_Funding_Strategies_Optional   string
+  People_Allocation_Detail_Optional        string
+  Notes_Optional                           string
+  Target_Geography_Optional                string
+  Highlighted_in_Reporting                 string
+  Show_in_Reporting                        string
 }
 
 Table investment_overlays {
-  overlay_id      string [pk]
-  investment_id   string [ref: > invest_investments.Investment_ID]
-  internal_notes  string
-  approver        string [note: 'Matt Gee | Natasha Fedo | Nicole Ifill | Allan Golston | Other — nullable, set manually for In Process investments']
-  last_updated    timestamp
-  updated_by      string
+  overlay_id     string [pk]
+  bow_id         string    [ref: > bows.bow_id]
+  invest_id      string
+  investment_id  string    [ref: > invest_investments.Investment_ID]
+  status         string
+  notes          string
+  owner          string
+  tags           string
+  outcome_rating string
+  goal_rating    string
+  internal_notes string
+  approver       string    [note: 'nullable — set manually for In Process investments']
+  last_updated   timestamp
+  updated_by     string
+}
+
+Table budget_forecast_snapshots {
+  snapshot_id   string [pk]
+  label         string
+  fiscal_year   int
+  snapshot_date date
+  taken_by      string
+  snapshot_data string [note: 'JSON']
+}
+
+
+// =============================================================================
+// INVESTMENT IDEAS
+// =============================================================================
+
+Table investment_ideas {
+  idea_id             string [pk]
+  title               string
+  submitted_by        string
+  submitted_at        timestamp
+  stage               string
+  idea_type           string
+  objective           string
+  primary_portfolio   string
+  primary_bow         string
+  additional_bows     string
+  potential_partner   string
+  est_total_amount    double
+  est_2026_amount     double
+  co_funding_details  string
+  desired_start_date  string
+  est_duration        string
+  notes               string
+  designated_approver string
+  approved_by         string
+  approved_at         timestamp
+  approver_note       string
+  reviewer_note       string
+  moved_to_invest     boolean
+  moved_to_invest_at  timestamp
+  inv_number          string
+  archived            boolean
+  archived_at         timestamp
+  archived_by         string
+}
+
+Table investment_idea_comments {
+  comment_id          string [pk]
+  idea_id             string [ref: > investment_ideas.idea_id]
+  comment_text        string
+  commented_by        string
+  commented_at        timestamp
+  is_approval_comment boolean
+}
+
+
+// =============================================================================
+// ACTIVITY & EDIT TRACKING
+// =============================================================================
+
+Table content_edit_log {
+  log_id          string [pk]
+  entity_type     string    [note: 'bow_outcome | bow_indicator | execution_target | portfolio_indicator | bow_desc | etc.']
+  entity_id       string
+  bow_id          string    [ref: > bows.bow_id, note: 'nullable']
+  portfolio_id    string    [ref: > portfolios.portfolio_id, note: 'nullable']
+  changes         string    [note: 'JSON — field-level diff']
+  rationale       string
+  revision_reason string
+  edited_by       string
+  edited_at       timestamp
+}
+
+Table comments {
+  comment_id   string [pk]
+  entity_type  string
+  entity_id    string
+  author       string
+  author_email string
+  body         string
+  created_at   timestamp
+}
+
+Table feedback {
+  feedback_id  string [pk]
+  submitted_by string
+  author_name  string
+  submitted_at timestamp
+  source       string
+  rating       int
+  working_well string
+  improve      string
 }
 
 
@@ -400,11 +671,11 @@ Table investment_overlays {
 Table bow_notes {
   note_id      string [pk]
   bow_id       string [ref: > bows.bow_id]
-  outcome_id   string [ref: > bow_outcomes.outcome_id]
+  outcome_id   string [ref: > bow_outcomes.outcome_id, note: 'nullable']
   year         int
   note_text    string
   last_updated timestamp
-  updated_by   string
+  updated_by   string [note: 'Auto-populated from Databricks login']
 }
 
 Table portfolio_tracking {
@@ -412,9 +683,20 @@ Table portfolio_tracking {
   portfolio_id      string [ref: > portfolios.portfolio_id]
   year              int
   notes             string
+  team_members      string
   budget_annotation string
   last_updated      timestamp
-  updated_by        string
+  updated_by        string [note: 'Auto-populated from Databricks login']
+}
+
+Table partner_tracking {
+  tracking_id         string [pk]
+  partner_id          string
+  portfolio_id        string [ref: > portfolios.portfolio_id]
+  notes               string
+  relationship_status string
+  last_updated        timestamp
+  updated_by          string [note: 'Auto-populated from Databricks login']
 }
 
 Table team_members {
@@ -431,20 +713,30 @@ Table team_members {
 Table pending_actuals {
   pending_id           string [pk]
   indicator_id         string
-  level                string [note: 'bow | portfolio | goal']
+  level                string    [note: 'bow | portfolio | goal']
   entity_id            string
   year                 int
-  period               string [note: 'Q1 | Q2 | Q3 | Q4 | M01-M12 — null for annual']
-  submitted_value      float
-  reading_date         date   [note: 'when data was collected or published — may differ from submitted_at']
-  source_notes         string [note: 'where the data came from — required at submission']
-  submitted_by         string [note: 'display name — resolved from team_members via Databricks login token']
-  submitted_permission string [note: 'MLE | Leadership | Team — permission level at time of submission']
+  period               string    [note: 'Q1 | Q2 | Q3 | Q4 | M01–M12 — null for annual']
+  submitted_value      double
+  reading_date         string    [note: 'date data was collected or published']
+  source_notes         string    [note: 'where the data came from — required at submission']
+  submitted_by         string    [note: 'Auto-populated from Databricks login']
+  submitted_role       string    [note: 'role at time of submission']
+  submitted_permission string    [note: 'MLE | Leadership | Team']
   submitted_at         timestamp
-  status               string [note: 'pending | approved | rejected']
-  reviewed_value       float
-  reviewed_by          string
-  reviewer_notes       string [note: 'reason recorded when rejecting or querying a submission — visible to submitter']
+  status               string    [note: 'pending | approved | rejected']
+  reviewed_value       double
+  reviewed_by          string    [note: 'Auto-populated from Databricks login on review']
+  reviewer_notes       string    [note: 'visible to submitter']
   reviewed_at          timestamp
   notes                string
 }
+
+
+// =============================================================================
+// VIEWS (read-only — not writable)
+// =============================================================================
+
+// current_bow_ratings           — latest bow_ratings row per bow_id + year
+//                                 adds is_estimate (bool) and rating_status (string) flags
+// current_assumption_confidence — latest assumption_confidence row per assumption_id
