@@ -6317,7 +6317,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
     primary_bow:          idea.primary_bow          || "",
     potential_partner:    idea.potential_partner    || "",
     est_2026_amount:      idea.est_2026_amount      || "",
-    description:          idea.description          || "",
+    objective:            idea.objective            || "",
     stage:                idea.stage                || "Brainstorming",
     inv_number:           idea.inv_number           || "",
     designated_approver:  idea.designated_approver  || "",
@@ -6525,7 +6525,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
             </select>
           </div>
         </div>
-        {fieldRow("Description / Rationale", "description", "textarea")}
+        {fieldRow("Description / Rationale", "objective", "textarea")}
 
         {/* Stage — all except Okay to Proceed which requires Approve */}
         <div style={{ marginBottom: 14 }}>
