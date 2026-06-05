@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.env.local
+
+# Generated data files — run the generator script to recreate, don't commit output
+import_investment_ideas*.sql
+
+# Debug / scratch scripts
+debug_*.js
+debug_*.py
+
+# Claude Code session files
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
