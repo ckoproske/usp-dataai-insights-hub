@@ -69,16 +69,17 @@ const SOURCE_TYPES = [
 ];
 
 const UNIT_OPTIONS = [
-  { value: "#",         label: "# (count)" },
-  { value: "%",         label: "% (percent)" },
-  { value: "$",         label: "$ (dollars)" },
-  { value: "schools",   label: "schools" },
-  { value: "learners",  label: "learners" },
-  { value: "partners",  label: "partners" },
-  { value: "tools",     label: "tools" },
-  { value: "users",     label: "users" },
-  { value: "countries", label: "countries" },
-  { value: "other",     label: "other (specify in notes)" },
+  { value: "#",            label: "# (count)" },
+  { value: "%",            label: "% (percent)" },
+  { value: "$",            label: "$ (dollars)" },
+  { value: "schools",      label: "schools" },
+  { value: "districts",    label: "districts" },
+  { value: "institutions", label: "institutions" },
+  { value: "partners",     label: "partners" },
+  { value: "learners",     label: "learners" },
+  { value: "solutions",    label: "solutions" },
+  { value: "users",        label: "users" },
+  { value: "other",        label: "other (specify in notes)" },
 ];
 
 const INSIGHT_TYPES = [
