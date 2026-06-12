@@ -4297,28 +4297,36 @@ def add_comment(entity_type, entity_id):
         author = "Unknown"
 
     cid = new_id()
-    execute(
-        f"""INSERT INTO {SCHEMA}.comments
-            (comment_id, entity_type, entity_id, author, author_email, body, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, current_timestamp())""",
-        [cid, entity_type, entity_id, author, email or "", body]
-    )
+    try:
+        execute(
+            f"""INSERT INTO {SCHEMA}.comments
+                (comment_id, entity_type, entity_id, author, author_email, body, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, current_timestamp())""",
+            [cid, entity_type, entity_id, author, email or "", body]
+        )
+    except Exception as e:
+        print(f"[add_comment] INSERT failed: {e}")
+        return jsonify({"error": "Failed to save comment. Please try again."}), 500
+
     # Return the saved row so the client can display it immediately
     try:
         row = query(
             f"""SELECT comment_id, entity_type, entity_id, author, author_email,
-                       body, CAST(created_at AS STRING) AS created_at
+                       body, CAST(created_at AS STRING) AS created_at,
+                       COALESCE(is_resolved, false) AS is_resolved
                 FROM {SCHEMA}.comments WHERE comment_id = ?""",
             [cid]
         )
         return jsonify(row[0] if row else {
             "comment_id": cid, "entity_type": entity_type, "entity_id": entity_id,
-            "author": author, "author_email": email or "", "body": body, "created_at": ""
+            "author": author, "author_email": email or "", "body": body, "created_at": "",
+            "is_resolved": False,
         })
     except Exception:
         return jsonify({
             "comment_id": cid, "entity_type": entity_type, "entity_id": entity_id,
-            "author": author, "author_email": email or "", "body": body, "created_at": ""
+            "author": author, "author_email": email or "", "body": body, "created_at": "",
+            "is_resolved": False,
         })
 
 

@@ -2374,16 +2374,26 @@ function CommentsPanel({ entityType, entityId }) {
   const [open, setOpen]         = useState(false);
   const [comments, setComments] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [draft, setDraft]       = useState("");
   const [saving, setSaving]     = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [acting, setActing]     = useState(null); // comment_id under action
   const inputRef                = useRef(null);
 
   const load = () => {
     setLoading(true);
+    setLoadError(false);
     api(`/api/comments/${entityType}/${entityId}`)
-      .then(d => setComments(Array.isArray(d) ? d : []))
-      .catch(() => setComments([]))
+      .then(d => {
+        if (Array.isArray(d)) {
+          setComments(d);
+        } else {
+          setLoadError(true);
+          setComments([]);
+        }
+      })
+      .catch(() => { setLoadError(true); setComments([]); })
       .finally(() => setLoading(false));
   };
 
@@ -2396,6 +2406,7 @@ function CommentsPanel({ entityType, entityId }) {
     const body = draft.trim();
     if (!body) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const saved = await api(`/api/comments/${entityType}/${entityId}`, {
         method: "POST", body: JSON.stringify({ body }),
@@ -2403,9 +2414,12 @@ function CommentsPanel({ entityType, entityId }) {
       if (saved && !saved.error) {
         setComments(prev => [...prev, saved]);
         setDraft("");
+      } else {
+        setSaveError(saved?.error || "Comment could not be saved. Please try again.");
       }
-    } catch (e) { /* ignore */ }
-    finally { setSaving(false); }
+    } catch (e) {
+      setSaveError("Comment could not be saved. Please try again.");
+    } finally { setSaving(false); }
   };
 
   const del = async (commentId) => {
@@ -2518,7 +2532,14 @@ function CommentsPanel({ entityType, entityId }) {
 
           {loading && [1, 2].map(i => <Skeleton key={i} height={68} />)}
 
-          {!loading && count === 0 && (
+          {!loading && loadError && (
+            <p style={{ fontSize: 13, color: DANGER, textAlign: "center",
+              marginTop: 40, lineHeight: 1.6 }}>
+              Could not load comments. Please refresh or try again.
+            </p>
+          )}
+
+          {!loading && !loadError && count === 0 && (
             <p style={{ fontSize: 13, color: TEXT_MUTED, textAlign: "center",
               marginTop: 40, lineHeight: 1.6 }}>
               No comments yet.<br />Be the first to leave one below.
@@ -2614,6 +2635,11 @@ function CommentsPanel({ entityType, entityId }) {
             style={{ ...inputStyle, resize: "none", width: "100%",
               marginBottom: 8, boxSizing: "border-box" }}
           />
+          {saveError && (
+            <p style={{ fontSize: 12, color: DANGER, marginBottom: 8, lineHeight: 1.5 }}>
+              {saveError}
+            </p>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Btn size="sm" onClick={submit} disabled={!draft.trim() || saving}>
               {saving ? "Posting…" : "Post comment"}
