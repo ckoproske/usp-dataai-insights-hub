@@ -4273,7 +4273,7 @@ def get_comments(entity_type, entity_id):
         rows = query(
             f"""SELECT comment_id, entity_type, entity_id, author, author_email,
                        body, CAST(created_at AS STRING) AS created_at,
-                       COALESCE(is_resolved, false) AS is_resolved
+                       false AS is_resolved
                 FROM {SCHEMA}.comments
                 WHERE entity_type = ? AND entity_id = ?
                 ORDER BY created_at ASC""",
@@ -4328,7 +4328,7 @@ def add_comment(entity_type, entity_id):
         row = query(
             f"""SELECT comment_id, entity_type, entity_id, author, author_email,
                        body, CAST(created_at AS STRING) AS created_at,
-                       COALESCE(is_resolved, false) AS is_resolved
+                       false AS is_resolved
                 FROM {SCHEMA}.comments WHERE comment_id = ?""",
             [cid]
         )
@@ -4357,13 +4357,17 @@ def delete_comment(comment_id):
 
 @app.route("/api/comments/<comment_id>/resolve", methods=["PATCH"])
 def resolve_comment(comment_id):
-    """Toggle the resolved state of a comment."""
+    """Toggle the resolved state of a comment. Requires is_resolved column (schema_migration_comments_v1.sql)."""
     data = request.json or {}
     is_resolved = bool(data.get("is_resolved", True))
-    execute(
-        f"UPDATE {SCHEMA}.comments SET is_resolved = ? WHERE comment_id = ?",
-        [is_resolved, comment_id]
-    )
+    try:
+        execute(
+            f"UPDATE {SCHEMA}.comments SET is_resolved = ? WHERE comment_id = ?",
+            [is_resolved, comment_id]
+        )
+    except Exception as e:
+        print(f"[resolve_comment] UPDATE failed (is_resolved column may not exist): {e}")
+        return jsonify({"error": "Resolve not available — run schema_migration_comments_v1.sql first."}), 500
     return jsonify({"comment_id": comment_id, "is_resolved": is_resolved})
 
 
