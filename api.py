@@ -4273,7 +4273,7 @@ def get_comments(entity_type, entity_id):
         rows = query(
             f"""SELECT comment_id, entity_type, entity_id, author, author_email,
                        body, CAST(created_at AS STRING) AS created_at,
-                       false AS is_resolved
+                       COALESCE(is_resolved, false) AS is_resolved
                 FROM {SCHEMA}.comments
                 WHERE entity_type = ? AND entity_id = ?
                 ORDER BY created_at ASC""",
@@ -4328,7 +4328,7 @@ def add_comment(entity_type, entity_id):
         row = query(
             f"""SELECT comment_id, entity_type, entity_id, author, author_email,
                        body, CAST(created_at AS STRING) AS created_at,
-                       false AS is_resolved
+                       COALESCE(is_resolved, false) AS is_resolved
                 FROM {SCHEMA}.comments WHERE comment_id = ?""",
             [cid]
         )
