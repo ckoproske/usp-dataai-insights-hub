@@ -4252,6 +4252,16 @@ def delete_idea_comment(idea_id, comment_id):
 
 # ── BOW / Portfolio comments ──────────────────────────────────────────────────
 
+@app.route("/api/comments/debug")
+def debug_comments():
+    """Quick check — returns total row count from the comments table."""
+    try:
+        rows = query(f"SELECT COUNT(*) AS total FROM {SCHEMA}.comments")
+        return jsonify({"status": "ok", "total_comments": rows[0]["total"] if rows else 0})
+    except Exception as e:
+        return jsonify({"status": "error", "detail": str(e)}), 500
+
+
 @app.route("/api/comments/<entity_type>/<entity_id>")
 def get_comments(entity_type, entity_id):
     """Return all comments for a BOW or portfolio, oldest first."""
@@ -4265,8 +4275,9 @@ def get_comments(entity_type, entity_id):
                 ORDER BY created_at ASC""",
             [entity_type, entity_id]
         )
-    except Exception:
-        rows = []
+    except Exception as e:
+        print(f"[get_comments] query failed for {entity_type}/{entity_id}: {e}")
+        return jsonify({"error": f"Could not load comments: {e}"}), 500
     return jsonify(rows)
 
 
