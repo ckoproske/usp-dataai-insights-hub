@@ -4254,10 +4254,14 @@ def delete_idea_comment(idea_id, comment_id):
 
 @app.route("/api/comments/debug")
 def debug_comments():
-    """Quick check — returns total row count from the comments table."""
+    """Quick check — returns all rows from the comments table (for diagnosis only)."""
     try:
-        rows = query(f"SELECT COUNT(*) AS total FROM {SCHEMA}.comments")
-        return jsonify({"status": "ok", "total_comments": rows[0]["total"] if rows else 0})
+        rows = query(
+            f"""SELECT comment_id, entity_type, entity_id, author,
+                       body, CAST(created_at AS STRING) AS created_at
+                FROM {SCHEMA}.comments ORDER BY created_at DESC"""
+        )
+        return jsonify({"status": "ok", "total_comments": len(rows), "rows": rows})
     except Exception as e:
         return jsonify({"status": "error", "detail": str(e)}), 500
 
