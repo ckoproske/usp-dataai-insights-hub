@@ -736,6 +736,17 @@ Table pending_actuals {
 }
 
 
+Table indicator_period_targets {
+  target_id    string    [pk]
+  indicator_id string    [note: 'refs bow_indicators.indicator_id or portfolio_indicators.indicator_id']
+  entity_type  string    [note: '"bow" | "portfolio"']
+  year         int
+  period       string    [note: '"H1"|"H2" | "Q1"–"Q4" | "Jan–Feb" etc. | "M01"–"M12"']
+  target_value double
+  updated_by   string
+  updated_at   timestamp
+}
+
 // =============================================================================
 // VIEWS (read-only — not writable)
 // =============================================================================

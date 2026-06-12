@@ -1162,13 +1162,31 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]         = useState(false);
 
-  const nameChanged    = iname !== (indicator.name || "");
-  const textChanged    = itext !== (indicator.text || "");
-  const targetsChanged = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
-  const majorChanged   = nameChanged || textChanged;
+  // Period targets: keyed as "YEAR_PERIOD" e.g. "2026_Q1"
+  const [periodTargets, setPeriodTargets]         = useState({});
+  const [origPeriodTargets, setOrigPeriodTargets] = useState({});
+
+  useEffect(() => {
+    if (!indicator.indicator_id) return;
+    api(`/api/indicators/${indicator.indicator_id}/period-targets`).then(d => {
+      if (Array.isArray(d)) {
+        const map = {};
+        d.forEach(r => { map[`${r.year}_${r.period}`] = String(r.target_value ?? ""); });
+        setPeriodTargets(map);
+        setOrigPeriodTargets(map);
+      }
+    });
+  }, [indicator.indicator_id]);
+
+  const nameChanged         = iname !== (indicator.name || "");
+  const textChanged         = itext !== (indicator.text || "");
+  const targetsChanged      = TARGET_YEARS.some(y => targets[y] !== String(indicator[`target_${y}`] ?? ""));
+  const periodTargetsChanged = JSON.stringify(periodTargets) !== JSON.stringify(origPeriodTargets);
+  const anyTargetsChanged   = targetsChanged || periodTargetsChanged;
+  const majorChanged        = nameChanged || textChanged;
   const canSave = (iname.trim() || itext.trim())
-    && (!majorChanged   || rationale.trim())
-    && (!targetsChanged || revReason);
+    && (!majorChanged      || rationale.trim())
+    && (!anyTargetsChanged || revReason);
 
   const save = async () => {
     setSaving(true); setError(null);
@@ -1192,6 +1210,24 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
     try {
       const res = await api(endpoint, { method: "PATCH", body: JSON.stringify(body) });
       if (res.error) { setError(res.error); return; }
+
+      // Save period targets if frequency is sub-annual
+      const periods = PERIOD_OPTIONS[freq] || [];
+      if (periods.length > 0) {
+        const ptPayload = [];
+        TARGET_YEARS.forEach(y => {
+          periods.forEach(p => {
+            ptPayload.push({ year: y, period: p, value: periodTargets[`${y}_${p}`] ?? "" });
+          });
+        });
+        const entityType = isPortfolio ? "portfolio" : "bow";
+        const ptRes = await api(`/api/indicators/${indicator.indicator_id}/period-targets`, {
+          method: "PUT",
+          body: JSON.stringify({ entity_type: entityType, targets: ptPayload, edited_by: user?.email }),
+        });
+        if (ptRes.error) { setError(ptRes.error); return; }
+      }
+
       onSave({ ...indicator, ...body, source_name: sourceName || "" });
     } catch (e) {
       setError("Save failed — please try again.");
@@ -1302,6 +1338,53 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         ))}
       </div>
 
+      {/* ── Period targets (sub-annual frequencies only) ── */}
+      {(() => {
+        const periods = PERIOD_OPTIONS[freq] || [];
+        if (periods.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginBottom: 6 }}>
+              Period targets ({freq})
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 52, padding: "3px 4px", textAlign: "left",
+                      color: TEXT_MUTED, fontWeight: 700 }}>Period</th>
+                    {TARGET_YEARS.map(y => (
+                      <th key={y} style={{ padding: "3px 4px", textAlign: "right",
+                        color: TEXT_MUTED, fontWeight: 700, minWidth: 60 }}>{y}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods.map((p, pi) => (
+                    <tr key={p} style={{ background: pi % 2 === 0 ? BG : SURFACE }}>
+                      <td style={{ padding: "3px 4px", fontWeight: 600, color: TEXT_SUB }}>{p}</td>
+                      {TARGET_YEARS.map(y => (
+                        <td key={y} style={{ padding: "2px 4px" }}>
+                          <input
+                            type="number"
+                            value={periodTargets[`${y}_${p}`] ?? ""}
+                            onChange={e => setPeriodTargets(pt => ({
+                              ...pt, [`${y}_${p}`]: e.target.value,
+                            }))}
+                            style={{ ...inputStyle, textAlign: "right", padding: "3px 5px",
+                              fontSize: 11, width: "100%" }}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Notes ── */}
       <SectionHead label="Notes" />
       <Field label="Data quality notes" helper="Known limitations, caveats, or gaps with this indicator's data.">
@@ -1321,7 +1404,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
             rows={2} style={{ ...inputStyle, resize: "vertical", borderColor: ACCENT }} />
         </Field>
       )}
-      {targetsChanged && (
+      {anyTargetsChanged && (
         <Field label="Reason for target revision" required>
           <select value={revReason} onChange={e => setRevReason(e.target.value)}
             style={{ ...inputStyle, appearance: "auto", borderColor: ACCENT }}>

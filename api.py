@@ -4371,6 +4371,63 @@ def resolve_comment(comment_id):
     return jsonify({"comment_id": comment_id, "is_resolved": is_resolved})
 
 
+# ── Indicator period targets ──────────────────────────────────────────────────
+
+@app.route("/api/indicators/<indicator_id>/period-targets")
+def get_period_targets(indicator_id):
+    """Return all period targets for an indicator, ordered by year then period."""
+    try:
+        rows = query(
+            f"""SELECT year, period, target_value
+                FROM {SCHEMA}.indicator_period_targets
+                WHERE indicator_id = ?
+                ORDER BY year, period""",
+            [indicator_id]
+        )
+    except Exception as e:
+        print(f"[get_period_targets] query failed for {indicator_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+    return jsonify(rows)
+
+
+@app.route("/api/indicators/<indicator_id>/period-targets", methods=["PUT"])
+def upsert_period_targets(indicator_id):
+    """Replace all period targets for an indicator.
+    Body: { entity_type: 'bow'|'portfolio', targets: [{year, period, value}, ...] }
+    Rows with null/blank value are skipped (treated as cleared).
+    """
+    data        = request.json or {}
+    entity_type = data.get("entity_type", "bow")
+    targets     = data.get("targets", [])
+    email       = _actor(data)
+
+    try:
+        execute(
+            f"DELETE FROM {SCHEMA}.indicator_period_targets WHERE indicator_id = ?",
+            [indicator_id]
+        )
+        for t in targets:
+            raw = t.get("value")
+            if raw is None or str(raw).strip() == "":
+                continue
+            try:
+                val = float(raw)
+            except (ValueError, TypeError):
+                continue
+            execute(
+                f"""INSERT INTO {SCHEMA}.indicator_period_targets
+                    (target_id, indicator_id, entity_type, year, period,
+                     target_value, updated_by, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp())""",
+                [new_id(), indicator_id, entity_type, int(t["year"]), t["period"], val, email]
+            )
+    except Exception as e:
+        print(f"[upsert_period_targets] failed for {indicator_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"status": "ok"})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
