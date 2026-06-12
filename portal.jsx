@@ -1224,10 +1224,10 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
       <Field label="Indicator name" required
         helper="Short, clear name used to identify this indicator across the platform.">
         <input type="text" value={iname} onChange={e => setIname(e.target.value)}
-          placeholder="e.g. % of grantees with AI-ready data infrastructure" style={inputStyle} />
+          style={inputStyle} />
       </Field>
-      <Field label="Description"
-        helper="What exactly is being measured — full definition, methodology, scope.">
+      <Field label="Indicator Metric"
+        helper={<>What exactly is being measured — full definition, methodology, scope.<br /><span style={{ color: TEXT_MUTED }}>e.g. % of grantees with AI-ready data infrastructure</span></>}>
         <textarea value={itext} onChange={e => setItext(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
