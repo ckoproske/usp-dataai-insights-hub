@@ -79,6 +79,7 @@ const UNIT_OPTIONS = [
   { value: "learners",     label: "learners" },
   { value: "solutions",    label: "solutions" },
   { value: "users",        label: "users" },
+  { value: "months",       label: "months" },
   { value: "other",        label: "other (specify in notes)" },
 ];
 
