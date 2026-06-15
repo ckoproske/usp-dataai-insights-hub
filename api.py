@@ -662,7 +662,7 @@ def get_indicators(bow_id):
     try:
         rows = query(
             f"""SELECT
-                  i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
+                  i.indicator_id, i.bow_id, i.outcome_id, i.name, i.text, i.data_source,
                   i.baseline, i.collection_frequency, i.unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   i.source_id,
@@ -680,7 +680,7 @@ def get_indicators(bow_id):
         # Fallback: omit optional columns if migration hasn't run yet
         rows = query(
             f"""SELECT
-                  i.indicator_id, i.bow_id, i.outcome_id, i.text, i.data_source,
+                  i.indicator_id, i.bow_id, i.outcome_id, i.name, i.text, i.data_source,
                   i.baseline, i.collection_frequency, NULL AS unit,
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   NULL AS source_id, NULL AS source_name, NULL AS source_url,
