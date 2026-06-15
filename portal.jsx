@@ -1361,7 +1361,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 2 }}>Baseline & Targets</p>
         <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
           {(PERIOD_OPTIONS[freq] || []).length > 0
-            ? "Enter period-level targets below — yearly rollups will be calculated from them in reporting."
+            ? "Enter period-level targets below."
             : "Yearly targets are required. Selecting a more frequent collection cadence will replace these with period-level targets."}
         </p>
       </div>
