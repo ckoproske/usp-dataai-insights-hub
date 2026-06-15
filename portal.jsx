@@ -547,13 +547,15 @@ function InlineSubmitForm({ indicator, bow, onClose, onSubmitted, noBox = false 
 }
 
 // ─── Inline Edit Outcome ───────────────────────────────────────────────────────
-function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
+function InlineEditOutcome({ outcome, onSave, onCancel, onDeleted, user, isPortfolio }) {
   const [title, setTitle]         = useState(outcome.title || "");
   const initText = outcome.text || outcome.outcome || "";
   const [text, setText]           = useState(initText);
   const [rationale, setRationale] = useState("");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting]   = useState(false);
 
   const titleChanged   = title !== (outcome.title || "");
   const textChanged    = text  !== initText;
@@ -605,6 +607,41 @@ function InlineEditOutcome({ outcome, onSave, onCancel, user, isPortfolio }) {
           {saving ? "Saving..." : "Save outcome"}
         </Btn>
       </div>
+
+      {!isPortfolio && onDeleted && (
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+          {confirmDelete ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: DANGER, flexGrow: 1 }}>
+                Permanently remove this outcome and all its indicators?
+              </span>
+              <button onClick={async () => {
+                setDeleting(true);
+                await api(`/api/bow-outcomes/${outcome.outcome_id}`, { method: "DELETE" });
+                setDeleting(false);
+                onDeleted();
+              }} disabled={deleting}
+                style={{ fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  background: DANGER, color: SURFACE, border: "none",
+                  borderRadius: 4, padding: "3px 10px" }}>
+                {deleting ? "Removing…" : "Yes, remove"}
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                style={{ fontSize: 12, cursor: "pointer", background: "none",
+                  border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px",
+                  color: TEXT_SUB }}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                fontSize: 12, color: TEXT_MUTED, padding: 0, textDecoration: "underline" }}>
+              Remove outcome
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1265,7 +1302,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
           style={inputStyle} />
       </Field>
       <Field label="Indicator Metric"
-        helper={<>What exactly is being measured — full definition, methodology, scope.<br /><span style={{ color: TEXT_MUTED }}>e.g. % of grantees with AI-ready data infrastructure</span></>}>
+        helper={<>What exactly is being measured? <span style={{ color: TEXT_MUTED }}>e.g. % of grantees with AI-ready data infrastructure</span></>}>
         <textarea value={itext} onChange={e => setItext(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
@@ -1320,7 +1357,15 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
         </Field>
       </div>
 
-      <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>Baseline & Targets</p>
+      <div style={{ marginBottom: 8 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 2 }}>Baseline & Targets</p>
+        <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
+          {(PERIOD_OPTIONS[freq] || []).length > 0
+            ? "Enter period-level targets below — yearly rollups will be calculated from them in reporting."
+            : "Yearly targets are required. Selecting a more frequent collection cadence will replace these with period-level targets."}
+        </p>
+      </div>
+      {(PERIOD_OPTIONS[freq] || []).length === 0 && (
       <div style={{ display: "grid",
         gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 8 }}>
         <div>
@@ -1339,6 +1384,7 @@ function InlineEditIndicator({ indicator, onSave, onCancel, onDeleted, user, isP
           </div>
         ))}
       </div>
+      )}
 
       {/* ── Period targets (sub-annual frequencies only) ── */}
       {(() => {
@@ -2109,25 +2155,6 @@ function BowContentTable({ outcomes, executionTargets, bow, user, onRefresh, onO
                               style={{ background: "none", border: "none", cursor: "pointer",
                                 fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
                               title="Edit outcome">✎</button>
-                            {confirmDelOut === out.outcome_id ? (
-                              <>
-                                <button onClick={async () => {
-                                  await api(`/api/bow-outcomes/${out.outcome_id}`, { method: "DELETE" });
-                                  setConfirmDelOut(null); onRefresh();
-                                }} style={{ background: "none", border: "none", cursor: "pointer",
-                                  fontSize: 11, color: DANGER, padding: "2px 4px", fontWeight: 700 }}>
-                                  ✓ Remove
-                                </button>
-                                <button onClick={() => setConfirmDelOut(null)}
-                                  style={{ background: "none", border: "none", cursor: "pointer",
-                                    fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}>✕</button>
-                              </>
-                            ) : (
-                              <button onClick={() => setConfirmDelOut(out.outcome_id)}
-                                style={{ background: "none", border: "none", cursor: "pointer",
-                                  fontSize: 11, color: TEXT_MUTED, padding: "2px 4px" }}
-                                title="Remove outcome">✕</button>
-                            )}
                           </div>
                         </div>
                         <p style={{ fontSize: 13, fontWeight: 700, color: TEXT,
@@ -2968,6 +2995,7 @@ function BowSourcesManager({ bow, user }) {
 function BowPanel({ bow, user, onBack }) {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
+  const [loadError, setLoadError]   = useState(false);
   const [outcomes, setOutcomes]     = useState([]);
   const [activeOId, setActiveOId]   = useState(null);
   const [drawerCtx, setDrawerCtx]   = useState(null);
@@ -2975,19 +3003,22 @@ function BowPanel({ bow, user, onBack }) {
   const openDrawer  = ctx => setDrawerCtx(ctx);
   const closeDrawer = ()  => setDrawerCtx(null);
 
-  const load = () => {
-    setLoading(true);
+  const load = (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setLoadError(false);
     Promise.all([
       api(`/api/bow/${bow.bow_id}/full`),
       api(`/api/bow/${bow.bow_id}/edit-summary`).catch(() => null),
     ]).then(([d, summary]) => {
+      if (d.error || !d.outcomes) { setLoadError(true); return; }
       const outs = d.outcomes || [];
       setData(d);
       setOutcomes(outs);
       // Set first tab on initial load only
       setActiveOId(prev => prev || (outs[0]?.outcome_id ?? null));
       if (summary) setEditSummary(summary);
-    }).finally(() => setLoading(false));
+    }).catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, [bow.bow_id]);
@@ -2997,6 +3028,15 @@ function BowPanel({ bow, user, onBack }) {
   if (loading) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "24px 0" }}>
       <Skeleton height={40} /><Skeleton height={300} /><Skeleton height={300} />
+    </div>
+  );
+
+  if (loadError) return (
+    <div style={{ padding: "24px 0" }}>
+      <p style={{ color: DANGER, fontSize: 14, marginBottom: 12 }}>
+        Failed to load BOW data. Your changes were saved — refresh the page to reload.
+      </p>
+      <Btn size="sm" onClick={() => load()}>Retry</Btn>
     </div>
   );
 
@@ -3112,7 +3152,7 @@ function BowPanel({ bow, user, onBack }) {
         outcomes={visibleOutcomes}
         executionTargets={visibleTargets}
         bow={bow} user={user}
-        onRefresh={load}
+        onRefresh={() => load(true)}
         onOpenDrawer={openDrawer}
         editSummary={editSummary}
       />
@@ -3135,28 +3175,29 @@ function BowPanel({ bow, user, onBack }) {
         {drawerCtx?.type === "indicator" && (
           <InlineEditIndicator indicator={drawerCtx.item} user={user}
             bowId={bow.bow_id}
-            onSave={() => { closeDrawer(); load(); }}
+            onSave={() => { closeDrawer(); load(true); }}
             onCancel={closeDrawer}
-            onDeleted={() => { closeDrawer(); load(); }} />
+            onDeleted={() => { closeDrawer(); load(true); }} />
         )}
         {drawerCtx?.type === "add-indicator" && (
           <AddIndicatorInline bow={bow} outcomeId={drawerCtx.extra?.outcomeId} user={user}
-            onSaved={() => { closeDrawer(); load(); }}
+            onSaved={() => { closeDrawer(); load(true); }}
             onCancel={closeDrawer} />
         )}
         {drawerCtx?.type === "outcome" && (
           <InlineEditOutcome outcome={drawerCtx.item} user={user}
-            onSave={() => { closeDrawer(); load(); }}
-            onCancel={closeDrawer} />
+            onSave={() => { closeDrawer(); load(true); }}
+            onCancel={closeDrawer}
+            onDeleted={() => { closeDrawer(); load(true); }} />
         )}
         {drawerCtx?.type === "add-outcome" && (
           <AddOutcomeForm bow={bow}
-            onSaved={() => { closeDrawer(); load(); }}
+            onSaved={() => { closeDrawer(); load(true); }}
             onCancel={closeDrawer} />
         )}
         {drawerCtx?.type === "bow-desc" && (
           <BowDescEditor bow={bow} data={drawerCtx.item} user={user}
-            onSaved={() => { closeDrawer(); load(); }}
+            onSaved={() => { closeDrawer(); load(true); }}
             onCancel={closeDrawer} />
         )}
         {drawerCtx?.type === "manage-sources" && (
