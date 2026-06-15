@@ -1011,6 +1011,7 @@ async function loadFromAPI() {
             // DB is the source of truth: id, text, targets, baseline, frequency
             byOutcome[ind.outcome_id][ind.indicator_id] = {
               id:          ind.indicator_id,
+              name:        ind.name || "",
               text:        ind.text || "",
               source:      ind.source_name || ind.data_source || "",
               source_name: ind.source_name || "",
