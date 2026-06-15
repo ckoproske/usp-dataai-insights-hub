@@ -1574,7 +1574,7 @@ function IndicatorTile({ ind, iIdx, activeYear, fluid }) {
   return (
     <div style={{flexShrink:0,width:(fluid||ind._fluid)?"100%":380,border:"1px solid "+BORDER,borderLeft:"3px solid "+sc.color,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(10,37,64,0.04)",background:SURFACE}}>
       <div style={{padding:"12px 16px 10px",background:SURFACE,borderBottom:"1px solid "+BORDER}}>
-        <div style={{fontSize:12,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:5}}>Indicator {iIdx+1}</div>
+        <div style={{fontSize:12,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:5}}>{ind.name || "Indicator Title"}</div>
         <div style={{fontSize:14,fontWeight:700,color:TEXT,lineHeight:1.5,marginBottom:5}}>{ind.text}</div>
         <DataMeta source={ind.source_url || ind.source_name || ind.source} lastUpdated={ind.lastUpdated} updateFreq={ind.updateFreq}/>
       </div>

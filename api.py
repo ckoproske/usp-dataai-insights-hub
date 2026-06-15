@@ -580,6 +580,7 @@ def get_targets(bow_id):
               ON t.target_id = s.target_id
              AND t.year      = s.year
             WHERE t.bow_id = ?
+              AND COALESCE(t.is_active, true) = true
             ORDER BY t.year, t.sort_order""",
         [bow_id]
     )
