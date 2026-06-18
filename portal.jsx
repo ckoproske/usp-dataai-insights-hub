@@ -2417,35 +2417,117 @@ function AddTargetInline({ bow, outcomeId, year, user, onSaved, onCancel }) {
 }
 
 function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
-  const [name, setName]     = useState("");
-  const [text, setText]     = useState("");
-  const [unit, setUnit]     = useState("");
-  const [freq, setFreq]     = useState("");
-  const [sourceId, setSId]  = useState(null);
-  const [roundId, setRId]   = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [iname, setIname]         = useState("");
+  const [itext, setItext]         = useState("");
+  const [purpose, setPurpose]     = useState("");
+  const [measureLevel, setML]     = useState("");
+  const [indStatus, setStatus]    = useState("active");
+  const [qualityNotes, setQN]     = useState("");
+  const [trackingNotes, setTN]    = useState("");
+  const [sourceId, setSourceId]   = useState(null);
+  const [sourceName, setSourceName] = useState("");
+  const [unit, setUnit]           = useState("");
+  const [freq, setFreq]           = useState("");
+  const [baseline, setBase]       = useState("");
+  const [targets, setTargets]     = useState(
+    TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: "" }), {})
+  );
+  const [periodTargets, setPeriodTargets] = useState({});
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState(null);
+
+  const canSave = itext.trim() || iname.trim();
 
   const save = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    const res = await api("/api/bow-indicators", {
-      method: "POST",
-      body: JSON.stringify({ bow_id: bow.bow_id, outcome_id: outcomeId,
-        name, text: text || null, unit: unit || null,
-        collection_frequency: freq || null, source_id: sourceId || null,
-        edited_by: user?.email }),
-    });
-    if (!res.error) onSaved();
+    if (!canSave) return;
+    setSaving(true); setError(null);
+    const body = {
+      bow_id: bow.bow_id, outcome_id: outcomeId,
+      name: iname || null, text: itext || iname,
+      purpose: purpose || null,
+      measurement_level: measureLevel || null,
+      status: indStatus,
+      data_quality_notes: qualityNotes || null,
+      tracking_notes: trackingNotes || null,
+      source_id: sourceId || null,
+      unit: unit || null, collection_frequency: freq || null,
+      baseline: baseline || null,
+      ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
+      edited_by: user?.email,
+    };
+    const res = await api("/api/bow-indicators", { method: "POST", body: JSON.stringify(body) });
+    if (res.error) { setError(res.error); setSaving(false); return; }
+
+    // Save period targets if frequency is sub-annual
+    const periods = PERIOD_OPTIONS[freq] || [];
+    if (periods.length > 0 && res.indicator_id) {
+      const ptPayload = [];
+      TARGET_YEARS.forEach(y => {
+        periods.forEach(p => {
+          ptPayload.push({ year: y, period: p, value: periodTargets[`${y}_${p}`] ?? "" });
+        });
+      });
+      await api(`/api/indicators/${res.indicator_id}/period-targets`, {
+        method: "PUT",
+        body: JSON.stringify({ entity_type: "bow", targets: ptPayload, edited_by: user?.email }),
+      });
+    }
+
     setSaving(false);
+    onSaved();
   };
 
+  const SectionHead = ({ label }) => (
+    <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+      letterSpacing: 0.6, marginBottom: 8, marginTop: 16, paddingTop: 12,
+      borderTop: `1px solid ${BORDER}` }}>{label}</p>
+  );
+
   return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
-        <Field label="Indicator name" required>
-          <input type="text" value={name} onChange={e => setName(e.target.value)}
-            placeholder="Short name, e.g. % grantees with AI-ready data" style={inputStyle} />
+    <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
+      border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
+
+      <Field label="Indicator name"
+        helper="Short, clear name used to identify this indicator across the platform.">
+        <input type="text" value={iname} onChange={e => setIname(e.target.value)}
+          placeholder="Short name, e.g. % grantees with AI-ready data" style={inputStyle} />
+      </Field>
+      <Field label="Indicator Metric" required
+        helper={<>What exactly is being measured? <span style={{ color: TEXT_MUTED }}>e.g. % of grantees with AI-ready data infrastructure</span></>}>
+        <textarea value={itext} onChange={e => setItext(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <Field label="Purpose"
+        helper="Why this indicator matters — what decision or learning it informs.">
+        <textarea value={purpose} onChange={e => setPurpose(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+
+      <Field label="Source">
+        <SourcePickerInline sourceId={sourceId} roundId={null}
+          onChange={(sid, _rid, sname) => { setSourceId(sid); if (sname !== undefined) setSourceName(sname || ""); }}
+          user={user} bowId={bow?.bow_id} />
+      </Field>
+
+      <SectionHead label="Classification" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <Field label="Measurement level">
+          <select value={measureLevel} onChange={e => setML(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select…</option>
+            {MEASUREMENT_LEVELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
         </Field>
+        <Field label="Status">
+          <select value={indStatus} onChange={e => setStatus(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            {INDICATOR_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <SectionHead label="Unit & Collection" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <Field label="Unit">
           <select value={unit} onChange={e => setUnit(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
@@ -2453,7 +2535,7 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
             {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
           </select>
         </Field>
-        <Field label="Frequency">
+        <Field label="Collection frequency">
           <select value={freq} onChange={e => setFreq(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
             <option value="">Select…</option>
@@ -2462,20 +2544,97 @@ function AddIndicatorInline({ bow, outcomeId, user, onSaved, onCancel }) {
           </select>
         </Field>
       </div>
-      <Field label="Description" helper="Optional — full definition can be filled in after saving.">
-        <textarea value={text} onChange={e => setText(e.target.value)}
-          placeholder="What exactly is being measured…"
+
+      <div style={{ marginBottom: 8 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 2 }}>Baseline & Targets</p>
+        <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
+          {(PERIOD_OPTIONS[freq] || []).length > 0
+            ? "Enter period-level targets below."
+            : "Yearly targets are required. Selecting a more frequent collection cadence will replace these with period-level targets."}
+        </p>
+      </div>
+      {(PERIOD_OPTIONS[freq] || []).length === 0 && (
+        <div style={{ display: "grid",
+          gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 8 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+              display: "block", marginBottom: 3 }}>Baseline</label>
+            <input type="number" value={baseline} onChange={e => setBase(e.target.value)}
+              style={{ ...inputStyle, textAlign: "right" }} />
+          </div>
+          {TARGET_YEARS.map(y => (
+            <div key={y}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                display: "block", marginBottom: 3 }}>{y}</label>
+              <input type="number" value={targets[y]}
+                onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
+                style={{ ...inputStyle, textAlign: "right" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(() => {
+        const periods = PERIOD_OPTIONS[freq] || [];
+        if (periods.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginBottom: 6 }}>
+              Period targets ({freq})
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 52, padding: "3px 4px", textAlign: "left",
+                      color: TEXT_MUTED, fontWeight: 700 }}>Period</th>
+                    {TARGET_YEARS.map(y => (
+                      <th key={y} style={{ padding: "3px 4px", textAlign: "right",
+                        color: TEXT_MUTED, fontWeight: 700, minWidth: 60 }}>{y}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods.map((p, pi) => (
+                    <tr key={p} style={{ background: pi % 2 === 0 ? BG : SURFACE }}>
+                      <td style={{ padding: "3px 4px", fontWeight: 600, color: TEXT_SUB }}>{p}</td>
+                      {TARGET_YEARS.map(y => (
+                        <td key={y} style={{ padding: "2px 4px" }}>
+                          <input type="number"
+                            value={periodTargets[`${y}_${p}`] ?? ""}
+                            onChange={e => setPeriodTargets(pt => ({
+                              ...pt, [`${y}_${p}`]: e.target.value,
+                            }))}
+                            style={{ ...inputStyle, textAlign: "right", padding: "3px 5px",
+                              fontSize: 11, width: "100%" }}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      <SectionHead label="Notes" />
+      <Field label="Data quality notes" helper="Known limitations, caveats, or gaps with this indicator's data.">
+        <textarea value={qualityNotes} onChange={e => setQN(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
-      <Field label="Source">
-        <SourcePickerInline sourceId={sourceId} roundId={roundId}
-          onChange={(sid, rid) => { setSId(sid); setRId(rid); }} user={user} />
+      <Field label="Tracking details" helper="How and where this indicator is tracked, any context for the team.">
+        <textarea value={trackingNotes} onChange={e => setTN(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <Btn size="sm" onClick={save} disabled={!name.trim() || saving}>
+
+      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        <Btn size="sm" onClick={save} disabled={!canSave || saving}>
           {saving ? "Adding…" : "Add indicator"}
         </Btn>
-        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
       </div>
     </div>
   );
@@ -4173,13 +4332,24 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
   const [mode, setMode]         = useState("pick"); // "pick" | "standalone"
   const [selected, setSelected] = useState(null);   // chosen BOW indicator
   const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState(null);
 
   // Standalone fields
-  const [name, setName]   = useState("");
-  const [text, setText]   = useState("");
-  const [unit, setUnit]   = useState("");
-  const [freq, setFreq]   = useState("");
-  const [sourceId, setSId] = useState(null);
+  const [iname, setIname]           = useState("");
+  const [itext, setItext]           = useState("");
+  const [purpose, setPurpose]       = useState("");
+  const [measureLevel, setML]       = useState("");
+  const [indStatus, setStatus]      = useState("active");
+  const [qualityNotes, setQN]       = useState("");
+  const [trackingNotes, setTN]      = useState("");
+  const [sourceId, setSourceId]     = useState(null);
+  const [unit, setUnit]             = useState("");
+  const [freq, setFreq]             = useState("");
+  const [baseline, setBase]         = useState("");
+  const [targets, setTargets]       = useState(
+    TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: "" }), {})
+  );
+  const [periodTargets, setPeriodTargets] = useState({});
 
   const saveLinked = async () => {
     if (!selected) return;
@@ -4193,18 +4363,44 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
     setSaving(false);
   };
 
+  const canSaveStandalone = itext.trim() || iname.trim();
+
   const saveStandalone = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    const res = await api("/api/portfolio-indicators", {
-      method: "POST",
-      body: JSON.stringify({ portfolio_id: portfolio.portfolio_id, outcome_id: outcomeId,
-        name, text: text || null, unit: unit || null,
-        collection_frequency: freq || null, source_id: sourceId || null,
-        edited_by: user?.email }),
-    });
-    if (!res.error) onSaved();
+    if (!canSaveStandalone) return;
+    setSaving(true); setError(null);
+    const body = {
+      portfolio_id: portfolio.portfolio_id, outcome_id: outcomeId,
+      name: iname || null, text: itext || iname,
+      purpose: purpose || null,
+      measurement_level: measureLevel || null,
+      status: indStatus,
+      data_quality_notes: qualityNotes || null,
+      tracking_notes: trackingNotes || null,
+      source_id: sourceId || null,
+      unit: unit || null, collection_frequency: freq || null,
+      baseline: baseline || null,
+      ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
+      edited_by: user?.email,
+    };
+    const res = await api("/api/portfolio-indicators", { method: "POST", body: JSON.stringify(body) });
+    if (res.error) { setError(res.error); setSaving(false); return; }
+
+    const periods = PERIOD_OPTIONS[freq] || [];
+    if (periods.length > 0 && res.indicator_id) {
+      const ptPayload = [];
+      TARGET_YEARS.forEach(y => {
+        periods.forEach(p => {
+          ptPayload.push({ year: y, period: p, value: periodTargets[`${y}_${p}`] ?? "" });
+        });
+      });
+      await api(`/api/indicators/${res.indicator_id}/period-targets`, {
+        method: "PUT",
+        body: JSON.stringify({ entity_type: "portfolio", targets: ptPayload, edited_by: user?.email }),
+      });
+    }
+
     setSaving(false);
+    onSaved();
   };
 
   if (mode === "pick" && !selected) {
@@ -4259,9 +4455,16 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
   }
 
   // Standalone mode
+  const SectionHead = ({ label }) => (
+    <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+      letterSpacing: 0.6, marginBottom: 8, marginTop: 16, paddingTop: 12,
+      borderTop: `1px solid ${BORDER}` }}>{label}</p>
+  );
+
   return (
-    <div>
-      <p style={{ fontSize: 12, color: TEXT_SUB, marginBottom: 8 }}>
+    <div className="fade-in" style={{ padding: "16px 20px", background: SURFACE,
+      border: `1px solid ${BORDER}`, borderRadius: 8, marginTop: 8 }}>
+      <p style={{ fontSize: 12, color: TEXT_SUB, marginBottom: 12 }}>
         Standalone indicator (no BOW counterpart).
         <button onClick={() => setMode("pick")}
           style={{ background: "none", border: "none", cursor: "pointer",
@@ -4269,11 +4472,48 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
           Link to a BOW indicator instead
         </button>
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
-        <Field label="Indicator name" required>
-          <input type="text" value={name} onChange={e => setName(e.target.value)}
-            placeholder="Short name" style={inputStyle} />
+
+      <Field label="Indicator name"
+        helper="Short, clear name used to identify this indicator across the platform.">
+        <input type="text" value={iname} onChange={e => setIname(e.target.value)}
+          placeholder="Short name, e.g. % grantees with AI-ready data" style={inputStyle} />
+      </Field>
+      <Field label="Indicator Metric" required
+        helper={<>What exactly is being measured? <span style={{ color: TEXT_MUTED }}>e.g. % of grantees with AI-ready data infrastructure</span></>}>
+        <textarea value={itext} onChange={e => setItext(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+      <Field label="Purpose"
+        helper="Why this indicator matters — what decision or learning it informs.">
+        <textarea value={purpose} onChange={e => setPurpose(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+      </Field>
+
+      <Field label="Source">
+        <SourcePickerInline sourceId={sourceId} roundId={null}
+          onChange={(sid, _rid, sname) => setSourceId(sid)}
+          user={user} />
+      </Field>
+
+      <SectionHead label="Classification" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <Field label="Measurement level">
+          <select value={measureLevel} onChange={e => setML(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            <option value="">Select…</option>
+            {MEASUREMENT_LEVELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
         </Field>
+        <Field label="Status">
+          <select value={indStatus} onChange={e => setStatus(e.target.value)}
+            style={{ ...inputStyle, appearance: "auto" }}>
+            {INDICATOR_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <SectionHead label="Unit & Collection" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <Field label="Unit">
           <select value={unit} onChange={e => setUnit(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
@@ -4281,7 +4521,7 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
             {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
           </select>
         </Field>
-        <Field label="Frequency">
+        <Field label="Collection frequency">
           <select value={freq} onChange={e => setFreq(e.target.value)}
             style={{ ...inputStyle, appearance: "auto" }}>
             <option value="">Select…</option>
@@ -4290,19 +4530,97 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
           </select>
         </Field>
       </div>
-      <Field label="Description">
-        <textarea value={text} onChange={e => setText(e.target.value)}
+
+      <div style={{ marginBottom: 8 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 2 }}>Baseline & Targets</p>
+        <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
+          {(PERIOD_OPTIONS[freq] || []).length > 0
+            ? "Enter period-level targets below."
+            : "Yearly targets are required. Selecting a more frequent collection cadence will replace these with period-level targets."}
+        </p>
+      </div>
+      {(PERIOD_OPTIONS[freq] || []).length === 0 && (
+        <div style={{ display: "grid",
+          gridTemplateColumns: `repeat(${TARGET_YEARS.length + 1}, 1fr)`, gap: 8, marginBottom: 8 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+              display: "block", marginBottom: 3 }}>Baseline</label>
+            <input type="number" value={baseline} onChange={e => setBase(e.target.value)}
+              style={{ ...inputStyle, textAlign: "right" }} />
+          </div>
+          {TARGET_YEARS.map(y => (
+            <div key={y}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                display: "block", marginBottom: 3 }}>{y}</label>
+              <input type="number" value={targets[y]}
+                onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
+                style={{ ...inputStyle, textAlign: "right" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(() => {
+        const periods = PERIOD_OPTIONS[freq] || [];
+        if (periods.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginBottom: 6 }}>
+              Period targets ({freq})
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 52, padding: "3px 4px", textAlign: "left",
+                      color: TEXT_MUTED, fontWeight: 700 }}>Period</th>
+                    {TARGET_YEARS.map(y => (
+                      <th key={y} style={{ padding: "3px 4px", textAlign: "right",
+                        color: TEXT_MUTED, fontWeight: 700, minWidth: 60 }}>{y}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods.map((p, pi) => (
+                    <tr key={p} style={{ background: pi % 2 === 0 ? BG : SURFACE }}>
+                      <td style={{ padding: "3px 4px", fontWeight: 600, color: TEXT_SUB }}>{p}</td>
+                      {TARGET_YEARS.map(y => (
+                        <td key={y} style={{ padding: "2px 4px" }}>
+                          <input type="number"
+                            value={periodTargets[`${y}_${p}`] ?? ""}
+                            onChange={e => setPeriodTargets(pt => ({
+                              ...pt, [`${y}_${p}`]: e.target.value,
+                            }))}
+                            style={{ ...inputStyle, textAlign: "right", padding: "3px 5px",
+                              fontSize: 11, width: "100%" }}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      <SectionHead label="Notes" />
+      <Field label="Data quality notes" helper="Known limitations, caveats, or gaps with this indicator's data.">
+        <textarea value={qualityNotes} onChange={e => setQN(e.target.value)}
           rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
-      <Field label="Source">
-        <SourcePickerInline sourceId={sourceId} roundId={null}
-          onChange={(sid) => setSId(sid)} user={user} />
+      <Field label="Tracking details" helper="How and where this indicator is tracked, any context for the team.">
+        <textarea value={trackingNotes} onChange={e => setTN(e.target.value)}
+          rows={2} style={{ ...inputStyle, resize: "vertical" }} />
       </Field>
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <Btn size="sm" onClick={saveStandalone} disabled={!name.trim() || saving}>
+
+      {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
+        <Btn size="sm" onClick={saveStandalone} disabled={!canSaveStandalone || saving}>
           {saving ? "Adding…" : "Add indicator"}
         </Btn>
-        <Btn variant="secondary" size="sm" onClick={onCancel}>Cancel</Btn>
       </div>
     </div>
   );
