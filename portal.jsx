@@ -3976,7 +3976,7 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
       <div style={{ display: "flex", justifyContent: "space-between",
         alignItems: "center", marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <SectionLabel>Impact Indicators</SectionLabel>
+          <SectionLabel>Portfolio Impact Indicators</SectionLabel>
           <LastEdited
             by={editSummary?.indicators?.edited_by}
             at={editSummary?.indicators?.edited_at}
