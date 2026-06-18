@@ -3250,12 +3250,19 @@ function BowPanel({ bow, user, onBack }) {
       {(() => {
         const desc = data?.bow?.description ?? bow.description ?? "";
         return (
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 24, padding: "16px 20px", background: BG,
+            border: `1px solid ${BORDER}`, borderRadius: 8 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-              <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
-                fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, flex: 1, margin: 0 }}>
-                {desc || "No description yet. Click ✎ to add one."}
-              </p>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 6px 0" }}>
+                  Description
+                </p>
+                <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
+                  fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, margin: 0 }}>
+                  {desc || "No description yet."}
+                </p>
+              </div>
               <button title="Edit description"
                 onClick={() => openDrawer({ type: "bow-desc", item: { desc } })}
                 style={{ background: "none", border: "none", cursor: "pointer",
@@ -4912,13 +4919,21 @@ function PortfolioPanel({ portfolio, user, onBack }) {
 
       {activeTab !== "alignment" && <>
 
-      {/* ── Portfolio Description ── */}
+      {/* ── Portfolio Description + Problem Statement ── */}
       {(() => {
         const desc = data?.portfolio?.description ?? "";
+        const ps   = data?.problem_statement ?? "";
         return (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <div style={{ marginBottom: 24, padding: "16px 20px", background: BG,
+            border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+
+            {/* Description */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 6px 0" }}>
+                  Description
+                </p>
                 <p style={{ fontSize: 13, color: desc ? TEXT_SUB : TEXT_MUTED,
                   fontStyle: desc ? "normal" : "italic", lineHeight: 1.7, margin: 0 }}>
                   {desc || "No description yet."}
@@ -4933,17 +4948,10 @@ function PortfolioPanel({ portfolio, user, onBack }) {
                 style={{ background: "none", border: "none", cursor: "pointer",
                   color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
             </div>
-          </div>
-        );
-      })()}
 
-      {/* ── Problem / Gap Statement ── */}
-      {(() => {
-        const ps = data?.problem_statement ?? "";
-        return (
-          <div style={{ padding: "14px 18px", background: BG, border: `1px solid ${BORDER}`,
-            borderRadius: 8, marginBottom: 24 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            {/* Problem / Gap Statement */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8,
+              paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
@@ -4955,7 +4963,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
                     at={editSummary?.problem_statement?.edited_at}
                   />
                 </div>
-                <p style={{ fontSize: 13, color: ps ? TEXT : TEXT_MUTED,
+                <p style={{ fontSize: 13, color: ps ? TEXT_SUB : TEXT_MUTED,
                   fontStyle: ps ? "normal" : "italic", lineHeight: 1.7, margin: 0 }}>
                   {ps || "No problem statement yet."}
                 </p>
@@ -4964,6 +4972,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
                 style={{ background: "none", border: "none", cursor: "pointer",
                   color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
             </div>
+
           </div>
         );
       })()}
