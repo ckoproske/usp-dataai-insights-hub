@@ -449,6 +449,97 @@ def get_bow_portfolio_links(bow_id):
     return jsonify(rows)
 
 
+@app.route("/api/portfolio/<portfolio_id>/alignment")
+def get_portfolio_alignment(portfolio_id):
+    """Returns portfolio outcomes, BOWs with nested bow_outcomes, and current links — for the alignment map editor."""
+    port_outcomes = query(
+        f"""SELECT outcome_id, portfolio_id,
+                   COALESCE(NULLIF(title, ''), short_title) AS title,
+                   short_title, sort_order,
+                   COALESCE(text, outcome, '') AS text
+            FROM {SCHEMA}.portfolio_outcomes
+            WHERE portfolio_id = ?
+            ORDER BY sort_order""",
+        [portfolio_id]
+    )
+    bows_rows = query(
+        f"SELECT bow_id, title, sort_order FROM {SCHEMA}.bows WHERE portfolio_id = ? ORDER BY sort_order",
+        [portfolio_id]
+    )
+    bow_ids = [b["bow_id"] for b in bows_rows]
+    bow_outcomes = []
+    if bow_ids:
+        ph = ",".join(["?" for _ in bow_ids])
+        bow_outcomes = query(
+            f"""SELECT outcome_id, bow_id, number, short_title, title, text, sort_order
+                FROM {SCHEMA}.bow_outcomes
+                WHERE bow_id IN ({ph})
+                ORDER BY bow_id, sort_order""",
+            bow_ids
+        )
+    bow_outcome_map = {}
+    for bo in bow_outcomes:
+        bow_outcome_map.setdefault(bo["bow_id"], []).append(bo)
+    bows = [{**b, "outcomes": bow_outcome_map.get(b["bow_id"], [])} for b in bows_rows]
+
+    bow_outcome_ids = [bo["outcome_id"] for bo in bow_outcomes]
+    links = []
+    if bow_outcome_ids:
+        ph = ",".join(["?" for _ in bow_outcome_ids])
+        links = query(
+            f"""SELECT bow_outcome_id, portfolio_outcome_id, contribution_type
+                FROM {SCHEMA}.bow_portfolio_outcome_links
+                WHERE bow_outcome_id IN ({ph})""",
+            bow_outcome_ids
+        )
+    return jsonify({"portfolio_outcomes": port_outcomes, "bows": bows, "links": links})
+
+
+@app.route("/api/portfolio-outcome-links", methods=["POST"])
+def add_portfolio_outcome_link():
+    data = request.json or {}
+    bow_outcome_id = data.get("bow_outcome_id")
+    portfolio_outcome_id = data.get("portfolio_outcome_id")
+    user = _actor(data)
+    if not bow_outcome_id or not portfolio_outcome_id:
+        return jsonify({"error": "bow_outcome_id and portfolio_outcome_id required"}), 400
+    existing = query(
+        f"SELECT 1 FROM {SCHEMA}.bow_portfolio_outcome_links WHERE bow_outcome_id = ? AND portfolio_outcome_id = ?",
+        [bow_outcome_id, portfolio_outcome_id]
+    )
+    if existing:
+        return jsonify({"status": "already_exists"})
+    execute(
+        f"""INSERT INTO {SCHEMA}.bow_portfolio_outcome_links
+            (bow_outcome_id, portfolio_outcome_id, contribution_type)
+            VALUES (?, ?, 'direct')""",
+        [bow_outcome_id, portfolio_outcome_id]
+    )
+    _log_edit("bow_portfolio_outcome_link", bow_outcome_id, None, None,
+              {"portfolio_outcome_id": {"old": None, "new": portfolio_outcome_id}},
+              "Alignment link added", None, user)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/portfolio-outcome-links", methods=["DELETE"])
+def remove_portfolio_outcome_link():
+    data = request.json or {}
+    bow_outcome_id = data.get("bow_outcome_id")
+    portfolio_outcome_id = data.get("portfolio_outcome_id")
+    user = _actor(data)
+    if not bow_outcome_id or not portfolio_outcome_id:
+        return jsonify({"error": "bow_outcome_id and portfolio_outcome_id required"}), 400
+    execute(
+        f"""DELETE FROM {SCHEMA}.bow_portfolio_outcome_links
+            WHERE bow_outcome_id = ? AND portfolio_outcome_id = ?""",
+        [bow_outcome_id, portfolio_outcome_id]
+    )
+    _log_edit("bow_portfolio_outcome_link", bow_outcome_id, None, None,
+              {"portfolio_outcome_id": {"old": portfolio_outcome_id, "new": None}},
+              "Alignment link removed", None, user)
+    return jsonify({"status": "ok"})
+
+
 @app.route("/api/debug/bow-links/<bow_id>")
 def debug_bow_links(bow_id):
     """Diagnostic: shows raw bow_outcomes and bow_portfolio_outcome_links for a BOW."""

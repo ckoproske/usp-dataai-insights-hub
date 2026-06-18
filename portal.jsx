@@ -4626,6 +4626,174 @@ function AddPortfolioIndicatorInline({ portfolio, outcomeId, user, onSaved, onCa
   );
 }
 
+// ─── Alignment Map Editor ──────────────────────────────────────────────────────
+function AlignmentMapEditor({ portfolio, user, onClose }) {
+  const [portOutcomes, setPortOutcomes] = useState([]);
+  const [bows, setBows]                 = useState([]);
+  const [links, setLinks]               = useState(new Set());
+  const [loading, setLoading]           = useState(true);
+  const [expandedCols, setExpandedCols] = useState({});
+  const [expandedRows, setExpandedRows] = useState({});
+  const [toggling, setToggling]         = useState(new Set());
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/api/portfolio/${portfolio.portfolio_id}/alignment`).then(d => {
+      setPortOutcomes(d.portfolio_outcomes || []);
+      setBows(d.bows || []);
+      setLinks(new Set((d.links || []).map(l => `${l.bow_outcome_id}|${l.portfolio_outcome_id}`)));
+    }).finally(() => setLoading(false));
+  }, [portfolio.portfolio_id]);
+
+  const toggle = async (bowOutcomeId, portOutcomeId) => {
+    const key = `${bowOutcomeId}|${portOutcomeId}`;
+    const wasLinked = links.has(key);
+    setLinks(prev => { const next = new Set(prev); wasLinked ? next.delete(key) : next.add(key); return next; });
+    setToggling(prev => new Set([...prev, key]));
+    await api("/api/portfolio-outcome-links", {
+      method: wasLinked ? "DELETE" : "POST",
+      body: JSON.stringify({ bow_outcome_id: bowOutcomeId, portfolio_outcome_id: portOutcomeId, edited_by: user?.email }),
+    });
+    setToggling(prev => { const next = new Set(prev); next.delete(key); return next; });
+  };
+
+  const p = PORT_COLORS[portfolio.portfolio_id];
+  const numCols = portOutcomes.length;
+  const colTemplate = `220px repeat(${numCols}, 1fr)`;
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT, margin: 0, flex: 1 }}>
+          BOW → Portfolio Outcome Alignment
+        </h3>
+        <span style={{ fontSize: 12, color: TEXT_MUTED }}>Click any cell to add or remove a link.</span>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: "40px 0", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>Loading…</div>
+      ) : (
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px 6px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 1.5, background: BG, borderBottom: `1px solid ${BORDER}` }}>
+            BOW Outcome → Portfolio Outcome Alignment
+          </div>
+          <div style={{ overflowX: "auto", padding: "0 16px 14px" }}>
+            {/* Header row */}
+            <div style={{ display: "grid", gridTemplateColumns: colTemplate, minWidth: 500 }}>
+              <div style={{ background: BG, borderBottom: `2px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, padding: "6px 10px" }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 0.8 }}>BOW / Outcome</span>
+              </div>
+              {portOutcomes.map((o, i) => (
+                <div key={o.outcome_id} style={{ padding: "6px 6px", background: BG, borderBottom: `2px solid ${BORDER}`,
+                  borderRight: `1px solid ${BORDER}`, textAlign: "center" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: "50%",
+                    background: p ? p.color + "18" : "#eee", color: p?.color || TEXT,
+                    border: `1px solid ${(p?.color || BORDER)}55`, fontSize: 9, fontWeight: 800,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 3 }}>{i + 1}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
+                    {o.short_title || o.title}
+                  </div>
+                  {o.title && (o.short_title !== o.title) && (
+                    <>
+                      <button onClick={() => setExpandedCols(c => ({ ...c, [o.outcome_id]: !c[o.outcome_id] }))}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9,
+                          color: TEXT_MUTED, padding: "2px 0 0 0", display: "block", margin: "0 auto" }}>
+                        {expandedCols[o.outcome_id] ? "▲" : "▾"}
+                      </button>
+                      {expandedCols[o.outcome_id] && (
+                        <div style={{ fontSize: 9, color: TEXT_SUB, lineHeight: 1.3, marginTop: 3, textAlign: "left" }}>{o.title}</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* BOW rows */}
+            {bows.map((bow, bi) => {
+              if (!bow.outcomes?.length) return null;
+              const bgBase = bi % 2 === 0 ? "transparent" : "#FAFAF8";
+              return (
+                <React.Fragment key={bow.bow_id}>
+                  <div style={{ display: "grid", gridTemplateColumns: colTemplate, minWidth: 500,
+                    borderBottom: `1px solid ${BORDER}`, background: "#F3F2EF" }}>
+                    <div style={{ padding: "4px 10px", borderRight: `1px solid ${BORDER}`,
+                      display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 3, height: 12, borderRadius: 2, background: TEXT_MUTED, flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_SUB }}>{bow.title}</span>
+                    </div>
+                    {portOutcomes.map(o => <div key={o.outcome_id} style={{ borderRight: `1px solid ${BORDER}` }} />)}
+                  </div>
+                  {bow.outcomes.map((bo, oi) => {
+                    const isLast = oi === bow.outcomes.length - 1;
+                    return (
+                      <div key={bo.outcome_id} style={{ display: "grid", gridTemplateColumns: colTemplate, minWidth: 500,
+                        borderBottom: isLast ? `2px solid ${BORDER}` : `1px solid ${BORDER}` }}>
+                        <div style={{ padding: "5px 10px 5px 18px", borderRight: `1px solid ${BORDER}`, background: bgBase }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 5 }}>
+                            <div style={{ width: 3, height: 3, borderRadius: "50%", background: TEXT_MUTED,
+                              marginTop: 5, flexShrink: 0, opacity: 0.5 }} />
+                            <div>
+                              <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.35 }}>{bo.title || bo.short_title}</span>
+                              {bo.text && bo.text !== (bo.title || bo.short_title) && (
+                                <>
+                                  <button onClick={() => setExpandedRows(r => ({ ...r, [bo.outcome_id]: !r[bo.outcome_id] }))}
+                                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9,
+                                      color: TEXT_MUTED, padding: "0 0 0 4px", verticalAlign: "middle" }}>
+                                    {expandedRows[bo.outcome_id] ? "▲" : "▾"}
+                                  </button>
+                                  {expandedRows[bo.outcome_id] && (
+                                    <div style={{ fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4, marginTop: 3 }}>{bo.text}</div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {portOutcomes.map(po => {
+                          const key = `${bo.outcome_id}|${po.outcome_id}`;
+                          const linked = links.has(key);
+                          const isSaving = toggling.has(key);
+                          return (
+                            <div key={po.outcome_id}
+                              onClick={() => !isSaving && toggle(bo.outcome_id, po.outcome_id)}
+                              title={linked ? "Click to remove link" : "Click to add link"}
+                              style={{ padding: "5px", borderRight: `1px solid ${BORDER}`, background: bgBase,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: isSaving ? "wait" : "pointer", opacity: isSaving ? 0.5 : 1,
+                                transition: "background 0.1s" }}>
+                              {linked
+                                ? <span style={{ width: 18, height: 18, borderRadius: "50%",
+                                    background: (p?.color || ACCENT) + "18",
+                                    border: `1.5px solid ${p?.color || ACCENT}`,
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                    fontSize: 10, color: p?.color || ACCENT, fontWeight: 700 }}>✓</span>
+                                : <span style={{ width: 16, height: 16, borderRadius: "50%",
+                                    border: `1.5px dashed ${BORDER}`,
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center" }} />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+
+            {bows.every(b => !b.outcomes?.length) && (
+              <div style={{ padding: "20px 16px", textAlign: "center", color: TEXT_MUTED, fontSize: 12, fontStyle: "italic" }}>
+                No BOW outcomes found for this portfolio.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PortfolioPanel({ portfolio, user, onBack }) {
   const [data, setData]               = useState(null);
   const [loading, setLoading]         = useState(true);
@@ -4698,11 +4866,11 @@ function PortfolioPanel({ portfolio, user, onBack }) {
     <div className="fade-in">
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-        <button onClick={onBack}
+        <button onClick={activeTab === "alignment" ? () => setActiveTab("outcome") : onBack}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
             textDecoration: "underline" }}>
-          ← All portfolios
+          {activeTab === "alignment" ? "← Back to portfolio" : "← All portfolios"}
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>
@@ -4711,7 +4879,23 @@ function PortfolioPanel({ portfolio, user, onBack }) {
           {p && <span style={{ width: 10, height: 10, borderRadius: "50%",
             background: p.color, display: "inline-block" }} />}
         </div>
+        <button
+          onClick={() => setActiveTab(activeTab === "alignment" ? "outcome" : "alignment")}
+          style={{ fontSize: 12, fontWeight: 600, cursor: "pointer",
+            background: activeTab === "alignment" ? (p?.color || ACCENT) : SURFACE,
+            color: activeTab === "alignment" ? "#fff" : TEXT_SUB,
+            border: `1px solid ${activeTab === "alignment" ? (p?.color || ACCENT) : BORDER}`,
+            borderRadius: 6, padding: "7px 14px", flexShrink: 0, whiteSpace: "nowrap" }}>
+          {activeTab === "alignment" ? "Editing Alignment Map" : "Edit Alignment Map"}
+        </button>
       </div>
+
+      {/* ── Alignment Map Editor ── */}
+      {activeTab === "alignment" && (
+        <AlignmentMapEditor portfolio={portfolio} user={user} onClose={() => setActiveTab("outcome")} />
+      )}
+
+      {activeTab !== "alignment" && <>
 
       {/* ── Portfolio Description ── */}
       {(() => {
@@ -4858,6 +5042,8 @@ function PortfolioPanel({ portfolio, user, onBack }) {
       {activeTab === "outcome" && !activeOutcome && outcomes.length === 0 && (
         <EmptyState message='No outcomes yet — use "+ Add outcome" in the tab strip above to get started.' />
       )}
+
+      </> /* end activeTab !== "alignment" */}
 
       {/* ── Side Drawer ── */}
       <SideDrawer
