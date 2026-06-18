@@ -4635,10 +4635,12 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
   const [expandedCols, setExpandedCols] = useState({});
   const [expandedRows, setExpandedRows] = useState({});
   const [toggling, setToggling]         = useState(new Set());
+  const [apiError, setApiError]         = useState(null);
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(true); setApiError(null);
     api(`/api/portfolio/${portfolio.portfolio_id}/alignment`).then(d => {
+      if (d.error) { setApiError(d.error); return; }
       setPortOutcomes(d.portfolio_outcomes || []);
       setBows(d.bows || []);
       setLinks(new Set((d.links || []).map(l => `${l.bow_outcome_id}|${l.portfolio_outcome_id}`)));
@@ -4669,6 +4671,13 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
         </h3>
         <span style={{ fontSize: 12, color: TEXT_MUTED }}>Click any cell to add or remove a link.</span>
       </div>
+
+      {apiError && (
+        <div style={{ padding: "12px 16px", background: "#FEF2F2", border: `1px solid #FECACA`,
+          borderRadius: 8, marginBottom: 16, fontSize: 12, color: DANGER }}>
+          API error: {apiError}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>Loading…</div>
@@ -4782,9 +4791,14 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
               );
             })}
 
-            {bows.every(b => !b.outcomes?.length) && (
+            {bows.length === 0 && (
               <div style={{ padding: "20px 16px", textAlign: "center", color: TEXT_MUTED, fontSize: 12, fontStyle: "italic" }}>
-                No BOW outcomes found for this portfolio.
+                No BOWs found for this portfolio (portfolio_id: {portfolio.portfolio_id}).
+              </div>
+            )}
+            {bows.length > 0 && bows.every(b => !b.outcomes?.length) && (
+              <div style={{ padding: "20px 16px", textAlign: "center", color: TEXT_MUTED, fontSize: 12, fontStyle: "italic" }}>
+                {bows.length} BOW{bows.length !== 1 ? "s" : ""} found but no BOW outcomes in the database yet.
               </div>
             )}
           </div>
