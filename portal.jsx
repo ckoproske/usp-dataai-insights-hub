@@ -3875,11 +3875,30 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
   const [confirmDel,      setConfirmDel]      = useState(false);
   const [deleting,        setDeleting]        = useState(false);
   const [bowInds,         setBowInds]         = useState([]);
+  const [confirming,      setConfirming]      = useState(new Set());
 
   useEffect(() => {
     api(`/api/portfolio-outcomes/${outcome.outcome_id}/bow-indicators`)
       .then(d => setBowInds(Array.isArray(d) ? d : []));
   }, [outcome.outcome_id]);
+
+  const toggleConfirm = async (indicatorId, currentlyConfirmed) => {
+    const key = indicatorId;
+    setConfirming(prev => new Set([...prev, key]));
+    // Optimistic update
+    setBowInds(prev => prev.map(i =>
+      i.indicator_id === indicatorId ? { ...i, confirmed: !currentlyConfirmed } : i
+    ));
+    await api("/api/portfolio-outcome-confirmations", {
+      method: currentlyConfirmed ? "DELETE" : "POST",
+      body: JSON.stringify({
+        portfolio_outcome_id: outcome.outcome_id,
+        indicator_id: indicatorId,
+        edited_by: user?.email,
+      }),
+    });
+    setConfirming(prev => { const n = new Set(prev); n.delete(key); return n; });
+  };
 
   const thStyle = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
     textTransform: "uppercase", letterSpacing: "0.06em", background: BG,
@@ -3991,42 +4010,101 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
 
       {/* ── BOW-Aligned Indicators ── */}
       {bowInds.length > 0 && (() => {
-        // Group by bow_title
-        const grouped = bowInds.reduce((acc, ind) => {
-          (acc[ind.bow_title] = acc[ind.bow_title] || { bow_id: ind.bow_id, inds: [] }).inds.push(ind);
-          return acc;
-        }, {});
+        // Group by BOW, then by BOW outcome within each BOW
+        const byBow = {};
+        bowInds.forEach(ind => {
+          if (!byBow[ind.bow_id]) byBow[ind.bow_id] = { bow_title: ind.bow_title, bow_id: ind.bow_id, outcomes: {} };
+          const bok = ind.bow_outcome_id;
+          if (!byBow[ind.bow_id].outcomes[bok])
+            byBow[ind.bow_id].outcomes[bok] = { title: ind.bow_outcome_title, inds: [] };
+          byBow[ind.bow_id].outcomes[bok].inds.push(ind);
+        });
+
         return (
           <div style={{ marginBottom: 28 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <SectionLabel>BOW-Aligned Indicators</SectionLabel>
-              <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>read-only — edit on the BOW page</span>
+              <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>
+                Check indicators to include on the dashboard
+              </span>
             </div>
-            {Object.entries(grouped).map(([bowTitle, { bow_id, inds: binds }]) => (
-              <div key={bow_id} style={{ marginBottom: 14 }}>
+
+            {Object.values(byBow).map(bow => (
+              <div key={bow.bow_id} style={{ marginBottom: 16 }}>
+
+                {/* BOW header */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                  marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
-                    textTransform: "uppercase", letterSpacing: 0.6 }}>{bowTitle}</span>
+                  marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: TEXT_SUB,
+                    textTransform: "uppercase", letterSpacing: 0.7 }}>{bow.bow_title}</span>
                   {onNavigateToBow && (
-                    <button onClick={() => onNavigateToBow(bow_id)}
+                    <button onClick={() => onNavigateToBow(bow.bow_id)}
                       style={{ background: "none", border: "none", cursor: "pointer",
                         fontSize: 11, color: ACCENT, fontWeight: 600, padding: 0 }}>
                       Edit on BOW page →
                     </button>
                   )}
                 </div>
-                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden" }}>
-                  {binds.map(ind => (
-                    <IndicatorChipRow
-                      key={ind.indicator_id}
-                      ind={{ ...ind, source_name: ind.source_name }}
-                      accentColor={TEXT_MUTED}
-                      onEdit={null}
-                      yearSet={PORT_TABLE_YEARS}
-                    />
-                  ))}
-                </div>
+
+                {/* BOW outcome cards */}
+                {Object.values(bow.outcomes).map(bo => (
+                  <div key={bo.title} style={{ border: `1px solid ${BORDER}`, borderRadius: 8,
+                    overflow: "hidden", marginBottom: 8 }}>
+
+                    {/* BOW outcome title bar */}
+                    <div style={{ padding: "8px 14px", background: BG,
+                      borderBottom: `1px solid ${BORDER}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 3, height: 14, borderRadius: 2,
+                          background: TEXT_MUTED, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_SUB,
+                          lineHeight: 1.35 }}>{bo.title}</span>
+                      </div>
+                    </div>
+
+                    {/* Indicators */}
+                    {bo.inds.map((ind, idx) => {
+                      const confirmed = !!ind.confirmed;
+                      const isSaving  = confirming.has(ind.indicator_id);
+                      const isLast    = idx === bo.inds.length - 1;
+                      return (
+                        <div key={ind.indicator_id}
+                          style={{ display: "flex", alignItems: "stretch",
+                            borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+                            opacity: isSaving ? 0.6 : 1, transition: "opacity 0.15s" }}>
+
+                          {/* Confirmation toggle */}
+                          <button
+                            onClick={() => !isSaving && toggleConfirm(ind.indicator_id, confirmed)}
+                            title={confirmed ? "Remove from dashboard" : "Confirm for dashboard"}
+                            style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center",
+                              justifyContent: "center", background: confirmed ? (p?.color || ACCENT) + "12" : "transparent",
+                              border: "none", borderRight: `1px solid ${BORDER}`,
+                              cursor: isSaving ? "wait" : "pointer", transition: "background 0.15s" }}>
+                            <span style={{ width: 18, height: 18, borderRadius: 4,
+                              border: `2px solid ${confirmed ? (p?.color || ACCENT) : BORDER}`,
+                              background: confirmed ? (p?.color || ACCENT) : "transparent",
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 11, color: "#fff", fontWeight: 700,
+                              transition: "all 0.15s", flexShrink: 0 }}>
+                              {confirmed ? "✓" : ""}
+                            </span>
+                          </button>
+
+                          {/* Indicator content — reuse chip row sans edit button */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <IndicatorChipRow
+                              ind={ind}
+                              accentColor={confirmed ? (p?.color || ACCENT) : TEXT_MUTED}
+                              onEdit={null}
+                              yearSet={PORT_TABLE_YEARS}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             ))}
           </div>

@@ -74,6 +74,13 @@ Table bow_portfolio_outcome_links {
   sort_order           int
 }
 
+Table portfolio_bow_indicator_confirmations {
+  portfolio_outcome_id string [ref: > portfolio_outcomes.outcome_id]
+  indicator_id         string [ref: > bow_indicators.indicator_id]
+  confirmed_by         string
+  confirmed_at         timestamp
+}
+
 
 // =============================================================================
 // INDICATORS & ACTUALS

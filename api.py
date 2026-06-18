@@ -3238,7 +3238,8 @@ def add_portfolio_outcome():
 
 @app.route("/api/portfolio-outcomes/<outcome_id>/bow-indicators")
 def get_bow_indicators_for_portfolio_outcome(outcome_id):
-    """Returns active BOW indicators that contribute to this portfolio outcome via alignment links."""
+    """Returns active BOW indicators that contribute to this portfolio outcome via alignment links,
+    with a confirmed flag from portfolio_bow_indicator_confirmations."""
     rows = query(
         f"""SELECT
               bi.indicator_id, bi.bow_id, bi.outcome_id AS bow_outcome_id,
@@ -3248,7 +3249,9 @@ def get_bow_indicators_for_portfolio_outcome(outcome_id):
               bi.source_id,
               s.source_name, s.source_url,
               bo.title AS bow_outcome_title,
-              b.title  AS bow_title
+              b.title  AS bow_title,
+              b.bow_id AS bow_id,
+              CASE WHEN c.indicator_id IS NOT NULL THEN true ELSE false END AS confirmed
             FROM {SCHEMA}.bow_indicators bi
             JOIN {SCHEMA}.bow_outcomes bo
               ON bi.outcome_id = bo.outcome_id
@@ -3258,12 +3261,55 @@ def get_bow_indicators_for_portfolio_outcome(outcome_id):
               ON bo.bow_id = b.bow_id
             LEFT JOIN {SCHEMA}.sources s
               ON bi.source_id = s.source_id
+            LEFT JOIN {SCHEMA}.portfolio_bow_indicator_confirmations c
+              ON c.indicator_id = bi.indicator_id
+             AND c.portfolio_outcome_id = ?
             WHERE l.portfolio_outcome_id = ?
               AND bi.is_active = true
             ORDER BY b.sort_order, bo.sort_order, bi.name""",
-        [outcome_id]
+        [outcome_id, outcome_id]
     )
     return jsonify(rows)
+
+
+@app.route("/api/portfolio-outcome-confirmations", methods=["POST"])
+def confirm_bow_indicator():
+    data = request.json or {}
+    portfolio_outcome_id = data.get("portfolio_outcome_id")
+    indicator_id         = data.get("indicator_id")
+    user                 = _actor(data)
+    if not portfolio_outcome_id or not indicator_id:
+        return jsonify({"error": "portfolio_outcome_id and indicator_id required"}), 400
+    existing = query(
+        f"""SELECT 1 FROM {SCHEMA}.portfolio_bow_indicator_confirmations
+            WHERE portfolio_outcome_id = ? AND indicator_id = ?""",
+        [portfolio_outcome_id, indicator_id]
+    )
+    if existing:
+        return jsonify({"status": "already_confirmed"})
+    execute(
+        f"""INSERT INTO {SCHEMA}.portfolio_bow_indicator_confirmations
+            (portfolio_outcome_id, indicator_id, confirmed_by, confirmed_at)
+            VALUES (?, ?, ?, current_timestamp())""",
+        [portfolio_outcome_id, indicator_id, user]
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/portfolio-outcome-confirmations", methods=["DELETE"])
+def unconfirm_bow_indicator():
+    data = request.json or {}
+    portfolio_outcome_id = data.get("portfolio_outcome_id")
+    indicator_id         = data.get("indicator_id")
+    user                 = _actor(data)
+    if not portfolio_outcome_id or not indicator_id:
+        return jsonify({"error": "portfolio_outcome_id and indicator_id required"}), 400
+    execute(
+        f"""DELETE FROM {SCHEMA}.portfolio_bow_indicator_confirmations
+            WHERE portfolio_outcome_id = ? AND indicator_id = ?""",
+        [portfolio_outcome_id, indicator_id]
+    )
+    return jsonify({"status": "ok"})
 
 
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["DELETE"])
