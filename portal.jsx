@@ -3273,6 +3273,8 @@ function BowPanel({ bow, user, onBack }) {
       })()}
 
       {/* ── Outcome tabs ── */}
+      <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+        letterSpacing: 0.5, margin: "0 0 10px 0" }}>Outcomes</p>
       {outcomes.length > 0 && (
         <div style={{ display: "flex", alignItems: "flex-end", gap: 2,
           borderBottom: `2px solid ${BORDER}`, marginBottom: 24, flexWrap: "wrap" }}>
@@ -4978,6 +4980,8 @@ function PortfolioPanel({ portfolio, user, onBack }) {
       })()}
 
       {/* ── Outcome tabs ── */}
+      <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
+        letterSpacing: 0.5, margin: "0 0 10px 0" }}>Outcomes</p>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2,
         borderBottom: `2px solid ${BORDER}`, marginBottom: 24, flexWrap: "wrap" }}>
 
