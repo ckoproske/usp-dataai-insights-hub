@@ -4022,11 +4022,15 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
 
         return (
           <div style={{ marginBottom: 28 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{ marginBottom: 12 }}>
               <SectionLabel>BOW-Aligned Indicators</SectionLabel>
-              <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>
-                Check indicators to include on the dashboard
-              </span>
+              <p style={{ fontSize: 12, color: TEXT_MUTED, margin: "5px 0 0 0", lineHeight: 1.6 }}>
+                These indicators come from BOW outcomes that are aligned to this portfolio outcome.
+                Use the <strong style={{ color: TEXT_SUB }}>Edit Alignment Map</strong> button at the
+                top of this page to change which BOW outcomes are linked here — the indicators below
+                will update automatically. Check the indicators that are relevant to this portfolio
+                outcome to include them on the main dashboard.
+              </p>
             </div>
 
             {Object.values(byBow).map(bow => (
