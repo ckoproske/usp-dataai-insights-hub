@@ -456,7 +456,7 @@ def get_portfolio_alignment(portfolio_id):
         f"""SELECT outcome_id, portfolio_id,
                    COALESCE(NULLIF(title, ''), short_title) AS title,
                    short_title, sort_order,
-                   COALESCE(text, outcome, '') AS text
+                   COALESCE(`text`, `outcome`, '') AS text
             FROM {SCHEMA}.portfolio_outcomes
             WHERE portfolio_id = ?
             ORDER BY sort_order""",
@@ -471,7 +471,7 @@ def get_portfolio_alignment(portfolio_id):
     if bow_ids:
         ph = ",".join(["?" for _ in bow_ids])
         bow_outcomes = query(
-            f"""SELECT outcome_id, bow_id, number, short_title, title, text, sort_order
+            f"""SELECT outcome_id, bow_id, number, short_title, title, `text`, sort_order
                 FROM {SCHEMA}.bow_outcomes
                 WHERE bow_id IN ({ph})
                 ORDER BY bow_id, sort_order""",
