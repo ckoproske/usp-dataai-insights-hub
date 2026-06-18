@@ -2024,11 +2024,13 @@ function IndicatorChipRow({ ind, accentColor, onEdit }) {
               </p>
             )}
           </div>
-          <button onClick={onEdit}
-            style={{ background: "none", border: "none", cursor: "pointer",
-              fontSize: 14, color: TEXT_MUTED, padding: "2px 4px", flexShrink: 0,
-              borderRadius: 4, lineHeight: 1, marginTop: 1 }}
-            title="Edit indicator">✎</button>
+          {onEdit && (
+            <button onClick={onEdit}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                fontSize: 14, color: TEXT_MUTED, padding: "2px 4px", flexShrink: 0,
+                borderRadius: 4, lineHeight: 1, marginTop: 1 }}
+              title="Edit indicator">✎</button>
+          )}
         </div>
         {/* Chips row — source + frequency only */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7, justifyContent: "flex-end" }}>
@@ -3868,10 +3870,16 @@ const PORT_TABLE_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const yearColW = `${Math.floor(72 / PORT_TABLE_YEARS.length)}%`;
 
 // ─── Portfolio Outcome Pane (single outcome, shown when tab is active) ──────────
-function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted, onOpenDrawer, editSummary }) {
+function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefresh, onOutcomeChange, onDeleted, onOpenDrawer, editSummary, onNavigateToBow }) {
   const p = PORT_COLORS[portfolio.portfolio_id];
   const [confirmDel,      setConfirmDel]      = useState(false);
   const [deleting,        setDeleting]        = useState(false);
+  const [bowInds,         setBowInds]         = useState([]);
+
+  useEffect(() => {
+    api(`/api/portfolio-outcomes/${outcome.outcome_id}/bow-indicators`)
+      .then(d => setBowInds(Array.isArray(d) ? d : []));
+  }, [outcome.outcome_id]);
 
   const thStyle = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
     textTransform: "uppercase", letterSpacing: "0.06em", background: BG,
@@ -3967,17 +3975,63 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
           action="Add indicator" onAction={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })} />
       )}
 
-      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden", marginBottom: 28 }}>
-        {inds.map(ind => (
-          <IndicatorChipRow
-            key={ind.indicator_id}
-            ind={ind}
-            accentColor={p?.color || ACCENT}
-            onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
-            yearSet={PORT_TABLE_YEARS}
-          />
-        ))}
-      </div>
+      {inds.length > 0 && (
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden", marginBottom: 28 }}>
+          {inds.map(ind => (
+            <IndicatorChipRow
+              key={ind.indicator_id}
+              ind={ind}
+              accentColor={p?.color || ACCENT}
+              onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
+              yearSet={PORT_TABLE_YEARS}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── BOW-Aligned Indicators ── */}
+      {bowInds.length > 0 && (() => {
+        // Group by bow_title
+        const grouped = bowInds.reduce((acc, ind) => {
+          (acc[ind.bow_title] = acc[ind.bow_title] || { bow_id: ind.bow_id, inds: [] }).inds.push(ind);
+          return acc;
+        }, {});
+        return (
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <SectionLabel>BOW-Aligned Indicators</SectionLabel>
+              <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>read-only — edit on the BOW page</span>
+            </div>
+            {Object.entries(grouped).map(([bowTitle, { bow_id, inds: binds }]) => (
+              <div key={bow_id} style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                  marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                    textTransform: "uppercase", letterSpacing: 0.6 }}>{bowTitle}</span>
+                  {onNavigateToBow && (
+                    <button onClick={() => onNavigateToBow(bow_id)}
+                      style={{ background: "none", border: "none", cursor: "pointer",
+                        fontSize: 11, color: ACCENT, fontWeight: 600, padding: 0 }}>
+                      Edit on BOW page →
+                    </button>
+                  )}
+                </div>
+                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden" }}>
+                  {binds.map(ind => (
+                    <IndicatorChipRow
+                      key={ind.indicator_id}
+                      ind={{ ...ind, source_name: ind.source_name }}
+                      accentColor={TEXT_MUTED}
+                      onEdit={null}
+                      yearSet={PORT_TABLE_YEARS}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── Remove outcome ── */}
       <div style={{ paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
@@ -4818,7 +4872,7 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
   );
 }
 
-function PortfolioPanel({ portfolio, user, onBack }) {
+function PortfolioPanel({ portfolio, user, onBack, onNavigateToBow }) {
   const [data, setData]               = useState(null);
   const [loading, setLoading]         = useState(true);
   const [outcomes, setOutcomes]       = useState([]);
@@ -5064,6 +5118,7 @@ function PortfolioPanel({ portfolio, user, onBack }) {
           }}
           onOpenDrawer={openDrawer}
           editSummary={editSummary}
+          onNavigateToBow={onNavigateToBow}
         />
       )}
 
@@ -7929,7 +7984,11 @@ function PortalApp() {
             )}
             {selectedPortfolio && (
               <PortfolioPanel portfolio={selectedPortfolio} user={user}
-                onBack={() => setSelectedPortfolio(null)} />
+                onBack={() => setSelectedPortfolio(null)}
+                onNavigateToBow={bow_id => {
+                  const bow = bows.find(b => b.bow_id === bow_id);
+                  if (bow) { setSelectedBow(bow); setSelectedPortfolio(null); }
+                }} />
             )}
           </>
         )}

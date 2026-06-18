@@ -3236,6 +3236,36 @@ def add_portfolio_outcome():
     return jsonify({"status": "ok", "outcome_id": oid})
 
 
+@app.route("/api/portfolio-outcomes/<outcome_id>/bow-indicators")
+def get_bow_indicators_for_portfolio_outcome(outcome_id):
+    """Returns active BOW indicators that contribute to this portfolio outcome via alignment links."""
+    rows = query(
+        f"""SELECT
+              bi.indicator_id, bi.bow_id, bi.outcome_id AS bow_outcome_id,
+              bi.name, bi.`text`, bi.unit, bi.collection_frequency,
+              bi.baseline, bi.status,
+              bi.target_2026, bi.target_2027, bi.target_2028, bi.target_2029, bi.target_2030,
+              bi.source_id,
+              s.source_name, s.source_url,
+              bo.title AS bow_outcome_title,
+              b.title  AS bow_title
+            FROM {SCHEMA}.bow_indicators bi
+            JOIN {SCHEMA}.bow_outcomes bo
+              ON bi.outcome_id = bo.outcome_id
+            JOIN {SCHEMA}.bow_portfolio_outcome_links l
+              ON l.bow_outcome_id = bo.outcome_id
+            JOIN {SCHEMA}.bows b
+              ON bo.bow_id = b.bow_id
+            LEFT JOIN {SCHEMA}.sources s
+              ON bi.source_id = s.source_id
+            WHERE l.portfolio_outcome_id = ?
+              AND bi.is_active = true
+            ORDER BY b.sort_order, bo.sort_order, bi.name""",
+        [outcome_id]
+    )
+    return jsonify(rows)
+
+
 @app.route("/api/portfolio-outcomes/<outcome_id>", methods=["DELETE"])
 def delete_portfolio_outcome(outcome_id):
     execute(f"DELETE FROM {SCHEMA}.portfolio_outcomes WHERE outcome_id = ?", [outcome_id])
