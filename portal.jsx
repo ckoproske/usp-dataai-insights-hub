@@ -4632,8 +4632,6 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
   const [bows, setBows]                 = useState([]);
   const [links, setLinks]               = useState(new Set());
   const [loading, setLoading]           = useState(true);
-  const [expandedCols, setExpandedCols] = useState({});
-  const [expandedRows, setExpandedRows] = useState({});
   const [toggling, setToggling]         = useState(new Set());
   const [apiError, setApiError]         = useState(null);
 
@@ -4642,7 +4640,8 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
     api(`/api/portfolio/${portfolio.portfolio_id}/alignment`).then(d => {
       if (d.error) { setApiError(d.error); return; }
       setPortOutcomes(d.portfolio_outcomes || []);
-      setBows(d.bows || []);
+      const EXCLUDED_BOWS = ["Mobilize Frontier Labs for Learner Success"];
+      setBows((d.bows || []).filter(b => !EXCLUDED_BOWS.includes(b.title)));
       setLinks(new Set((d.links || []).map(l => `${l.bow_outcome_id}|${l.portfolio_outcome_id}`)));
     }).finally(() => setLoading(false));
   }, [portfolio.portfolio_id]);
@@ -4700,21 +4699,9 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
                     background: p ? p.color + "18" : "#eee", color: p?.color || TEXT,
                     border: `1px solid ${(p?.color || BORDER)}55`, fontSize: 9, fontWeight: 800,
                     display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 3 }}>{i + 1}</div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
-                    {o.short_title || o.title}
+                  <div style={{ fontSize: 9, fontWeight: 700, color: TEXT, lineHeight: 1.2, textAlign: "left" }}>
+                    {o.title || o.short_title}
                   </div>
-                  {o.title && (o.short_title !== o.title) && (
-                    <>
-                      <button onClick={() => setExpandedCols(c => ({ ...c, [o.outcome_id]: !c[o.outcome_id] }))}
-                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9,
-                          color: TEXT_MUTED, padding: "2px 0 0 0", display: "block", margin: "0 auto" }}>
-                        {expandedCols[o.outcome_id] ? "▲" : "▾"}
-                      </button>
-                      {expandedCols[o.outcome_id] && (
-                        <div style={{ fontSize: 9, color: TEXT_SUB, lineHeight: 1.3, marginTop: 3, textAlign: "left" }}>{o.title}</div>
-                      )}
-                    </>
-                  )}
                 </div>
               ))}
             </div>
@@ -4746,16 +4733,7 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
                             <div>
                               <span style={{ fontSize: 10, color: TEXT_SUB, lineHeight: 1.35 }}>{bo.title || bo.short_title}</span>
                               {bo.text && bo.text !== (bo.title || bo.short_title) && (
-                                <>
-                                  <button onClick={() => setExpandedRows(r => ({ ...r, [bo.outcome_id]: !r[bo.outcome_id] }))}
-                                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9,
-                                      color: TEXT_MUTED, padding: "0 0 0 4px", verticalAlign: "middle" }}>
-                                    {expandedRows[bo.outcome_id] ? "▲" : "▾"}
-                                  </button>
-                                  {expandedRows[bo.outcome_id] && (
-                                    <div style={{ fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4, marginTop: 3 }}>{bo.text}</div>
-                                  )}
-                                </>
+                                <div style={{ fontSize: 10, color: TEXT_MUTED, lineHeight: 1.4, marginTop: 2 }}>{bo.text}</div>
                               )}
                             </div>
                           </div>
