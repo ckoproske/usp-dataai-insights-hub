@@ -3920,19 +3920,22 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
   return (
     <div className="fade-in">
 
-      {/* ── Outcome title + text ── */}
-      <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+      {/* ── Outcome title + text + Investments (cohesive card) ── */}
+      <div style={{ marginBottom: 28, padding: "18px 20px", background: BG,
+        border: `1px solid ${BORDER}`, borderRadius: 8 }}>
+
+        {/* Title + full text */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
           <div style={{ flex: 1 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.4 }}>
               {outcome.title || <span style={{ color: TEXT_MUTED, fontStyle: "italic", fontWeight: 400 }}>No title set</span>}
             </h3>
             {(outcome.text || outcome.outcome) ? (
-              <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7 }}>
+              <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7, margin: 0 }}>
                 {outcome.text || outcome.outcome}
               </p>
             ) : (
-              <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No description yet.</p>
+              <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", margin: 0 }}>No description yet.</p>
             )}
             <LastEdited by={outcome.last_edited_by} at={outcome.last_edited_at} style={{ display: "block", marginTop: 8 }} />
           </div>
@@ -3941,42 +3944,46 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
             style={{ background: "none", border: "none", cursor: "pointer",
               color: TEXT_MUTED, fontSize: 15, flexShrink: 0, padding: "0 2px" }}>✎</button>
         </div>
-      </div>
 
-      {/* ── Investments & Inputs ── */}
-      <div style={{ marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <SectionLabel>Investments & Inputs</SectionLabel>
-            <LastEdited
-              by={editSummary?.outcomes?.edited_by}
-              at={editSummary?.outcomes?.edited_at}
-            />
+        {/* Investments & Inputs — secondary, flows below */}
+        <div style={{ paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                textTransform: "uppercase", letterSpacing: 0.5, margin: 0 }}>
+                Investments & Inputs
+              </p>
+              <LastEdited
+                by={editSummary?.outcomes?.edited_by}
+                at={editSummary?.outcomes?.edited_at}
+              />
+            </div>
+            <button onClick={() => onOpenDrawer({ type: "investments", item: outcome, extra: { toaActivities } })}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
           </div>
-          <button onClick={() => onOpenDrawer({ type: "investments", item: outcome, extra: { toaActivities } })}
-            style={{ background: "none", border: "none", cursor: "pointer",
-              color: TEXT_MUTED, fontSize: 15, padding: "0 2px" }}>✎</button>
+          {outcome.investments_inputs ? (
+            <p style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
+              {outcome.investments_inputs}
+            </p>
+          ) : toaActivities && toaActivities.length > 0 ? (
+            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
+              {toaActivities.map(a => (
+                <li key={a.activity_id} style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.6 }}>{a.activity_text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic", margin: 0 }}>No investments & inputs defined yet.</p>
+          )}
         </div>
-        {outcome.investments_inputs ? (
-          <p style={{ fontSize: 13, color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-            {outcome.investments_inputs}
-          </p>
-        ) : toaActivities && toaActivities.length > 0 ? (
-          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
-            {toaActivities.map(a => (
-              <li key={a.activity_id} style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>{a.activity_text}</li>
-            ))}
-          </ul>
-        ) : (
-          <p style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: "italic" }}>No investments & inputs defined yet.</p>
-        )}
       </div>
 
       {/* ── Impact Indicators ── */}
-      <div style={{ display: "flex", justifyContent: "space-between",
-        alignItems: "center", marginBottom: 10 }}>
+      <div style={{ padding: "16px 20px 4px", background: SURFACE,
+        border: `1px solid ${BORDER}`, borderRadius: "8px 8px 0 0",
+        borderBottom: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <SectionLabel>Portfolio Impact Indicators</SectionLabel>
+          <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Portfolio Impact Indicators</p>
           <LastEdited
             by={editSummary?.indicators?.edited_by}
             at={editSummary?.indicators?.edited_at}
@@ -3989,24 +3996,23 @@ function PortfolioOutcomePane({ outcome, portfolio, user, toaActivities, onRefre
         </button>
       </div>
 
-      {inds.length === 0 && (
-        <EmptyState message="No indicators for this outcome yet."
-          action="Add indicator" onAction={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })} />
-      )}
-
-      {inds.length > 0 && (
-        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 7, overflow: "hidden", marginBottom: 28 }}>
-          {inds.map(ind => (
-            <IndicatorChipRow
-              key={ind.indicator_id}
-              ind={ind}
-              accentColor={p?.color || ACCENT}
-              onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
-              yearSet={PORT_TABLE_YEARS}
-            />
-          ))}
-        </div>
-      )}
+      <div style={{ border: `1px solid ${BORDER}`, borderRadius: "0 0 8px 8px",
+        overflow: "hidden", marginBottom: 28 }}>
+        {inds.length === 0 ? (
+          <div style={{ padding: "16px 20px" }}>
+            <EmptyState message="No indicators for this outcome yet."
+              action="Add indicator" onAction={() => onOpenDrawer({ type: "add-indicator", extra: { outcomeId: outcome.outcome_id } })} />
+          </div>
+        ) : inds.map(ind => (
+          <IndicatorChipRow
+            key={ind.indicator_id}
+            ind={ind}
+            accentColor={p?.color || ACCENT}
+            onEdit={() => onOpenDrawer({ type: "indicator", item: ind })}
+            yearSet={PORT_TABLE_YEARS}
+          />
+        ))}
+      </div>
 
       {/* ── BOW-Aligned Indicators ── */}
       {bowInds.length > 0 && (() => {
