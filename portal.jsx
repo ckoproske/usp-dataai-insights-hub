@@ -4853,9 +4853,9 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
                     border: `1px solid ${(p?.color || BORDER)}55`, fontSize: 9, fontWeight: 800,
                     display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 3 }}>{i + 1}</div>
                   <div style={{ fontSize: 9, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
-                    {o.short_title || o.title}
+                    {o.title || o.short_title}
                   </div>
-                  {o.title && o.short_title && (o.short_title !== o.title) && (
+                  {o.outcome && o.outcome !== o.title && (
                     <>
                       <button onClick={() => setExpandedCols(c => ({ ...c, [o.outcome_id]: !c[o.outcome_id] }))}
                         style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9,
@@ -4863,7 +4863,7 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
                         {expandedCols[o.outcome_id] ? "▲" : "▾"}
                       </button>
                       {expandedCols[o.outcome_id] && (
-                        <div style={{ fontSize: 9, color: TEXT_SUB, lineHeight: 1.3, marginTop: 3, textAlign: "left" }}>{o.title}</div>
+                        <div style={{ fontSize: 9, color: TEXT_SUB, lineHeight: 1.3, marginTop: 3, textAlign: "left" }}>{o.outcome}</div>
                       )}
                     </>
                   )}
