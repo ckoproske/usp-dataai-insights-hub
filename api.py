@@ -245,9 +245,10 @@ def update_goal(goal_id):
     row = rows[0]
     allowed = {
         "title", "target_text", "metric", "unit", "goal_2030", "current_2026",
-        "sort_order", "earliest", "source", "update_freq", "chart_type",
+        "sort_order", "source", "update_freq", "chart_type",
         "chart_note", "goal_note", "note", "baseline_year", "baseline_total",
         "chart_config",
+        "target_2026", "target_2027", "target_2028", "target_2029", "target_2030",
     }
     changes = _build_changes(row, data, allowed)
     if not changes:

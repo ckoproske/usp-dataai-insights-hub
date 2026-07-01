@@ -853,6 +853,10 @@ async function loadFromAPI() {
         if (g.goal_note)   goal.goalNote = g.goal_note;
         if (g.note)        goal.note = g.note;
         if (g.baseline_year) goal.baseline = { year: g.baseline_year, total: g.baseline_total || 0 };
+        if ([2026,2027,2028,2029,2030].some(y => g[`target_${y}`])) {
+          goal.targets = { 2026:g.target_2026||"", 2027:g.target_2027||"", 2028:g.target_2028||"",
+            2029:g.target_2029||"", 2030:g.target_2030||"" };
+        }
         return Object.assign(goal, chartConfig);
       });
     }
@@ -9034,7 +9038,7 @@ const DM_GROUPS = [
   {id:"tracking",    label:"Notes & Tracking",          color:"#92400E", tables:["bow_notes","portfolio_tracking","partner_tracking","team_members","pending_actuals","content_edit_log","comments","feedback"]},
 ];
 const DM_TABLES = {
-  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float"},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
+  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float"},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals"},{n:"target_2026",t:"string"},{n:"target_2027",t:"string"},{n:"target_2028",t:"string"},{n:"target_2029",t:"string"},{n:"target_2030",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
   portfolios:{cols:[{n:"portfolio_id",t:"string",pk:true},{n:"title",t:"string"},{n:"description",t:"string"},{n:"sort_order",t:"int"}],refs:[]},
   portfolio_goal_links:{cols:[{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"goal_id",t:"string",fk:"strategy_goals"}],refs:["portfolios","strategy_goals"]},
   bows:{cols:[{n:"bow_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"invest_bow_id",t:"string",note:"INVEST BoW_ID e.g. B06039"},{n:"sort_order",t:"int"}],refs:["portfolios"]},

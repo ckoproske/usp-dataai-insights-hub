@@ -30,6 +30,11 @@ Table strategy_goals {
   baseline_year  string
   baseline_total float
   chart_config   string [note: 'JSON — shape depends on chart_type: groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals']
+  target_2026    string
+  target_2027    string
+  target_2028    string
+  target_2029    string
+  target_2030    string
   last_updated   timestamp
   updated_by     string
 }

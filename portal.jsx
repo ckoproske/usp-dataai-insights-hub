@@ -6452,7 +6452,9 @@ function GoalPanel({ goal, user, onBack }) {
   const [unit, setUnit]             = useState(goal.unit || "");
   const [goal2030, setGoal2030]     = useState(String(goal.goal_2030 ?? ""));
   const [current2026, setCurrent2026] = useState(String(goal.current_2026 ?? ""));
-  const [earliest, setEarliest]     = useState(goal.earliest || "");
+  const [targets, setTargets]       = useState(
+    TARGET_YEARS.reduce((a, y) => ({ ...a, [y]: String(goal[`target_${y}`] ?? "") }), {})
+  );
   const [source, setSource]         = useState(goal.source || "");
   const [updateFreq, setUpdateFreq] = useState(goal.update_freq || "");
   const [chartNote, setChartNote]   = useState(goal.chart_note || "");
@@ -6471,7 +6473,7 @@ function GoalPanel({ goal, user, onBack }) {
     || unit !== (goal.unit || "")
     || goal2030 !== String(goal.goal_2030 ?? "")
     || current2026 !== String(goal.current_2026 ?? "")
-    || earliest !== (goal.earliest || "")
+    || TARGET_YEARS.some(y => targets[y] !== String(goal[`target_${y}`] ?? ""))
     || source !== (goal.source || "")
     || updateFreq !== (goal.update_freq || "")
     || chartNote !== (goal.chart_note || "")
@@ -6489,7 +6491,8 @@ function GoalPanel({ goal, user, onBack }) {
           title, target_text: targetText, metric, unit,
           goal_2030: goal2030 === "" ? null : parseFloat(goal2030),
           current_2026: current2026 === "" ? null : parseFloat(current2026),
-          earliest, source, update_freq: updateFreq,
+          ...TARGET_YEARS.reduce((a, y) => ({ ...a, [`target_${y}`]: targets[y] || null }), {}),
+          source, update_freq: updateFreq,
           chart_note: chartNote, goal_note: goalNote, note,
           baseline_year: baselineYear,
           baseline_total: baselineTotal === "" ? null : parseFloat(baselineTotal),
@@ -6541,9 +6544,6 @@ function GoalPanel({ goal, user, onBack }) {
           <Field label="2026 current value">
             <input type="number" value={current2026} onChange={e => setCurrent2026(e.target.value)} style={inputStyle} />
           </Field>
-          <Field label="Earliest update" helper="e.g. Q1 2026 — Annual Update in PR">
-            <input type="text" value={earliest} onChange={e => setEarliest(e.target.value)} style={inputStyle} />
-          </Field>
           <Field label="Update frequency">
             <input type="text" value={updateFreq} onChange={e => setUpdateFreq(e.target.value)} style={inputStyle} />
           </Field>
@@ -6551,6 +6551,22 @@ function GoalPanel({ goal, user, onBack }) {
         <Field label="Source">
           <input type="text" value={source} onChange={e => setSource(e.target.value)} style={inputStyle} />
         </Field>
+
+        <div style={{ marginBottom: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 2 }}>Annual Targets</p>
+        </div>
+        <div style={{ display: "grid",
+          gridTemplateColumns: `repeat(${TARGET_YEARS.length}, 1fr)`, gap: 8, marginBottom: 20 }}>
+          {TARGET_YEARS.map(y => (
+            <div key={y}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
+                display: "block", marginBottom: 3 }}>{y}</label>
+              <input type="number" value={targets[y]}
+                onChange={e => setTargets(t => ({ ...t, [y]: e.target.value }))}
+                style={{ ...inputStyle, textAlign: "right" }} />
+            </div>
+          ))}
+        </div>
         {goal.chart_type && (
           <>
             <Field label="Chart note" helper="Caption shown above the chart.">
