@@ -234,6 +234,37 @@ def get_goals():
     rows = query(f"SELECT * FROM {SCHEMA}.strategy_goals ORDER BY sort_order")
     return jsonify(rows)
 
+@app.route("/api/goals/<goal_id>", methods=["PATCH"])
+def update_goal(goal_id):
+    """Update strategy goal content, including chart_config JSON."""
+    data = request.json or {}
+    user = _actor(data)
+    rows = query(f"SELECT * FROM {SCHEMA}.strategy_goals WHERE goal_id = ?", [goal_id])
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    row = rows[0]
+    allowed = {
+        "title", "target_text", "metric", "unit", "goal_2030", "current_2026",
+        "sort_order", "earliest", "source", "update_freq", "chart_type",
+        "chart_note", "goal_note", "note", "baseline_year", "baseline_total",
+        "chart_config",
+    }
+    changes = _build_changes(row, data, allowed)
+    if not changes:
+        return jsonify({"status": "no_change"})
+    sets = [f"`{f}` = ?" for f in changes]
+    vals = [data[f] for f in changes]
+    vals += [user, goal_id]
+    execute(
+        f"""UPDATE {SCHEMA}.strategy_goals
+            SET {', '.join(sets)}, last_updated = current_timestamp(), updated_by = ?
+            WHERE goal_id = ?""",
+        vals
+    )
+    _log_edit("strategy_goal", goal_id, None, None, changes,
+              data.get("rationale"), data.get("revision_reason"), user)
+    return jsonify({"status": "ok", "changes": changes})
+
 @app.route("/api/portfolios")
 def get_portfolios():
     rows = query(f"SELECT * FROM {SCHEMA}.portfolios ORDER BY sort_order")

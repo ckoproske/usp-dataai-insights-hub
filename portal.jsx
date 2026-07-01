@@ -5453,14 +5453,174 @@ function SubmitDrawerContent({ ind, bow, onClose, onSubmitted }) {
   );
 }
 
+// ─── Goal Submit Drawer (Strategy Goals — Submit Data) ─────────────────────────
+function GoalSubmitDrawerContent({ goal, onClose, onSubmitted }) {
+  const [actuals, setActuals]   = useState(null);
+  const [actualsLoading, setAL] = useState(true);
+
+  useEffect(() => {
+    setActuals(null); setAL(true);
+    api(`/api/goal-actuals`)
+      .then(d => setActuals(Array.isArray(d) ? d.filter(a => a.goal_id === goal.goal_id && a.actual_value != null) : []))
+      .catch(() => setActuals([]))
+      .finally(() => setAL(false));
+  }, [goal.goal_id]);
+
+  const [value, setValue]             = useState("");
+  const [year, setYear]               = useState(String(CURRENT_YEAR));
+  const [readingDate, setDate]        = useState(TODAY);
+  const [sourceName, setSourceName]   = useState("");
+  const [notes, setNotes]             = useState("");
+  const [submitting, setSubmitting]   = useState(false);
+  const [error, setError]             = useState(null);
+
+  const canSubmit = value && year && sourceName.trim() && readingDate;
+
+  const submit = async () => {
+    setSubmitting(true); setError(null);
+    try {
+      await api("/api/pending-actuals/submit", {
+        method: "POST",
+        body: JSON.stringify({
+          level: "goal",
+          entity_id: goal.goal_id,
+          year: parseInt(year, 10),
+          submitted_value: parseFloat(value),
+          reading_date: readingDate,
+          source_notes: sourceName.trim(),
+          notes,
+        }),
+      });
+      onSubmitted();
+    } catch (e) {
+      setError("Submission failed — please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const unit = goal.unit ? ` ${goal.unit}` : "";
+  const FL = { fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {(goal.goal_2030 != null || goal.current_2026 != null) && (
+        <div>
+          <div style={FL}>Target</div>
+          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden",
+            border: `1px solid ${BORDER}`, background: SURFACE }}>
+            {goal.current_2026 != null && (
+              <div style={{ flex: 1, textAlign: "center", padding: "8px 6px",
+                borderRight: `1px solid ${BORDER}`, background: INFO_BG }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: INFO,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>2026</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: INFO }}>{goal.current_2026}{unit}</div>
+              </div>
+            )}
+            {goal.goal_2030 != null && (
+              <div style={{ flex: 1, textAlign: "center", padding: "8px 6px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>2030 Goal</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{goal.goal_2030}{unit}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div style={FL}>Values on Record</div>
+        {actualsLoading && <Skeleton height={52} />}
+        {!actualsLoading && (!actuals || actuals.length === 0) && (
+          <p style={{ fontSize: 13, color: TEXT_MUTED, margin: 0 }}>
+            No values on record yet — be the first to submit.
+          </p>
+        )}
+        {!actualsLoading && actuals && actuals.length > 0 && (
+          <div style={{ borderRadius: 8, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: SURFACE }}>
+              <thead>
+                <tr style={{ background: BG }}>
+                  {["Year", "Value", "Date"].map(h => (
+                    <th key={h} style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED,
+                      textTransform: "uppercase", letterSpacing: "0.06em",
+                      padding: "6px 10px", borderBottom: `1px solid ${BORDER}`,
+                      textAlign: "left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...actuals].reverse().map((a, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? SURFACE : BG }}>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, color: TEXT }}>{a.year}</td>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, fontWeight: 700, color: TEXT }}>
+                      {a.actual_value != null ? `${a.actual_value}${unit}` : "—"}
+                    </td>
+                    <td style={{ fontSize: 12, padding: "7px 10px",
+                      borderBottom: `1px solid ${BORDER}`, color: TEXT_SUB }}>{a.reading_date || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div style={{ borderTop: `2px solid ${BORDER}` }} />
+
+      <div>
+        <div style={FL}>Submit New Value</div>
+        <div className="fade-in">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <Field label="Reporting year" required>
+              <select value={year} onChange={e => setYear(e.target.value)}
+                style={{ ...inputStyle, appearance: "auto" }}>
+                {TARGET_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </Field>
+            <Field label={`Value${goal.unit ? ` (${goal.unit})` : ""}`} required>
+              <input type="number" value={value} onChange={e => setValue(e.target.value)}
+                placeholder="Enter value..." style={inputStyle} autoFocus />
+            </Field>
+          </div>
+          <Field label="Data date" required helper="When was this data collected or published?">
+            <input type="date" value={readingDate} onChange={e => setDate(e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Source" required>
+            <input type="text" value={sourceName} onChange={e => setSourceName(e.target.value)}
+              placeholder="Source name or document..." style={inputStyle} />
+          </Field>
+          <Field label="Notes">
+            <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="Any caveats for the reviewer..." style={inputStyle} />
+          </Field>
+          {error && <p style={{ color: DANGER, fontSize: 13, marginTop: 6, marginBottom: 4 }}>{error}</p>}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+            <Btn variant="secondary" size="sm" onClick={onClose}>Cancel</Btn>
+            <Btn size="sm" onClick={submit} disabled={!canSubmit || submitting}>
+              {submitting ? "Submitting..." : "Submit for review"}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Update Data View ─────────────────────────────────────────────────────────
-function DataUpdateView({ bows, portfolios, user, loading }) {
+function DataUpdateView({ bows, portfolios, goals = [], user, loading }) {
   const [view, setView]               = useState("bows");
   const [selected, setSelected]       = useState(null); // { type: "bow"|"portfolio", entity }
   const [data, setData]               = useState(null);
   const [loadingData, setLoadingData] = useState(false);
   const [drawerInd, setDrawerInd]     = useState(null); // indicator object for the side drawer
   const [submitted, setSubmitted]     = useState(new Set());
+  const [goalDrawer, setGoalDrawer]   = useState(null); // goal object for the goal submission drawer
+  const [goalSubmitted, setGoalSubmitted] = useState(new Set());
 
   useEffect(() => {
     if (!selected) { setData(null); return; }
@@ -5484,12 +5644,13 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Update Data</h1>
           <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
-            Select a Body of Work or Portfolio to submit new indicator actuals.
+            Select a Body of Work, Portfolio, or Strategy Goal to submit new actuals.
           </p>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
-          {[{ id: "bows", label: "Bodies of Work" }, { id: "portfolios", label: "Portfolios" }].map(v => (
+          {[{ id: "bows", label: "Bodies of Work" }, { id: "portfolios", label: "Portfolios" },
+            { id: "goals", label: "Strategy" }].map(v => (
             <button key={v.id} onClick={() => setView(v.id)}
               style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600,
                 cursor: "pointer", border: `1px solid ${view === v.id ? ACCENT : BORDER}`,
@@ -5561,6 +5722,50 @@ function DataUpdateView({ bows, portfolios, user, loading }) {
             })}
           </div>
         )}
+
+        {!loading && view === "goals" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[...goals].sort((a, b) => (a.sort_order ?? a.number) - (b.sort_order ?? b.number)).map(goal => (
+              <div key={goal.goal_id}
+                onClick={() => setGoalDrawer(goal)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "14px 18px", background: SURFACE, borderRadius: 9,
+                  border: `1px solid ${BORDER}`, cursor: "pointer",
+                  borderLeft: `4px solid ${BRAND}`,
+                  transition: "box-shadow 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.10)"}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>G{goal.number}</span>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{goal.title}</p>
+                  {goalSubmitted.has(goal.goal_id) && (
+                    <span style={{ fontSize: 11, color: SUCCESS, fontWeight: 600 }}>✓ Submitted</span>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, color: TEXT_MUTED }}>Submit data →</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Goal submission drawer */}
+        <SideDrawer
+          isOpen={!!goalDrawer}
+          onClose={() => setGoalDrawer(null)}
+          title={goalDrawer ? `Goal ${goalDrawer.number}: ${goalDrawer.title}` : ""}
+          subtitle={goalDrawer?.metric || ""}
+        >
+          {goalDrawer && (
+            <GoalSubmitDrawerContent
+              goal={goalDrawer}
+              onClose={() => setGoalDrawer(null)}
+              onSubmitted={() => {
+                setGoalSubmitted(prev => new Set([...prev, goalDrawer.goal_id]));
+                setGoalDrawer(null);
+              }}
+            />
+          )}
+        </SideDrawer>
       </div>
     );
   }
@@ -6100,7 +6305,7 @@ function CompletenessChips({ stats }) {
 }
 
 // ─── BOW + Portfolio List ──────────────────────────────────────────────────────
-function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfolio: {} }, onSelectBow, onSelectPortfolio }) {
+function BowPortfolioList({ bows, portfolios, goals = [], completeness = { bow: {}, portfolio: {} }, onSelectBow, onSelectPortfolio, onSelectGoal }) {
   const [view, setView] = useState("bows");
 
   const bowsByPortfolio = portfolios.map(p => ({
@@ -6112,7 +6317,8 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {[{ id: "bows", label: "Bodies of Work" },
-          { id: "portfolios", label: "Portfolios" }].map(v => (
+          { id: "portfolios", label: "Portfolios" },
+          { id: "goals", label: "Strategy" }].map(v => (
           <button key={v.id} onClick={() => setView(v.id)}
             style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 600,
               cursor: "pointer", border: `1px solid ${view === v.id ? ACCENT : BORDER}`,
@@ -6205,7 +6411,355 @@ function BowPortfolioList({ bows, portfolios, completeness = { bow: {}, portfoli
           })}
         </div>
       )}
+
+      {view === "goals" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {[...goals].sort((a, b) => (a.sort_order ?? a.number) - (b.sort_order ?? b.number)).map(goal => (
+            <div key={goal.goal_id}
+              onClick={() => onSelectGoal(goal)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 16px", background: SURFACE, borderRadius: 8,
+                border: `1px solid ${BORDER}`, cursor: "pointer",
+                borderLeft: `3px solid ${BRAND}`, transition: "box-shadow 0.12s" }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(48,58,68,0.08)"}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: TEXT_MUTED }}>G{goal.number}</span>
+                <p style={{ fontSize: 14, fontWeight: 500, color: TEXT, margin: 0 }}>{goal.title}</p>
+              </div>
+              <button
+                style={{ flexShrink: 0, marginLeft: 16, padding: "5px 14px",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: "none", border: `1px solid ${BORDER}`,
+                  borderRadius: 6, color: TEXT_SUB,
+                  transition: "border-color 0.12s, color 0.12s",
+                  pointerEvents: "none" }}>
+                Open
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+// ─── Goal Panel (Strategy 2030 Goals — Edit Content) ───────────────────────────
+function GoalPanel({ goal, user, onBack }) {
+  const [title, setTitle]           = useState(goal.title || "");
+  const [targetText, setTargetText] = useState(goal.target_text || "");
+  const [metric, setMetric]         = useState(goal.metric || "");
+  const [unit, setUnit]             = useState(goal.unit || "");
+  const [goal2030, setGoal2030]     = useState(String(goal.goal_2030 ?? ""));
+  const [current2026, setCurrent2026] = useState(String(goal.current_2026 ?? ""));
+  const [earliest, setEarliest]     = useState(goal.earliest || "");
+  const [source, setSource]         = useState(goal.source || "");
+  const [updateFreq, setUpdateFreq] = useState(goal.update_freq || "");
+  const [chartNote, setChartNote]   = useState(goal.chart_note || "");
+  const [goalNote, setGoalNote]     = useState(goal.goal_note || "");
+  const [note, setNote]             = useState(goal.note || "");
+  const [baselineYear, setBaselineYear]   = useState(goal.baseline_year || "");
+  const [baselineTotal, setBaselineTotal] = useState(String(goal.baseline_total ?? ""));
+  const [rationale, setRationale]   = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState(null);
+  const [saved, setSaved]           = useState(false);
+
+  const changed = title !== (goal.title || "")
+    || targetText !== (goal.target_text || "")
+    || metric !== (goal.metric || "")
+    || unit !== (goal.unit || "")
+    || goal2030 !== String(goal.goal_2030 ?? "")
+    || current2026 !== String(goal.current_2026 ?? "")
+    || earliest !== (goal.earliest || "")
+    || source !== (goal.source || "")
+    || updateFreq !== (goal.update_freq || "")
+    || chartNote !== (goal.chart_note || "")
+    || goalNote !== (goal.goal_note || "")
+    || note !== (goal.note || "")
+    || baselineYear !== (goal.baseline_year || "")
+    || baselineTotal !== String(goal.baseline_total ?? "");
+
+  const save = async () => {
+    setSaving(true); setError(null); setSaved(false);
+    try {
+      const res = await api(`/api/goals/${goal.goal_id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title, target_text: targetText, metric, unit,
+          goal_2030: goal2030 === "" ? null : parseFloat(goal2030),
+          current_2026: current2026 === "" ? null : parseFloat(current2026),
+          earliest, source, update_freq: updateFreq,
+          chart_note: chartNote, goal_note: goalNote, note,
+          baseline_year: baselineYear,
+          baseline_total: baselineTotal === "" ? null : parseFloat(baselineTotal),
+          rationale: rationale || undefined,
+          edited_by: user?.email,
+        }),
+      });
+      if (res.error) { setError(res.error); return; }
+      if (res.status !== "no_change") { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    } catch (e) {
+      setError("Save failed — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+        <button onClick={onBack}
+          style={{ background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, color: TEXT_MUTED, fontWeight: 600, padding: 0,
+            textDecoration: "underline" }}>
+          ← All goals
+        </button>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>
+          Goal {goal.number}: {goal.title}
+        </h2>
+      </div>
+
+      <Card style={{ marginBottom: 20 }}>
+        <Field label="Title" required>
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Target">
+          <textarea value={targetText} onChange={e => setTargetText(e.target.value)}
+            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <Field label="Metric">
+            <input type="text" value={metric} onChange={e => setMetric(e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Unit">
+            <input type="text" value={unit} onChange={e => setUnit(e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="2030 goal value">
+            <input type="number" value={goal2030} onChange={e => setGoal2030(e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="2026 current value">
+            <input type="number" value={current2026} onChange={e => setCurrent2026(e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Earliest update" helper="e.g. Q1 2026 — Annual Update in PR">
+            <input type="text" value={earliest} onChange={e => setEarliest(e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Update frequency">
+            <input type="text" value={updateFreq} onChange={e => setUpdateFreq(e.target.value)} style={inputStyle} />
+          </Field>
+        </div>
+        <Field label="Source">
+          <input type="text" value={source} onChange={e => setSource(e.target.value)} style={inputStyle} />
+        </Field>
+        {goal.chart_type && (
+          <>
+            <Field label="Chart note" helper="Caption shown above the chart.">
+              <input type="text" value={chartNote} onChange={e => setChartNote(e.target.value)} style={inputStyle} />
+            </Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <Field label="Baseline year">
+                <input type="text" value={baselineYear} onChange={e => setBaselineYear(e.target.value)} style={inputStyle} />
+              </Field>
+              <Field label="Baseline total">
+                <input type="number" value={baselineTotal} onChange={e => setBaselineTotal(e.target.value)} style={inputStyle} />
+              </Field>
+            </div>
+          </>
+        )}
+        <Field label="Goal note" helper="Longer explanatory note shown with the goal detail.">
+          <textarea value={goalNote} onChange={e => setGoalNote(e.target.value)}
+            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+        <Field label="Note" helper="Freeform caveat, e.g. data source limitations.">
+          <textarea value={note} onChange={e => setNote(e.target.value)}
+            rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+        {changed && (
+          <Field label="Rationale for change" helper="Explain why this content is changing.">
+            <textarea value={rationale} onChange={e => setRationale(e.target.value)}
+              rows={2} style={{ ...inputStyle, resize: "vertical", borderColor: ACCENT }} />
+          </Field>
+        )}
+        {error && <p style={{ color: DANGER, fontSize: 13, marginBottom: 10 }}>{error}</p>}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end" }}>
+          {saved && <span style={{ fontSize: 12, color: SUCCESS, fontWeight: 600 }}>✓ Saved</span>}
+          <Btn size="sm" onClick={save} disabled={!changed || saving}>
+            {saving ? "Saving..." : "Save"}
+          </Btn>
+        </div>
+      </Card>
+
+      {goal.chart_type && (
+        <GoalChartConfigEditor goal={goal} user={user} />
+      )}
+    </div>
+  );
+}
+
+// ─── Goal chart data editor (structured, per chart_type) ───────────────────────
+function GoalChartConfigEditor({ goal, user }) {
+  const parsed = (() => {
+    try { return goal.chart_config ? JSON.parse(goal.chart_config) : {}; }
+    catch { return {}; }
+  })();
+
+  const [groupedData, setGroupedData] = useState(parsed.groupedData || []);
+  const [rightBreakout, setRightBreakout] = useState(parsed.rightBreakout || { advising: { pct: 0, rows: [] }, instruction: { pct: 0, rows: [] } });
+  const [momentumPoints, setMomentumPoints] = useState(parsed.momentumPoints || []);
+  const [leverageData, setLeverageData] = useState(parsed.leverageData || []);
+  const [leverageTotals, setLeverageTotals] = useState(parsed.leverageTotals || { target: "", stretch: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  const rowStyle = { display: "flex", gap: 8, alignItems: "center", marginBottom: 8 };
+  const smallInput = { ...inputStyle, padding: "6px 10px", fontSize: 13 };
+
+  const save = async () => {
+    setSaving(true); setError(null); setSaved(false);
+    let chart_config;
+    if (goal.chart_type === "bar-grouped") chart_config = { groupedData, rightBreakout };
+    else if (goal.chart_type === "momentum-points") chart_config = { momentumPoints };
+    else if (goal.chart_type === "stacked-bar-leverage") chart_config = { leverageData, leverageTotals };
+    else chart_config = {};
+    try {
+      const res = await api(`/api/goals/${goal.goal_id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ chart_config: JSON.stringify(chart_config), edited_by: user?.email }),
+      });
+      if (res.error) { setError(res.error); return; }
+      setSaved(true); setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setError("Save failed — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 14 }}>Chart data</h3>
+
+      {goal.chart_type === "bar-grouped" && (
+        <>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            Grouped bars by year
+          </div>
+          {groupedData.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Year" value={row.year || ""} style={{ ...smallInput, width: 70 }}
+                onChange={e => setGroupedData(gd => gd.map((r, j) => j === i ? { ...r, year: e.target.value } : r))} />
+              <input placeholder="Instruction %" type="number" value={row.instruction ?? ""} style={{ ...smallInput, width: 110 }}
+                onChange={e => setGroupedData(gd => gd.map((r, j) => j === i ? { ...r, instruction: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="Advising %" type="number" value={row.advising ?? ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setGroupedData(gd => gd.map((r, j) => j === i ? { ...r, advising: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="All learners %" type="number" value={row.allLearners ?? ""} style={{ ...smallInput, width: 120 }}
+                onChange={e => setGroupedData(gd => gd.map((r, j) => j === i ? { ...r, allLearners: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setGroupedData(gd => gd.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setGroupedData(gd => [...gd, { year: "", instruction: 0, advising: 0, allLearners: 0 }])}>
+            + Add year
+          </Btn>
+
+          {["advising", "instruction"].map(key => (
+            <div key={key} style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, textTransform: "capitalize" }}>
+                  {key} breakout — pct
+                </span>
+                <input type="number" value={rightBreakout[key]?.pct ?? ""} style={{ ...smallInput, width: 70 }}
+                  onChange={e => setRightBreakout(rb => ({ ...rb, [key]: { ...rb[key], pct: parseFloat(e.target.value) || 0 } }))} />
+              </div>
+              {(rightBreakout[key]?.rows || []).map((row, i) => (
+                <div key={i} style={rowStyle}>
+                  <input placeholder="Label" value={row.label || ""} style={{ ...smallInput, flex: 1 }}
+                    onChange={e => setRightBreakout(rb => ({ ...rb, [key]: { ...rb[key], rows: rb[key].rows.map((r, j) => j === i ? { ...r, label: e.target.value } : r) } }))} />
+                  <input placeholder="Value" type="number" value={row.val ?? ""} style={{ ...smallInput, width: 90 }}
+                    onChange={e => setRightBreakout(rb => ({ ...rb, [key]: { ...rb[key], rows: rb[key].rows.map((r, j) => j === i ? { ...r, val: parseFloat(e.target.value) || 0 } : r) } }))} />
+                  <button onClick={() => setRightBreakout(rb => ({ ...rb, [key]: { ...rb[key], rows: rb[key].rows.filter((_, j) => j !== i) } }))}
+                    style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+                </div>
+              ))}
+              <Btn variant="secondary" size="sm"
+                onClick={() => setRightBreakout(rb => ({ ...rb, [key]: { ...rb[key], rows: [...(rb[key]?.rows || []), { label: "", val: 0 }] } }))}>
+                + Add row
+              </Btn>
+            </div>
+          ))}
+        </>
+      )}
+
+      {goal.chart_type === "momentum-points" && (
+        <>
+          {momentumPoints.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Label" value={row.label || ""} style={{ ...smallInput, flex: 1 }}
+                onChange={e => setMomentumPoints(mp => mp.map((r, j) => j === i ? { ...r, label: e.target.value } : r))} />
+              <input placeholder="Short label" value={row.short || ""} style={{ ...smallInput, width: 140 }}
+                onChange={e => setMomentumPoints(mp => mp.map((r, j) => j === i ? { ...r, short: e.target.value } : r))} />
+              <input placeholder="Current" type="number" value={row.current ?? ""} style={{ ...smallInput, width: 90 }}
+                onChange={e => setMomentumPoints(mp => mp.map((r, j) => j === i ? { ...r, current: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="2030 target" type="number" value={row.target2030 ?? ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setMomentumPoints(mp => mp.map((r, j) => j === i ? { ...r, target2030: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setMomentumPoints(mp => mp.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm"
+            onClick={() => setMomentumPoints(mp => [...mp, { label: "", short: "", current: 0, target2030: 0 }])}>
+            + Add momentum point
+          </Btn>
+        </>
+      )}
+
+      {goal.chart_type === "stacked-bar-leverage" && (
+        <>
+          {leverageData.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Period" value={row.period || ""} style={{ ...smallInput, width: 130 }}
+                onChange={e => setLeverageData(ld => ld.map((r, j) => j === i ? { ...r, period: e.target.value } : r))} />
+              <input placeholder="Label" value={row.label || ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setLeverageData(ld => ld.map((r, j) => j === i ? { ...r, label: e.target.value } : r))} />
+              <input placeholder="Philanthropic" type="number" value={row.philanthropic ?? ""} style={{ ...smallInput, width: 110 }}
+                onChange={e => setLeverageData(ld => ld.map((r, j) => j === i ? { ...r, philanthropic: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="Hyperscalers" type="number" value={row.hyperscalers ?? ""} style={{ ...smallInput, width: 110 }}
+                onChange={e => setLeverageData(ld => ld.map((r, j) => j === i ? { ...r, hyperscalers: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="VC/Impact" type="number" value={row.vcImpact ?? ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setLeverageData(ld => ld.map((r, j) => j === i ? { ...r, vcImpact: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="Public" type="number" value={row.public ?? ""} style={{ ...smallInput, width: 90 }}
+                onChange={e => setLeverageData(ld => ld.map((r, j) => j === i ? { ...r, public: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setLeverageData(ld => ld.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setLeverageData(ld => [...ld, { period: "", label: "", philanthropic: 0, hyperscalers: 0, vcImpact: 0, public: 0 }])}>
+            + Add period
+          </Btn>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Field label="Target total">
+              <input type="text" value={leverageTotals.target || ""} style={inputStyle}
+                onChange={e => setLeverageTotals(lt => ({ ...lt, target: e.target.value }))} />
+            </Field>
+            <Field label="Stretch total">
+              <input type="text" value={leverageTotals.stretch || ""} style={inputStyle}
+                onChange={e => setLeverageTotals(lt => ({ ...lt, stretch: e.target.value }))} />
+            </Field>
+          </div>
+        </>
+      )}
+
+      {error && <p style={{ color: DANGER, fontSize: 13, marginTop: 4, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+        {saved && <span style={{ fontSize: 12, color: SUCCESS, fontWeight: 600 }}>✓ Saved</span>}
+        <Btn size="sm" onClick={save} disabled={saving}>
+          {saving ? "Saving..." : "Save chart data"}
+        </Btn>
+      </div>
+    </Card>
   );
 }
 
@@ -7053,10 +7607,11 @@ function renderSourceNotes(text) {
 }
 
 // ─── Review Queue ─────────────────────────────────────────────────────────────
-function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, user, showToast }) {
+function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, goals, user, showToast }) {
   const canAct = user?.permission_level === "MLE";
   const indicatorMap = Object.fromEntries((indicators || []).map(i => [i.indicator_id, i]));
   const bowMap       = Object.fromEntries((bows || []).map(b => [b.bow_id, b]));
+  const goalMap       = Object.fromEntries((goals || []).map(g => [g.goal_id, g]));
   const [rejectId, setRejectId]       = useState(null);
   const [rejectNotes, setRejectNotes] = useState("");
   const [editId, setEditId]           = useState(null);
@@ -7175,6 +7730,7 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {queue.map(s => {
           const ind      = indicatorMap[s.indicator_id];
+          const goal     = s.level === "goal" ? goalMap[s.entity_id] : null;
           const portId   = ind?.portfolio_id || (s.level === "portfolio" ? s.entity_id : null);
           const bow      = ind?.bow_id ? bowMap[ind.bow_id] : null;
           const isExpanded = expandedId === s.pending_id;
@@ -7195,7 +7751,7 @@ function ReviewQueue({ queue, loading, onRefresh, onRemove, indicators, bows, us
                     </p>
                   )}
                   <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 3, lineHeight: 1.4 }}>
-                    {ind?.text || `${s.level?.toUpperCase()} — ${s.entity_id}`}
+                    {ind?.text || (goal ? `Goal ${goal.number}: ${goal.title} (${goal.metric})` : `${s.level?.toUpperCase()} — ${s.entity_id}`)}
                   </p>
                   <p style={{ fontSize: 12, color: TEXT_MUTED }}>
                     {s.level?.toUpperCase()} · {s.period ? `${s.period} · ` : ""}{s.year}
@@ -7784,6 +8340,7 @@ function PortalApp() {
   const [tab, setTab]               = useState("content");
   const [bows, setBows]             = useState([]);
   const [portfolios, setPortfolios] = useState([]);
+  const [goals, setGoals]           = useState([]);
   const [indicators, setIndicators] = useState([]);
   const [queue, setQueue]           = useState([]);
   const [completeness, setCompleteness] = useState({ bow: {}, portfolio: {} });
@@ -7791,6 +8348,7 @@ function PortalApp() {
   const [loadingQueue, setLoadingQueue] = useState(false);
   const [selectedBow, setSelectedBow]           = useState(null);
   const [selectedPortfolio, setSelectedPortfolio] = useState(null);
+  const [selectedGoal, setSelectedGoal]         = useState(null);
   const [toast, setToast]                       = useState(null); // { message, variant }
   const [showFeedback, setShowFeedback]         = useState(false);
   const toastTimer = useRef(null);
@@ -7806,12 +8364,14 @@ function PortalApp() {
       api("/api/me").catch(() => null),
       api("/api/bows").catch(() => []),
       api("/api/portfolios").catch(() => []),
+      api("/api/goals").catch(() => []),
       api("/api/indicators/all").catch(() => []),
       api("/api/completeness").catch(() => ({ bow: {}, portfolio: {} })),
-    ]).then(([u, b, p, i, c]) => {
+    ]).then(([u, b, p, g, i, c]) => {
       if (u) setUser(u);
       setBows(Array.isArray(b) ? b.filter(bow => !RETIRED_BOW_IDS.has(bow.bow_id)) : []);
       setPortfolios(Array.isArray(p) ? p : []);
+      setGoals(Array.isArray(g) ? g : []);
       setIndicators(Array.isArray(i) ? i : []);
       setCompleteness(c && typeof c === "object" ? c : { bow: {}, portfolio: {} });
       setLoadingData(false);
@@ -7850,10 +8410,17 @@ function PortalApp() {
   const handleSelectBow = bow => {
     setSelectedBow(bow);
     setSelectedPortfolio(null);
+    setSelectedGoal(null);
   };
   const handleSelectPortfolio = portfolio => {
     setSelectedPortfolio(portfolio);
     setSelectedBow(null);
+    setSelectedGoal(null);
+  };
+  const handleSelectGoal = goal => {
+    setSelectedGoal(goal);
+    setSelectedBow(null);
+    setSelectedPortfolio(null);
   };
 
   return (
@@ -8018,7 +8585,7 @@ function PortalApp() {
       {mode !== null && (
       <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`,
         padding: "0 32px", display: "flex", gap: 2, alignItems: "center" }}>
-        <button onClick={() => { setMode(null); setSelectedBow(null); setSelectedPortfolio(null); }}
+        <button onClick={() => { setMode(null); setSelectedBow(null); setSelectedPortfolio(null); setSelectedGoal(null); }}
           style={{ fontSize: 12, color: TEXT_MUTED, background: "none", border: "none",
             cursor: "pointer", padding: "13px 10px 13px 0", fontWeight: 600,
             borderBottom: "3px solid transparent", marginRight: 6, fontFamily: "inherit" }}>
@@ -8043,14 +8610,14 @@ function PortalApp() {
 
         {tab === "content" && mode === "edit" && (
           <>
-            {!selectedBow && !selectedPortfolio && (
+            {!selectedBow && !selectedPortfolio && !selectedGoal && (
               <>
                 <div style={{ marginBottom: 24 }}>
                   <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 6 }}>
                     BOWs & Portfolios
                   </h1>
                   <p style={{ fontSize: 14, color: TEXT_SUB, lineHeight: 1.6 }}>
-                    Select a Body of Work or Portfolio to edit its outcomes, indicators, and content.
+                    Select a Body of Work, Portfolio, or Strategy Goal to edit its content.
                   </p>
                 </div>
                 {loadingData ? (
@@ -8059,10 +8626,11 @@ function PortalApp() {
                   </div>
                 ) : (
                   <BowPortfolioList
-                    bows={bows} portfolios={portfolios}
+                    bows={bows} portfolios={portfolios} goals={goals}
                     completeness={completeness}
                     onSelectBow={handleSelectBow}
                     onSelectPortfolio={handleSelectPortfolio}
+                    onSelectGoal={handleSelectGoal}
                   />
                 )}
               </>
@@ -8078,12 +8646,15 @@ function PortalApp() {
                   if (bow) { setSelectedBow(bow); setSelectedPortfolio(null); }
                 }} />
             )}
+            {selectedGoal && (
+              <GoalPanel goal={selectedGoal} user={user} onBack={() => setSelectedGoal(null)} />
+            )}
           </>
         )}
 
         {tab === "content" && mode === "data" && (
           <DataUpdateView
-            bows={bows} portfolios={portfolios} user={user} loading={loadingData} />
+            bows={bows} portfolios={portfolios} goals={goals} user={user} loading={loadingData} />
         )}
 
         {tab === "content" && mode === "catalog" && (
@@ -8133,7 +8704,7 @@ function PortalApp() {
             </div>
             <ReviewQueue queue={queue} loading={loadingQueue}
               onRefresh={loadQueue} onRemove={removeFromQueue}
-              indicators={indicators} bows={bows} user={user}
+              indicators={indicators} bows={bows} goals={goals} user={user}
               showToast={showToast} />
           </>
         )}

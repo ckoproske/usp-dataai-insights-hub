@@ -11,15 +11,27 @@
 // =============================================================================
 
 Table strategy_goals {
-  goal_id       string [pk]
-  title         string
-  target_text   string
-  number        int
-  metric        string
-  unit          string
-  goal_2030     float
-  current_2026  float
-  sort_order    int
+  goal_id        string [pk]
+  title          string
+  target_text    string
+  number         int
+  metric         string
+  unit           string
+  goal_2030      float
+  current_2026   float
+  sort_order     int
+  earliest       string [note: 'e.g. "Q1 2026 — Annual Update in PR"']
+  source         string
+  update_freq    string
+  chart_type     string [note: 'bar-grouped | momentum-points | stacked-bar-leverage | null']
+  chart_note     string
+  goal_note      string
+  note           string
+  baseline_year  string
+  baseline_total float
+  chart_config   string [note: 'JSON — shape depends on chart_type: groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals']
+  last_updated   timestamp
+  updated_by     string
 }
 
 Table portfolios {

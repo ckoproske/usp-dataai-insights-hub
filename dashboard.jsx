@@ -100,8 +100,9 @@ const STRATEGY_TOTAL = 258;
 const PO_SHORT_TITLES_CC  = ["Cross-Division Alignment","Data-Driven Insights","Team Coordination & Impact","Culture & Inclusion"];
 const BOW_SHORT_TITLES_CC = ["Measurement & MLE Routines","AI-Enabled Analytics","Cross-PST Collaboration"];
 
-// 2030 Strategy Goals
-const STRATEGY_GOALS = [
+// 2030 Strategy Goals — fallback literal, used only until loadFromAPI() merges
+// live data from strategy_goals/chart_config; also used if the API is unreachable.
+let STRATEGY_GOALS = [
   { id:"g1", number:1, title:"Enable AI Solutions", color:"#313A44",
     target:"40% of learners reached by solutions embedding portable memory and context",
     earliest:"Q1 2026 — Annual Update in PR",
@@ -834,9 +835,28 @@ async function loadFromAPI() {
  
     if (goals.length > 0) {
       anyRealData = true;
-      base.strategyGoalsMeta = goals;
+      // Reassign the module-level STRATEGY_GOALS binding so every existing
+      // render call site (which reads it directly) picks up DB content —
+      // this happens before setData() below triggers a re-render.
+      STRATEGY_GOALS = goals.map(g => {
+        const chartConfig = g.chart_config ? JSON.parse(g.chart_config) : {};
+        const goal = {
+          id: g.goal_id, number: g.number, title: g.title, color: "#313A44",
+          target: g.target_text, earliest: g.earliest,
+          metric: g.metric, unit: g.unit,
+          goal2030: g.goal_2030, current2026: g.current_2026,
+        };
+        if (g.source)      goal.source = g.source;
+        if (g.update_freq) goal.updateFreq = g.update_freq;
+        if (g.chart_type)  goal.chartType = g.chart_type;
+        if (g.chart_note)  goal.chartNote = g.chart_note;
+        if (g.goal_note)   goal.goalNote = g.goal_note;
+        if (g.note)        goal.note = g.note;
+        if (g.baseline_year) goal.baseline = { year: g.baseline_year, total: g.baseline_total || 0 };
+        return Object.assign(goal, chartConfig);
+      });
     }
- 
+
     if (portfolios.length > 0) {
       anyRealData = true;
       portfolios.forEach(p => {
@@ -864,7 +884,7 @@ async function loadFromAPI() {
       });
     }
  
-    // Merge goal actuals into strategyGoalsMeta
+    // Merge goal actuals into STRATEGY_GOALS
     // goal_actuals returns one row per goal per year — build a map
     if (goalActuals.length > 0) {
       anyRealData = true;
@@ -873,12 +893,10 @@ async function loadFromAPI() {
         if (!actualsByGoal[a.goal_id]) actualsByGoal[a.goal_id] = {};
         actualsByGoal[a.goal_id][a.year] = a.actual_value;
       });
-      if (base.strategyGoalsMeta) {
-        base.strategyGoalsMeta = base.strategyGoalsMeta.map(g => ({
-          ...g,
-          actuals: actualsByGoal[g.goal_id] || {},
-        }));
-      }
+      STRATEGY_GOALS = STRATEGY_GOALS.map(g => ({
+        ...g,
+        actuals: actualsByGoal[g.id] || {},
+      }));
     }
  
     // Merge goal ratings — Claude estimates labeled as such
@@ -9016,7 +9034,7 @@ const DM_GROUPS = [
   {id:"tracking",    label:"Notes & Tracking",          color:"#92400E", tables:["bow_notes","portfolio_tracking","partner_tracking","team_members","pending_actuals","content_edit_log","comments","feedback"]},
 ];
 const DM_TABLES = {
-  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"}],refs:[]},
+  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float"},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
   portfolios:{cols:[{n:"portfolio_id",t:"string",pk:true},{n:"title",t:"string"},{n:"description",t:"string"},{n:"sort_order",t:"int"}],refs:[]},
   portfolio_goal_links:{cols:[{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"goal_id",t:"string",fk:"strategy_goals"}],refs:["portfolios","strategy_goals"]},
   bows:{cols:[{n:"bow_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"invest_bow_id",t:"string",note:"INVEST BoW_ID e.g. B06039"},{n:"sort_order",t:"int"}],refs:["portfolios"]},
