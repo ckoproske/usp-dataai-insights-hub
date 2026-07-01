@@ -1747,6 +1747,16 @@ def get_me():
         })
     return jsonify({"email": email, "display_name": email, "permission_level": "Team", "portfolio_id": None})
 
+@app.route("/api/team-members")
+def get_team_members():
+    """Lightweight email -> display_name / permission_level map for client-side
+    rendering (e.g. showing a registered display name instead of guessing one
+    from an email address in edit/activity history)."""
+    rows = query(
+        f"SELECT email, display_name, permission_level FROM {SCHEMA}.team_members WHERE is_active = true"
+    )
+    return jsonify(rows)
+
 @app.route("/api/indicators/all")
 def get_all_indicators():
     """Returns all active BOW indicators with BOW, portfolio, and outcome context.

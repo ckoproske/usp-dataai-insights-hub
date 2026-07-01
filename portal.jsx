@@ -1,4 +1,10 @@
-const { useState, useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useRef, useMemo, useContext } = React;
+
+// Email -> display_name map (from /api/team-members), so edit/activity history
+// shows each person's registered name (which may include a suffix like
+// "(Tyton Partners)" for external collaborators) instead of a name guessed
+// from their email address.
+const TeamMembersContext = React.createContext({});
 
 // ─── Design system — matches main dashboard ───────────────────────────────────
 const BRAND        = "#303A44";
@@ -272,12 +278,16 @@ function fmtDateShort(d) {
   return `${m[2]}/${m[3]}/${m[1].slice(-2)}`;
 }
 
-// Format a last-edited timestamp + email into a human-readable hint
-function formatLastEdited(by, at) {
+// Format a last-edited timestamp + email into a human-readable hint.
+// nameMap (email -> registered display_name) is checked first so people with
+// a registered display name (which may include a suffix like
+// "(Tyton Partners)") show correctly instead of a name guessed from email.
+function formatLastEdited(by, at, nameMap) {
   if (!by && !at) return null;
-  const name = by
+  const registered = by && nameMap ? nameMap[by.trim().toLowerCase()] : null;
+  const name = registered || (by
     ? by.split("@")[0].split(".").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
-    : null;
+    : null);
   if (!at) return name ? `Updated by ${name}` : null;
   // Databricks CAST(timestamp AS STRING) returns "YYYY-MM-DD HH:MM:SS" with no timezone
   // marker. Browsers parse that as local time, which shifts the epoch value and breaks
@@ -294,7 +304,8 @@ function formatLastEdited(by, at) {
 }
 
 function LastEdited({ by, at, style = {} }) {
-  const text = formatLastEdited(by, at);
+  const nameMap = useContext(TeamMembersContext);
+  const text = formatLastEdited(by, at, nameMap);
   if (!text) return null;
   return (
     <span style={{ fontSize: T_META, color: TEXT_MUTED, fontStyle: "italic", ...style }}>
@@ -7981,8 +7992,11 @@ function ActivityFeed({ bows, portfolios, user }) {
     } catch { return ts.slice(0, 16); }
   };
 
+  const nameMap = useContext(TeamMembersContext);
   const actorName = a => {
     if (!a) return "Unknown";
+    const registered = nameMap[a.trim().toLowerCase()];
+    if (registered) return registered;
     return a.split("@")[0].replace(/\./g, " ").replace(/\b\w/g, c => c.toUpperCase());
   };
 
@@ -8029,7 +8043,7 @@ function ActivityFeed({ bows, portfolios, user }) {
           <option value="">All users</option>
           {allUsers.map(u => (
             <option key={u} value={u}>
-              {u.split("@")[0].split(".").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+              {actorName(u)}
             </option>
           ))}
         </select>
@@ -8367,6 +8381,7 @@ function PortalApp() {
   const [selectedGoal, setSelectedGoal]         = useState(null);
   const [toast, setToast]                       = useState(null); // { message, variant }
   const [showFeedback, setShowFeedback]         = useState(false);
+  const [nameMap, setNameMap]                   = useState({}); // lowercased email -> display_name
   const toastTimer = useRef(null);
 
   const showToast = (message, variant = "success") => {
@@ -8383,13 +8398,20 @@ function PortalApp() {
       api("/api/goals").catch(() => []),
       api("/api/indicators/all").catch(() => []),
       api("/api/completeness").catch(() => ({ bow: {}, portfolio: {} })),
-    ]).then(([u, b, p, g, i, c]) => {
+      api("/api/team-members").catch(() => []),
+    ]).then(([u, b, p, g, i, c, tm]) => {
       if (u) setUser(u);
       setBows(Array.isArray(b) ? b.filter(bow => !RETIRED_BOW_IDS.has(bow.bow_id)) : []);
       setPortfolios(Array.isArray(p) ? p : []);
       setGoals(Array.isArray(g) ? g : []);
       setIndicators(Array.isArray(i) ? i : []);
       setCompleteness(c && typeof c === "object" ? c : { bow: {}, portfolio: {} });
+      if (Array.isArray(tm)) {
+        setNameMap(Object.fromEntries(
+          tm.filter(m => m.email && m.display_name)
+            .map(m => [m.email.trim().toLowerCase(), m.display_name])
+        ));
+      }
       setLoadingData(false);
     });
   }, []);
@@ -8440,6 +8462,7 @@ function PortalApp() {
   };
 
   return (
+    <TeamMembersContext.Provider value={nameMap}>
     <div style={{ minHeight: "100vh", background: "#FFFFFF" }}>
 
       {/* Toast notification */}
@@ -8729,5 +8752,6 @@ function PortalApp() {
 
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
+    </TeamMembersContext.Provider>
   );
 }
