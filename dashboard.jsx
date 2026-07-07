@@ -3749,7 +3749,7 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
     const orig = toaData;
     try {
       const toaChanged = {};
-      const toaFields = ["problem_statement","col1_label","col2_label","cross_indicators_label","amb45_intro_text","amb45_label","amb45_full_text","amb45_buckets_json"];
+      const toaFields = ["problem_statement","col1_label","cross_indicators_label","amb45_intro_text","amb45_label","amb45_full_text","amb45_buckets_json"];
       toaFields.forEach(f => { if (editState.toa[f] !== orig.toa[f]) toaChanged[f] = editState.toa[f]; });
       const newCrossJson = JSON.stringify(editState.crossInds);
       if (newCrossJson !== orig.toa.cross_indicators_json) toaChanged.cross_indicators_json = newCrossJson;
@@ -3777,7 +3777,7 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
   const { toa, lanes } = toaData;
   const accent = portColor?.color || C.teal;
   const col1Label = toa.col1_label || "Service Lines";
-  const col2Label = toa.col2_label || "Core Activities";
+  const col2Label = "Investments & Inputs";
   const crossLabel = toa.cross_indicators_label || "2030 Impact Goals";
   const toggleLane = id => setActiveLane(p => p === id ? null : id);
   const toggleInd = (id, e) => { e.stopPropagation(); setExpandedIndicators(p => ({ ...p, [id]: !p[id] })); };
@@ -3818,10 +3818,6 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
             <div style={{ display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:11, color:C.slate, fontWeight:700 }}>Col 1</span>
               <input value={es.toa.col1_label||""} onChange={e=>setToaField("col1_label",e.target.value)} placeholder="e.g. Service Lines" style={{ border:`1px solid ${C.slateBd}`, borderRadius:5, padding:"3px 8px", fontSize:11, fontFamily:"inherit", width:160, outline:"none", color:C.text }} />
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-              <span style={{ fontSize:11, color:C.teal, fontWeight:700 }}>Col 2</span>
-              <input value={es.toa.col2_label||""} onChange={e=>setToaField("col2_label",e.target.value)} placeholder="e.g. Core Activities" style={{ border:`1px solid ${C.tealBd}`, borderRadius:5, padding:"3px 8px", fontSize:11, fontFamily:"inherit", width:160, outline:"none", color:C.text }} />
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:11, color:C.gold, fontWeight:700 }}>Impact Label</span>
