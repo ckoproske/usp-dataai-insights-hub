@@ -98,7 +98,6 @@ const STORAGE_KEY  = "usp-strategy-dashboard-v43";
 const STRATEGY_TOTAL = 258;
 
 const PO_SHORT_TITLES_CC  = ["Cross-Division Alignment","Data-Driven Insights","Team Coordination & Impact","Culture & Inclusion"];
-const BOW_SHORT_TITLES_CC = ["Measurement & MLE Routines","AI-Enabled Analytics","Cross-PST Collaboration"];
 
 // 2030 Strategy Goals — fallback literal, used only until loadFromAPI() merges
 // live data from strategy_goals/chart_config; also used if the API is unreachable.
@@ -268,7 +267,7 @@ const BOW_ACRONYM = {
   "bow1": "MLE",           // Advance Strategy Learning & Insight
   // bow2 has no acronym
   "sfl-bow1": "EDU",       // Build and Sustain EDU-Net
-  "sfl-bow2": "DAIP",      // Integrated Delivery
+  "sfl-bow2": "DAIP",      // Integrate AI and Data Infrastructure in Context
   "sfl-bow3": "CSGA",      // Launch Competencies & Skills Genome Accelerator
   "ai-infra-bow1": "BMC",  // Build Model Capabilities & Learner Context
   "ai-infra-bow2": "DAE",  // Develop AI Evaluation Infrastructure
@@ -670,7 +669,7 @@ const DEFAULT_DATA = {
           ],
         },
         {
-          id:"sfl-bow2", name:"Integrated Delivery", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
+          id:"sfl-bow2", name:"Integrate AI and Data Infrastructure in Context", color:"#FCE7F3", tagColor:"#EC4899", budget:"", delegate:"",
           description:"This BOW focuses on strengthening the conditions required for data- and AI-enabled solutions to be adopted, used, and sustained in service of USP program strategy goals. This body of work centers on building regional and statewide system feedback loops, data and AI readiness, and governance capacity so that integrated data translates into timely insight and action for practitioners, institutions, and policymakers.\n\nThe work is anchored in TX, WA, and CA where USP has place-based strategies and where state and regional systems are at critical inflection points. Across these contexts, the BOW advances three core objectives: enable regional system feedback loops by improving access to integrated data and accelerating time from data to insight for priority users; build data and AI readiness in place, including governance, privacy safeguards, interoperability, and human capacity for responsible adoption of AI-enabled tools; and activate implementation conditions that allow USP Data investments and PST-led solutions to be tested, adopted, and scaled in real-world settings.\n\nBy strengthening these conditions in place, this BOW enables near-term program impact while generating durable learning about how state and regional systems can support effective and equitable use of data and AI. By 2030, the goal is for 50% of districts in PW and WSI regions to achieve strategic institutional adoption of AI-enabled solutions, and for 100% of regional cross-sector data tools in those regions to reach thresholds for regular use.",
           outcomes:[
             {
@@ -4596,8 +4595,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
   const isCrossC = portId==="cross-cutting";
   const isSFL = portId==="sfl";
   const hasTeam = isCrossC || isSFL;
-  const SHORT_TITLES = isCrossC ? PO_SHORT_TITLES_CC : portfolio.portfolioOutcomes.map((po,i)=>po.title||po.shortTitle||("Outcome "+(i+1)));
-  const BOW_TITLES = isCrossC ? BOW_SHORT_TITLES_CC : [];
+  const SHORT_TITLES = portfolio.portfolioOutcomes.map((po,i)=>po.title||po.shortTitle||("Outcome "+(i+1)));
+  const BOW_TITLES = [];
 
   const BOW_COLORS_MAP = [
     {tagColor:pc.color,color:SURFACE},
