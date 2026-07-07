@@ -4476,8 +4476,10 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7,maxWidth:680}}>{portfolio.description}</div>
           </div>
           <button onClick={()=>setShowToaModal(true)}
-            style={{flexShrink:0,marginTop:4,padding:"6px 14px",fontSize:12,fontWeight:500,color:TEXT_MUTED,background:"none",border:"1px solid "+BORDER,borderRadius:6,cursor:"pointer",display:"flex",alignItems:"center",gap:6,transition:"all .15s",whiteSpace:"nowrap"}}>
-            <span style={{fontSize:12,opacity:0.6}}>⤢</span> View Theory of Action
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=`0 4px 14px ${pc.color}55`;}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=`0 2px 8px ${pc.color}40`;}}
+            style={{flexShrink:0,marginTop:4,padding:"9px 18px",fontSize:13,fontWeight:700,color:"#fff",background:pc.color,border:"none",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .15s",whiteSpace:"nowrap",boxShadow:`0 2px 8px ${pc.color}40`,letterSpacing:0.2}}>
+            <span style={{fontSize:14}}>⤢</span> View Theory of Action
           </button>
         </div>
       </div>
