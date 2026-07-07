@@ -2633,39 +2633,47 @@ def get_bow_full(bow_id):
 
 @app.route("/api/toa/<portfolio_id>")
 def get_portfolio_toa(portfolio_id):
+    """Lanes are derived live from portfolio_outcomes/portfolio_indicators — the same
+    tables edited in the Submit Portal — so the ToA view can never drift from portal
+    edits. Only the header fields (problem statement, column labels, cross indicators,
+    amb45 content) still come from portfolio_toa, since the portal has no equivalent."""
     toa_rows = query(
         f"SELECT * FROM {SCHEMA}.portfolio_toa WHERE portfolio_id = ?",
         [portfolio_id]
     )
-    if not toa_rows:
-        return jsonify({"toa": None, "lanes": []})
+    toa = toa_rows[0] if toa_rows else {}
 
-    toa = toa_rows[0]
-
-    lanes = query(
-        f"""SELECT * FROM {SCHEMA}.portfolio_toa_lanes
-            WHERE portfolio_id = ? AND COALESCE(is_active, true) = true
-            ORDER BY sort_order""",
+    outcomes = query(
+        f"""SELECT outcome_id, title, short_title, outcome, investments_inputs, sort_order
+            FROM {SCHEMA}.portfolio_outcomes
+            WHERE portfolio_id = ? ORDER BY sort_order""",
         [portfolio_id]
     )
 
-    for lane in lanes:
-        lid = lane["lane_id"]
-        acts = query(
-            f"""SELECT activity_id, activity_text, sort_order
-                FROM {SCHEMA}.portfolio_toa_activities
-                WHERE lane_id = ? ORDER BY sort_order""",
-            [lid]
+    ind_rows = query(
+        f"""SELECT indicator_id, outcome_id, COALESCE(text, name) AS indicator_text
+            FROM {SCHEMA}.portfolio_indicators
+            WHERE portfolio_id = ? AND COALESCE(is_active, true) = true""",
+        [portfolio_id]
+    )
+    inds_by_outcome = {}
+    for i in ind_rows:
+        inds_by_outcome.setdefault(i["outcome_id"], []).append(
+            {"indicator_id": i["indicator_id"], "indicator_text": i["indicator_text"]}
         )
-        lane["activities"] = acts  # full objects with activity_id
 
-        inds = query(
-            f"""SELECT indicator_id, indicator_text, sort_order
-                FROM {SCHEMA}.portfolio_toa_lane_indicators
-                WHERE lane_id = ? ORDER BY sort_order""",
-            [lid]
-        )
-        lane["indicators"] = inds  # full objects with indicator_id
+    lanes = []
+    for o in outcomes:
+        oid = o["outcome_id"]
+        activity_lines = [l.strip() for l in (o.get("investments_inputs") or "").split("\n") if l.strip()]
+        lanes.append({
+            "lane_id": oid,
+            "label": o.get("short_title") or o.get("title"),
+            "outcome_text": o.get("outcome"),
+            "is_tbd": not (o.get("outcome") or o.get("investments_inputs")),
+            "activities": [{"activity_id": f"{oid}-{i}", "activity_text": t} for i, t in enumerate(activity_lines)],
+            "indicators": inds_by_outcome.get(oid, []),
+        })
 
     return jsonify({"toa": toa, "lanes": lanes})
 

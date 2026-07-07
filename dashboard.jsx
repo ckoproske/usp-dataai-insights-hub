@@ -3727,15 +3727,10 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
 
   const enterEdit = () => {
     if (!toaData) return;
-    const { toa, lanes } = toaData;
+    const { toa } = toaData;
     setEditState({
       toa: { ...toa },
       crossInds: toa.cross_indicators_json ? JSON.parse(toa.cross_indicators_json) : [],
-      lanes: lanes.map(l => ({
-        ...l,
-        activities: (l.activities || []).map(a => ({ ...a })),
-        indicators: (l.indicators || []).map(i => ({ ...i })),
-      }))
     });
     setEditMode(true);
     setSaveError(null);
@@ -3749,91 +3744,19 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
   const setCrossInds = inds =>
     setEditState(s => ({ ...s, crossInds: inds }));
 
-  const setLaneField = (laneId, field, val) =>
-    setEditState(s => ({
-      ...s,
-      lanes: s.lanes.map(l => l.lane_id === laneId ? { ...l, [field]: val } : l)
-    }));
-
-  const setLaneActivities = (laneId, acts) =>
-    setEditState(s => ({
-      ...s,
-      lanes: s.lanes.map(l => l.lane_id === laneId ? { ...l, activities: acts } : l)
-    }));
-
-  const setLaneIndicators = (laneId, inds) =>
-    setEditState(s => ({
-      ...s,
-      lanes: s.lanes.map(l => l.lane_id === laneId ? { ...l, indicators: inds } : l)
-    }));
-
   const saveAll = async () => {
     setSaving(true); setSaveError(null);
     const orig = toaData;
     try {
-      const promises = [];
-
-      // 1. Top-level toa fields
       const toaChanged = {};
       const toaFields = ["problem_statement","col1_label","col2_label","cross_indicators_label","amb45_intro_text","amb45_label","amb45_full_text","amb45_buckets_json"];
       toaFields.forEach(f => { if (editState.toa[f] !== orig.toa[f]) toaChanged[f] = editState.toa[f]; });
       const newCrossJson = JSON.stringify(editState.crossInds);
       if (newCrossJson !== orig.toa.cross_indicators_json) toaChanged.cross_indicators_json = newCrossJson;
       if (Object.keys(toaChanged).length) {
-        promises.push(fetch(`/api/toa/${portfolioId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(toaChanged) }));
+        await fetch(`/api/toa/${portfolioId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(toaChanged) });
       }
 
-      // 2. Lane fields + activities + indicators
-      editState.lanes.forEach((lane, li) => {
-        const origLane = orig.lanes[li] || {};
-        // Lane label/outcome
-        const laneChanged = {};
-        ["label","outcome_text","icon","color"].forEach(f => { if (lane[f] !== origLane[f]) laneChanged[f] = lane[f]; });
-        if (Object.keys(laneChanged).length) {
-          promises.push(fetch(`/api/toa/lanes/${lane.lane_id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(laneChanged) }));
-        }
-
-        // Activities
-        const origActIds = new Set((origLane.activities||[]).map(a=>a.activity_id));
-        const editActIds = new Set(lane.activities.filter(a=>!a._isNew).map(a=>a.activity_id));
-        // Deleted
-        (origLane.activities||[]).forEach(a => {
-          if (!editActIds.has(a.activity_id)) {
-            promises.push(fetch(`/api/toa/activities/${a.activity_id}`, { method:"DELETE" }));
-          }
-        });
-        // New
-        lane.activities.filter(a=>a._isNew && a.activity_text.trim()).forEach((a,ai) => {
-          promises.push(fetch("/api/toa/activities", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lane_id:lane.lane_id, portfolio_id:portfolioId, activity_text:a.activity_text.trim(), sort_order:100+ai }) }));
-        });
-        // Modified existing
-        lane.activities.filter(a=>!a._isNew && origActIds.has(a.activity_id)).forEach(a => {
-          const origA = (origLane.activities||[]).find(oa=>oa.activity_id===a.activity_id);
-          if (origA && a.activity_text !== origA.activity_text) {
-            promises.push(fetch(`/api/toa/activities/${a.activity_id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ activity_text:a.activity_text }) }));
-          }
-        });
-
-        // Indicators
-        const origIndIds = new Set((origLane.indicators||[]).map(i=>i.indicator_id));
-        const editIndIds = new Set(lane.indicators.filter(i=>!i._isNew).map(i=>i.indicator_id));
-        (origLane.indicators||[]).forEach(i => {
-          if (!editIndIds.has(i.indicator_id)) {
-            promises.push(fetch(`/api/toa/lane-indicators/${i.indicator_id}`, { method:"DELETE" }));
-          }
-        });
-        lane.indicators.filter(i=>i._isNew && i.indicator_text.trim()).forEach((i,ii) => {
-          promises.push(fetch("/api/toa/lane-indicators", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lane_id:lane.lane_id, portfolio_id:portfolioId, indicator_text:i.indicator_text.trim(), sort_order:100+ii }) }));
-        });
-        lane.indicators.filter(i=>!i._isNew && origIndIds.has(i.indicator_id)).forEach(i => {
-          const origI = (origLane.indicators||[]).find(oi=>oi.indicator_id===i.indicator_id);
-          if (origI && i.indicator_text !== origI.indicator_text) {
-            promises.push(fetch(`/api/toa/lane-indicators/${i.indicator_id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ indicator_text:i.indicator_text }) }));
-          }
-        });
-      });
-
-      await Promise.all(promises);
       await fetchToa();  // re-fetch fresh data
       setEditMode(false); setEditState(null);
     } catch(e) {
@@ -3844,9 +3767,10 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
   };
 
   if (loading) return <div style={{ padding:40, textAlign:"center", color:C.textDim }}>Loading…</div>;
-  if (!toaData || !toaData.toa) return (
+  if (!toaData || !toaData.lanes || toaData.lanes.length === 0) return (
     <div style={{ padding:40, textAlign:"center", color:C.textDim }}>
-      <div style={{ fontSize:15, marginBottom:8 }}>No Theory of Action defined for this portfolio.</div>
+      <div style={{ fontSize:15, marginBottom:8 }}>No portfolio outcomes defined for this portfolio.</div>
+      <div style={{ fontSize:12 }}>Add outcomes in the Submit Portal to populate the Theory of Action.</div>
     </div>
   );
 
@@ -3863,8 +3787,6 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
   // ── Edit mode render ────────────────────────────────────────────────────────
   if (editMode && editState) {
     const es = editState;
-    const eCol1 = es.toa.col1_label || "Service Lines";
-    const eCol2 = es.toa.col2_label || "Core Activities";
     return (
       <div style={{ background:C.bg, color:C.text }}>
         {/* Edit header bar */}
@@ -3907,80 +3829,13 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
             </div>
           </div>
 
-          {/* Main grid */}
-          <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr 36px 400px", gap:6, alignItems:"end", marginBottom:4 }}>
-            <StageHead num="1" label={eCol1} sub="" color={C.slate} />
-            <StageHead num="2" label={eCol2} sub="" color={C.teal} />
-            <StageHead num="3" label="Enabling Outcomes" sub="What changes as a result?" color={C.teal} />
-            <div />
-            <StageHead num="4" label="Impact Achieved" sub="What does this make possible?" color={C.gold} />
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr 36px 400px", gap:6, alignItems:"center", marginBottom:8 }}>
-            <div style={{ height:2, background:`linear-gradient(90deg, ${C.slate}60, ${C.teal})`, borderRadius:2 }} />
-            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:C.teal }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.teal}/></svg></div>
-            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.teal}, ${C.slate})` }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.slate}/></svg></div>
-            <div />
-            <div style={{ display:"flex", alignItems:"center" }}><div style={{ flex:1, height:2, background:`linear-gradient(90deg, ${C.slate}, ${C.gold})`, borderRadius:2 }} /><svg width="10" height="10" viewBox="0 0 10 10"><polygon points="0,0 10,5 0,10" fill={C.gold}/></svg></div>
+          {/* Note pointing lane/outcome edits to the Submit Portal */}
+          <div style={{ background:`${accent}0a`, border:`1px solid ${accent}30`, borderRadius:8, padding:"10px 14px", marginBottom:16, fontSize:12, color:C.textSub, lineHeight:1.5 }}>
+            Service lines, activities, outcomes, and indicators are edited in the <strong>Submit Portal</strong> —
+            this diagram always reflects the latest Portfolio Outcomes and Impact Indicators from there.
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 36px 400px", gap:0, alignItems:"start" }}>
-            {/* Lanes edit grid */}
-            <div style={{ borderRight:`2px solid ${C.bd}`, paddingRight:12 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"140px 0.8fr 1fr", gap:4, alignItems:"stretch" }}>
-                {es.lanes.map((lane, li) => {
-                  const lc = lane.color || C.teal;
-                  return (
-                    <div key={lane.lane_id} style={{ display:"contents" }}>
-                      {/* Col 1 — lane label */}
-                      <div style={{ borderRadius:8, background:`${lc}10`, border:`1px solid ${lc}35`, borderLeft:`4px solid ${lc}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:6, gridRow:li+1 }}>
-                        <input value={lane.label||""} onChange={e=>setLaneField(lane.lane_id,"label",e.target.value)}
-                          style={{ border:`1px solid ${lc}60`, borderRadius:5, padding:"4px 7px", fontSize:12, fontWeight:700, fontFamily:"inherit", color:lc, background:`${lc}08`, outline:"none", width:"100%" }} />
-                        {lane.is_tbd && <div style={{ fontSize:9, background:`${lc}20`, border:`1px solid ${lc}40`, borderRadius:3, padding:"1px 6px", color:lc, fontWeight:700, width:"fit-content" }}>TBD</div>}
-                        {lane.is_multiplier && <div style={{ background:`${lc}30`, border:`1px solid ${lc}60`, borderRadius:4, padding:"2px 6px", fontSize:9, color:lc, fontWeight:800, textAlign:"center", letterSpacing:"0.08em", textTransform:"uppercase" }}>× Multiplier</div>}
-                      </div>
-                      {/* Col 2 — activities */}
-                      <div style={{ borderRadius:8, background:`${lc}04`, border:`1.5px solid ${C.bd}`, padding:"9px 10px", gridRow:li+1 }}>
-                        <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:6 }}>{eCol2}</div>
-                        <ToaEditList
-                          items={lane.activities.map(a=>a.activity_text)}
-                          accent={lc}
-                          onChange={newTexts => setLaneActivities(lane.lane_id, newTexts.map((t,i) => {
-                            const existing = lane.activities[i];
-                            return existing ? { ...existing, activity_text:t } : { activity_id:null, activity_text:t, _isNew:true };
-                          }).concat(
-                            // preserve any items beyond newTexts length (shouldn't happen but guard)
-                            lane.activities.slice(newTexts.length).map(a=>({...a, _deleted:true}))
-                          ))}
-                        />
-                      </div>
-                      {/* Col 3 — outcome + indicators */}
-                      <div style={{ borderRadius:8, background:`${C.teal}06`, border:`1.5px solid ${C.teal}30`, padding:"9px 12px", gridRow:li+1, display:"flex", flexDirection:"column", gap:8 }}>
-                        <div>
-                          <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:4 }}>Outcome {li+1}</div>
-                          <ToaTextField value={lane.outcome_text} onChange={v=>setLaneField(lane.lane_id,"outcome_text",v)} multiline placeholder="Describe the enabling outcome…" style={{ fontSize:12, minHeight:70 }} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize:10, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:4 }}>Leading Indicators</div>
-                          <ToaEditList
-                            items={lane.indicators.map(i=>i.indicator_text)}
-                            accent={lc}
-                            onChange={newTexts => setLaneIndicators(lane.lane_id, newTexts.map((t,i) => {
-                              const existing = lane.indicators[i];
-                              return existing ? { ...existing, indicator_text:t } : { indicator_id:null, indicator_text:t, _isNew:true };
-                            }).concat(
-                              lane.indicators.slice(newTexts.length).map(i=>({...i, _deleted:true}))
-                            ))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <Connector />
-
+          <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:0, alignItems:"start" }}>
             {/* Impact panel edit */}
             <ImpactPanel num="4">
               <div>
@@ -4064,15 +3919,13 @@ function PortfolioToaView({ portfolioId, portColor, hideIndicators=false }) {
               {lanes.map((lane, li) => {
                 const isActive = activeLane === lane.lane_id;
                 const isDimmed = activeLane && !isActive;
-                const lc = lane.color || C.teal;
+                const lc = accent;
                 const hasInds = (lane.indicators||[]).length > 0;
                 return (
                   <div key={lane.lane_id} style={{ display:"contents" }}>
                     <div onClick={() => toggleLane(lane.lane_id)} style={{ borderRadius:8, background:isActive?`${lc}18`:`${lc}10`, border:`1px solid ${isActive?lc:`${lc}35`}`, borderLeft:`4px solid ${lc}`, padding:"10px 10px", display:"flex", flexDirection:"column", gap:4, justifyContent:"center", cursor:"pointer", opacity:isDimmed?0.4:1, transition:"all 0.15s", boxShadow:isActive?`0 2px 16px ${lc}30`:"0 1px 3px rgba(0,0,0,0.08)", gridRow:li+1 }}>
-                      {lane.icon && <div style={{ fontSize:18, color:lc, lineHeight:1 }}>{lane.icon}</div>}
                       <div style={{ fontSize:13, fontWeight:800, color:lc, lineHeight:1.3 }}>{lane.label}</div>
                       {lane.is_tbd && <div style={{ fontSize:9, background:`${lc}20`, border:`1px solid ${lc}40`, borderRadius:3, padding:"1px 6px", color:lc, fontWeight:700, width:"fit-content" }}>TBD</div>}
-                      {lane.is_multiplier && <div style={{ background:`${lc}30`, border:`1px solid ${lc}60`, borderRadius:4, padding:"2px 6px", fontSize:9, color:lc, fontWeight:800, textAlign:"center", letterSpacing:"0.08em", textTransform:"uppercase" }}>× Multiplier</div>}
                     </div>
                     <div style={{ borderRadius:8, background:`${lc}04`, border:`1.5px solid ${isActive?lc:C.bd}`, padding:"9px 10px", opacity:isDimmed?0.4:1, transition:"all 0.15s", gridRow:li+1 }}>
                       <div style={{ fontSize:11, fontWeight:800, color:lc, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:5 }}>{col2Label}</div>
