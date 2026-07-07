@@ -64,7 +64,6 @@ Table portfolio_outcomes {
   outcome_id         string [pk]
   portfolio_id       string [ref: > portfolios.portfolio_id]
   title              string
-  short_title        string
   activity           string
   activity_text      string
   outcome            string

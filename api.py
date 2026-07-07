@@ -468,7 +468,7 @@ def get_bow_portfolio_links(bow_id):
               l.portfolio_outcome_id,
               l.contribution_type,
               bo.title         AS bow_outcome_title,
-              COALESCE(NULLIF(po.title, ''), po.short_title) AS portfolio_outcome_title
+              po.title AS portfolio_outcome_title
             FROM {SCHEMA}.bow_portfolio_outcome_links l
             JOIN {SCHEMA}.bow_outcomes bo
               ON bo.outcome_id = l.bow_outcome_id
@@ -593,7 +593,7 @@ def debug_portfolio_outcomes(portfolio_id):
     if not request.headers.get("X-Forwarded-Email"):
         return jsonify({"error": "Authentication required"}), 403
     rows = query(
-        f"SELECT outcome_id, short_title, sort_order FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
+        f"SELECT outcome_id, title, sort_order FROM {SCHEMA}.portfolio_outcomes WHERE portfolio_id = ? ORDER BY sort_order",
         [portfolio_id]
     )
     return jsonify({"portfolio_id": portfolio_id, "outcomes": rows})
@@ -1827,7 +1827,7 @@ def get_all_portfolio_indicators():
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   NULL           AS bow_id,
                   NULL           AS bow_title,
-                  COALESCE(NULLIF(po.title, ''), po.short_title) AS outcome_title
+                  po.title AS outcome_title
                 FROM {SCHEMA}.portfolio_indicators i
                 LEFT JOIN {SCHEMA}.portfolio_outcomes po ON i.outcome_id = po.outcome_id
                 ORDER BY i.portfolio_id, po.sort_order, i.indicator_id"""
@@ -1846,7 +1846,7 @@ def get_all_portfolio_indicators():
                   i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                   NULL           AS bow_id,
                   NULL           AS bow_title,
-                  COALESCE(NULLIF(po.title, ''), po.short_title) AS outcome_title
+                  po.title AS outcome_title
                 FROM {SCHEMA}.portfolio_indicators i
                 LEFT JOIN {SCHEMA}.portfolio_outcomes po ON i.outcome_id = po.outcome_id
                 ORDER BY i.portfolio_id, po.sort_order, i.indicator_id"""
@@ -2644,7 +2644,7 @@ def get_portfolio_toa(portfolio_id):
     toa = toa_rows[0] if toa_rows else {}
 
     outcomes = query(
-        f"""SELECT outcome_id, title, short_title, outcome, investments_inputs, sort_order
+        f"""SELECT outcome_id, title, outcome, investments_inputs, sort_order
             FROM {SCHEMA}.portfolio_outcomes
             WHERE portfolio_id = ? ORDER BY sort_order""",
         [portfolio_id]
@@ -2668,7 +2668,7 @@ def get_portfolio_toa(portfolio_id):
         activity_lines = [l.strip() for l in (o.get("investments_inputs") or "").split("\n") if l.strip()]
         lanes.append({
             "lane_id": oid,
-            "label": o.get("short_title") or o.get("title"),
+            "label": o.get("title"),
             "outcome_text": o.get("outcome"),
             "is_tbd": not (o.get("outcome") or o.get("investments_inputs")),
             "activities": [{"activity_id": f"{oid}-{i}", "activity_text": t} for i, t in enumerate(activity_lines)],
@@ -2843,8 +2843,7 @@ def get_portfolio_full(portfolio_id):
 
             try:
                 outcomes = _qc(cur,
-                    f"""SELECT outcome_id, portfolio_id,
-                               COALESCE(NULLIF(title, ''), short_title) AS title,
+                    f"""SELECT outcome_id, portfolio_id, title,
                                COALESCE(text, outcome) AS text,
                                sort_order, investments_inputs
                         FROM {SCHEMA}.portfolio_outcomes
@@ -2860,8 +2859,6 @@ def get_portfolio_full(portfolio_id):
                 for o in outcomes:
                     if not o.get("text") and o.get("outcome"):
                         o["text"] = o["outcome"]
-                    if not o.get("title") and o.get("short_title"):
-                        o["title"] = o["short_title"]
 
             try:
                 indicators = _qc(cur,
@@ -2968,7 +2965,7 @@ def get_portfolio_full(portfolio_id):
         out["indicators"] = ind_by_outcome.get(out["outcome_id"], [])
         lane = lane_by_id.get(out["outcome_id"])
         if not lane:
-            key = (out.get("short_title") or out.get("title") or "").strip().lower()
+            key = (out.get("title") or "").strip().lower()
             lane = lane_by_label.get(key)
         out["toa_activities"] = acts_by_lane.get(lane["lane_id"], []) if lane else []
 
@@ -3279,9 +3276,9 @@ def add_portfolio_outcome():
     oid = new_id()
     execute(
         f"""INSERT INTO {SCHEMA}.portfolio_outcomes
-            (outcome_id, portfolio_id, title, short_title, outcome, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?)""",
-        [oid, portfolio_id, title, data.get("short_title", ""), data.get("outcome", data.get("text", "")), sort_order]
+            (outcome_id, portfolio_id, title, outcome, sort_order)
+            VALUES (?, ?, ?, ?, ?)""",
+        [oid, portfolio_id, title, data.get("outcome", data.get("text", "")), sort_order]
     )
     return jsonify({"status": "ok", "outcome_id": oid})
 
@@ -3724,7 +3721,7 @@ def get_indicators_catalog():
                    i.baseline,
                    i.target_2026, i.target_2027, i.target_2028, i.target_2029, i.target_2030,
                    COALESCE(b.status, 'draft') AS status,
-                   COALESCE(NULLIF(po.title, ''), po.short_title) AS outcome_title
+                   po.title AS outcome_title
             FROM {SCHEMA}.portfolio_indicators i
             LEFT JOIN {SCHEMA}.bow_indicators b ON b.indicator_id = i.bow_indicator_id
             LEFT JOIN {SCHEMA}.portfolio_outcomes po ON po.outcome_id = i.outcome_id

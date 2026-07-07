@@ -4864,7 +4864,7 @@ function AlignmentMapEditor({ portfolio, user, onClose }) {
                     border: `1px solid ${(p?.color || BORDER)}55`, fontSize: 9, fontWeight: 800,
                     display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 3 }}>{i + 1}</div>
                   <div style={{ fontSize: 9, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
-                    {o.title || o.short_title}
+                    {o.title}
                   </div>
                   {o.outcome && o.outcome !== o.title && (
                     <>

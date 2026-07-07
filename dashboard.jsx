@@ -1143,8 +1143,8 @@ async function loadFromAPI() {
           : (existing ? existing.indicators : []);
         return {
           id:          po.outcome_id,
-          title:       po.title || po.short_title || (existing ? existing.shortTitle : ""),
-          shortTitle:  po.title || po.short_title  || (existing ? existing.shortTitle : ""),
+          title:       po.title || (existing ? existing.shortTitle : ""),
+          shortTitle:  po.title || (existing ? existing.shortTitle : ""),
           activity:    po.activity     || (existing ? existing.activity   : ""),
           // API returns COALESCE(text, outcome) AS text — check all field aliases
           outcome:     po.text || po.outcome_text || po.outcome || (existing ? existing.outcome : ""),
@@ -8890,7 +8890,7 @@ const DM_TABLES = {
   portfolios:{cols:[{n:"portfolio_id",t:"string",pk:true},{n:"title",t:"string"},{n:"description",t:"string"},{n:"sort_order",t:"int"}],refs:[]},
   portfolio_goal_links:{cols:[{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"goal_id",t:"string",fk:"strategy_goals"}],refs:["portfolios","strategy_goals"]},
   bows:{cols:[{n:"bow_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"invest_bow_id",t:"string",note:"INVEST BoW_ID e.g. B06039"},{n:"sort_order",t:"int"}],refs:["portfolios"]},
-  portfolio_outcomes:{cols:[{n:"outcome_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"short_title",t:"string"},{n:"activity",t:"string"},{n:"activity_text",t:"string"},{n:"outcome",t:"string"},{n:"investments_inputs",t:"string"},{n:"sort_order",t:"int"}],refs:["portfolios"]},
+  portfolio_outcomes:{cols:[{n:"outcome_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"activity",t:"string"},{n:"activity_text",t:"string"},{n:"outcome",t:"string"},{n:"investments_inputs",t:"string"},{n:"sort_order",t:"int"}],refs:["portfolios"]},
   bow_outcomes:{cols:[{n:"outcome_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"number",t:"int"},{n:"short_title",t:"string"},{n:"title",t:"string"},{n:"text",t:"string"},{n:"sort_order",t:"int"}],refs:["bows"]},
   bow_portfolio_outcome_links:{cols:[{n:"bow_outcome_id",t:"string",fk:"bow_outcomes"},{n:"portfolio_outcome_id",t:"string",fk:"portfolio_outcomes"},{n:"contribution_type",t:"string",note:"direct | indirect"},{n:"sort_order",t:"int"}],refs:["bow_outcomes","portfolio_outcomes"]},
   sources:{cols:[{n:"source_id",t:"string",pk:true},{n:"source_name",t:"string"},{n:"source_type",t:"string"},{n:"source_url",t:"string"},{n:"owner",t:"string"},{n:"coverage_notes",t:"string"},{n:"created_at",t:"timestamp"},{n:"created_by",t:"string"}],refs:[]},
