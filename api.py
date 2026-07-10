@@ -3686,6 +3686,7 @@ def get_indicators_catalog():
             FROM {SCHEMA}.bow_indicators i
             JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
             WHERE COALESCE(i.is_active, true) = true
+              AND COALESCE(b.is_draft, false) = false
             ORDER BY b.portfolio_id, b.sort_order, i.indicator_id
         """)
     except Exception:
@@ -3701,6 +3702,7 @@ def get_indicators_catalog():
                        b.title AS entity_name, b.portfolio_id
                 FROM {SCHEMA}.bow_indicators i
                 JOIN {SCHEMA}.bows b ON b.bow_id = i.bow_id
+                WHERE COALESCE(b.is_draft, false) = false
                 ORDER BY b.portfolio_id, i.indicator_id
             """)
         except Exception:

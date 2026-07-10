@@ -58,6 +58,7 @@ Table bows {
   description   string
   invest_bow_id string [note: 'INVEST BoW_ID e.g. B06039 — used to join to invest_bow_* tables']
   sort_order    int
+  is_draft      boolean [default: false, note: 'true = portal-only draft BOW — not in DEFAULT_DATA so it never renders on the dashboard, and excluded from the indicator catalog']
 }
 
 Table portfolio_outcomes {
