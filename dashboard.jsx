@@ -784,7 +784,11 @@ async function apiFetch(path, options = {}) {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
+  if (!res.ok) {
+    let detail = "";
+    try { detail = (await res.json())?.error || ""; } catch {}
+    throw new Error(detail || `API ${path} → ${res.status}`);
+  }
   return res.json();
 }
  
@@ -6188,11 +6192,16 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
     idea_type:            idea.idea_type            || "",
     primary_portfolio:    idea.primary_portfolio    || "",
     primary_bow:          idea.primary_bow          || "",
+    additional_bows:      idea.additional_bows      || "",
     potential_partner:    idea.potential_partner    || "",
+    est_total_amount:     idea.est_total_amount     || "",
     est_2026_amount:      idea.est_2026_amount      || "",
+    co_funding_details:   idea.co_funding_details    || "",
+    desired_start_date:   idea.desired_start_date   || "",
+    est_duration:         idea.est_duration         || "",
     objective:            idea.objective            || "",
+    notes:                idea.notes                || "",
     stage:                idea.stage                || "Brainstorming",
-    inv_number:           idea.inv_number           || "",
     designated_approver:  idea.designated_approver  || "",
   });
   const [saving, setSaving]         = useState(false);
@@ -6220,8 +6229,8 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
       onUpdate({ ...idea, ...editDraft, ...(updated || {}) });
       setSaveMsg("Saved");
       setTimeout(() => setSaveMsg(null), 2000);
-    } catch {
-      setSaveMsg("Error saving");
+    } catch (err) {
+      setSaveMsg(err.message || "Error saving");
     } finally {
       setSaving(false);
     }
@@ -6384,8 +6393,13 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
               )).map(b => <option key={b.bow_id} value={b.bow_id}>{b.name}</option>)}
             </select>
           </div>
+          {fieldRow("Additional BOWs", "additional_bows")}
           {fieldRow("Potential Partner", "potential_partner")}
+          {fieldRow("Est. Total Amount ($)", "est_total_amount", "number")}
           {fieldRow("Est. 2026 Amount ($)", "est_2026_amount", "number")}
+          {fieldRow("Desired Start Date", "desired_start_date", "date")}
+          {fieldRow("Est. Duration", "est_duration")}
+          {fieldRow("Co-funding Details", "co_funding_details")}
           <div style={{ marginBottom: 14, gridColumn: "1 / -1" }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
               letterSpacing: 0.8, marginBottom: 4 }}>Approver</div>
@@ -6399,6 +6413,7 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
           </div>
         </div>
         {fieldRow("Description / Rationale", "objective", "textarea")}
+        {fieldRow("Additional Notes", "notes", "textarea")}
 
         {/* Stage — all except Okay to Proceed which requires Approve */}
         <div style={{ marginBottom: 14 }}>
@@ -6417,20 +6432,6 @@ function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios
             "Okay to Proceed" can only be set via the Approve action below.
           </div>
         </div>
-
-        {/* INV Number (shown when Moved to Invest) */}
-        {(idea.stage === "Moved to Invest" || editDraft.stage === "Moved to Invest") && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase",
-              letterSpacing: 0.8, marginBottom: 4 }}>INV Number</div>
-            <input value={editDraft.inv_number}
-              onChange={e => handleFieldChange("inv_number", e.target.value)}
-              placeholder="e.g. INV-12345"
-              style={{ width: "100%", padding: "6px 10px", borderRadius: 7, border: "1px solid " + BORDER,
-                fontSize: 13, color: TEXT, background: SURFACE, fontFamily: "inherit", outline: "none",
-                boxSizing: "border-box" }}/>
-          </div>
-        )}
 
         {/* Save + Delete row */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
@@ -6740,8 +6741,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
       setShowNewForm(false);
       setNewDraft({ title: "", stage: "Brainstorming", idea_type: "", primary_portfolio: "", primary_bow: "", additional_bows: "", potential_partner: "", est_total_amount: "", est_2026_amount: "", co_funding_details: "", desired_start_date: "", est_duration: "", objective: "", notes: "", designated_approver: "" });
       showToast("Idea created successfully!");
-    } catch {
-      setNewError("Failed to create idea.");
+    } catch (err) {
+      setNewError(err.message || "Failed to create idea.");
     } finally {
       setNewSaving(false);
     }
