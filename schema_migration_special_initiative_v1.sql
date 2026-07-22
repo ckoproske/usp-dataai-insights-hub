@@ -16,6 +16,8 @@ COMMENT 'Free-text flag for a special initiative this investment is tied to, e.g
 -- VERIFICATION
 -- =============================================================================
 
-SELECT col_name, data_type, comment
-FROM (DESCRIBE TABLE usp_data.usp_strategy.investment_overlays)
-WHERE col_name = 'special_initiative';
+SELECT column_name, data_type, comment
+FROM usp_data.information_schema.columns
+WHERE table_schema = 'usp_strategy'
+  AND table_name = 'investment_overlays'
+  AND column_name = 'special_initiative';
