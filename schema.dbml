@@ -593,6 +593,7 @@ Table investment_overlays {
   goal_rating    string
   internal_notes string
   approver       string    [note: 'nullable — set manually for In Process investments']
+  special_initiative string [note: 'nullable — free-text flag, e.g. "CEO Reserve Ask", surfaced in All Investments view']
   last_updated   timestamp
   updated_by     string
 }

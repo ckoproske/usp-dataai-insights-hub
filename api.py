@@ -1204,6 +1204,7 @@ def get_all_investments():
               b.title AS bow_title,
               o.internal_notes,
               o.approver,
+              o.special_initiative,
               o.overlay_id,
               o.last_updated   AS notes_updated_at,
               o.updated_by     AS notes_updated_by,
@@ -1231,6 +1232,7 @@ def get_investments_by_bow(bow_id):
               i.*,
               o.internal_notes,
               o.approver,
+              o.special_initiative,
               o.overlay_id,
               o.last_updated   AS notes_updated_at,
               o.updated_by     AS notes_updated_by,
@@ -1261,6 +1263,7 @@ def get_investments_by_portfolio(portfolio_id):
               b.title AS bow_title,
               o.internal_notes,
               o.approver,
+              o.special_initiative,
               o.overlay_id,
               o.last_updated   AS notes_updated_at,
               o.updated_by     AS notes_updated_by,
@@ -1320,20 +1323,21 @@ def update_investment_overlay(investment_id):
     if existing:
         execute(
             f"""UPDATE {SCHEMA}.investment_overlays
-                SET internal_notes = ?,
-                    approver       = ?,
-                    last_updated   = current_timestamp(),
-                    updated_by     = ?
+                SET internal_notes     = ?,
+                    approver           = ?,
+                    special_initiative = ?,
+                    last_updated       = current_timestamp(),
+                    updated_by         = ?
                 WHERE investment_id = ?""",
-            [data.get("internal_notes"), data.get("approver"), updated_by, investment_id]
+            [data.get("internal_notes"), data.get("approver"), data.get("special_initiative"), updated_by, investment_id]
         )
     else:
         execute(
             f"""INSERT INTO {SCHEMA}.investment_overlays
-                (overlay_id, investment_id, internal_notes, approver, last_updated, updated_by)
-                VALUES (?, ?, ?, ?, current_timestamp(), ?)""",
+                (overlay_id, investment_id, internal_notes, approver, special_initiative, last_updated, updated_by)
+                VALUES (?, ?, ?, ?, ?, current_timestamp(), ?)""",
             [new_id(), investment_id, data.get("internal_notes"),
-             data.get("approver"), updated_by]
+             data.get("approver"), data.get("special_initiative"), updated_by]
         )
     return jsonify({"status": "ok", "updated_by": updated_by})
 

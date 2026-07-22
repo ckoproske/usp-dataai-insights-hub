@@ -1247,6 +1247,7 @@ async function loadAllInvestments(filters = {}) {
       endDate:         inv.End_Date               || "",
       internal_notes:  inv.internal_notes         || "",
       approver:        inv.approver               || "",
+      specialInitiative: inv.special_initiative   || "",
       overlay_id:      inv.overlay_id             || null,
       notesUpdatedAt:  inv.notes_updated_at       || null,
       notesUpdatedBy:  inv.notes_updated_by       || null,
@@ -3454,6 +3455,31 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
 
 
 // Small notes editor sub-component — save on blur
+function SpecialInitiativeEditor({ value, onSave, onDone, isSaving }) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft(value); }, [value]);
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed !== (value || "")) onSave(trimmed);
+    onDone();
+  };
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+      <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") onDone(); }}
+        placeholder="e.g. CEO Reserve Ask"
+        style={{ flex: 1, minWidth: 0, border: "1px solid #FCD34D", borderRadius: 5,
+          padding: "3px 6px", fontSize: 11, fontFamily: "inherit", outline: "none",
+          color: TEXT, background: "#fff", boxSizing: "border-box" }} />
+      <button onClick={commit}
+        style={{ fontSize: 10, fontWeight: 700, cursor: "pointer", border: "none",
+          borderRadius: 4, padding: "3px 7px", background: "#D97706", color: "#fff", flexShrink: 0 }}>
+        {isSaving ? "…" : "✓"}
+      </button>
+    </div>
+  );
+}
+
 function PortfolioNotesEditor({ value, onSave, isSaving }) {
   const [draft, setDraft] = useState(value);
   useEffect(() => { setDraft(value); }, [value]);
@@ -7696,8 +7722,10 @@ function AllInvestmentsView({ onNavigate }) {
   const [sortBy, setSortBy]             = useState("grantee");
   const [sortDir, setSortDir]           = useState("asc");
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [selectedBow, setSelectedBow]               = useState("all");
+  const [selectedBows, setSelectedBows]             = useState([]);
   const [selectedCoFundingTeam, setSelectedCoFundingTeam] = useState("all");
+  const [selectedInitiatives, setSelectedInitiatives] = useState([]);
+  const [editingInitiativeId, setEditingInitiativeId] = useState(null);
   const [currentUser, setCurrentUser]               = useState(null);
   const [viewMode, setViewMode]                     = useState("table");
   const [selectedOwner, setSelectedOwner]           = useState("all");
@@ -7755,6 +7783,10 @@ function AllInvestmentsView({ onNavigate }) {
       : [])
   )).sort();
 
+  const initiativeOptions = Array.from(new Set(
+    portfolioFiltered.map(inv => inv.specialInitiative).filter(Boolean)
+  )).sort();
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -7773,7 +7805,7 @@ function AllInvestmentsView({ onNavigate }) {
     try {
       const res = await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null }),
+        body: JSON.stringify({ internal_notes: notes, approver: cur?.approver || null, special_initiative: cur?.specialInitiative || null }),
       });
       const savedAt = new Date().toISOString();
       const author = res?.updated_by || currentUser?.display_name || null;
@@ -7793,13 +7825,31 @@ function AllInvestmentsView({ onNavigate }) {
     try {
       await apiFetch(`/api/investments/${invId}/overlay`, {
         method: "POST",
-        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, updated_by: currentUser?.display_name || null }),
+        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver, special_initiative: cur?.specialInitiative || null, updated_by: currentUser?.display_name || null }),
       });
       setInvestments(prev => prev.map(inv =>
         inv.id === invId ? { ...inv, approver: approver || "" } : inv
       ));
     } catch (err) {
       console.warn("Failed to save approver:", err);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const saveSpecialInitiative = async (invId, value) => {
+    setSavingId(invId);
+    const cur = investments.find(i => i.id === invId);
+    try {
+      await apiFetch(`/api/investments/${invId}/overlay`, {
+        method: "POST",
+        body: JSON.stringify({ internal_notes: cur?.internal_notes || null, approver: cur?.approver || null, special_initiative: value || null, updated_by: currentUser?.display_name || null }),
+      });
+      setInvestments(prev => prev.map(inv =>
+        inv.id === invId ? { ...inv, specialInitiative: value || "" } : inv
+      ));
+    } catch (err) {
+      console.warn("Failed to save special initiative:", err);
     } finally {
       setSavingId(null);
     }
@@ -7821,9 +7871,10 @@ function AllInvestmentsView({ onNavigate }) {
 
   const filtered = investments
     .filter(inv => selectedPortfolio === "all" || inv.portfolio_id === selectedPortfolio)
-    .filter(inv => selectedBow === "all" || inv.bowTitles.includes(selectedBow))
+    .filter(inv => selectedBows.length === 0 || inv.bowTitles.some(t => selectedBows.includes(t)))
     .filter(inv => selectedCoFundingTeam === "all" || (inv.coFundingTeams &&
       inv.coFundingTeams.split(", ").includes(selectedCoFundingTeam)))
+    .filter(inv => selectedInitiatives.length === 0 || selectedInitiatives.includes(inv.specialInitiative))
     .filter(inv => {
       if (!filterStatuses.length) return true;
       return filterStatuses.some(f => f === "Active" ? inv.status === "Active" : inv.stage === f);
@@ -7842,10 +7893,11 @@ function AllInvestmentsView({ onNavigate }) {
 
   const totalAmt = filtered.reduce((s, inv) => s + toNum(inv.amount), 0);
 
-  const contextLevel = selectedBow !== "all" ? "BOW"
+  const contextLevel = selectedBows.length > 0 ? "BOW"
     : selectedPortfolio !== "all" ? "Portfolio"
     : "Strategy";
-  const contextTitle = selectedBow !== "all" ? selectedBow
+  const contextTitle = selectedBows.length === 1 ? selectedBows[0]
+    : selectedBows.length > 1 ? `${selectedBows.length} BOWs`
     : selectedPortfolio !== "all" ? (PORT_COLORS[selectedPortfolio]?.label || selectedPortfolio)
     : "Strategy-Wide Pipeline";
 
@@ -8019,7 +8071,7 @@ function AllInvestmentsView({ onNavigate }) {
         </div>
         {/* Portfolio filter dropdown */}
         <select value={selectedPortfolio}
-          onChange={e => { setSelectedPortfolio(e.target.value); setSelectedBow("all"); setSelectedCoFundingTeam("all"); setSelectedOwner("all"); }}
+          onChange={e => { setSelectedPortfolio(e.target.value); setSelectedBows([]); setSelectedCoFundingTeam("all"); setSelectedOwner("all"); }}
           style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
             fontSize: 12, color: TEXT, background: SURFACE, cursor: "pointer",
             fontFamily: "inherit", outline: "none" }}>
@@ -8035,7 +8087,7 @@ function AllInvestmentsView({ onNavigate }) {
           )).sort()];
           return (
             <select value={selectedOwner}
-              onChange={e => { setSelectedOwner(e.target.value); setSelectedPortfolio("all"); setSelectedBow("all"); setSelectedCoFundingTeam("all"); }}
+              onChange={e => { setSelectedOwner(e.target.value); setSelectedPortfolio("all"); setSelectedBows([]); setSelectedCoFundingTeam("all"); }}
               style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid " + BORDER,
                 fontSize: 12, color: TEXT, background: SURFACE, cursor: "pointer",
                 fontFamily: "inherit", outline: "none" }}>
@@ -8243,18 +8295,19 @@ function AllInvestmentsView({ onNavigate }) {
             <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
               <colgroup>
                 <col style={{ width: "5%" }} />
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "11%" }} />
                 <col style={{ width: "8%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "7%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "6%" }} />
                 <col style={{ width: "6%" }} />
                 <col style={{ width: "5%" }} />
                 <col style={{ width: "5%" }} />
                 <col style={{ width: "7%" }} />
                 <col style={{ width: "6%" }} />
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "11%" }} />
               </colgroup>
               <thead>
                 {(() => {
@@ -8294,9 +8347,11 @@ function AllInvestmentsView({ onNavigate }) {
                       </th>
                       <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
                         <div onClick={() => setOpenDropdown(openDropdown === "bow" ? null : "bow")}
-                          style={{ ...hStyle(selectedBow !== "all"), padding: "9px 12px", cursor: "pointer",
+                          style={{ ...hStyle(selectedBows.length > 0), padding: "9px 12px", cursor: "pointer",
                             userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                          {selectedBow === "all" ? "BOW" : selectedBow.length > 22 ? selectedBow.slice(0, 22) + "…" : selectedBow}
+                          {selectedBows.length === 0 ? "BOW"
+                            : selectedBows.length === 1 ? (selectedBows[0].length > 18 ? selectedBows[0].slice(0, 18) + "…" : selectedBows[0])
+                            : `BOW · ${selectedBows.length} selected`}
                           <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
                         </div>
                         {openDropdown === "bow" && (
@@ -8307,16 +8362,32 @@ function AllInvestmentsView({ onNavigate }) {
                               background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
                               padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
                               minWidth: 220, maxHeight: 260, overflowY: "auto" }}>
-                              {[{ value: "all", label: "All BOWs" }, ...bowOptions.map(b => ({ value: b, label: b }))].map(opt => (
-                                <div key={opt.value}
-                                  onClick={() => { setSelectedBow(opt.value); setOpenDropdown(null); }}
-                                  style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                                    background: selectedBow === opt.value ? pc.color + "12" : "transparent",
-                                    color: selectedBow === opt.value ? pc.color : TEXT,
-                                    fontWeight: selectedBow === opt.value ? 700 : 400 }}>
-                                  {opt.label}
-                                </div>
-                              ))}
+                              {[{ value: "", label: "All BOWs" }, ...bowOptions.map(b => ({ value: b, label: b }))].map(opt => {
+                                const isClear = opt.value === "";
+                                const isSelected = isClear ? selectedBows.length === 0 : selectedBows.includes(opt.value);
+                                return (
+                                  <div key={opt.value || "__all__"}
+                                    onClick={() => {
+                                      if (isClear) { setSelectedBows([]); setOpenDropdown(null); }
+                                      else setSelectedBows(prev => prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]);
+                                    }}
+                                    style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                      background: isSelected ? pc.color + "12" : "transparent",
+                                      color: isSelected ? pc.color : TEXT,
+                                      fontWeight: isSelected ? 700 : 400,
+                                      display: "flex", alignItems: "center", gap: 8 }}>
+                                    {!isClear && (
+                                      <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+                                        border: "1.5px solid " + (isSelected ? pc.color : BORDER),
+                                        background: isSelected ? pc.color : "transparent",
+                                        display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                        {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                                      </span>
+                                    )}
+                                    {opt.label}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </>
                         )}
@@ -8346,6 +8417,58 @@ function AllInvestmentsView({ onNavigate }) {
                                   {opt.label}
                                 </div>
                               ))}
+                            </div>
+                          </>
+                        )}
+                      </th>
+                      <th style={{ position: "relative", borderRight: "1px solid " + BORDER, verticalAlign: "middle" }}>
+                        <div onClick={() => setOpenDropdown(openDropdown === "initiative" ? null : "initiative")}
+                          style={{ ...hStyle(selectedInitiatives.length > 0), padding: "9px 12px", cursor: "pointer",
+                            userSelect: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          {selectedInitiatives.length === 0 ? "Special Initiative"
+                            : selectedInitiatives.length === 1 ? (selectedInitiatives[0].length > 16 ? selectedInitiatives[0].slice(0, 16) + "…" : selectedInitiatives[0])
+                            : `Initiative · ${selectedInitiatives.length} selected`}
+                          <span style={{ fontSize: 8, opacity: 0.7 }}>▼</span>
+                        </div>
+                        {openDropdown === "initiative" && (
+                          <>
+                            <div onClick={() => setOpenDropdown(null)}
+                              style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100,
+                              background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
+                              padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                              minWidth: 220, maxHeight: 260, overflowY: "auto" }}>
+                              {initiativeOptions.length === 0 && (
+                                <div style={{ padding: "8px 14px", fontSize: 11, color: TEXT_MUTED, fontStyle: "italic" }}>
+                                  No investments tagged yet
+                                </div>
+                              )}
+                              {[{ value: "", label: "All" }, ...initiativeOptions.map(t => ({ value: t, label: t }))].map(opt => {
+                                const isClear = opt.value === "";
+                                const isSelected = isClear ? selectedInitiatives.length === 0 : selectedInitiatives.includes(opt.value);
+                                return (
+                                  <div key={opt.value || "__all__"}
+                                    onClick={() => {
+                                      if (isClear) { setSelectedInitiatives([]); setOpenDropdown(null); }
+                                      else setSelectedInitiatives(prev => prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value]);
+                                    }}
+                                    style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
+                                      background: isSelected ? pc.color + "12" : "transparent",
+                                      color: isSelected ? pc.color : TEXT,
+                                      fontWeight: isSelected ? 700 : 400,
+                                      display: "flex", alignItems: "center", gap: 8 }}>
+                                    {!isClear && (
+                                      <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
+                                        border: "1.5px solid " + (isSelected ? pc.color : BORDER),
+                                        background: isSelected ? pc.color : "transparent",
+                                        display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                        {isSelected && <span style={{ color: "#fff", fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                                      </span>
+                                    )}
+                                    {opt.label}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </>
                         )}
@@ -8542,6 +8665,32 @@ function AllInvestmentsView({ onNavigate }) {
                           );
                         })()}
 
+                        {/* Special Initiative */}
+                        <td style={{ ...tdBase, padding: "9px 12px" }}>
+                          {editingInitiativeId === inv.id ? (
+                            <SpecialInitiativeEditor
+                              value={inv.specialInitiative || ""}
+                              isSaving={isSaving}
+                              onSave={val => saveSpecialInitiative(inv.id, val)}
+                              onDone={() => setEditingInitiativeId(null)}
+                            />
+                          ) : inv.specialInitiative ? (
+                            <span onClick={() => setEditingInitiativeId(inv.id)}
+                              title="Click to edit"
+                              style={{ fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7",
+                                border: "1px solid #FDE68A", borderRadius: 5, padding: "3px 8px", cursor: "pointer",
+                                display: "inline-flex", alignItems: "center", gap: 4, wordBreak: "break-word" }}>
+                              🎯 {inv.specialInitiative}
+                            </span>
+                          ) : (
+                            <button onClick={() => setEditingInitiativeId(inv.id)}
+                              style={{ fontSize: 10, cursor: "pointer", border: "1px dashed " + BORDER, borderRadius: 5,
+                                padding: "3px 8px", background: "transparent", color: TEXT_MUTED }}>
+                              + Tag
+                            </button>
+                          )}
+                        </td>
+
                         {/* Amount */}
                         <td style={{ ...tdBase, padding: "11px 12px", position: "relative" }}
                           onMouseEnter={e => inv.amount && showPayments(inv.id, e.currentTarget.getBoundingClientRect())}
@@ -8666,7 +8815,7 @@ function AllInvestmentsView({ onNavigate }) {
 
                       {isEditing && (
                         <tr>
-                          <td colSpan={13} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
+                          <td colSpan={14} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
                             padding: "10px 16px", borderBottom: rowBorder }}>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
                               {[
@@ -8925,7 +9074,7 @@ const DM_TABLES = {
   invest_investments:{cols:[{n:"Investment_ID",t:"string",pk:true},{n:"Investment_URL",t:"string"},{n:"Investment_Name",t:"string"},{n:"Grantee_Vendor",t:"string"},{n:"Primary_Contact",t:"string"},{n:"Type",t:"string"},{n:"Subtype",t:"string"},{n:"Start_Date",t:"date"},{n:"End_Date",t:"date"},{n:"Investment_Amount",t:"decimal",note:"formula field"},{n:"Investment_Owner",t:"string"},{n:"Investment_Owner_Title",t:"string"},{n:"Secondary_Investment_Owner",t:"string"},{n:"Managing_Team",t:"string",note:"formula field"},{n:"Supporting_Team",t:"string"},{n:"Status",t:"string"},{n:"Workflow_Step",t:"string"},{n:"Forecasted_Approval_Date",t:"date"},{n:"Strategic_Fit",t:"string"},{n:"Project_Overview",t:"string"},{n:"Approved_Investment_Amount",t:"decimal"},{n:"Paid_Amount",t:"double",note:"formula field"},{n:"Outstanding_Balance",t:"double",note:"formula field"},{n:"Funding_Team",t:"string"}],refs:[]},
   invest_bow_allocation:{cols:[{n:"Investment_ID",t:"string",fk:"invest_investments"},{n:"BoW_Funding_ID",t:"string"},{n:"BoW_ID",t:"string"},{n:"Investment_Payment_Allocation_Type",t:"string"},{n:"Investment_Payment_ID",t:"string"},{n:"Investment_Payment_Date",t:"date"},{n:"Investment_Payment_Year",t:"int"},{n:"Investment_Payment_Status",t:"string"},{n:"Investment_Payment_Allocation_Amount",t:"decimal"}],refs:["invest_investments"]},
   invest_bow_details:{cols:[{n:"BoW_ID",t:"string",pk:true},{n:"BoW_URL",t:"string"},{n:"BoW_Name",t:"string"},{n:"BoW_Type",t:"string"},{n:"BoW_Status",t:"string"},{n:"BoW_Owner",t:"string"},{n:"BoW_Director",t:"string"},{n:"BoW_Managing_Strategy",t:"string"},{n:"BoW_Managing_Group",t:"string"},{n:"Strategy_Taxonomy",t:"string"},{n:"Description_and_Foundation_Role",t:"string"},{n:"Impact_Performance_Rating",t:"string"},{n:"Impact_Performance_Rating_Rationale",t:"string"},{n:"Execution_Performance_Rating",t:"string"},{n:"Execution_Performance_Rating_Rationale",t:"string"}],refs:[]},
-  investment_overlays:{cols:[{n:"overlay_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"invest_id",t:"string"},{n:"investment_id",t:"string",fk:"invest_investments"},{n:"status",t:"string"},{n:"notes",t:"string"},{n:"owner",t:"string"},{n:"tags",t:"string"},{n:"outcome_rating",t:"string"},{n:"goal_rating",t:"string"},{n:"internal_notes",t:"string"},{n:"approver",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["bows","invest_investments"]},
+  investment_overlays:{cols:[{n:"overlay_id",t:"string",pk:true},{n:"bow_id",t:"string",fk:"bows"},{n:"invest_id",t:"string"},{n:"investment_id",t:"string",fk:"invest_investments"},{n:"status",t:"string"},{n:"notes",t:"string"},{n:"owner",t:"string"},{n:"tags",t:"string"},{n:"outcome_rating",t:"string"},{n:"goal_rating",t:"string"},{n:"internal_notes",t:"string"},{n:"approver",t:"string"},{n:"special_initiative",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:["bows","invest_investments"]},
   investment_ideas:{cols:[{n:"idea_id",t:"string",pk:true},{n:"title",t:"string"},{n:"submitted_by",t:"string"},{n:"submitted_at",t:"timestamp"},{n:"stage",t:"string"},{n:"idea_type",t:"string"},{n:"objective",t:"string"},{n:"primary_portfolio",t:"string"},{n:"primary_bow",t:"string"},{n:"additional_bows",t:"string"},{n:"potential_partner",t:"string"},{n:"est_total_amount",t:"double"},{n:"est_2026_amount",t:"double"},{n:"co_funding_details",t:"string"},{n:"desired_start_date",t:"string"},{n:"est_duration",t:"string"},{n:"notes",t:"string"},{n:"designated_approver",t:"string"},{n:"approved_by",t:"string"},{n:"approved_at",t:"timestamp"},{n:"approver_note",t:"string"},{n:"reviewer_note",t:"string"},{n:"moved_to_invest",t:"boolean"},{n:"moved_to_invest_at",t:"timestamp"},{n:"inv_number",t:"string"},{n:"archived",t:"boolean"},{n:"archived_at",t:"timestamp"},{n:"archived_by",t:"string"}],refs:[]},
   investment_idea_comments:{cols:[{n:"comment_id",t:"string",pk:true},{n:"idea_id",t:"string",fk:"investment_ideas"},{n:"comment_text",t:"string"},{n:"commented_by",t:"string"},{n:"commented_at",t:"timestamp"},{n:"is_approval_comment",t:"boolean"}],refs:["investment_ideas"]},
   budget_forecast_snapshots:{cols:[{n:"snapshot_id",t:"string",pk:true},{n:"label",t:"string"},{n:"fiscal_year",t:"int"},{n:"snapshot_date",t:"date"},{n:"taken_by",t:"string"},{n:"snapshot_data",t:"string",note:"JSON"}],refs:[]},
