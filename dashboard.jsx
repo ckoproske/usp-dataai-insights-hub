@@ -3043,6 +3043,20 @@ function fmtInvDate(ts) {
   const yr = String(d.getFullYear()).slice(2);
   return `${m}/${day}/${yr}`;
 }
+function fmtRelativeDate(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  if (isNaN(d)) return "—";
+  const days = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+  if (days <= 0)  return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7)   return `${days} days ago`;
+  if (days < 14)  return "1 week ago";
+  if (days < 30)  return `${Math.floor(days / 7)} weeks ago`;
+  if (days < 60)  return "1 month ago";
+  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+  return fmtNoteDate(ts);
+}
 
 
 const PIPELINE_STAGES = [
@@ -6841,6 +6855,9 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
         const tA = a.desired_start_date ? new Date(a.desired_start_date).getTime() : (sc.dir === "asc" ? Infinity : -Infinity);
         const tB = b.desired_start_date ? new Date(b.desired_start_date).getTime() : (sc.dir === "asc" ? Infinity : -Infinity);
         va = tA; vb = tB;
+      } else if (sc.col === "submitted_at") {
+        va = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
+        vb = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
       }
       if (va < vb) return sc.dir === "asc" ? -1 : 1;
       if (va > vb) return sc.dir === "asc" ? 1 : -1;
@@ -7094,7 +7111,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 2200, tableLayout: "auto" }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 2 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Additional Notes", "Approver Requests", "Approver", "Approval Status"].map(h => (
+                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Submitted", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Additional Notes", "Approver Requests", "Approver", "Approval Status"].map(h => (
                       <th key={h} style={{ padding: "8px 14px", textAlign: "left",
                         fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
                         textTransform: "uppercase", letterSpacing: 0.6,
@@ -7145,6 +7162,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         {fSel("idea_type", IDEA_TYPES.map(t => <option key={t} value={t}>{t}</option>))}
                         {/* Submitted By */}
                         {fSel("submitted_by", submittedByOptions.map(n => <option key={n} value={n}>{n}</option>))}
+                        {/* Submitted — most recent first by default */}
+                        {fSort("submitted_at", "desc", ["Newest → Oldest ↓", "Oldest → Newest ↑"])}
                         {/* Portfolio */}
                         {fSel("primary_portfolio", (portfolios || []).map(p => <option key={p.portfolio_id} value={p.portfolio_id}>{p.name}</option>))}
                         {/* BOW — cascades off portfolio filter */}
@@ -7262,6 +7281,10 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 120 }}>
                           {idea.submitted_by || "—"}
+                        </td>
+                        <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 110 }}
+                          title={fmtNoteDate(idea.submitted_at)}>
+                          {fmtRelativeDate(idea.submitted_at)}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
                           minWidth: 160, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
