@@ -6185,7 +6185,7 @@ function IdeaStageBadge({ stage }) {
 
 function InvestmentIdeaDetail({ idea, onClose, currentUser, onUpdate, portfolios, allBows, onApproved, onDeleted, onMoved }) {
   const canApprove = currentUser &&
-    (currentUser.permission_level === "Leadership" || currentUser.permission_level === "DMT" || currentUser.permission_level === "MLE");
+    (currentUser.permission_level === "Leadership" || currentUser.permission_level === "MLE");
 
   const [editDraft, setEditDraft] = useState({
     title:                idea.title                || "",
@@ -9129,9 +9129,10 @@ function FeedbackModal({ onClose, source }) {
   const [improve,  setImprove]  = useState("");
   const [saving,   setSaving]   = useState(false);
   const [done,     setDone]     = useState(false);
+  const [ratingError, setRatingError] = useState(false);
 
   const submit = async () => {
-    if (!rating) return;
+    if (!rating) { setRatingError(true); return; }
     setSaving(true);
     try {
       await apiFetch("/api/feedback", {
@@ -9185,7 +9186,7 @@ function FeedbackModal({ onClose, source }) {
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                 {[1,2,3,4,5].map(i => (
-                  <span key={i} onClick={() => setRating(i)}
+                  <span key={i} onClick={() => { setRating(i); setRatingError(false); }}
                     onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(0)}
                     style={{ fontSize:30, cursor:"pointer", color:starCol(i),
                       transition:"color 0.1s", lineHeight:1, userSelect:"none" }}>★</span>
@@ -9196,6 +9197,11 @@ function FeedbackModal({ onClose, source }) {
                   </span>
                 )}
               </div>
+              {ratingError && (
+                <div style={{ fontSize:12, color:"#EF4444", marginTop:6, fontWeight:600 }}>
+                  Please select a rating before submitting.
+                </div>
+              )}
             </div>
 
             {/* What's working */}
@@ -9230,12 +9236,12 @@ function FeedbackModal({ onClose, source }) {
                 fontSize:13, fontWeight:600, cursor:"pointer" }}>
                 Cancel
               </button>
-              <button onClick={submit} disabled={!rating || saving}
+              <button onClick={submit} disabled={saving}
                 style={{ padding:"8px 22px", borderRadius:8, border:"none",
                   background: rating ? ACCENT : BORDER,
                   color: rating ? "#fff" : TEXT_MUTED,
                   fontSize:13, fontWeight:700,
-                  cursor: rating ? "pointer" : "default",
+                  cursor: saving ? "default" : "pointer",
                   transition:"background 0.15s" }}>
                 {saving ? "Sending…" : "Submit Feedback"}
               </button>

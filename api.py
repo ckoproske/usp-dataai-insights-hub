@@ -4035,7 +4035,7 @@ def create_source_round(source_id):
 # Valid idea_type values:
 #   Grant, Contract, Bucket (multiple INVs), Supplement to existing INV
 #
-# Approval gate: permission_level must be "Leadership", "DMT", or "MLE"
+# Approval gate: permission_level must be "Leadership" or "MLE"
 # ══════════════════════════════════════════════════════════════════════════════
 
 _IDEA_STAGES   = ["Brainstorming", "More Info Needed", "Ready for Review",
@@ -4222,7 +4222,7 @@ def update_investment_idea(idea_id):
 
 @app.route("/api/investment-ideas/<idea_id>/approve", methods=["POST"])
 def approve_investment_idea(idea_id):
-    """Leadership/DMT only.
+    """Leadership/MLE only.
     Sets stage='Okay to Proceed', records approved_by + approved_at.
     Optionally adds an approval comment to investment_idea_comments."""
     data  = request.json or {}
@@ -4233,7 +4233,7 @@ def approve_investment_idea(idea_id):
         f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
     )
-    if not member or member[0].get("permission_level") not in ("Leadership", "DMT", "MLE"):
+    if not member or member[0].get("permission_level") not in ("Leadership", "MLE"):
         return jsonify({"error": "Insufficient permissions to approve"}), 403
 
     approved_by = member[0].get("display_name") or email
@@ -4337,7 +4337,7 @@ def archive_investment_idea(idea_id):
 
 @app.route("/api/investment-ideas/<idea_id>/request-changes", methods=["POST"])
 def request_idea_changes(idea_id):
-    """Leadership/DMT/MLE only.
+    """Leadership/MLE only.
     Sets stage='More Info Needed' and records a reviewer_note so the submitter
     knows exactly what changes are needed before re-submitting for review.
     A non-empty note is required."""
@@ -4348,7 +4348,7 @@ def request_idea_changes(idea_id):
         f"SELECT display_name, permission_level FROM {SCHEMA}.team_members WHERE email = ? AND is_active = true",
         [email]
     )
-    if not member or member[0].get("permission_level") not in ("Leadership", "DMT", "MLE"):
+    if not member or member[0].get("permission_level") not in ("Leadership", "MLE"):
         return jsonify({"error": "Insufficient permissions to request changes"}), 403
 
     reviewer_note = (data.get("note") or "").strip()
