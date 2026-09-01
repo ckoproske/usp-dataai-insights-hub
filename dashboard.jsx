@@ -6267,11 +6267,14 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
 
       {/* Vision + strategy framing */}
       <section className="toa-hero">
-        <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
-        <h1 className="toa-vision">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</h1>
-        <div className="toa-divider"/>
-        <span className="toa-eyebrow toa-accent">The strategy that gets us there</span>
-        <p className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</p>
+        {/* Vision reduced to a slim strip — it is the page's endpoint, and
+            Stage 4 below carries it at full weight. The strategy line is the
+            thesis, so it gets the headline treatment. */}
+        <div className="toa-vision-strip">
+          <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
+          <p className="toa-vision-line">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</p>
+        </div>
+        <h1 className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</h1>
         <p className="toa-sub">
           We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
           capability layers every USP team builds on and benefits from. This is the strategic logic behind our
@@ -6281,6 +6284,12 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
         {/* IF / THEN / THEN / ACCELERATING chevron banner */}
         <div className="toa-banner">
           <h2 className="toa-banner-title">Theory of Action</h2>
+          <div className="toa-banner-sub">How the foundation we build turns into impact for every USP team.</div>
+          <div className="toa-colheads">
+            {["Portfolios","2030 Goals","Team Impact","2045"].map(h => (
+              <div key={h} className="toa-colhead">{h}</div>
+            ))}
+          </div>
           <div className="toa-row">
             <div className="toa-chev toa-chev-1" onClick={()=>scrollTo("toa-foundation")}>
               <span className="toa-tag">IF</span>
@@ -6517,15 +6526,15 @@ const TOA_CSS = `
 .usp-toa .toa-accent { color:${ACCENT}; }
 .usp-toa .toa-italic { font-style:italic; }
 
-.usp-toa .toa-hero { padding-top:24px; padding-bottom:36px; }
-.usp-toa h1.toa-vision { font-family:Cambria,Georgia,serif; font-style:italic; font-weight:500; font-size:32px; line-height:1.35; margin-top:12px; }
-.usp-toa h1.toa-vision em { font-style:italic; color:${ACCENT}; }
-.usp-toa .toa-divider { width:48px; height:2px; background:${BORDER}; margin:28px 0 24px; }
-.usp-toa .toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:23px; line-height:1.35; margin:10px 0 12px; }
-.usp-toa .toa-strategy-line em { font-style:italic; color:${ACCENT}; }
+.usp-toa .toa-hero { padding-top:20px; padding-bottom:32px; }
+/* Vision compressed to a slim strip so the strategy line can lead the page */
+.usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:14px; margin-bottom:22px; }
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.55; color:${TEXT_SUB}; margin-top:6px; }
+.usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
+.usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1.25; margin:0 0 12px; }
+.usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 /* Supporting copy sits directly beneath the strategy line, not beside it */
-.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; line-height:1.65; max-width:760px; margin-top:2px; }
-.usp-toa .toa-banner-title { font-size:22px; margin-bottom:18px; }
+.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; line-height:1.65; max-width:760px; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
@@ -6534,7 +6543,12 @@ const TOA_CSS = `
 .usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:680px; margin-top:10px; line-height:1.6; }
 .usp-toa .toa-centered { margin-left:auto; margin-right:auto; }
 
-.usp-toa .toa-banner { margin-top:40px; }
+/* The diagram is a contained object, not loose elements on the page */
+.usp-toa .toa-banner { margin-top:34px; background:${SURFACE}; border:1px solid ${BORDER}; border-radius:16px; padding:24px 28px 30px; box-shadow:0 2px 14px rgba(48,58,68,0.07); }
+.usp-toa .toa-banner-title { font-size:20px; margin-bottom:3px; }
+.usp-toa .toa-banner-sub { font-size:12.5px; color:${TEXT_MUTED}; margin-bottom:18px; }
+.usp-toa .toa-colheads { display:flex; margin-bottom:9px; }
+.usp-toa .toa-colhead { flex:1; padding-left:32px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; }
 .usp-toa .toa-row { display:flex; }
 .usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:18px 22px 18px 32px; cursor:pointer; transition:filter .15s ease; }
 .usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { filter:brightness(1.12); }
@@ -6548,7 +6562,7 @@ const TOA_CSS = `
 
 .usp-toa .toa-connector-wrap { position:relative; }
 .usp-toa .toa-connectors { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; z-index:0; }
-.usp-toa .toa-connector-line { fill:none; stroke:${BORDER}; stroke-width:1.3; }
+.usp-toa .toa-connector-line { fill:none; stroke:${TEXT_MUTED}; stroke-width:1.8; }
 .usp-toa .toa-arrowhead { fill:${ACCENT}; }
 .usp-toa .toa-content-row { display:flex; margin-top:16px; position:relative; z-index:1; }
 .usp-toa .toa-content { flex:1; padding:0 22px 0 32px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; align-content:flex-start; gap:7px; }
@@ -6616,7 +6630,8 @@ const TOA_CSS = `
 @media (max-width:860px) {
   .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
   .usp-toa .toa-impact-grid, .usp-toa .toa-path-wrap { grid-template-columns:1fr; }
-  .usp-toa h1.toa-vision { font-size:27px; }
+  .usp-toa h1.toa-strategy-line { font-size:26px; }
+  .usp-toa .toa-colheads { display:none; }
   .usp-toa .toa-row, .usp-toa .toa-content-row { flex-direction:column; }
   .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
   .usp-toa .toa-content { padding-left:22px; margin-bottom:14px; }
@@ -9982,7 +9997,31 @@ function FeedbackInboxView() {
   );
 }
 
-function Sidebar({ activeView, onNavigate, currentUser }) {
+// Connection status, shown at the foot of the nav pane. Dark-pane variants of
+// the colours the status bar used when it sat under the top bar.
+function SidebarStatus({ usingPlaceholder, apiAvailable }) {
+  const s = !usingPlaceholder
+    ? { dot:"#10B981", label:"Live", detail:"usp_data.usp_strategy" }
+    : apiAvailable === "db-error"
+      ? { dot:"#EF4444", label:"DB Unreachable", detail:"showing placeholder data", link:"/api/debug" }
+      : apiAvailable === "ok"
+        ? { dot:"#FBBF24", label:"Connected", detail:"tables empty · placeholder data" }
+        : { dot:"#EF4444", label:"Offline", detail:"API not reachable · placeholder data" };
+  return (
+    <div style={{display:"flex",alignItems:"flex-start",gap:7,paddingLeft:10}}>
+      <span style={{width:6,height:6,borderRadius:"50%",background:s.dot,display:"inline-block",flexShrink:0,marginTop:5}}/>
+      <div style={{minWidth:0}}>
+        <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.82)"}}>{s.label}</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,0.38)",lineHeight:1.45,wordBreak:"break-word"}}>
+          {s.detail}
+          {s.link && <> · <a href={s.link} target="_blank" style={{color:"rgba(255,255,255,0.6)",textDecoration:"underline"}}>diagnostic</a></>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sidebar({ activeView, onNavigate, currentUser, usingPlaceholder, apiAvailable }) {
   const isStrategyActive  = activeView.type==="strategy";
   const isAllInvActive    = activeView.type==="all-investments";
   const isIdeaTrackerActive = activeView.type==="idea-tracker";
@@ -10100,6 +10139,7 @@ function Sidebar({ activeView, onNavigate, currentUser }) {
           />
         )}
         <div style={{fontSize:10, color:"rgba(255,255,255,0.2)", letterSpacing:0.5, paddingLeft:10}}>Draft · Do Not Distribute</div>
+        <SidebarStatus usingPlaceholder={usingPlaceholder} apiAvailable={apiAvailable}/>
       </div>
     </div>
   );
@@ -10238,53 +10278,21 @@ function App() {
   const activePortData = activePortId ? data.portfolios[activePortId] : null;
   const pc = activePortId ? PORT_COLORS[activePortId] : null;
 
-  const breadcrumb = activeView.type==="strategy"
-    ? "2026–2030 Strategy"
-    : activeView.type==="all-investments"
-    ? "2026–2030 Strategy"
-    : activeView.type==="idea-tracker"
-    ? "All Investments"
-    : activeView.type==="budget-forecasts"
-    ? "All Investments"
-    : activeView.type==="data-model"
-    ? "Tools"
-    : pc?.label || "";
-
-  const pageTitle = activeView.type==="strategy"
-    ? "USP Data & AI Measurement & Insights Dashboard"
-    : activeView.type==="all-investments"
-    ? "All Investments"
-    : activeView.type==="idea-tracker"
-    ? "Investment Idea Tracker"
-    : activeView.type==="budget-forecasts"
-    ? "Budget Forecast"
-    : activeView.type==="data-model"
-    ? "Explore the Data Model"
-    : (activePortData?.portfolio?.name || pc?.label || "");
-
   return (
     <div style={{fontFamily:"Calibri,'Segoe UI',Arial,sans-serif",minHeight:"100vh",background:BG,display:"flex",color:TEXT}}>
       <style>{FONT_CSS}</style>
-      <Sidebar activeView={activeView} onNavigate={setActiveView} data={data} currentUser={currentUser}/>
+      <Sidebar activeView={activeView} onNavigate={setActiveView} data={data} currentUser={currentUser}
+        usingPlaceholder={usingPlaceholder} apiAvailable={apiAvailable}/>
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,height:"100vh",overflowY:"auto"}}>
 
-        {/* Top bar */}
+        {/* Action bar — no white band and no breadcrumb/title; the sidebar
+            already names the app and the page. Connection status now lives at
+            the foot of the nav pane. */}
         <div style={{
-          background:SURFACE, borderBottom:"1px solid "+BORDER,
-          padding:"0 36px", height:56,
-          display:"flex", justifyContent:"space-between", alignItems:"center",
-          position:"sticky", top:0, zIndex:100,
+          padding:"14px 36px 0",
+          display:"flex", justifyContent:"flex-end", alignItems:"center",
         }}>
-          <div style={{display:"flex",alignItems:"baseline",gap:10}}>
-            <span style={{fontSize:11,fontWeight:500,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2}}>{breadcrumb}</span>
-            {pageTitle && breadcrumb !== pageTitle && (
-              <>
-                <span style={{color:TEXT_MUTED,opacity:0.4,fontSize:13}}>/</span>
-                <span style={{fontSize:16,color:TEXT}}>{pageTitle}</span>
-              </>
-            )}
-          </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             {/* Save indicator */}
             <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:TEXT_MUTED}}>
@@ -10326,18 +10334,6 @@ function App() {
           </div>
         </div>
 
-
-        {/* Connection status bar */}
-        <div style={{padding:"5px 36px",borderBottom:"1px solid "+BORDER,display:"flex",alignItems:"center",gap:6,background:SURFACE}}>
-          {!usingPlaceholder
-            ? <><span style={{width:6,height:6,borderRadius:"50%",background:"#10B981",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#065F46",fontWeight:600}}>Live</span><span style={{fontSize:11,color:TEXT_MUTED}}>— connected to <code>usp_data.usp_strategy</code></span></>
-            : apiAvailable==="db-error"
-              ? <><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#B91C1C",fontWeight:600}}>DB Unreachable</span><span style={{fontSize:11,color:TEXT_MUTED}}>— API is up but cannot connect to warehouse · showing placeholder data · </span><a href="/api/debug" target="_blank" style={{fontSize:11,color:"#B91C1C",textDecoration:"underline",cursor:"pointer"}}>view diagnostic</a></>
-              : apiAvailable==="ok"
-                ? <><span style={{width:6,height:6,borderRadius:"50%",background:YELLOW,display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#92400E",fontWeight:600}}>Connected</span><span style={{fontSize:11,color:TEXT_MUTED}}>— warehouse reachable but tables appear empty · showing placeholder data</span></>
-                : <><span style={{width:6,height:6,borderRadius:"50%",background:"#EF4444",display:"inline-block",flexShrink:0}}/><span style={{fontSize:11,color:"#B91C1C",fontWeight:600}}>Offline</span><span style={{fontSize:11,color:TEXT_MUTED}}>— API not reachable · showing placeholder data</span></>
-          }
-        </div>
 
         {/* Page content */}
         <div style={{flex:1,minHeight:0,padding:(activeView.type==="data-model"||activeView.type==="idea-tracker")?"0":"32px 36px",maxWidth:(activeView.type==="data-model"||activeView.type==="idea-tracker")?"100%":1600,width:"100%",margin:"0 auto",boxSizing:"border-box",display:"flex",flexDirection:"column",overflow:(activeView.type==="idea-tracker")?"hidden":"visible"}}>
