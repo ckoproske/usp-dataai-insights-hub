@@ -2258,8 +2258,8 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
               <div style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:16}}>2030 Goals Enabled</div>
               <div style={{display:"flex",flexDirection:"column",gap:18}}>
                 {goals.map(g => {
-                  const pct = (g.goal2030 && g.current2026 !== undefined)
-                    ? Math.round((g.current2026 / g.goal2030) * 100) : null;
+                  const bl  = goalBaselineInfo(g);
+                  const pct = g.goal2030 ? goalProgressPct(g) : null;
                   return (
                     <div key={g.number}>
                       <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:pct!==null?8:0}}>
@@ -2277,7 +2277,9 @@ function PortfolioOutcomesView({ portId, portfolio, bows, portColor, onChange, i
                             </div>
                             <span style={{fontSize:12,fontWeight:700,color:TEXT,flexShrink:0}}>{pct}%</span>
                           </div>
-                          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:4}}>{g.current2026}{g.unit} of {g.goal2030}{g.unit}</div>
+                          <div style={{fontSize:11,color:bl.pending?YELLOW:TEXT_MUTED,marginBottom:4,lineHeight:1.45}}>
+                            {bl.label} <span style={{color:TEXT_MUTED}}>({bl.caption}) → {g.goal2030}{g.unit} target</span>
+                          </div>
                           {onNavigateToStrategy&&(
                             <button onClick={()=>onNavigateToStrategy(g.number)}
                               style={{fontSize:11,fontWeight:600,color:pc.color,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:3}}>
@@ -4498,11 +4500,17 @@ function PortfolioOverviewToa({ portId, portfolio, bows, portColor, portShortTit
                 const m2 = tgt.match(/^(\d+(?:\.\d+)?%|\$?\d+(?:[,.]\d+)?[MBK]?|\d+)/);
                 const gVal  = m2 ? m2[1] : null;
                 const gBody = m2 ? tgt.slice(m2[0].length).trim() : tgt;
+                const bl = goalBaselineInfo(g);
                 return (
                   <div key={g.number} onClick={()=>onNavigateToStrategy&&onNavigateToStrategy(g.number)}
                     style={{background:pc.light,border:"1px solid "+pc.color+"33",borderRadius:12,padding:"22px 24px",display:"flex",flexDirection:"column",gap:10,cursor:onNavigateToStrategy?"pointer":"default"}}>
                     <div style={{fontSize:48,fontWeight:800,color:pc.color,letterSpacing:-2,lineHeight:1}}>{gVal || g.number}</div>
                     <div style={{fontSize:14,color:TEXT,lineHeight:1.65,flex:1}}>{gBody}</div>
+                    {bl.year && (
+                      <div style={{fontSize:12,color:bl.pending?YELLOW:TEXT_SUB,lineHeight:1.5,fontWeight:bl.pending?600:400}}>
+                        {bl.caption}: {bl.label}
+                      </div>
+                    )}
                     {onNavigateToStrategy && <div style={{fontSize:12,color:pc.dark,marginTop:4,fontWeight:600}}>View in strategy ↗</div>}
                   </div>
                 );
