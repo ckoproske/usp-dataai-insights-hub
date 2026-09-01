@@ -6073,7 +6073,9 @@ const TOA_PATH_2045 = {
 
 // Short one-line summaries shown on the portfolio cards, hardcoded from the
 // approved slide. The full description from the DB is revealed on click.
-// Keyed by bow_id — note the Hub's second BOW is "bow1", not "hub-bow2".
+// Keyed by bow_id. Two of these ids are not namespaced by portfolio — "bow1"
+// is the Hub's second BOW and "bow2" is Cross Cutting's — so a future BOW
+// reusing either id elsewhere would inherit the wrong summary.
 const TOA_BOW_SHORT = {
   "ai-infra-bow1": "Infra to make AI systems more capable and contextually aware for education use cases.",
   "ai-infra-bow2": "Eval technology and tools to help the field develop, assess, and deploy AI responsibly.",
@@ -6082,6 +6084,7 @@ const TOA_BOW_SHORT = {
   "sfl-bow3":      "Build a dynamic, AI-native public knowledge graph.",
   "hub-bow1":      "Creates tools, resources, and capabilities to support USP to leverage data & AI effectively.",
   "bow1":          "Builds tools to support progress monitoring, forecasting, and sharpen insights & decisionmaking.",
+  "bow2":          "Provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time.",
 };
 
 // One body of work on a portfolio card: short summary by default, full
