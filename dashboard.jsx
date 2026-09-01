@@ -6174,31 +6174,8 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
   // there is no secondary stage rail — the page rail above is the only nav.
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
-  // ── Animated 2045 counter, triggered once when it scrolls into view ──────────
-  const counterRef = useRef(null);
-  const countedRef = useRef(false);
-  const [counterValue, setCounterValue] = useState(0);
-
-  useEffect(() => {
-    if (!counterRef.current) return;
-    const target = path2045.value;
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !countedRef.current) {
-          countedRef.current = true;
-          let val = 0;
-          const step = () => {
-            val += target / 40;
-            if (val < target) { setCounterValue(Number(val.toFixed(1))); requestAnimationFrame(step); }
-            else setCounterValue(target);
-          };
-          step();
-        }
-      });
-    }, { threshold:0.5 });
-    obs.observe(counterRef.current);
-    return () => obs.disconnect();
-  }, [path2045]);
+  // The 2045 figure renders statically. A count-up animation reads as
+  // promotional on a page whose job is to be credible about measurement.
 
   // ── Connector curves: portfolio chips → goals icon → outcome chips → ~10M ────
   const toaWrapRef       = useRef(null);
@@ -6345,7 +6322,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                     ))}
                   </g>
                   {[[30,6],[47,16],[47,36],[30,46],[13,36],[13,16]].map(([cx,cy])=>(
-                    <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.5" fill={ACCENT}/>
+                    <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.5" fill={BRAND}/>
                   ))}
                 </svg>
                 <span className="toa-label">{goals.length} 2030 strategy goals</span>
@@ -6417,7 +6394,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
               const pc = PORT_COLORS[id] || {};
               return (
                 <span key={id} className="toa-feed-chip"
-                  style={{color:pc.color,borderColor:(pc.color||BORDER)+"66",background:(pc.color||"#000")+"22"}}>
+                  style={{color:pc.light,borderColor:(pc.color||BORDER)+"88",background:(pc.color||"#000")+"33"}}>
                   {pc.label || id}
                 </span>
               );
@@ -6431,7 +6408,11 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                 <div key={g.number} className="toa-goal-card">
                   <div className="toa-goal-top">
                     <span className="toa-goal-num">{g.number}</span>
-                    <span className="toa-goal-origin" style={{color:pc.color||TEXT_MUTED}}>{g.originPortfolio}</span>
+                    {/* Pale tint, not pc.color — the saturated portfolio
+                        colours only reach ~3.2:1 on the dark band, under the
+                        4.5:1 AA floor for text this small. */}
+                    <span className="toa-goal-origin"
+                      style={{color:pc.light||"rgba(255,255,255,0.6)"}}>{g.originPortfolio}</span>
                   </div>
                   <div className={"toa-goal-text"+(g.italic?" toa-italic":"")}>
                     <b>{g.boldStat}</b> {g.text}
@@ -6471,9 +6452,9 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           <p>Every layer above rolls up into one number, then fans out into the areas it accelerates.</p>
         </div>
         <div className="toa-path-wrap">
-          <div className="toa-counter-card" ref={counterRef}>
+          <div className="toa-counter-card">
             <div className="toa-eyebrow toa-on-dark-eyebrow">{path2045.label}</div>
-            <div className="toa-counter-num">~{counterValue}{path2045.unit}</div>
+            <div className="toa-counter-num">~{path2045.value}{path2045.unit}</div>
           </div>
           <div className="toa-lift">
             {path2045.recipients.map(r => <div className="toa-lift-item" key={r}>{r}</div>)}
@@ -6529,7 +6510,7 @@ const TOA_CSS = `
 .usp-toa .toa-hero { padding-top:20px; padding-bottom:32px; }
 /* Vision compressed to a slim strip so the strategy line can lead the page */
 .usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:14px; margin-bottom:22px; }
-.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.55; color:${TEXT_SUB}; margin-top:6px; }
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.55; color:${TEXT_SUB}; margin-top:6px; max-width:80ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1.25; margin:0 0 12px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
@@ -6563,7 +6544,7 @@ const TOA_CSS = `
 .usp-toa .toa-connector-wrap { position:relative; }
 .usp-toa .toa-connectors { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; z-index:0; }
 .usp-toa .toa-connector-line { fill:none; stroke:${TEXT_MUTED}; stroke-width:1.8; }
-.usp-toa .toa-arrowhead { fill:${ACCENT}; }
+.usp-toa .toa-arrowhead { fill:${TEXT_MUTED}; }
 .usp-toa .toa-content-row { display:flex; margin-top:16px; position:relative; z-index:1; }
 .usp-toa .toa-content { flex:1; padding:0 22px 0 32px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; align-content:flex-start; gap:7px; }
 .usp-toa .toa-content.toa-center { flex-direction:column; align-items:flex-start; gap:4px; }
@@ -6594,7 +6575,7 @@ const TOA_CSS = `
 .usp-toa .toa-goal-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.11); border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:14px; transition:background .2s ease, border-color .2s ease; }
 .usp-toa .toa-goal-card:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); }
 .usp-toa .toa-goal-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
-.usp-toa .toa-goal-num { font-family:Cambria,Georgia,serif; font-style:italic; font-size:29px; color:${ACCENT}; line-height:1; }
+.usp-toa .toa-goal-num { font-family:Cambria,Georgia,serif; font-style:italic; font-size:29px; color:rgba(255,255,255,0.5); line-height:1; }
 .usp-toa .toa-goal-origin { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; font-weight:700; text-align:right; }
 .usp-toa .toa-goal-text { font-size:14.5px; line-height:1.55; color:rgba(255,255,255,0.88); }
 .usp-toa .toa-goal-text b { color:#fff; font-size:16px; }
@@ -6611,7 +6592,7 @@ const TOA_CSS = `
 .usp-toa .toa-counter-num { font-family:Cambria,Georgia,serif; font-size:70px; font-weight:600; margin:12px 0 4px; letter-spacing:-1px; }
 .usp-toa .toa-lift { display:flex; flex-direction:column; align-items:stretch; }
 .usp-toa .toa-lift-item { background:${SURFACE}; border:1px solid ${BORDER}; border-radius:10px; padding:13px 18px; font-size:14px; font-weight:600; text-align:center; margin-bottom:8px; }
-.usp-toa .toa-lift-arrows { display:flex; justify-content:space-around; color:${ACCENT}; font-size:16px; margin:-2px 0 8px; line-height:1; }
+.usp-toa .toa-lift-arrows { display:flex; justify-content:space-around; color:${TEXT_MUTED}; font-size:16px; margin:-2px 0 8px; line-height:1; }
 .usp-toa .toa-lift-floor { background:${BRAND}; color:#fff; font-weight:700; text-align:center; border-radius:10px; padding:17px; font-size:15px; box-shadow:0 6px 0 0 rgba(48,58,68,0.18); }
 .usp-toa .toa-dim { color:rgba(255,255,255,0.66); font-weight:400; font-size:12px; margin-left:4px; }
 
@@ -6620,12 +6601,12 @@ const TOA_CSS = `
 .usp-toa .toa-loop-wrap { max-width:400px; margin:32px auto 0; }
 .usp-toa .toa-loop { width:100%; height:auto; display:block; }
 .usp-toa .toa-arc { fill:none; stroke:rgba(255,255,255,0.28); stroke-width:2; }
-.usp-toa .toa-arc-fb { stroke:${ACCENT}; stroke-width:2.8; }
-.usp-toa .toa-loop-marker { fill:rgba(255,255,255,0.55); }
-.usp-toa .toa-marker-fb { fill:${ACCENT}; }
-.usp-toa .toa-loop-dot { fill:${ACCENT}; }
+.usp-toa .toa-arc-fb { stroke:rgba(255,255,255,0.85); stroke-width:2.8; }
+.usp-toa .toa-loop-marker { fill:rgba(255,255,255,0.5); }
+.usp-toa .toa-marker-fb { fill:rgba(255,255,255,0.85); }
+.usp-toa .toa-loop-dot { fill:rgba(255,255,255,0.9); }
 .usp-toa .toa-loop-label { font-family:Calibri,'Segoe UI',Arial,sans-serif; font-size:13px; font-weight:600; fill:rgba(255,255,255,0.9); }
-.usp-toa .toa-loop-center { fill:${ACCENT}; font-size:26px; }
+.usp-toa .toa-loop-center { fill:rgba(255,255,255,0.45); font-size:26px; }
 
 @media (max-width:860px) {
   .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
