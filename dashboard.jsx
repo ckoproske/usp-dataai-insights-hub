@@ -6170,9 +6170,17 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
   const outcomes   = TOA_IMPACT_OUTCOMES;
   const path2045   = TOA_PATH_2045;
 
-  // The chevrons and chip columns still scroll to their stage on click, but
-  // there is no secondary stage rail — the page rail above is the only nav.
-  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
+  // The diagram doubles as the control for the detail panel below it: each
+  // column selects which stage is shown, so a portfolio, goal or outcome
+  // appears once as a chip in the diagram and once as a card in its panel,
+  // never twice on the same screen.
+  const TOA_COLS = [
+    { key:"portfolios", head:"Portfolios"  },
+    { key:"goals",      head:"2030 Goals"  },
+    { key:"impact",     head:"Team Impact" },
+    { key:"path2045",   head:"2045"        },
+  ];
+  const [activeCol, setActiveCol] = useState("portfolios");
 
   // The 2045 figure renders statically. A count-up animation reads as
   // promotional on a page whose job is to be credible about measurement.
@@ -6263,24 +6271,26 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           <h2 className="toa-banner-title">Theory of Action</h2>
           <div className="toa-banner-sub">How the foundation we build turns into impact for every USP team.</div>
           <div className="toa-colheads">
-            {["Portfolios","2030 Goals","Team Impact","2045"].map(h => (
-              <div key={h} className="toa-colhead">{h}</div>
+            {TOA_COLS.map(c => (
+              <button key={c.key}
+                className={"toa-colhead"+(activeCol===c.key?" active":"")}
+                onClick={()=>setActiveCol(c.key)}>{c.head}</button>
             ))}
           </div>
           <div className="toa-row">
-            <div className="toa-chev toa-chev-1" onClick={()=>scrollTo("toa-foundation")}>
+            <div className={"toa-chev toa-chev-1"+(activeCol==="portfolios"?" active":"")} onClick={()=>setActiveCol("portfolios")}>
               <span className="toa-tag">IF</span>
               <p>we build a shared AI &amp; data foundation upstream of every solution</p>
             </div>
-            <div className="toa-chev" onClick={()=>scrollTo("toa-floor")}>
+            <div className={"toa-chev"+(activeCol==="goals"?" active":"")} onClick={()=>setActiveCol("goals")}>
               <span className="toa-tag">THEN</span>
               <p>we build field-level enabling conditions via six 2030 goals</p>
             </div>
-            <div className="toa-chev" onClick={()=>scrollTo("toa-impact")}>
+            <div className={"toa-chev"+(activeCol==="impact"?" active":"")} onClick={()=>setActiveCol("impact")}>
               <span className="toa-tag">THEN</span>
               <p>more impact is possible for every USP team</p>
             </div>
-            <div className="toa-box" onClick={()=>scrollTo("toa-path2045")}>
+            <div className={"toa-box"+(activeCol==="path2045"?" active":"")} onClick={()=>setActiveCol("path2045")}>
               <span className="toa-tag toa-tag-dark">ACCELERATING</span>
               <p>our path to 2045</p>
             </div>
@@ -6301,7 +6311,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
             </svg>
 
             <div className="toa-content-row">
-              <div className="toa-content" onClick={()=>scrollTo("toa-foundation")}>
+              <div className="toa-content" onClick={()=>setActiveCol("portfolios")}>
                 {portfolios.map(p => {
                   const pc = PORT_COLORS[p.id] || {};
                   return (
@@ -6311,7 +6321,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                 })}
               </div>
 
-              <div className="toa-content toa-center" onClick={()=>scrollTo("toa-floor")}>
+              <div className="toa-content toa-center" onClick={()=>setActiveCol("goals")}>
                 <svg className="toa-goals-icon" viewBox="0 0 60 52" ref={goalsIconRef}>
                   <g stroke={BORDER} strokeWidth="1">
                     {[[30,6,47,16],[30,6,47,36],[30,6,30,46],[30,6,13,36],[30,6,13,16],
@@ -6328,7 +6338,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                 <span className="toa-label">{goals.length} 2030 strategy goals</span>
               </div>
 
-              <div className="toa-content" onClick={()=>scrollTo("toa-impact")}>
+              <div className="toa-content" onClick={()=>setActiveCol("impact")}>
                 {outcomes.map(o => (
                   <span key={o.name} className="toa-chip toa-chip-neutral" ref={registerOutcomeChip}>
                     {o.name}
@@ -6336,17 +6346,32 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                 ))}
               </div>
 
-              <div className="toa-content toa-center" onClick={()=>scrollTo("toa-path2045")}>
+              <div className="toa-content toa-center" onClick={()=>setActiveCol("path2045")}>
                 <span className="toa-bignum" ref={tenMRef}>~{path2045.value}{path2045.unit}</span>
                 <span className="toa-label">learners with credentials of value</span>
               </div>
             </div>
           </div>
+
+          {/* The feedback loop is the return arrow of the theory of action, so
+              it lives inside the diagram rather than in its own closing band. */}
+          <div className="toa-return">
+            <div className="toa-return-bracket"/>
+            <div className="toa-return-caption">
+              <b>Cross-division feedback loop</b> — PST learner outcomes and field evidence flow back to sharpen
+              our upstream infrastructure, ensuring what gets built keeps moving the needle.
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Stage 1 — the portfolios */}
-      <section id="toa-foundation">
+      {/* Detail panel — the diagram's columns choose which stage shows here, so
+          each portfolio, goal and outcome appears once as a chip above and once
+          as a card below, never twice on the same screen. */}
+      <div className="toa-detail">
+
+      {activeCol === "portfolios" && (
+      <section className="toa-panel">
         <div className="toa-stage-head">
           <div className="toa-eyebrow">Stage 1 · If</div>
           <h2>Four portfolios build the shared foundation.</h2>
@@ -6377,10 +6402,11 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           })}
         </div>
       </section>
+      )}
 
-      {/* Stage 2 — the goals, on the dark focal band */}
-      <div className="toa-floor-band" id="toa-floor">
-        <section className="toa-floor-inner">
+      {activeCol === "goals" && (
+      <div className="toa-floor-band toa-panel">
+        <div className="toa-floor-inner">
           <div className="toa-stage-head">
             <div className="toa-eyebrow toa-accent">Stage 2 · Then — the core commitment</div>
             <h2 className="toa-on-dark">We build field-level enabling conditions.</h2>
@@ -6421,11 +6447,12 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
               );
             })}
           </div>
-        </section>
+        </div>
       </div>
+      )}
 
-      {/* Stage 3 — team impact */}
-      <section id="toa-impact">
+      {activeCol === "impact" && (
+      <section className="toa-panel">
         <div className="toa-stage-head">
           <div className="toa-eyebrow">Stage 3 · Then</div>
           <h2>More impact is possible for every USP team.</h2>
@@ -6443,9 +6470,10 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           ))}
         </div>
       </section>
+      )}
 
-      {/* Stage 4 — the 2045 number */}
-      <section id="toa-path2045">
+      {activeCol === "path2045" && (
+      <section className="toa-panel">
         <div className="toa-stage-head">
           <div className="toa-eyebrow">Stage 4 · Accelerating our path</div>
           <h2>Where it all points: 2045.</h2>
@@ -6465,32 +6493,8 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           </div>
         </div>
       </section>
+      )}
 
-      {/* Closing the loop */}
-      <div className="toa-loop-band">
-        <section className="toa-loop-inner">
-          <span className="toa-eyebrow toa-accent">Closing the loop</span>
-          <h2 className="toa-on-dark">The cross-division feedback loop</h2>
-          <p className="toa-on-dark-sub toa-centered">PST learner outcomes and field evidence flow back to
-             sharpen our upstream infrastructure — ensuring what gets built keeps moving the needle.</p>
-          <div className="toa-loop-wrap">
-            <svg className="toa-loop" viewBox="-10 -10 420 360">
-              <path className="toa-arc" d="M200,60 A140,140 0 0,1 321,270"/>
-              <path className="toa-arc" d="M321,270 A140,140 0 0,1 79,270"/>
-              <path className="toa-arc toa-arc-fb" d="M79,270 A140,140 0 0,1 200,60"/>
-              <path className="toa-loop-marker" d="M -6 -5 L 6 0 L -6 5 Z" transform="translate(321,130) rotate(60)"/>
-              <path className="toa-loop-marker" d="M -6 -5 L 6 0 L -6 5 Z" transform="translate(200,340) rotate(180)"/>
-              <path className="toa-loop-marker toa-marker-fb" d="M -7 -6 L 7 0 L -7 6 Z" transform="translate(79,130) rotate(-60)"/>
-              <text x="200" y="208" textAnchor="middle" className="toa-loop-center">↻</text>
-              <circle cx="200" cy="60"  r="7" className="toa-loop-dot"/>
-              <text x="200" y="30"  textAnchor="middle" className="toa-loop-label">Build the Foundation</text>
-              <circle cx="321" cy="270" r="7" className="toa-loop-dot"/>
-              <text x="321" y="304" textAnchor="middle" className="toa-loop-label">Deploy to PSTs</text>
-              <circle cx="79"  cy="270" r="7" className="toa-loop-dot"/>
-              <text x="79"  y="304" textAnchor="middle" className="toa-loop-label">Learn From the Field</text>
-            </svg>
-          </div>
-        </section>
       </div>
     </div>
   );
@@ -6522,14 +6526,32 @@ const TOA_CSS = `
 .usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:640px; margin-top:10px; line-height:1.6; }
 .usp-toa .toa-on-dark { color:#fff; font-size:31px; max-width:760px; line-height:1.25; }
 .usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:680px; margin-top:10px; line-height:1.6; }
-.usp-toa .toa-centered { margin-left:auto; margin-right:auto; }
 
 /* The diagram is a contained object, not loose elements on the page */
 .usp-toa .toa-banner { margin-top:34px; background:${SURFACE}; border:1px solid ${BORDER}; border-radius:16px; padding:24px 28px 30px; box-shadow:0 2px 14px rgba(48,58,68,0.07); }
 .usp-toa .toa-banner-title { font-size:20px; margin-bottom:3px; }
 .usp-toa .toa-banner-sub { font-size:12.5px; color:${TEXT_MUTED}; margin-bottom:18px; }
 .usp-toa .toa-colheads { display:flex; margin-bottom:9px; }
-.usp-toa .toa-colhead { flex:1; padding-left:32px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; }
+.usp-toa .toa-colhead { flex:1; padding:0 0 6px 32px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
+.usp-toa .toa-colhead:hover { color:${TEXT_SUB}; }
+.usp-toa .toa-colhead.active { color:${TEXT}; border-bottom-color:${ACCENT}; }
+/* Selection reads on the header underline and the chevron. The chip columns
+   stay at full strength — dimming them would make the diagram look faded
+   rather than filtered, and it needs to read as one complete picture. */
+.usp-toa .toa-chev, .usp-toa .toa-box { opacity:0.86; transition:opacity .15s; }
+.usp-toa .toa-chev.active, .usp-toa .toa-box.active,
+.usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { opacity:1; }
+
+/* Feedback loop, folded in as the diagram's return path */
+.usp-toa .toa-return { margin-top:18px; }
+.usp-toa .toa-return-bracket { height:20px; border:1px solid ${BORDER}; border-top:none; border-radius:0 0 12px 12px; position:relative; }
+.usp-toa .toa-return-bracket::after { content:""; position:absolute; left:-5px; top:-7px; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:7px solid ${TEXT_MUTED}; }
+.usp-toa .toa-return-caption { margin-top:9px; font-size:12px; color:${TEXT_SUB}; line-height:1.55; max-width:900px; }
+.usp-toa .toa-return-caption b { color:${TEXT}; font-weight:700; }
+
+/* One stage at a time, chosen from the diagram above */
+.usp-toa .toa-detail { margin-top:4px; }
+.usp-toa .toa-panel { padding-top:36px; animation:fadeIn .18s ease both; }
 .usp-toa .toa-row { display:flex; }
 .usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:18px 22px 18px 32px; cursor:pointer; transition:filter .15s ease; }
 .usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { filter:brightness(1.12); }
@@ -6566,8 +6588,8 @@ const TOA_CSS = `
 .usp-toa .toa-li-desc { color:${TEXT_SUB}; font-size:12.8px; line-height:1.5; }
 .usp-toa .toa-li-note { margin-top:2px; padding-top:10px; border-top:1px dashed ${BORDER}; }
 
-.usp-toa .toa-floor-band { background:${BRAND}; border-radius:16px; margin:64px 0; }
-.usp-toa .toa-floor-inner { max-width:1180px; margin:0 auto; padding:64px 36px 68px; }
+.usp-toa .toa-floor-band { background:${BRAND}; border-radius:16px; }
+.usp-toa .toa-floor-inner { padding:44px 36px 48px; }
 .usp-toa .toa-feed-strip { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:26px 0 30px; }
 .usp-toa .toa-feed-label { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; font-weight:600; color:rgba(255,255,255,0.55); }
 .usp-toa .toa-feed-chip { font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; white-space:nowrap; border:1px solid transparent; }
@@ -6596,17 +6618,6 @@ const TOA_CSS = `
 .usp-toa .toa-lift-floor { background:${BRAND}; color:#fff; font-weight:700; text-align:center; border-radius:10px; padding:17px; font-size:15px; box-shadow:0 6px 0 0 rgba(48,58,68,0.18); }
 .usp-toa .toa-dim { color:rgba(255,255,255,0.66); font-weight:400; font-size:12px; margin-left:4px; }
 
-.usp-toa .toa-loop-band { background:${BRAND}; border-radius:16px; margin-top:56px; }
-.usp-toa .toa-loop-inner { max-width:700px; margin:0 auto; padding:64px 28px 56px; text-align:center; }
-.usp-toa .toa-loop-wrap { max-width:400px; margin:32px auto 0; }
-.usp-toa .toa-loop { width:100%; height:auto; display:block; }
-.usp-toa .toa-arc { fill:none; stroke:rgba(255,255,255,0.28); stroke-width:2; }
-.usp-toa .toa-arc-fb { stroke:rgba(255,255,255,0.85); stroke-width:2.8; }
-.usp-toa .toa-loop-marker { fill:rgba(255,255,255,0.5); }
-.usp-toa .toa-marker-fb { fill:rgba(255,255,255,0.85); }
-.usp-toa .toa-loop-dot { fill:rgba(255,255,255,0.9); }
-.usp-toa .toa-loop-label { font-family:Calibri,'Segoe UI',Arial,sans-serif; font-size:13px; font-weight:600; fill:rgba(255,255,255,0.9); }
-.usp-toa .toa-loop-center { fill:rgba(255,255,255,0.45); font-size:26px; }
 
 @media (max-width:860px) {
   .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
