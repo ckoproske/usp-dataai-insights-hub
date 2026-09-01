@@ -36,6 +36,7 @@ Table strategy_goals {
   target_2028    string
   target_2029    string
   target_2030    string
+  bold_stat      string [note: 'headline stat rendered large on Strategy Overview goal cards, e.g. "50%" or "2-3x"; must be a leading substring of target_text']
   last_updated   timestamp
   updated_by     string
 }
@@ -44,6 +45,7 @@ Table portfolios {
   portfolio_id  string [pk]
   title         string
   description   string
+  note          string [note: 'optional italic footnote on the portfolio card; nothing renders when NULL']
   sort_order    int
 }
 
