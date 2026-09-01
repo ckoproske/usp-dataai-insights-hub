@@ -5993,7 +5993,7 @@ function MeasurementHierarchyView() {
 // ── Strategy Overview ─────────────────────────────────────────────────────────
 function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, selectedGoal }) {
   const ratings = data.strategyRatings||{};
-  const [activeTab, setActiveTab] = useState("goals");
+  const [activeTab, setActiveTab] = useState("toa");
 
   // When navigating here from a portfolio goal badge, switch to Goals tab
   useEffect(() => { if (selectedGoal) setActiveTab("goals"); }, [selectedGoal]);
@@ -6271,18 +6271,16 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
         <h1 className="toa-vision">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</h1>
         <div className="toa-divider"/>
         <span className="toa-eyebrow toa-accent">The strategy that gets us there</span>
-        <div className="toa-intro">
-          <p className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</p>
-          <p className="toa-sub">
-            We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
-            capability layers every USP team builds on and benefits from. This is the strategic logic behind our
-            six 2030 goals and our path to 2045.
-          </p>
-        </div>
+        <p className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</p>
+        <p className="toa-sub">
+          We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
+          capability layers every USP team builds on and benefits from. This is the strategic logic behind our
+          six 2030 goals and our path to 2045.
+        </p>
 
         {/* IF / THEN / THEN / ACCELERATING chevron banner */}
         <div className="toa-banner">
-          <h2 className="toa-banner-title">Theory of Change</h2>
+          <h2 className="toa-banner-title">Theory of Action</h2>
           <div className="toa-row">
             <div className="toa-chev toa-chev-1" onClick={()=>scrollTo("toa-foundation")}>
               <span className="toa-tag">IF</span>
@@ -6525,9 +6523,8 @@ const TOA_CSS = `
 .usp-toa .toa-divider { width:48px; height:2px; background:${BORDER}; margin:28px 0 24px; }
 .usp-toa .toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:23px; line-height:1.35; margin:10px 0 12px; }
 .usp-toa .toa-strategy-line em { font-style:italic; color:${ACCENT}; }
-/* Two columns so the intro fills the width instead of hugging the left edge */
-.usp-toa .toa-intro { display:grid; grid-template-columns:1.15fr 1fr; gap:44px; align-items:start; }
-.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; line-height:1.65; }
+/* Supporting copy sits directly beneath the strategy line, not beside it */
+.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; line-height:1.65; max-width:760px; margin-top:2px; }
 .usp-toa .toa-banner-title { font-size:22px; margin-bottom:18px; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
@@ -6619,7 +6616,6 @@ const TOA_CSS = `
 @media (max-width:860px) {
   .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
   .usp-toa .toa-impact-grid, .usp-toa .toa-path-wrap { grid-template-columns:1fr; }
-  .usp-toa .toa-intro { grid-template-columns:1fr; gap:16px; }
   .usp-toa h1.toa-vision { font-size:27px; }
   .usp-toa .toa-row, .usp-toa .toa-content-row { flex-direction:column; }
   .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
