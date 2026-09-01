@@ -28,7 +28,8 @@ Table strategy_goals {
   goal_note      string
   note           string
   baseline_year  string
-  baseline_total float
+  baseline_total float [note: 'numeric baseline used for progress math; NULL when no baseline has been established']
+  baseline_text  string [note: 'display override for qualified/absent baselines, e.g. "≤ 5%" or "Pending, insufficient evidence"; falls back to baseline_total when empty']
   chart_config   string [note: 'JSON — shape depends on chart_type: groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals']
   target_2026    string
   target_2027    string

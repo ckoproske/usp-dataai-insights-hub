@@ -102,14 +102,14 @@ const PO_SHORT_TITLES_CC  = ["Cross-Division Alignment","Data-Driven Insights","
 // 2030 Strategy Goals — fallback literal, used only until loadFromAPI() merges
 // live data from strategy_goals/chart_config; also used if the API is unreachable.
 let STRATEGY_GOALS = [
-  { id:"g1", number:1, title:"Enable AI Solutions", color:"#313A44",
-    target:"40% of learners reached by solutions embedding portable memory and context",
+  { id:"g1", number:1, title:"Shared Technical Public Goods", color:"#313A44",
+    target:"50% of PST solutions using our public goods show 2x the efficacy of those that don't",
     earliest:"Q1 2026 — Annual Update in PR",
     source:"", updateFreq:"Annual",
-    metric:"% of students in K-12 and PS", unit:"%", goal2030:40, current2026:12,
+    metric:"% of PST solutions", unit:"%", goal2030:50, current2026:0,
     chartType:"bar-grouped",
     chartNote:"% of students in K-12 and PS reached, by solution type. 'All Learners' reflects share of the 40% goal reached. Early directional estimates.",
-    baseline:{year:"2025", total:0},
+    baseline:{year:"2026", total:0},
     groupedData:[
       { year:"2028", instruction:65, advising:21, allLearners:28 },
       { year:"2030", instruction:60, advising:23, allLearners:40 },
@@ -130,14 +130,14 @@ let STRATEGY_GOALS = [
       ]},
     },
   },
-  { id:"g2", number:2, title:"Build Trusted Evidence in Education", color:"#313A44",
-    target:"50% of learners reached by solutions that have adopted evidence-based benchmarks and evaluation technology that improve safety and quality",
+  { id:"g2", number:2, title:"Evidence & Safety Measures that Shift the Market", color:"#313A44",
+    target:"75% of independent verification bodies using our evaluation infrastructure investments",
     earliest:"Q1 2026 — Annual Update in PR",
     source:"", updateFreq:"Annual",
-    metric:"% of students in K-12 and PS", unit:"%", goal2030:50, current2026:15,
+    metric:"% of independent verification bodies", unit:"%", goal2030:75, current2026:0,
     chartType:"bar-grouped",
     chartNote:"% of students in K-12 and PS reached, by solution type. 'All Learners' reflects share of the 50% goal reached. Early directional estimates.",
-    baseline:{year:"2025", total:0},
+    baseline:{year:"2026", total:0},
     groupedData:[
       { year:"2028",
         instruction:60, advising:27, allLearners:30 },
@@ -160,14 +160,23 @@ let STRATEGY_GOALS = [
       ]},
     },
   },
-  { id:"g3", number:3, title:"Data-Informed Decision Making", color:"#313A44",
-    target:"% of district and PS data decision makers report using better, higher-quality data to support learning and advising",
-    earliest:"Q4 2025 — Annual Update in PR",
-    metric:"% decision makers", unit:"%", goal2030:70, current2026:28 },
-  { id:"g4", number:4, title:"Comprehensive EW Momentum Measurement", color:"#313A44",
-    target:"% of state and district systems able to measure progress across all 5 E-W Momentum Points for learners",
+  // New goal in the 2026 re-cut — no chart yet, and no numeric baseline (the
+  // baseline.text pending label renders in place of a value).
+  { id:"g6", number:3, title:"Infrastructure Designed for the Learners Who Need it Most", color:"#313A44",
+    target:"40% of target populations served by solutions that perform well on key benchmarks that center them",
     earliest:"Q1 2026 — Annual Update in PR",
-    metric:"% of systems measuring all 5 points", unit:"%", goal2030:70, current2026:18,
+    metric:"% of target populations", unit:"%", goal2030:40, current2026:null,
+    baseline:{year:"2026", total:null, text:"Pending, insufficient evidence"} },
+  { id:"g3", number:4, title:"Data-Informed Decision Making", color:"#313A44",
+    target:"70% of district and postsecondary data decision-makers report using better, higher-quality data to support learning and advising",
+    earliest:"Q4 2025 — Annual Update in PR",
+    metric:"% decision makers", unit:"%", goal2030:70, current2026:21,
+    baseline:{year:"2026", total:21} },
+  { id:"g4", number:5, title:"Comprehensive EW Momentum Measurement", color:"#313A44",
+    target:"40% of field leaders have comprehensive data access within 6 months to all 5 E-W Momentum Points",
+    earliest:"Q1 2026 — Annual Update in PR",
+    metric:"% of field leaders", unit:"%", goal2030:40, current2026:5,
+    baseline:{year:"2026", total:5, text:"≤ 5%"},
     chartType:"momentum-points",
     chartNote:"Share of state/district systems able to measure each E-W Momentum Point",
     momentumPoints:[
@@ -179,7 +188,7 @@ let STRATEGY_GOALS = [
       { label:"All 5 Points (Composite)",                 short:"All 5 (Composite)", current:18, target2030:70 },
     ],
   },
-  { id:"g5", number:5, title:"Amplify Coordination and Impact", color:"#313A44",
+  { id:"g5", number:6, title:"Amplify Coordination and Impact", color:"#313A44",
     target:"2-3x ($415-540M) leverage on USP Data investment through key partnerships.",
     earliest:"Q4 2025 — Annual Update in PR",
     note:"Data for this goal will eventually automatically pull and refresh based on our new CRM tool within INVEST.",
@@ -855,7 +864,13 @@ async function loadFromAPI() {
         if (g.chart_note)  goal.chartNote = g.chart_note;
         if (g.goal_note)   goal.goalNote = g.goal_note;
         if (g.note)        goal.note = g.note;
-        if (g.baseline_year) goal.baseline = { year: g.baseline_year, total: g.baseline_total || 0 };
+        // total stays null when no numeric baseline is established — don't
+        // collapse it to 0, or a pending baseline reads as a real zero.
+        if (g.baseline_year) goal.baseline = {
+          year: g.baseline_year,
+          total: g.baseline_total ?? null,
+          text: g.baseline_text || "",
+        };
         if ([2026,2027,2028,2029,2030].some(y => g[`target_${y}`])) {
           goal.targets = { 2026:g.target_2026||"", 2027:g.target_2027||"", 2028:g.target_2028||"",
             2029:g.target_2029||"", 2030:g.target_2030||"" };
@@ -2972,10 +2987,52 @@ function BowReportingView({ bow, portColor }) {
 }
 
 
+// ── Strategy goal baseline helpers ────────────────────────────────────────────
+// A goal baseline has three possible states:
+//   numeric        — baseline.total is a number; render it with the goal's unit
+//   qualified      — baseline.text overrides the display ("≤ 5%") but total is
+//                    still numeric so progress math works
+//   pending        — baseline.total is null; baseline.text carries the reason
+// Goals with no baseline at all fall back to the current reading so their cards
+// keep showing a number instead of an empty state.
+function goalBaselineInfo(g) {
+  const b = g.baseline;
+  const hasCur = g.current2026 !== null && g.current2026 !== undefined;
+
+  if (!b) {
+    return {
+      year: null, num: null, pending: false, isCurrent: hasCur,
+      label:   hasCur ? `${g.current2026}${g.unit||""}` : "Not yet established",
+      caption: hasCur ? "Current (2026)" : "Baseline",
+    };
+  }
+
+  const num = b.total !== null && b.total !== undefined ? Number(b.total) : null;
+  return {
+    year: b.year || null, num, pending: num === null, isCurrent: false,
+    // Explicit text wins; otherwise format the number with the goal's unit.
+    label:   b.text || (num !== null ? `${num}${g.unit||""}` : "Not yet established"),
+    caption: b.year ? `${b.year} baseline` : "Baseline",
+  };
+}
+
+// Progress from the baseline toward the 2030 target, clamped to 0-100.
+// Falls back to a 0-anchored bar when there is no numeric baseline.
+function goalProgressPct(g) {
+  const { num } = goalBaselineInfo(g);
+  const start  = num ?? 0;
+  const target = Number(g.goal2030);
+  const cur    = g.current2026 !== null && g.current2026 !== undefined ? Number(g.current2026) : start;
+  const span   = target - start;
+  if (!isFinite(span) || span <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round(((cur - start) / span) * 100)));
+}
+
 // ── GoalProgressCard ──────────────────────────────────────────────────────────
 function GoalProgressCard({ g, isPending, cardIdx }) {
   const [hovered, setHovered] = useState(false);
-  const pct = Math.round((g.current2026/g.goal2030)*100);
+  const bl  = goalBaselineInfo(g);
+  const pct = goalProgressPct(g);
   return (
     <div
       onMouseEnter={()=>setHovered(true)}
@@ -2993,9 +3050,11 @@ function GoalProgressCard({ g, isPending, cardIdx }) {
         <div style={{height:8,background:BORDER,borderRadius:4,overflow:"hidden"}}>
           <div style={{width:pct+"%",height:"100%",background:BRAND,borderRadius:4,transition:"width .4s"}}/>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-          <span style={{fontSize:11,color:TEXT_SUB}}>0</span>
-          <span style={{fontSize:11,color:TEXT_SUB,fontWeight:600}}>2030 target</span>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:4,gap:8}}>
+          <span style={{fontSize:11,color:bl.pending?YELLOW:TEXT_SUB,fontWeight:bl.pending?600:400}}>
+            {bl.year ? `${bl.label} · ${bl.year} baseline` : "0"}
+          </span>
+          <span style={{fontSize:11,color:TEXT_SUB,fontWeight:600,flexShrink:0}}>2030 target</span>
         </div>
         {isPending&&(
           <div style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:YELLOW,fontWeight:600,marginTop:4}}>
@@ -3005,13 +3064,13 @@ function GoalProgressCard({ g, isPending, cardIdx }) {
       </div>
       {hovered&&(
         <div style={{position:"absolute",...(cardIdx===0?{top:"calc(100% + 8px)"}:{bottom:"calc(100% + 8px)"}),left:0,right:0,background:BRAND,borderRadius:10,padding:"12px 14px",boxShadow:"0 8px 24px rgba(10,37,64,0.18)",zIndex:20,pointerEvents:"none"}}>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.6)",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{g.title} — 2026 Progress</div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.6)",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{g.title} — Baseline to 2030</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:10}}>
             <div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:2}}>Current (2026)</div>
-              <div style={{fontSize:21,fontWeight:800,color:"#fff"}}>{g.current2026}{g.unit}</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:2,textTransform:"capitalize"}}>{bl.caption}</div>
+              <div style={{fontSize:bl.pending?13:21,fontWeight:800,color:"#fff",lineHeight:1.25}}>{bl.label}</div>
             </div>
-            <div style={{textAlign:"right"}}>
+            <div style={{textAlign:"right",flexShrink:0}}>
               <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:2}}>2030 Target</div>
               <div style={{fontSize:21,fontWeight:800,color:"rgba(255,255,255,0.7)"}}>{g.goal2030}{g.unit}</div>
             </div>
@@ -3019,7 +3078,7 @@ function GoalProgressCard({ g, isPending, cardIdx }) {
           <div style={{height:6,background:"rgba(255,255,255,0.15)",borderRadius:3,overflow:"hidden"}}>
             <div style={{width:pct+"%",height:"100%",background:"#fff",borderRadius:3}}/>
           </div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:4,textAlign:"center"}}>{pct}% of 2030 target · Baseline: {g.earliest}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:4,textAlign:"center"}}>{pct}% of 2030 target · Updated {g.earliest}</div>
         </div>
       )}
     </div>
@@ -3395,7 +3454,8 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
       <div style={{padding:"16px 24px 20px",background:SURFACE}}>
         <div style={{display:"grid",gridTemplateColumns:`repeat(${goalData.length}, 1fr)`,gap:12}}>
           {goalData.map((g, i) => {
-            const pct = Math.round((g.current2026 / g.goal2030) * 100);
+            const bl  = goalBaselineInfo(g);
+            const pct = goalProgressPct(g);
             const pending = isPending.includes(g.number);
             const isHov = hovered === g.number;
 
@@ -3437,21 +3497,28 @@ function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRating
                         transition:"width .6s cubic-bezier(.4,0,.2,1)",
                       }}/>
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
-                      <span style={{fontSize:10,color:TEXT_SUB}}>0</span>
-                      <span style={{fontSize:10,fontWeight:700,color:isHov?g.color:TEXT_SUB,transition:"color .2s"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginTop:3,gap:6}}>
+                      <span style={{fontSize:10,color:bl.pending?YELLOW:TEXT_SUB,fontWeight:bl.pending?600:400}}>
+                        {bl.year ? bl.label : "0"}
+                      </span>
+                      <span style={{fontSize:10,fontWeight:700,color:isHov?g.color:TEXT_SUB,transition:"color .2s",flexShrink:0}}>
                         {g.goal2030}{g.unit} goal
                       </span>
                     </div>
                   </div>
 
                   {/* Current + % — always visible */}
-                  <div style={{paddingTop:8,borderTop:"1px solid "+g.color+"22",display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+                  {/* Baseline + progress — baseline replaces the former
+                      "Current (2026)" figure, which duplicated it now that
+                      every baseline is a 2026 reading. */}
+                  <div style={{paddingTop:8,borderTop:"1px solid "+g.color+"22",display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:8}}>
                     <div>
-                      <div style={{fontSize:10,color:TEXT_SUB,marginBottom:1}}>Current (2026)</div>
-                      <div style={{fontSize:20,fontWeight:900,color:g.color,lineHeight:1,letterSpacing:-0.5}}>{g.current2026}{g.unit}</div>
+                      <div style={{fontSize:10,color:TEXT_SUB,marginBottom:1}}>{bl.caption}</div>
+                      <div style={{fontSize:bl.pending?11:20,fontWeight:bl.pending?600:900,color:bl.pending?YELLOW:g.color,lineHeight:bl.pending?1.35:1,letterSpacing:bl.pending?0:-0.5}}>
+                        {bl.label}
+                      </div>
                     </div>
-                    <div style={{textAlign:"right"}}>
+                    <div style={{textAlign:"right",flexShrink:0}}>
                       <div style={{fontSize:10,color:TEXT_SUB,marginBottom:1}}>{pct}% of target</div>
                       {pending && <div style={{fontSize:10,color:YELLOW,fontWeight:600}}>Targets pending</div>}
                     </div>
@@ -4739,16 +4806,21 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
 
 
 // ── GoalExplorer ──────────────────────────────────────────────────────────────
+// Renumbered for the 2026 six-goal re-cut. Goal 3 ("Infrastructure Designed for
+// the Learners Who Need it Most") is new; it is mapped to ai-infra because that
+// portfolio already carries the matching indicators (low-SES learner test cases
+// in benchmarks, population-disaggregated benchmark performance). Confirm.
 const GOAL_PORT_MAP = {
   1: ["ai-infra"],
   2: ["ai-infra"],
-  3: ["sfl"],
+  3: ["ai-infra"],
   4: ["sfl"],
-  5: ["cross-cutting"],
+  5: ["sfl"],
+  6: ["cross-cutting"],
 };
 const PORT_GOAL_MAP = {
-  "ai-infra":       [1, 2],
-  "sfl":            [3, 4],
+  "ai-infra":       [1, 2, 3],
+  "sfl":            [4, 5],
   "cross-cutting":  [],
   "hub":            [],
 };
@@ -5058,7 +5130,7 @@ function GoalDetailChart({ g }) {
     const [expanded, setExpanded] = useState(null);
 
     const allRows = [
-      { year: g.baseline.year, instruction: 0, advising: 0, allLearners: g.baseline.total, isBaseline: true },
+      { year: g.baseline.year, instruction: 0, advising: 0, allLearners: g.baseline.total ?? 0, isBaseline: true },
       ...g.groupedData,
     ];
 
@@ -9061,7 +9133,7 @@ const DM_GROUPS = [
   {id:"tracking",    label:"Notes & Tracking",          color:"#92400E", tables:["bow_notes","portfolio_tracking","partner_tracking","team_members","pending_actuals","content_edit_log","comments","feedback"]},
 ];
 const DM_TABLES = {
-  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float"},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals"},{n:"target_2026",t:"string"},{n:"target_2027",t:"string"},{n:"target_2028",t:"string"},{n:"target_2029",t:"string"},{n:"target_2030",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
+  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float",note:"NULL when no baseline established"},{n:"baseline_text",t:"string",note:"display override, e.g. \"≤ 5%\" or \"Pending, insufficient evidence\""},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals"},{n:"target_2026",t:"string"},{n:"target_2027",t:"string"},{n:"target_2028",t:"string"},{n:"target_2029",t:"string"},{n:"target_2030",t:"string"},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
   portfolios:{cols:[{n:"portfolio_id",t:"string",pk:true},{n:"title",t:"string"},{n:"description",t:"string"},{n:"sort_order",t:"int"}],refs:[]},
   portfolio_goal_links:{cols:[{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"goal_id",t:"string",fk:"strategy_goals"}],refs:["portfolios","strategy_goals"]},
   bows:{cols:[{n:"bow_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"invest_bow_id",t:"string",note:"INVEST BoW_ID e.g. B06039"},{n:"sort_order",t:"int"},{n:"is_draft",t:"boolean",note:"default false — portal-only draft, hidden from dashboard + indicator catalog"}],refs:["portfolios"]},
