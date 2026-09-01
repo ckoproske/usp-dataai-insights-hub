@@ -160,8 +160,35 @@ WHERE goal_id IN ('g3','g4','g5','g6');
 
 
 -- =============================================================================
+-- SECTION 4: link the new goal to its portfolio
+--
+-- Goal 3 ("Infrastructure Designed for the Learners Who Need it Most") is new in
+-- the v4 re-cut and had no portfolio linkage. It belongs to AI Infrastructure,
+-- which already carries the matching indicators (low-SES learner test cases in
+-- benchmarks, population-disaggregated benchmark performance).
+--
+-- Runs after SECTION 2, so the id is 'g3'. Guarded so it is safe to re-run.
+-- If 'ai-infra' is not the literal portfolio_id, correct it here first:
+--   SELECT portfolio_id, title FROM usp_data.usp_strategy.portfolios ORDER BY sort_order;
+-- =============================================================================
+
+INSERT INTO usp_data.usp_strategy.portfolio_goal_links (portfolio_id, goal_id)
+SELECT 'ai-infra', 'g3'
+WHERE NOT EXISTS (
+  SELECT 1 FROM usp_data.usp_strategy.portfolio_goal_links
+  WHERE portfolio_id = 'ai-infra' AND goal_id = 'g3'
+);
+
+
+-- =============================================================================
 -- VERIFICATION
 -- =============================================================================
+
+-- 0. The new goal's linkage — expect one row, ai-infra / g3
+SELECT l.portfolio_id, l.goal_id, g.number, g.title
+FROM usp_data.usp_strategy.portfolio_goal_links l
+JOIN usp_data.usp_strategy.strategy_goals g ON g.goal_id = l.goal_id
+WHERE l.goal_id = 'g3';
 
 -- 1. goal_id must now equal 'g' || number for all six rows
 SELECT goal_id, number, sort_order, title,
