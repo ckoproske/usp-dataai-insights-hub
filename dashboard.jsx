@@ -3030,63 +3030,6 @@ function goalProgressPct(g) {
   return Math.max(0, Math.min(100, Math.round(((cur - start) / span) * 100)));
 }
 
-// ── GoalProgressCard ──────────────────────────────────────────────────────────
-function GoalProgressCard({ g, isPending, cardIdx }) {
-  const [hovered, setHovered] = useState(false);
-  const bl  = goalBaselineInfo(g);
-  const pct = goalProgressPct(g);
-  return (
-    <div
-      onMouseEnter={()=>setHovered(true)}
-      onMouseLeave={()=>setHovered(false)}
-      style={{borderRadius:10,border:"1px solid "+BORDER,overflow:"visible",boxShadow:hovered?"0 4px 16px rgba(10,37,64,0.12)":"0 1px 4px rgba(10,37,64,0.06)",position:"relative",transition:"box-shadow .15s",background:SURFACE}}>
-      <div style={{padding:"10px 12px"}}>
-        <div style={{marginBottom:6}}>
-          <span style={{fontSize:13,fontWeight:700,color:TEXT,lineHeight:1.3}}>{g.title}</span>
-        </div>
-        <div style={{fontSize:12,color:TEXT_SUB,lineHeight:1.5,marginBottom:10}}>{g.target}</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
-          <span style={{fontSize:12,color:TEXT_SUB}}>{g.metric}</span>
-          <span style={{fontSize:15,fontWeight:800,color:BRAND}}>{g.goal2030}{g.unit}</span>
-        </div>
-        <div style={{height:8,background:BORDER,borderRadius:4,overflow:"hidden"}}>
-          <div style={{width:pct+"%",height:"100%",background:BRAND,borderRadius:4,transition:"width .4s"}}/>
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:4,gap:8}}>
-          <span style={{fontSize:11,color:bl.pending?YELLOW:TEXT_SUB,fontWeight:bl.pending?600:400}}>
-            {bl.year ? `${bl.label} · ${bl.year} baseline` : "0"}
-          </span>
-          <span style={{fontSize:11,color:TEXT_SUB,fontWeight:600,flexShrink:0}}>2030 target</span>
-        </div>
-        {isPending&&(
-          <div style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:YELLOW,fontWeight:600,marginTop:4}}>
-            Portfolio targets pending
-          </div>
-        )}
-      </div>
-      {hovered&&(
-        <div style={{position:"absolute",...(cardIdx===0?{top:"calc(100% + 8px)"}:{bottom:"calc(100% + 8px)"}),left:0,right:0,background:BRAND,borderRadius:10,padding:"12px 14px",boxShadow:"0 8px 24px rgba(10,37,64,0.18)",zIndex:20,pointerEvents:"none"}}>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.6)",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{g.title} — Baseline to 2030</div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:10}}>
-            <div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:2,textTransform:"capitalize"}}>{bl.caption}</div>
-              <div style={{fontSize:bl.pending?13:21,fontWeight:800,color:"#fff",lineHeight:1.25}}>{bl.label}</div>
-            </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
-              <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:2}}>2030 Target</div>
-              <div style={{fontSize:21,fontWeight:800,color:"rgba(255,255,255,0.7)"}}>{g.goal2030}{g.unit}</div>
-            </div>
-          </div>
-          <div style={{height:6,background:"rgba(255,255,255,0.15)",borderRadius:3,overflow:"hidden"}}>
-            <div style={{width:pct+"%",height:"100%",background:"#fff",borderRadius:3}}/>
-          </div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:4,textAlign:"center"}}>{pct}% of 2030 target · Updated {g.earliest}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── BowDecisionsView ──────────────────────────────────────────────────────────
 // ── Shared investment helpers ─────────────────────────────────────────────────
 function fmtNoteDate(ts) {
@@ -3385,157 +3328,6 @@ function ActivitiesSidebar({ activities, portColor }) {
     </div>
   );
 }
-
-// ── GoalsSidebar ──────────────────────────────────────────────────────────────
-function GoalsSidebar({ goals, portId, portColor }) {
-  const [open, setOpen] = useState(false);
-  const pc = portColor || { color: ACCENT };
-  return (
-    <div style={{borderLeft:"1px solid "+BORDER,background:SURFACE,display:"flex",flexDirection:"column",transition:"width .2s",width:open?260:72,overflow:"hidden",flexShrink:0,cursor:"pointer"}}
-      onClick={()=>setOpen(v=>!v)}>
-      <div style={{padding:"12px 8px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:4,borderBottom:"1px solid "+BORDER,background:"#F3F4F6"}}>
-        <span style={{fontSize:10,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,whiteSpace:"nowrap"}}>2030 Goals</span>
-        <span style={{fontSize:11,color:pc.color}}>{open?"›":"‹"}</span>
-      </div>
-      {!open&&(
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"12px 0"}}>
-          {goals.map((_,i)=>(
-            <span key={i} style={{width:10,height:10,background:BRAND+"22",borderRadius:"50%",border:"1px solid "+BRAND+"44",display:"inline-block"}}/>
-          ))}
-          {goals.length===0&&<span style={{width:10,height:10,background:BORDER,borderRadius:"50%",display:"inline-block"}}/>}
-        </div>
-      )}
-      {open&&(
-        <div style={{padding:"18px 16px",minWidth:244}} onClick={e=>e.stopPropagation()}>
-          <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:14}}>2030 Strategy Goals</div>
-          {goals.length===0 ? (
-            <div style={{fontSize:12,color:TEXT_SUB}}>No direct linkage</div>
-          ) : (
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {goals.map(gNum=>{
-                const g=STRATEGY_GOALS.find(sg=>sg.number===gNum);
-                if(!g) return null;
-                const isPending=(GOAL_TARGETS_PENDING[portId]||[]).includes(gNum);
-                return <GoalProgressCard key={gNum} g={g} isPending={isPending}/>;
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-// ── PortfolioGoalsStrip ───────────────────────────────────────────────────────
-function PortfolioGoalsStrip({ goals, portId, portColor, ratings, onUpdateRatings, goalRatings, onNavigateToGoal }) {
-  const [hovered, setHovered] = useState(null);
-  const pc = portColor || { color: ACCENT };
-  const isPending = (GOAL_TARGETS_PENDING[portId]||[]);
-
-  if (!goals.length) return null;
-
-  const goalData = goals.map(n => STRATEGY_GOALS.find(g => g.number === n)).filter(Boolean);
-
-  return (
-    <div style={{borderBottom:"1px solid "+BORDER}}>
-      {/* Intro bridge */}
-      <div style={{padding:"18px 24px 0",background:SURFACE}}>
-        <div style={{borderTop:"1px solid "+BORDER,paddingTop:18,display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:3,height:32,borderRadius:2,background:pc.color,flexShrink:0}}/>
-          <div>
-            <div style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>2030 Strategy Goals</div>
-            <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.5}}>
-              This portfolio contributes toward a subset of our 2030 Data & AI Strategy Goals. Click any goal to explore the full detail.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Goal cards */}
-      <div style={{padding:"16px 24px 20px",background:SURFACE}}>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${goalData.length}, 1fr)`,gap:12}}>
-          {goalData.map((g, i) => {
-            const bl  = goalBaselineInfo(g);
-            const pct = goalProgressPct(g);
-            const pending = isPending.includes(g.number);
-            const isHov = hovered === g.number;
-
-            return (
-              <div key={g.id} style={{position:"relative"}}
-                onMouseEnter={()=>setHovered(g.number)}
-                onMouseLeave={()=>setHovered(null)}>
-                <div
-                  onClick={()=>onNavigateToGoal&&onNavigateToGoal(g.number)}
-                  style={{
-                    borderRadius:10,
-                    border:"1.5px solid "+(isHov ? g.color+"88" : BORDER),
-                    background: isHov ? g.color+"06" : BG,
-                    padding:"14px 16px",
-                    transition:"all .2s",
-                    boxShadow: isHov ? "0 2px 10px rgba(10,37,64,0.07)" : "none",
-                    cursor:onNavigateToGoal?"pointer":"default",
-                  }}>
-                  {/* Goal number badge + title */}
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:12,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5,flex:1}}>
-                      {g.title}
-                    </span>
-                    {onNavigateToGoal&&<span style={{fontSize:11,color:TEXT_MUTED,opacity:0.6,flexShrink:0}}>↗</span>}
-                  </div>
-                  {/* Full target text — always visible */}
-                  <div style={{fontSize:13,fontWeight:600,color:isHov?TEXT:TEXT_SUB,lineHeight:1.45,marginBottom:10,transition:"color .2s"}}>
-                    {g.target}
-                  </div>
-
-                  {/* Progress bar — always visible, fills on hover or expand */}
-                  <div style={{marginBottom:6}}>
-                    <div style={{height:6,background:BORDER,borderRadius:3,overflow:"hidden"}}>
-                      <div style={{
-                        width: pct+"%",
-                        height:"100%",
-                        background:`linear-gradient(90deg, ${g.color}88, ${g.color})`,
-                        borderRadius:3,
-                        transition:"width .6s cubic-bezier(.4,0,.2,1)",
-                      }}/>
-                    </div>
-                    <div style={{display:"flex",justifyContent:"space-between",marginTop:3,gap:6}}>
-                      <span style={{fontSize:10,color:bl.pending?YELLOW:TEXT_SUB,fontWeight:bl.pending?600:400}}>
-                        {bl.year ? bl.label : "0"}
-                      </span>
-                      <span style={{fontSize:10,fontWeight:700,color:isHov?g.color:TEXT_SUB,transition:"color .2s",flexShrink:0}}>
-                        {g.goal2030}{g.unit} goal
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Current + % — always visible */}
-                  {/* Baseline + progress — baseline replaces the former
-                      "Current (2026)" figure, which duplicated it now that
-                      every baseline is a 2026 reading. */}
-                  <div style={{paddingTop:8,borderTop:"1px solid "+g.color+"22",display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:8}}>
-                    <div>
-                      <div style={{fontSize:10,color:TEXT_SUB,marginBottom:1}}>{bl.caption}</div>
-                      <div style={{fontSize:bl.pending?11:20,fontWeight:bl.pending?600:900,color:bl.pending?YELLOW:g.color,lineHeight:bl.pending?1.35:1,letterSpacing:bl.pending?0:-0.5}}>
-                        {bl.label}
-                      </div>
-                    </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontSize:10,color:TEXT_SUB,marginBottom:1}}>{pct}% of target</div>
-                      {pending && <div style={{fontSize:10,color:YELLOW,fontWeight:600}}>Targets pending</div>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-    </div>
-  );
-}
-
 
 // Small notes editor sub-component — save on blur
 function SpecialInitiativeEditor({ value, onSave, onDone, isSaving }) {
@@ -4832,8 +4624,6 @@ const PORT_GOAL_MAP = {
   "cross-cutting":  [],
   "hub":            [],
 };
-// Goals where portfolio-specific targets are still pending
-const GOAL_TARGETS_PENDING = {};
 
 function GoalExplorer({ strategyRatings }) {
   const [hovered, setHovered] = useState(null); // {type:"goal"|"port", id}
@@ -6026,7 +5816,7 @@ function MeasurementHierarchyView() {
   // Primary chain nodes
   const NODES = [
     {id:"ambition",      y:0,            label:"Ambition 2045",        tier:null,     tag:"North star · long-term vision",       color:BRAND,     desc:"The Foundation's long-term vision for equitable, AI-enabled learning outcomes. Not directly measured — it sets the direction that all strategy goals and investments are oriented toward."},
-    {id:"goals",         y:ROW_STEP,     label:"2030 Strategy Goals",  tier:"Tier 1", tag:"5 goals",                             color:"#3086AB", desc:"Five time-bound goals defining what the team commits to achieving by 2030. Each goal has a metric, a 2026 baseline, and a 2030 target. Goals are contributed to by portfolios in a many-to-many relationship — only AI Infrastructure and System Feedback Loops contribute directly."},
+    {id:"goals",         y:ROW_STEP,     label:"2030 Strategy Goals",  tier:"Tier 1", tag:"6 goals",                             color:"#3086AB", desc:"Six time-bound goals defining what the team commits to achieving by 2030. Each goal has a metric, a 2026 baseline, and a 2030 target. Goals are contributed to by portfolios in a many-to-many relationship — only AI Infrastructure and System Feedback Loops contribute directly."},
     {id:"portfolios",    y:ROW_STEP*2,   label:"Portfolios",            tier:"Tier 2", tag:"4 portfolios",                        color:"#4EAB9A", desc:"Four thematic investment areas. AI Infrastructure and System Feedback Loops are direct drivers of the 2030 goals (M:N). Cross-Cutting Supports and Data & AI Enablement Hub are internal enablers — they support team execution and strategy effectiveness but do not contribute directly to any 2030 goal."},
     {id:"port-outcomes", y:ROW_STEP*3,   label:"Portfolio Outcomes",    tier:"Tier 3", tag:"activity–outcome pairs",              color:"#FBAE40", desc:"Specific results each portfolio is working toward. Each pairs a discrete activity (what the team does) with an expected outcome (what changes as a result). Portfolio Outcomes sit between the broad 2030 Goals and the detailed BOW Outcomes."},
     {id:"bows",          y:ROW_STEP*4,   label:"Bodies of Work (BOWs)", tier:"Tier 4", tag:"10 BOWs across 4 portfolios",         color:ACCENT,    desc:"Ten major workstreams — the primary unit of execution. Each BOW defines a focused area of work, the outcomes it aims to produce, and the investments made to deliver it. Nested within one portfolio."},
