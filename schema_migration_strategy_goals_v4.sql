@@ -29,6 +29,11 @@
 -- Annual targets (target_2026..target_2030, added in v3) are left NULL — only
 -- the 2026 baseline and the 2030 target are known at this point.
 --
+-- SUPERSEDED IN PART: schema_migration_strategy_goals_v5.sql renumbers goal_id
+-- so it matches the display number (g6→g3, g3→g4, g4→g5, g5→g6). Do NOT re-run
+-- the MERGE below after v5 has been applied — it would re-insert 'g6' as a
+-- second row for number 3.
+--
 -- Run in: Databricks SQL Editor (usp_data catalog, usp_strategy schema)
 -- =============================================================================
 
