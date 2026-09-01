@@ -1,5 +1,5 @@
 ﻿// ── CDN Shims — replaces import statements (loaded via index.html script tags) ──
-const DASHBOARD_BUILD = "2026-05-27-v1";  // bump this string on every deploy to verify cache is busted
+const DASHBOARD_BUILD = "2026-09-01-strategy-overview";  // bump this string on every deploy to verify cache is busted
 console.log(`%c[Dashboard] build ${DASHBOARD_BUILD} loaded`, "color:#059669;font-weight:bold");
 const { useState, useEffect, useRef, useCallback } = React;
 const _Recharts = window.Recharts || window.recharts || {};
@@ -6001,28 +6001,11 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
   return (
     <div style={{display:"flex",flexDirection:"column",gap:28}}>
 
-      {/* Hero block — suppressed on the Theory of Change tab, which opens with
-          its own richer treatment of the same 2045 vision statement. */}
-      {activeTab !== "toa" && (
-      <div style={{
-        background:BRAND, borderRadius:16, padding:"36px 40px",
-        position:"relative", overflow:"hidden",
-      }}>
-        <div style={{position:"absolute",top:-60,right:80,width:320,height:320,borderRadius:"50%",background:"radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%)",pointerEvents:"none"}}/>
-        <div style={{position:"relative"}}>
-          <div style={{fontSize:10,fontWeight:600,letterSpacing:3,textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:12}}>
-            USP Data & AI Strategy Vision
-          </div>
-          <div style={{fontSize:22,lineHeight:1.7,color:"rgba(255,255,255,0.92)",fontWeight:600}}>
-            By 2045 all learners—especially those historically underserved—and the adults who support them are empowered by safe, evidence-based, AI-enabled solutions that deliver personalized experiences.
-          </div>
-        </div>
-      </div>
-      )}
-
-      {/* Sub-nav */}
+      {/* Sub-nav — sits at the top of the page on every tab. The vision
+          statement banner that used to head this page is gone; the Strategy
+          Overview tab carries the vision instead. */}
       <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4,alignItems:"center"}}>
-        {[["toa","Theory of Change"],["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
+        {[["toa","Strategy Overview"],["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
           <button key={id} onClick={()=>setActiveTab(id)}
             style={{padding:"10px 20px",fontSize:13,fontWeight:activeTab===id?600:400,border:"none",background:"none",cursor:"pointer",
               borderBottom:activeTab===id?"2px solid "+ACCENT:"2px solid transparent",
@@ -6088,6 +6071,44 @@ const TOA_PATH_2045 = {
   recipients:["K12 Teaching & Learning","PS Learning & Nav","Advocacy & Systems Impl."],
 };
 
+// Short one-line summaries shown on the portfolio cards, hardcoded from the
+// approved slide. The full description from the DB is revealed on click.
+// Keyed by bow_id — note the Hub's second BOW is "bow1", not "hub-bow2".
+const TOA_BOW_SHORT = {
+  "ai-infra-bow1": "Infra to make AI systems more capable and contextually aware for education use cases.",
+  "ai-infra-bow2": "Eval technology and tools to help the field develop, assess, and deploy AI responsibly.",
+  "sfl-bow1":      "Build a secure, interoperable network of data enclaves.",
+  "sfl-bow2":      "Generate evidence of combined impact via demonstration sites.",
+  "sfl-bow3":      "Build a dynamic, AI-native public knowledge graph.",
+  "hub-bow1":      "Creates tools, resources, and capabilities to support USP to leverage data & AI effectively.",
+  "bow1":          "Builds tools to support progress monitoring, forecasting, and sharpen insights & decisionmaking.",
+};
+
+// One body of work on a portfolio card: short summary by default, full
+// description on click. Placeholder descriptions are never expandable — this
+// page is outward-facing and "[Placeholder]" copy should not surface.
+function ToaBowRow({ bow }) {
+  const [open, setOpen] = useState(false);
+  const isPlaceholder = /^\s*\[Placeholder\]/.test(bow.description || "");
+  const canExpand = !!bow.short && !!bow.description && !isPlaceholder
+                    && bow.description.trim() !== bow.short.trim();
+  const body = bow.short
+    ? (open && canExpand ? bow.description : bow.short)
+    : (isPlaceholder ? "" : bow.description);
+
+  return (
+    <li>
+      <div className="toa-li-title">{bow.title}</div>
+      {body && <div className="toa-li-desc">{body}</div>}
+      {canExpand && (
+        <button className="toa-more" onClick={(e)=>{ e.stopPropagation(); setOpen(o=>!o); }}>
+          {open ? "Show less" : "Read more"}
+        </button>
+      )}
+    </li>
+  );
+}
+
 // Renders text with `emphasis` (if present) wrapped in an accent-coloured em.
 function toaWithEmphasis(text, emphasis) {
   if (!text) return null;
@@ -6097,7 +6118,9 @@ function toaWithEmphasis(text, emphasis) {
 }
 
 // Portfolio cards, in dashboard sort order, with their bodies of work.
-// Draft BOWs are already excluded — they never enter DEFAULT_DATA.
+// Draft BOWs are already excluded — they never enter DEFAULT_DATA. Retired
+// BOWs are excluded here too: this page is the outward-facing strategy
+// narrative, so a wound-down body of work should not be named on it.
 function toaPortfolios(data) {
   return PORTFOLIOS.map(({ id }) => {
     const pd = data?.portfolios?.[id];
@@ -6107,8 +6130,9 @@ function toaPortfolios(data) {
       name: pd.portfolio?.name || PORT_COLORS[id]?.label || id,
       note: pd.portfolio?.note || null,
       bodiesOfWork: (pd.bows || [])
-        .filter(b => b.name)
-        .map(b => ({ id:b.id, title:b.name, description:b.description || "" })),
+        .filter(b => b.name && !b.retired)
+        .map(b => ({ id:b.id, title:b.name, description:b.description || "",
+                     short: TOA_BOW_SHORT[b.id] || "" })),
     };
   }).filter(Boolean);
 }
@@ -6143,23 +6167,8 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
   const outcomes   = TOA_IMPACT_OUTCOMES;
   const path2045   = TOA_PATH_2045;
 
-  // ── Scrollspy for the stage chain-nav. The app has no inner scroll container,
-  // so the window is the scroller and getBoundingClientRect is reliable here.
-  const chainTargets = ["toa-foundation","toa-floor","toa-impact","toa-path2045"];
-  const [activeSection, setActiveSection] = useState(0);
-
-  useEffect(() => {
-    const sections = chainTargets.map(id => document.getElementById(id)).filter(Boolean);
-    const onScroll = () => {
-      let idx = 0;
-      sections.forEach((el, i) => { if (el.getBoundingClientRect().top < 140) idx = i; });
-      setActiveSection(idx);
-    };
-    window.addEventListener("scroll", onScroll);
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
+  // The chevrons and chip columns still scroll to their stage on click, but
+  // there is no secondary stage rail — the page rail above is the only nav.
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
   // ── Animated 2045 counter, triggered once when it scrolls into view ──────────
@@ -6253,34 +6262,24 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
     <div className="usp-toa">
       <style>{TOA_CSS}</style>
 
-      {/* Stage chain-nav */}
-      <div className="toa-chain">
-        {["Foundation","Technical Floor","Team Impact","2045 Path"].map((label, i) => (
-          <React.Fragment key={label}>
-            <button className={"toa-chain-btn"+(activeSection===i?" active":"")}
-              onClick={()=>scrollTo(chainTargets[i])}>
-              <span className="toa-chain-num">{i+1}</span>{label}
-            </button>
-            {i < 3 && <span className="toa-chain-arrow">→</span>}
-          </React.Fragment>
-        ))}
-      </div>
-
       {/* Vision + strategy framing */}
       <section className="toa-hero">
         <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
         <h1 className="toa-vision">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</h1>
         <div className="toa-divider"/>
         <span className="toa-eyebrow toa-accent">The strategy that gets us there</span>
-        <p className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</p>
-        <p className="toa-sub">
-          We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
-          capability layers every USP team builds on and benefits from. This is the strategic logic behind our
-          six 2030 goals and our path to 2045.
-        </p>
+        <div className="toa-intro">
+          <p className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</p>
+          <p className="toa-sub">
+            We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
+            capability layers every USP team builds on and benefits from. This is the strategic logic behind our
+            six 2030 goals and our path to 2045.
+          </p>
+        </div>
 
         {/* IF / THEN / THEN / ACCELERATING chevron banner */}
         <div className="toa-banner">
+          <h2 className="toa-banner-title">Theory of Change</h2>
           <div className="toa-row">
             <div className="toa-chev toa-chev-1" onClick={()=>scrollTo("toa-foundation")}>
               <span className="toa-tag">IF</span>
@@ -6373,16 +6372,15 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
             const pc = PORT_COLORS[p.id] || {};
             return (
               <div key={p.id} className="toa-pcard"
-                onClick={()=>onNavigateToPortfolio && onNavigateToPortfolio(p.id)}
-                style={{cursor:onNavigateToPortfolio?"pointer":"default",borderTop:"3px solid "+(pc.color||BORDER)}}>
-                <span className="toa-ptag" style={{background:pc.light,color:pc.dark}}>{p.name}</span>
+                style={{borderTop:"3px solid "+(pc.color||BORDER)}}>
+                <button className="toa-ptag"
+                  onClick={()=>onNavigateToPortfolio && onNavigateToPortfolio(p.id)}
+                  style={{background:pc.light,color:pc.dark,
+                    cursor:onNavigateToPortfolio?"pointer":"default"}}>
+                  {p.name}
+                </button>
                 <ul>
-                  {p.bodiesOfWork.map(bow => (
-                    <li key={bow.id}>
-                      <div className="toa-li-title">{bow.title}</div>
-                      {bow.description && <div className="toa-li-desc">{bow.description}</div>}
-                    </li>
-                  ))}
+                  {p.bodiesOfWork.map(bow => <ToaBowRow key={bow.id} bow={bow}/>)}
                   {p.note && (
                     <li className="toa-li-note"><div className="toa-li-desc toa-italic">{p.note}</div></li>
                   )}
@@ -6513,32 +6511,27 @@ const TOA_CSS = `
 .usp-toa { color:${TEXT}; font-family:Calibri,'Segoe UI',Arial,sans-serif; }
 .usp-toa * { box-sizing:border-box; }
 .usp-toa h1, .usp-toa h2, .usp-toa h3 { font-family:Cambria,Georgia,serif; margin:0; font-weight:600; color:${TEXT}; }
-.usp-toa section { max-width:1180px; margin:0 auto; padding:72px 4px 32px; scroll-margin-top:24px; }
+.usp-toa section { margin:0 auto; padding:64px 4px 32px; scroll-margin-top:24px; }
 .usp-toa .toa-eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:10px; font-weight:600; color:${TEXT_MUTED}; display:block; }
 .usp-toa .toa-accent { color:${ACCENT}; }
 .usp-toa .toa-italic { font-style:italic; }
 
-.usp-toa .toa-chain { display:flex; gap:2px; align-items:center; flex-wrap:wrap; padding:14px 0 0; }
-.usp-toa .toa-chain-btn { font-size:12.5px; font-weight:600; color:${TEXT_SUB}; background:none; border:none; cursor:pointer; padding:8px 14px; border-radius:20px; transition:all .2s ease; display:flex; align-items:center; gap:6px; font-family:inherit; }
-.usp-toa .toa-chain-num { font-size:10px; width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:${BORDER}; color:${TEXT_SUB}; }
-.usp-toa .toa-chain-btn.active { background:${BRAND}; color:#fff; }
-.usp-toa .toa-chain-btn.active .toa-chain-num { background:${ACCENT}; color:#fff; }
-.usp-toa .toa-chain-btn:not(.active):hover { background:${BORDER}; }
-.usp-toa .toa-chain-arrow { color:${BORDER}; font-size:12px; }
-
-.usp-toa .toa-hero { padding-top:28px; padding-bottom:40px; }
-.usp-toa h1.toa-vision { font-family:Cambria,Georgia,serif; font-style:italic; font-weight:500; font-size:32px; line-height:1.35; max-width:900px; margin-top:12px; }
+.usp-toa .toa-hero { padding-top:24px; padding-bottom:36px; }
+.usp-toa h1.toa-vision { font-family:Cambria,Georgia,serif; font-style:italic; font-weight:500; font-size:32px; line-height:1.35; margin-top:12px; }
 .usp-toa h1.toa-vision em { font-style:italic; color:${ACCENT}; }
-.usp-toa .toa-divider { width:48px; height:2px; background:${BORDER}; margin:30px 0 26px; }
-.usp-toa .toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:23px; line-height:1.35; max-width:640px; margin:10px 0 12px; }
+.usp-toa .toa-divider { width:48px; height:2px; background:${BORDER}; margin:28px 0 24px; }
+.usp-toa .toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:23px; line-height:1.35; margin:10px 0 12px; }
 .usp-toa .toa-strategy-line em { font-style:italic; color:${ACCENT}; }
-.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; max-width:640px; margin-top:16px; line-height:1.6; }
+/* Two columns so the intro fills the width instead of hugging the left edge */
+.usp-toa .toa-intro { display:grid; grid-template-columns:1.15fr 1fr; gap:44px; align-items:start; }
+.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; line-height:1.65; }
+.usp-toa .toa-banner-title { font-size:22px; margin-bottom:18px; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
 .usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:640px; margin-top:10px; line-height:1.6; }
 .usp-toa .toa-on-dark { color:#fff; font-size:31px; max-width:760px; line-height:1.25; }
-.usp-toa .toa-on-dark-sub { color:rgba(255,255,255,0.72); font-size:14.5px; max-width:620px; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:680px; margin-top:10px; line-height:1.6; }
 .usp-toa .toa-centered { margin-left:auto; margin-right:auto; }
 
 .usp-toa .toa-banner { margin-top:40px; }
@@ -6569,7 +6562,9 @@ const TOA_CSS = `
 .usp-toa .toa-portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
 .usp-toa .toa-pcard { border-radius:14px; padding:20px; background:${SURFACE}; border:1px solid ${BORDER}; display:flex; flex-direction:column; gap:14px; transition:transform .2s ease, box-shadow .2s ease; }
 .usp-toa .toa-pcard:hover { transform:translateY(-3px); box-shadow:0 10px 24px rgba(48,58,68,0.10); }
-.usp-toa .toa-ptag { align-self:flex-start; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; }
+.usp-toa .toa-ptag { align-self:flex-start; font-size:11px; font-weight:700; padding:5px 11px; border-radius:20px; border:none; font-family:inherit; }
+.usp-toa .toa-more { background:none; border:none; padding:0; margin-top:5px; font-family:inherit; font-size:11.5px; font-weight:700; color:${ACCENT}; cursor:pointer; }
+.usp-toa .toa-more:hover { text-decoration:underline; }
 .usp-toa .toa-pcard ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; }
 .usp-toa .toa-pcard li { font-size:13.5px; }
 .usp-toa .toa-li-title { font-weight:700; margin-bottom:3px; }
@@ -6621,7 +6616,7 @@ const TOA_CSS = `
 @media (max-width:860px) {
   .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
   .usp-toa .toa-impact-grid, .usp-toa .toa-path-wrap { grid-template-columns:1fr; }
-  .usp-toa .toa-chain { display:none; }
+  .usp-toa .toa-intro { grid-template-columns:1fr; gap:16px; }
   .usp-toa h1.toa-vision { font-size:27px; }
   .usp-toa .toa-row, .usp-toa .toa-content-row { flex-direction:column; }
   .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
