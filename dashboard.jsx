@@ -864,6 +864,7 @@ async function loadFromAPI() {
         if (g.chart_note)  goal.chartNote = g.chart_note;
         if (g.goal_note)   goal.goalNote = g.goal_note;
         if (g.note)        goal.note = g.note;
+        if (g.bold_stat)   goal.boldStat = g.bold_stat;
         // total stays null when no numeric baseline is established — don't
         // collapse it to 0, or a pending baseline reads as a real zero.
         if (g.baseline_year) goal.baseline = {
@@ -887,6 +888,8 @@ async function loadFromAPI() {
             p.description || base.portfolios[p.portfolio_id].portfolio.description;
           base.portfolios[p.portfolio_id].portfolio.name =
             p.title || base.portfolios[p.portfolio_id].portfolio.name;
+          // Optional italic footnote rendered on the Strategy Overview ToA cards
+          base.portfolios[p.portfolio_id].portfolio.note = p.note || null;
         }
       });
     }
@@ -5998,7 +6001,9 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
   return (
     <div style={{display:"flex",flexDirection:"column",gap:28}}>
 
-      {/* Hero block */}
+      {/* Hero block — suppressed on the Theory of Change tab, which opens with
+          its own richer treatment of the same 2045 vision statement. */}
+      {activeTab !== "toa" && (
       <div style={{
         background:BRAND, borderRadius:16, padding:"36px 40px",
         position:"relative", overflow:"hidden",
@@ -6013,10 +6018,11 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
           </div>
         </div>
       </div>
+      )}
 
       {/* Sub-nav */}
       <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4,alignItems:"center"}}>
-        {[["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
+        {[["toa","Theory of Change"],["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
           <button key={id} onClick={()=>setActiveTab(id)}
             style={{padding:"10px 20px",fontSize:13,fontWeight:activeTab===id?600:400,border:"none",background:"none",cursor:"pointer",
               borderBottom:activeTab===id?"2px solid "+ACCENT:"2px solid transparent",
@@ -6027,6 +6033,9 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
       </div>
 
       {/* Content */}
+      {activeTab==="toa" && (
+        <StrategyToaOverview data={data} onNavigateToPortfolio={onNavigateToPortfolio}/>
+      )}
       {activeTab==="goals" && (
         <div>
           <GoalTabExplorer ratings={ratings} onUpdateRatings={onUpdateRatings} goalRatings={data.goalRatings||{}} initialGoal={selectedGoal}/>
@@ -6042,6 +6051,585 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
     </div>
   );
 }
+// ── StrategyToaOverview ───────────────────────────────────────────────────────
+// Theory-of-change narrative for the Strategy Overview page: IF we build the
+// shared foundation, THEN six 2030 goals raise the technical floor, THEN more
+// impact is possible for every USP team, ACCELERATING the path to 2045.
+//
+// Ported from an approved standalone mockup and re-skinned onto the app's brand
+// values (Calibri/Cambria, BRAND slate, Gates orange, PORT_COLORS) rather than
+// the mockup's own fonts and palette.
+//
+// Fed entirely from state the app has already loaded — data.portfolios and
+// STRATEGY_GOALS — so it adds no endpoints and cannot disagree with the rest of
+// the dashboard. Every CSS selector below is scoped under .usp-toa; bare
+// element selectors would leak into the rest of the app.
+
+// Stable narrative content — deliberately not table-driven.
+const TOA_VISION = {
+  statement: "By 2045, all learners — especially those historically underserved — and the adults who support them are empowered by safe, evidence-based, AI-enabled solutions that deliver personalized experiences.",
+  emphasis:  "especially those historically underserved",
+};
+
+const TOA_IMPACT_OUTCOMES = [
+  { name:"Better Products",   fedByGoal:"GOAL 01",
+    description:"Solutions are measurably more capable, contextually aware, and educationally effective." },
+  { name:"Faster R&D",        fedByGoal:"GOAL 02",
+    description:"Shared eval infrastructure and evidence standards accelerate and improve development cycles." },
+  { name:"Stronger Adoption", fedByGoal:"GOAL 03",
+    description:"Shared evaluation frameworks and quality signals drive AI adoption decisions." },
+  { name:"Smarter Systems",   fedByGoal:"GOALS 04 & 05",
+    description:"Key decisionmakers have meaningful access to learner and workforce outcomes across sectors and act on them in time." },
+];
+
+const TOA_PATH_2045 = {
+  value:10, unit:"M",
+  label:"Learners with credentials of value, by 2045",
+  recipients:["K12 Teaching & Learning","PS Learning & Nav","Advocacy & Systems Impl."],
+};
+
+// Renders text with `emphasis` (if present) wrapped in an accent-coloured em.
+function toaWithEmphasis(text, emphasis) {
+  if (!text) return null;
+  if (!emphasis || !text.includes(emphasis)) return text;
+  const [before, after] = text.split(emphasis);
+  return <>{before}<em>{emphasis}</em>{after}</>;
+}
+
+// Portfolio cards, in dashboard sort order, with their bodies of work.
+// Draft BOWs are already excluded — they never enter DEFAULT_DATA.
+function toaPortfolios(data) {
+  return PORTFOLIOS.map(({ id }) => {
+    const pd = data?.portfolios?.[id];
+    if (!pd) return null;
+    return {
+      id,
+      name: pd.portfolio?.name || PORT_COLORS[id]?.label || id,
+      note: pd.portfolio?.note || null,
+      bodiesOfWork: (pd.bows || [])
+        .filter(b => b.name)
+        .map(b => ({ id:b.id, title:b.name, description:b.description || "" })),
+    };
+  }).filter(Boolean);
+}
+
+// Goal cards. boldStat comes from strategy_goals.bold_stat; the remainder of the
+// sentence is target_text with that prefix stripped, so the copy is stored once.
+// Falls back to a regex split if bold_stat has not been populated yet.
+function toaGoals() {
+  return STRATEGY_GOALS.map(g => {
+    const target = g.target || g.title || "";
+    let stat = g.boldStat || "";
+    if (!stat) {
+      const m = target.match(/^(\d+(?:[-–]\d+)?(?:\.\d+)?%?x?|\$?\d+(?:[,.]\d+)?[MBK]?)/);
+      stat = m ? m[1] : "";
+    }
+    const rest = stat && target.startsWith(stat) ? target.slice(stat.length).trim() : target;
+    const portId = (GOAL_PORT_MAP[g.number] || [])[0] || null;
+    return {
+      number: String(g.number).padStart(2, "0"),
+      boldStat: stat || String(g.number).padStart(2, "0"),
+      text: rest,
+      portId,
+      originPortfolio: portId ? (PORT_COLORS[portId]?.label || portId) : "Cross-cutting",
+      italic: portId === "cross-cutting",
+    };
+  });
+}
+
+function StrategyToaOverview({ data, onNavigateToPortfolio }) {
+  const portfolios = toaPortfolios(data);
+  const goals      = toaGoals();
+  const outcomes   = TOA_IMPACT_OUTCOMES;
+  const path2045   = TOA_PATH_2045;
+
+  // ── Scrollspy for the stage chain-nav. The app has no inner scroll container,
+  // so the window is the scroller and getBoundingClientRect is reliable here.
+  const chainTargets = ["toa-foundation","toa-floor","toa-impact","toa-path2045"];
+  const [activeSection, setActiveSection] = useState(0);
+
+  useEffect(() => {
+    const sections = chainTargets.map(id => document.getElementById(id)).filter(Boolean);
+    const onScroll = () => {
+      let idx = 0;
+      sections.forEach((el, i) => { if (el.getBoundingClientRect().top < 140) idx = i; });
+      setActiveSection(idx);
+    };
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
+
+  // ── Animated 2045 counter, triggered once when it scrolls into view ──────────
+  const counterRef = useRef(null);
+  const countedRef = useRef(false);
+  const [counterValue, setCounterValue] = useState(0);
+
+  useEffect(() => {
+    if (!counterRef.current) return;
+    const target = path2045.value;
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !countedRef.current) {
+          countedRef.current = true;
+          let val = 0;
+          const step = () => {
+            val += target / 40;
+            if (val < target) { setCounterValue(Number(val.toFixed(1))); requestAnimationFrame(step); }
+            else setCounterValue(target);
+          };
+          step();
+        }
+      });
+    }, { threshold:0.5 });
+    obs.observe(counterRef.current);
+    return () => obs.disconnect();
+  }, [path2045]);
+
+  // ── Connector curves: portfolio chips → goals icon → outcome chips → ~10M ────
+  const toaWrapRef       = useRef(null);
+  const goalsIconRef     = useRef(null);
+  const tenMRef          = useRef(null);
+  const portfolioChipRefs = useRef([]);
+  const outcomeChipRefs   = useRef([]);
+  const [connectorPaths, setConnectorPaths] = useState([]);
+  const [connectorSize, setConnectorSize]   = useState({ w:0, h:0 });
+
+  // Reset per render, repopulated by the ref callbacks below as chips mount.
+  portfolioChipRefs.current = [];
+  outcomeChipRefs.current = [];
+  const registerPortfolioChip = (el) => { if (el) portfolioChipRefs.current.push(el); };
+  const registerOutcomeChip   = (el) => { if (el) outcomeChipRefs.current.push(el); };
+
+  const drawConnectors = useCallback(() => {
+    const wrap = toaWrapRef.current, goalsIcon = goalsIconRef.current, tenM = tenMRef.current;
+    if (!wrap || !goalsIcon || !tenM) return;
+    if (window.innerWidth <= 860) { setConnectorPaths([]); return; }
+    if (!portfolioChipRefs.current.length || !outcomeChipRefs.current.length) return;
+
+    const wrapRect = wrap.getBoundingClientRect();
+    setConnectorSize({ w:wrapRect.width, h:wrapRect.height });
+
+    const center = (el, side) => {
+      const r = el.getBoundingClientRect();
+      return { x: side === "left" ? r.left - wrapRect.left : r.right - wrapRect.left,
+               y: r.top - wrapRect.top + r.height / 2 };
+    };
+    const curve = (p1, p2) => {
+      const midX = (p1.x + p2.x) / 2;
+      return `M ${p1.x} ${p1.y} C ${midX} ${p1.y}, ${midX} ${p2.y}, ${p2.x} ${p2.y}`;
+    };
+
+    const goalsLeft = center(goalsIcon, "left");
+    const goalsRight = center(goalsIcon, "right");
+    const tenMLeft = center(tenM, "left");
+    const paths = [];
+    portfolioChipRefs.current.forEach((chip, i) =>
+      paths.push({ id:`p-${i}`, d:curve(center(chip,"right"), goalsLeft), arrow:false }));
+    outcomeChipRefs.current.forEach((chip, i) =>
+      paths.push({ id:`g-${i}`, d:curve(goalsRight, center(chip,"left")), arrow:false }));
+    outcomeChipRefs.current.forEach((chip, i) =>
+      paths.push({ id:`o-${i}`, d:curve(center(chip,"right"), tenMLeft),
+                   arrow: i === outcomeChipRefs.current.length - 1 }));
+    setConnectorPaths(paths);
+  }, []);
+
+  React.useLayoutEffect(() => { drawConnectors(); }, [drawConnectors, portfolios.length, outcomes.length]);
+
+  useEffect(() => {
+    let timer;
+    const onResize = () => { clearTimeout(timer); timer = setTimeout(drawConnectors, 120); };
+    window.addEventListener("resize", onResize);
+    if (document.fonts?.ready) document.fonts.ready.then(drawConnectors);
+    return () => window.removeEventListener("resize", onResize);
+  }, [drawConnectors]);
+
+  // Portfolios that actually own a goal, for the "Driven by" strip
+  const drivingPortIds = [...new Set(goals.map(g => g.portId).filter(Boolean))];
+
+  return (
+    <div className="usp-toa">
+      <style>{TOA_CSS}</style>
+
+      {/* Stage chain-nav */}
+      <div className="toa-chain">
+        {["Foundation","Technical Floor","Team Impact","2045 Path"].map((label, i) => (
+          <React.Fragment key={label}>
+            <button className={"toa-chain-btn"+(activeSection===i?" active":"")}
+              onClick={()=>scrollTo(chainTargets[i])}>
+              <span className="toa-chain-num">{i+1}</span>{label}
+            </button>
+            {i < 3 && <span className="toa-chain-arrow">→</span>}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Vision + strategy framing */}
+      <section className="toa-hero">
+        <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
+        <h1 className="toa-vision">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</h1>
+        <div className="toa-divider"/>
+        <span className="toa-eyebrow toa-accent">The strategy that gets us there</span>
+        <p className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</p>
+        <p className="toa-sub">
+          We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
+          capability layers every USP team builds on and benefits from. This is the strategic logic behind our
+          six 2030 goals and our path to 2045.
+        </p>
+
+        {/* IF / THEN / THEN / ACCELERATING chevron banner */}
+        <div className="toa-banner">
+          <div className="toa-row">
+            <div className="toa-chev toa-chev-1" onClick={()=>scrollTo("toa-foundation")}>
+              <span className="toa-tag">IF</span>
+              <p>we build a shared AI &amp; data foundation upstream of every solution</p>
+            </div>
+            <div className="toa-chev" onClick={()=>scrollTo("toa-floor")}>
+              <span className="toa-tag">THEN</span>
+              <p>we build field-level enabling conditions via six 2030 goals</p>
+            </div>
+            <div className="toa-chev" onClick={()=>scrollTo("toa-impact")}>
+              <span className="toa-tag">THEN</span>
+              <p>more impact is possible for every USP team</p>
+            </div>
+            <div className="toa-box" onClick={()=>scrollTo("toa-path2045")}>
+              <span className="toa-tag toa-tag-dark">ACCELERATING</span>
+              <p>our path to 2045</p>
+            </div>
+          </div>
+
+          <div className="toa-connector-wrap" ref={toaWrapRef}>
+            <svg className="toa-connectors" width={connectorSize.w} height={connectorSize.h}>
+              <defs>
+                <marker id="toaArrow" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path className="toa-arrowhead" d="M0 0 L10 5 L0 10 z"/>
+                </marker>
+              </defs>
+              {connectorPaths.map(p => (
+                <path key={p.id} className="toa-connector-line" d={p.d}
+                  markerEnd={p.arrow ? "url(#toaArrow)" : undefined}/>
+              ))}
+            </svg>
+
+            <div className="toa-content-row">
+              <div className="toa-content" onClick={()=>scrollTo("toa-foundation")}>
+                {portfolios.map(p => {
+                  const pc = PORT_COLORS[p.id] || {};
+                  return (
+                    <span key={p.id} className="toa-chip" ref={registerPortfolioChip}
+                      style={{background:pc.light,color:pc.dark}}>{p.name}</span>
+                  );
+                })}
+              </div>
+
+              <div className="toa-content toa-center" onClick={()=>scrollTo("toa-floor")}>
+                <svg className="toa-goals-icon" viewBox="0 0 60 52" ref={goalsIconRef}>
+                  <g stroke={BORDER} strokeWidth="1">
+                    {[[30,6,47,16],[30,6,47,36],[30,6,30,46],[30,6,13,36],[30,6,13,16],
+                      [47,16,47,36],[47,16,30,46],[47,16,13,36],[47,16,13,16],
+                      [47,36,30,46],[47,36,13,36],[47,36,13,16],
+                      [30,46,13,36],[30,46,13,16],[13,36,13,16]].map(([x1,y1,x2,y2],i)=>(
+                      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}/>
+                    ))}
+                  </g>
+                  {[[30,6],[47,16],[47,36],[30,46],[13,36],[13,16]].map(([cx,cy])=>(
+                    <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.5" fill={ACCENT}/>
+                  ))}
+                </svg>
+                <span className="toa-label">{goals.length} 2030 strategy goals</span>
+              </div>
+
+              <div className="toa-content" onClick={()=>scrollTo("toa-impact")}>
+                {outcomes.map(o => (
+                  <span key={o.name} className="toa-chip toa-chip-neutral" ref={registerOutcomeChip}>
+                    {o.name}
+                  </span>
+                ))}
+              </div>
+
+              <div className="toa-content toa-center" onClick={()=>scrollTo("toa-path2045")}>
+                <span className="toa-bignum" ref={tenMRef}>~{path2045.value}{path2045.unit}</span>
+                <span className="toa-label">learners with credentials of value</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stage 1 — the portfolios */}
+      <section id="toa-foundation">
+        <div className="toa-stage-head">
+          <div className="toa-eyebrow">Stage 1 · If</div>
+          <h2>Four portfolios build the shared foundation.</h2>
+          <p>Four core functions carry the strategy. Inside each, you'll find the bodies of work — the big bets
+             we're placing to reach our 2030 goals.</p>
+        </div>
+
+        <div className="toa-portfolio-grid">
+          {portfolios.map(p => {
+            const pc = PORT_COLORS[p.id] || {};
+            return (
+              <div key={p.id} className="toa-pcard"
+                onClick={()=>onNavigateToPortfolio && onNavigateToPortfolio(p.id)}
+                style={{cursor:onNavigateToPortfolio?"pointer":"default",borderTop:"3px solid "+(pc.color||BORDER)}}>
+                <span className="toa-ptag" style={{background:pc.light,color:pc.dark}}>{p.name}</span>
+                <ul>
+                  {p.bodiesOfWork.map(bow => (
+                    <li key={bow.id}>
+                      <div className="toa-li-title">{bow.title}</div>
+                      {bow.description && <div className="toa-li-desc">{bow.description}</div>}
+                    </li>
+                  ))}
+                  {p.note && (
+                    <li className="toa-li-note"><div className="toa-li-desc toa-italic">{p.note}</div></li>
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Stage 2 — the goals, on the dark focal band */}
+      <div className="toa-floor-band" id="toa-floor">
+        <section className="toa-floor-inner">
+          <div className="toa-stage-head">
+            <div className="toa-eyebrow toa-accent">Stage 2 · Then — the core commitment</div>
+            <h2 className="toa-on-dark">We build field-level enabling conditions.</h2>
+            <p className="toa-on-dark-sub">Shared infrastructure and public goods that raise the technical floor
+               across the entire field — captured in six 2030 goals.</p>
+          </div>
+
+          <div className="toa-feed-strip">
+            <span className="toa-feed-label">Driven by</span>
+            {drivingPortIds.map(id => {
+              const pc = PORT_COLORS[id] || {};
+              return (
+                <span key={id} className="toa-feed-chip"
+                  style={{color:pc.color,borderColor:(pc.color||BORDER)+"66",background:(pc.color||"#000")+"22"}}>
+                  {pc.label || id}
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="toa-goal-grid">
+            {goals.map(g => {
+              const pc = PORT_COLORS[g.portId] || {};
+              return (
+                <div key={g.number} className="toa-goal-card">
+                  <div className="toa-goal-top">
+                    <span className="toa-goal-num">{g.number}</span>
+                    <span className="toa-goal-origin" style={{color:pc.color||TEXT_MUTED}}>{g.originPortfolio}</span>
+                  </div>
+                  <div className={"toa-goal-text"+(g.italic?" toa-italic":"")}>
+                    <b>{g.boldStat}</b> {g.text}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      {/* Stage 3 — team impact */}
+      <section id="toa-impact">
+        <div className="toa-stage-head">
+          <div className="toa-eyebrow">Stage 3 · Then</div>
+          <h2>More impact is possible for every USP team.</h2>
+          <p>We coordinate rather than centralize — teams still make their own domain-specific bets, but
+             capabilities, evaluation frameworks, and safety standards get built once here and reused across
+             every PST. That's what makes us a multiplier for the division.</p>
+        </div>
+        <div className="toa-impact-grid">
+          {outcomes.map(o => (
+            <div key={o.name} className="toa-impact-card">
+              <h3>{o.name}</h3>
+              <p>{o.description}</p>
+              <div className="toa-src">FED BY {o.fedByGoal}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Stage 4 — the 2045 number */}
+      <section id="toa-path2045">
+        <div className="toa-stage-head">
+          <div className="toa-eyebrow">Stage 4 · Accelerating our path</div>
+          <h2>Where it all points: 2045.</h2>
+          <p>Every layer above rolls up into one number, then fans out into the areas it accelerates.</p>
+        </div>
+        <div className="toa-path-wrap">
+          <div className="toa-counter-card" ref={counterRef}>
+            <div className="toa-eyebrow toa-on-dark-eyebrow">{path2045.label}</div>
+            <div className="toa-counter-num">~{counterValue}{path2045.unit}</div>
+          </div>
+          <div className="toa-lift">
+            {path2045.recipients.map(r => <div className="toa-lift-item" key={r}>{r}</div>)}
+            <div className="toa-lift-arrows">
+              {path2045.recipients.map((r,i) => <span key={i}>↑</span>)}
+            </div>
+            <div className="toa-lift-floor">Data &amp; AI <span className="toa-dim">raises the floor</span></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Closing the loop */}
+      <div className="toa-loop-band">
+        <section className="toa-loop-inner">
+          <span className="toa-eyebrow toa-accent">Closing the loop</span>
+          <h2 className="toa-on-dark">The cross-division feedback loop</h2>
+          <p className="toa-on-dark-sub toa-centered">PST learner outcomes and field evidence flow back to
+             sharpen our upstream infrastructure — ensuring what gets built keeps moving the needle.</p>
+          <div className="toa-loop-wrap">
+            <svg className="toa-loop" viewBox="-10 -10 420 360">
+              <path className="toa-arc" d="M200,60 A140,140 0 0,1 321,270"/>
+              <path className="toa-arc" d="M321,270 A140,140 0 0,1 79,270"/>
+              <path className="toa-arc toa-arc-fb" d="M79,270 A140,140 0 0,1 200,60"/>
+              <path className="toa-loop-marker" d="M -6 -5 L 6 0 L -6 5 Z" transform="translate(321,130) rotate(60)"/>
+              <path className="toa-loop-marker" d="M -6 -5 L 6 0 L -6 5 Z" transform="translate(200,340) rotate(180)"/>
+              <path className="toa-loop-marker toa-marker-fb" d="M -7 -6 L 7 0 L -7 6 Z" transform="translate(79,130) rotate(-60)"/>
+              <text x="200" y="208" textAnchor="middle" className="toa-loop-center">↻</text>
+              <circle cx="200" cy="60"  r="7" className="toa-loop-dot"/>
+              <text x="200" y="30"  textAnchor="middle" className="toa-loop-label">Build the Foundation</text>
+              <circle cx="321" cy="270" r="7" className="toa-loop-dot"/>
+              <text x="321" y="304" textAnchor="middle" className="toa-loop-label">Deploy to PSTs</text>
+              <circle cx="79"  cy="270" r="7" className="toa-loop-dot"/>
+              <text x="79"  y="304" textAnchor="middle" className="toa-loop-label">Learn From the Field</text>
+            </svg>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// Every selector is scoped under .usp-toa — bare nav/section/footer selectors
+// would restyle the rest of the dashboard.
+const TOA_CSS = `
+.usp-toa { color:${TEXT}; font-family:Calibri,'Segoe UI',Arial,sans-serif; }
+.usp-toa * { box-sizing:border-box; }
+.usp-toa h1, .usp-toa h2, .usp-toa h3 { font-family:Cambria,Georgia,serif; margin:0; font-weight:600; color:${TEXT}; }
+.usp-toa section { max-width:1180px; margin:0 auto; padding:72px 4px 32px; scroll-margin-top:24px; }
+.usp-toa .toa-eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:10px; font-weight:600; color:${TEXT_MUTED}; display:block; }
+.usp-toa .toa-accent { color:${ACCENT}; }
+.usp-toa .toa-italic { font-style:italic; }
+
+.usp-toa .toa-chain { display:flex; gap:2px; align-items:center; flex-wrap:wrap; padding:14px 0 0; }
+.usp-toa .toa-chain-btn { font-size:12.5px; font-weight:600; color:${TEXT_SUB}; background:none; border:none; cursor:pointer; padding:8px 14px; border-radius:20px; transition:all .2s ease; display:flex; align-items:center; gap:6px; font-family:inherit; }
+.usp-toa .toa-chain-num { font-size:10px; width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:${BORDER}; color:${TEXT_SUB}; }
+.usp-toa .toa-chain-btn.active { background:${BRAND}; color:#fff; }
+.usp-toa .toa-chain-btn.active .toa-chain-num { background:${ACCENT}; color:#fff; }
+.usp-toa .toa-chain-btn:not(.active):hover { background:${BORDER}; }
+.usp-toa .toa-chain-arrow { color:${BORDER}; font-size:12px; }
+
+.usp-toa .toa-hero { padding-top:28px; padding-bottom:40px; }
+.usp-toa h1.toa-vision { font-family:Cambria,Georgia,serif; font-style:italic; font-weight:500; font-size:32px; line-height:1.35; max-width:900px; margin-top:12px; }
+.usp-toa h1.toa-vision em { font-style:italic; color:${ACCENT}; }
+.usp-toa .toa-divider { width:48px; height:2px; background:${BORDER}; margin:30px 0 26px; }
+.usp-toa .toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:23px; line-height:1.35; max-width:640px; margin:10px 0 12px; }
+.usp-toa .toa-strategy-line em { font-style:italic; color:${ACCENT}; }
+.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; max-width:640px; margin-top:16px; line-height:1.6; }
+
+.usp-toa .toa-stage-head { margin-bottom:32px; }
+.usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
+.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:640px; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-on-dark { color:#fff; font-size:31px; max-width:760px; line-height:1.25; }
+.usp-toa .toa-on-dark-sub { color:rgba(255,255,255,0.72); font-size:14.5px; max-width:620px; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-centered { margin-left:auto; margin-right:auto; }
+
+.usp-toa .toa-banner { margin-top:40px; }
+.usp-toa .toa-row { display:flex; }
+.usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:18px 22px 18px 32px; cursor:pointer; transition:filter .15s ease; }
+.usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { filter:brightness(1.12); }
+.usp-toa .toa-chev { background:${BRAND}; color:#fff; clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 22px 50%); margin-left:-22px; }
+.usp-toa .toa-chev-1 { clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%); margin-left:0; border-radius:10px 0 0 10px; }
+.usp-toa .toa-box { background:${ACCENT_LIGHT}; color:${BRAND}; border-radius:0 10px 10px 0; margin-left:-4px; padding-left:36px; }
+.usp-toa .toa-tag { display:block; font-size:10.5px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:7px; }
+.usp-toa .toa-tag-dark { color:${BRAND}; }
+.usp-toa .toa-chev p, .usp-toa .toa-box p { font-size:13.5px; line-height:1.42; margin:0; max-width:230px; }
+.usp-toa .toa-box p { font-weight:700; }
+
+.usp-toa .toa-connector-wrap { position:relative; }
+.usp-toa .toa-connectors { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; z-index:0; }
+.usp-toa .toa-connector-line { fill:none; stroke:${BORDER}; stroke-width:1.3; }
+.usp-toa .toa-arrowhead { fill:${ACCENT}; }
+.usp-toa .toa-content-row { display:flex; margin-top:16px; position:relative; z-index:1; }
+.usp-toa .toa-content { flex:1; padding:0 22px 0 32px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; align-content:flex-start; gap:7px; }
+.usp-toa .toa-content.toa-center { flex-direction:column; align-items:flex-start; gap:4px; }
+.usp-toa .toa-chip { font-size:11px; font-weight:700; padding:5px 11px; border-radius:20px; white-space:nowrap; }
+.usp-toa .toa-chip-neutral { background:#EEF0F3; color:${BRAND}; }
+.usp-toa .toa-bignum { font-family:Cambria,Georgia,serif; font-weight:600; font-size:30px; color:${TEXT}; line-height:1; }
+.usp-toa .toa-goals-icon { width:72px; height:62px; margin-bottom:4px; }
+.usp-toa .toa-label { font-size:11.5px; color:${TEXT_SUB}; }
+
+.usp-toa .toa-portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+.usp-toa .toa-pcard { border-radius:14px; padding:20px; background:${SURFACE}; border:1px solid ${BORDER}; display:flex; flex-direction:column; gap:14px; transition:transform .2s ease, box-shadow .2s ease; }
+.usp-toa .toa-pcard:hover { transform:translateY(-3px); box-shadow:0 10px 24px rgba(48,58,68,0.10); }
+.usp-toa .toa-ptag { align-self:flex-start; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; }
+.usp-toa .toa-pcard ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; }
+.usp-toa .toa-pcard li { font-size:13.5px; }
+.usp-toa .toa-li-title { font-weight:700; margin-bottom:3px; }
+.usp-toa .toa-li-desc { color:${TEXT_SUB}; font-size:12.8px; line-height:1.5; }
+.usp-toa .toa-li-note { margin-top:2px; padding-top:10px; border-top:1px dashed ${BORDER}; }
+
+.usp-toa .toa-floor-band { background:${BRAND}; border-radius:16px; margin:64px 0; }
+.usp-toa .toa-floor-inner { max-width:1180px; margin:0 auto; padding:64px 36px 68px; }
+.usp-toa .toa-feed-strip { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:26px 0 30px; }
+.usp-toa .toa-feed-label { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; font-weight:600; color:rgba(255,255,255,0.55); }
+.usp-toa .toa-feed-chip { font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; white-space:nowrap; border:1px solid transparent; }
+.usp-toa .toa-goal-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:32px; }
+.usp-toa .toa-goal-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.11); border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:14px; transition:background .2s ease, border-color .2s ease; }
+.usp-toa .toa-goal-card:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); }
+.usp-toa .toa-goal-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.usp-toa .toa-goal-num { font-family:Cambria,Georgia,serif; font-style:italic; font-size:29px; color:${ACCENT}; line-height:1; }
+.usp-toa .toa-goal-origin { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; font-weight:700; text-align:right; }
+.usp-toa .toa-goal-text { font-size:14.5px; line-height:1.55; color:rgba(255,255,255,0.88); }
+.usp-toa .toa-goal-text b { color:#fff; font-size:16px; }
+
+.usp-toa .toa-impact-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.usp-toa .toa-impact-card { background:#EEF0F3; border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:8px; }
+.usp-toa .toa-impact-card h3 { font-size:18px; }
+.usp-toa .toa-impact-card p { font-size:13.5px; color:${TEXT_SUB}; line-height:1.55; margin:0; }
+.usp-toa .toa-src { margin-top:auto; padding-top:10px; border-top:1px solid rgba(48,58,68,0.14); font-size:10.5px; letter-spacing:0.8px; font-weight:700; color:${BRAND}; }
+
+.usp-toa .toa-path-wrap { display:grid; grid-template-columns:1.1fr 1fr; gap:36px; align-items:center; }
+.usp-toa .toa-counter-card { background:${BRAND}; color:#fff; border-radius:18px; padding:40px 34px; }
+.usp-toa .toa-on-dark-eyebrow { color:rgba(255,255,255,0.6); }
+.usp-toa .toa-counter-num { font-family:Cambria,Georgia,serif; font-size:70px; font-weight:600; margin:12px 0 4px; letter-spacing:-1px; }
+.usp-toa .toa-lift { display:flex; flex-direction:column; align-items:stretch; }
+.usp-toa .toa-lift-item { background:${SURFACE}; border:1px solid ${BORDER}; border-radius:10px; padding:13px 18px; font-size:14px; font-weight:600; text-align:center; margin-bottom:8px; }
+.usp-toa .toa-lift-arrows { display:flex; justify-content:space-around; color:${ACCENT}; font-size:16px; margin:-2px 0 8px; line-height:1; }
+.usp-toa .toa-lift-floor { background:${BRAND}; color:#fff; font-weight:700; text-align:center; border-radius:10px; padding:17px; font-size:15px; box-shadow:0 6px 0 0 rgba(48,58,68,0.18); }
+.usp-toa .toa-dim { color:rgba(255,255,255,0.66); font-weight:400; font-size:12px; margin-left:4px; }
+
+.usp-toa .toa-loop-band { background:${BRAND}; border-radius:16px; margin-top:56px; }
+.usp-toa .toa-loop-inner { max-width:700px; margin:0 auto; padding:64px 28px 56px; text-align:center; }
+.usp-toa .toa-loop-wrap { max-width:400px; margin:32px auto 0; }
+.usp-toa .toa-loop { width:100%; height:auto; display:block; }
+.usp-toa .toa-arc { fill:none; stroke:rgba(255,255,255,0.28); stroke-width:2; }
+.usp-toa .toa-arc-fb { stroke:${ACCENT}; stroke-width:2.8; }
+.usp-toa .toa-loop-marker { fill:rgba(255,255,255,0.55); }
+.usp-toa .toa-marker-fb { fill:${ACCENT}; }
+.usp-toa .toa-loop-dot { fill:${ACCENT}; }
+.usp-toa .toa-loop-label { font-family:Calibri,'Segoe UI',Arial,sans-serif; font-size:13px; font-weight:600; fill:rgba(255,255,255,0.9); }
+.usp-toa .toa-loop-center { fill:${ACCENT}; font-size:26px; }
+
+@media (max-width:860px) {
+  .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
+  .usp-toa .toa-impact-grid, .usp-toa .toa-path-wrap { grid-template-columns:1fr; }
+  .usp-toa .toa-chain { display:none; }
+  .usp-toa h1.toa-vision { font-size:27px; }
+  .usp-toa .toa-row, .usp-toa .toa-content-row { flex-direction:column; }
+  .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
+  .usp-toa .toa-content { padding-left:22px; margin-bottom:14px; }
+  .usp-toa .toa-connectors { display:none; }
+}
+`;
+
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 const PORTFOLIOS = [
   {id:"ai-infra",      label:"AI Infrastructure"},

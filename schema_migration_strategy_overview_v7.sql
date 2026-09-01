@@ -63,6 +63,18 @@ WHEN MATCHED THEN UPDATE SET
 
 
 -- =============================================================================
+-- SECTION 3: Populate the Data & AI Enablement Hub footnote
+--
+-- The Hub is the one portfolio carrying an intermediate-outcome line on its
+-- card. The other three stay NULL and render no footnote.
+-- =============================================================================
+
+UPDATE usp_data.usp_strategy.portfolios
+SET note = '% of USP reporting Hub support contributed to a significant AI-related decision'
+WHERE portfolio_id = 'hub';
+
+
+-- =============================================================================
 -- VERIFICATION
 -- =============================================================================
 
