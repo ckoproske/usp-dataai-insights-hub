@@ -9780,6 +9780,7 @@ function Sidebar({ activeView, onNavigate, currentUser, usingPlaceholder, apiAva
         <NavItem
           label="2030 Goals"
           icon={<IconTarget/>}
+          notice="Being Updated"
           active={activeView.type==="goals"}
           onClick={()=>onNavigate({type:"goals"})}
         />
@@ -9874,7 +9875,7 @@ function Sidebar({ activeView, onNavigate, currentUser, usingPlaceholder, apiAva
   );
 }
 
-function NavItem({ label, icon, active, onClick, accent, muted, tag, soon }) {
+function NavItem({ label, icon, active, onClick, accent, muted, tag, soon, notice }) {
   const [hov, setHov] = React.useState(false);
   return (
     <button
@@ -9895,6 +9896,9 @@ function NavItem({ label, icon, active, onClick, accent, muted, tag, soon }) {
       </span>
       {soon && <span style={{fontSize:9,fontWeight:700,color:ACCENT,background:"rgba(240,165,0,0.15)",borderRadius:3,padding:"1px 5px",letterSpacing:0.5,textTransform:"uppercase",border:"1px solid rgba(240,165,0,0.2)"}}>Soon</span>}
       {tag && !soon && <span style={{fontSize:9,fontWeight:600,color:"rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.07)",borderRadius:3,padding:"1px 5px"}}>{tag}</span>}
+      {/* Status notice — amber so it registers as "heads up", and readable on
+          the dark pane at 7:1 rather than the tag slot's 30%-opacity grey */}
+      {notice && <span style={{fontSize:10,fontWeight:700,color:"#FBBF24",background:"rgba(251,191,36,0.14)",border:"1px solid rgba(251,191,36,0.32)",borderRadius:3,padding:"1px 6px",whiteSpace:"nowrap",flexShrink:0,lineHeight:1.4}}>{notice}</span>}
     </button>
   );
 }
