@@ -6062,14 +6062,14 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
 // Every selector is scoped under .usp-toa — bare nav/section/footer selectors
 // would restyle the rest of the dashboard.
 const TOA_CSS = `
-/* Capped content column. The prose measures below only look right relative to
-   a bounded page — at full 1600px width a readable line fills a third of it and
-   reads as stranded. */
-.usp-toa { color:${TEXT}; font-family:Calibri,'Segoe UI',Arial,sans-serif; max-width:1120px; margin:0 auto; }
+/* No cap — the page runs the same width as the portfolio pages, governed by the
+   App container. Prose sizes below are scaled up to suit, so a readable line
+   still occupies a reasonable share of the wider column. */
+.usp-toa { color:${TEXT}; font-family:Calibri,'Segoe UI',Arial,sans-serif; }
 .usp-toa * { box-sizing:border-box; }
 .usp-toa h1, .usp-toa h2, .usp-toa h3 { font-family:Cambria,Georgia,serif; margin:0; font-weight:600; color:${TEXT}; }
 .usp-toa section { margin:0 auto; padding:64px 4px 32px; scroll-margin-top:24px; }
-.usp-toa .toa-eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:10px; font-weight:600; color:${TEXT_MUTED}; display:block; }
+.usp-toa .toa-eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:12.5px; font-weight:600; color:${TEXT_MUTED}; display:block; }
 .usp-toa .toa-accent { color:${ACCENT}; }
 .usp-toa .toa-italic { font-style:italic; }
 
@@ -6077,22 +6077,22 @@ const TOA_CSS = `
 /* Descending hierarchy under the thesis: headline 40px, this 18px, the vision
    note 15px behind a rule. "can" is emphasised — the layers are available to
    every team, not necessarily used by all of them. */
-.usp-toa .toa-sub { font-size:20px; color:${TEXT_SUB}; line-height:1.6; max-width:78ch; margin-top:15px; }
+.usp-toa .toa-sub { font-size:22px; color:${TEXT_SUB}; line-height:1.6; max-width:88ch; margin-top:16px; }
 .usp-toa .toa-sub em { font-style:italic; color:${TEXT}; font-weight:600; }
 /* Vision as a subordinate note beneath the thesis, tied to it by a left rule */
 .usp-toa .toa-vision-note { margin-top:20px; padding-left:16px; border-left:3px solid ${ACCENT_MID}; }
-.usp-toa .toa-vision-label { display:block; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:6px; }
+.usp-toa .toa-vision-label { display:block; font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:6px; }
 /* Measures set in ch, so the character count holds regardless of font size.
    68ch of "0" glyphs fits roughly 75-80 characters of running prose — the top
    of Bringhurst's comfortable range. */
-.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-size:16px; line-height:1.65; color:${TEXT_SUB}; max-width:84ch; }
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-size:17px; line-height:1.65; color:${TEXT_SUB}; max-width:96ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:40px; line-height:1.2; margin:0; letter-spacing:-0.4px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
-.usp-toa .toa-stage-head h2 { font-size:24px; max-width:52ch; line-height:1.3; }
-.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:16px; max-width:88ch; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-stage-head h2 { font-size:26px; max-width:56ch; line-height:1.3; }
+.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:17px; max-width:96ch; margin-top:10px; line-height:1.6; }
 
 /* One card holds the vision, the thesis and the diagram, so the framing runs
    straight into the Theory of Action with no seam between them */
@@ -6103,7 +6103,7 @@ const TOA_CSS = `
    interlock, same 40px text inset. Without the offsets the labels drifted up to
    66px right of the stage they name by the fourth column. */
 .usp-toa .toa-colheads { display:flex; margin-bottom:9px; }
-.usp-toa .toa-colhead { flex:1; margin-left:-22px; padding:0 0 6px 40px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
+.usp-toa .toa-colhead { flex:1; margin-left:-22px; padding:0 0 6px 40px; font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
 .usp-toa .toa-colhead:first-child { margin-left:0; }
 .usp-toa .toa-colhead:hover { color:${TEXT_SUB}; }
 .usp-toa .toa-colhead.active { color:${TEXT}; border-bottom-color:${ACCENT}; }
@@ -6119,16 +6119,18 @@ const TOA_CSS = `
 .usp-toa .toa-box.active { background:${ACCENT_MID}; }
 
 /* Disclosure caret — the affordance that these stages open the panel below */
-.usp-toa .toa-caret { display:inline-block; margin-left:7px; font-size:11px; opacity:0.55; transform:translateY(-1px); transition:opacity .15s, color .15s; }
+.usp-toa .toa-caret { display:inline-block; margin-left:7px; font-size:13px; opacity:0.55; transform:translateY(-1px); transition:opacity .15s, color .15s; }
 .usp-toa .toa-chev:hover .toa-caret, .usp-toa .toa-box:hover .toa-caret { opacity:0.9; }
 .usp-toa .toa-chev.active .toa-caret, .usp-toa .toa-box.active .toa-caret { opacity:1; font-size:13px; }
-.usp-toa .toa-hint { font-size:11.5px; font-weight:600; color:${ACCENT}; }
+.usp-toa .toa-hint { font-size:13px; font-weight:600; color:${ACCENT}; }
 
 /* Feedback loop, folded in as the diagram's return path */
 .usp-toa .toa-return { margin-top:18px; }
 .usp-toa .toa-return-bracket { height:30px; border:1.5px solid ${TEXT_MUTED}; border-top:none; border-radius:0 0 14px 14px; position:relative; opacity:0.7; }
 .usp-toa .toa-return-bracket::after { content:""; position:absolute; left:-7px; top:-10px; width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:10px solid ${TEXT_MUTED}; }
-.usp-toa .toa-return-caption { margin-top:9px; font-size:12.5px; color:${TEXT_SUB}; line-height:1.55; max-width:80ch; }
+/* No measure cap: the caption belongs to the bracket above it, so it reads
+   better spanning the same width the arrow does */
+.usp-toa .toa-return-caption { margin-top:10px; font-size:14px; color:${TEXT_SUB}; line-height:1.55; }
 .usp-toa .toa-return-caption b { color:${TEXT}; font-weight:700; }
 
 /* One stage at a time, chosen from the diagram above. The gap lives on the
@@ -6152,20 +6154,20 @@ const TOA_CSS = `
 /* The terminus interlocks like the rest of the band — same notch, same overlap,
    same text inset — so the sequence flows into it instead of butting against it */
 .usp-toa .toa-box { background:${ACCENT_LIGHT}; color:${BRAND}; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%, 22px 50%); margin-left:-22px; }
-.usp-toa .toa-tag { display:flex; align-items:center; font-size:11px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:9px; }
+.usp-toa .toa-tag { display:flex; align-items:center; font-size:13px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:9px; }
 /* Numbered step, so the sequence is explicit without extra copy */
-.usp-toa .toa-step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; margin-right:9px; font-size:10px; letter-spacing:0; background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.9); flex-shrink:0; }
+.usp-toa .toa-step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; margin-right:9px; font-size:12.5px; letter-spacing:0; background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.9); flex-shrink:0; }
 .usp-toa .toa-box .toa-step { background:rgba(48,58,68,0.14); color:${BRAND}; }
 .usp-toa .toa-tag-dark { color:${BRAND}; }
-.usp-toa .toa-chev p, .usp-toa .toa-box p { font-size:13.5px; line-height:1.42; margin:0; max-width:230px; }
+.usp-toa .toa-chev p, .usp-toa .toa-box p { font-size:14.5px; line-height:1.45; margin:0; max-width:300px; }
 .usp-toa .toa-box p { font-weight:700; }
 
 
 .usp-toa .toa-portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
 .usp-toa .toa-pcard { border-radius:14px; padding:20px; background:${SURFACE}; border:1px solid ${BORDER}; display:flex; flex-direction:column; gap:14px; transition:transform .2s ease, box-shadow .2s ease; }
 .usp-toa .toa-pcard:hover { transform:translateY(-3px); box-shadow:0 10px 24px rgba(48,58,68,0.10); }
-.usp-toa .toa-ptag { align-self:flex-start; font-size:11px; font-weight:700; padding:5px 11px; border-radius:20px; border:none; font-family:inherit; }
-.usp-toa .toa-more { background:none; border:none; padding:0; margin-top:5px; font-family:inherit; font-size:11.5px; font-weight:700; color:${ACCENT}; cursor:pointer; }
+.usp-toa .toa-ptag { align-self:flex-start; font-size:13px; font-weight:700; padding:5px 11px; border-radius:20px; border:none; font-family:inherit; }
+.usp-toa .toa-more { background:none; border:none; padding:0; margin-top:5px; font-family:inherit; font-size:13px; font-weight:700; color:${ACCENT}; cursor:pointer; }
 .usp-toa .toa-more:hover { text-decoration:underline; }
 .usp-toa .toa-pcard ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; }
 .usp-toa .toa-pcard li { font-size:13.5px; }
@@ -6174,16 +6176,16 @@ const TOA_CSS = `
 .usp-toa .toa-li-note { margin-top:2px; padding-top:10px; border-top:1px dashed ${BORDER}; }
 
 .usp-toa .toa-feed-strip { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:20px 0 0; }
-.usp-toa .toa-feed-label { font-size:10px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700; color:${TEXT_MUTED}; }
-.usp-toa .toa-feed-chip { font-size:10.5px; font-weight:700; padding:4px 11px; border-radius:20px; white-space:nowrap; border:1px solid transparent; }
+.usp-toa .toa-feed-label { font-size:12.5px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700; color:${TEXT_MUTED}; }
+.usp-toa .toa-feed-chip { font-size:12.5px; font-weight:700; padding:4px 11px; border-radius:20px; white-space:nowrap; border:1px solid transparent; }
 /* Three up on wide screens: six goals read as two tidy rows rather than a
    long 2x3 column, and each card stays wide enough for its sentence */
 .usp-toa .toa-goal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(288px,1fr)); gap:14px; margin-top:26px; }
 .usp-toa .toa-goal-card { background:${SURFACE}; border:1px solid ${BORDER}; border-radius:12px; padding:18px 20px 20px; display:flex; flex-direction:column; gap:9px; transition:transform .2s ease, box-shadow .2s ease; }
 .usp-toa .toa-goal-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(48,58,68,0.09); }
 .usp-toa .toa-goal-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.usp-toa .toa-goal-label { font-size:9.5px; letter-spacing:1.6px; text-transform:uppercase; font-weight:700; color:${TEXT_MUTED}; }
-.usp-toa .toa-goal-origin { font-size:9px; letter-spacing:0.7px; text-transform:uppercase; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+.usp-toa .toa-goal-label { font-size:12px; letter-spacing:1.6px; text-transform:uppercase; font-weight:700; color:${TEXT_MUTED}; }
+.usp-toa .toa-goal-origin { font-size:12px; letter-spacing:0.7px; text-transform:uppercase; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
 /* The headline figure, at display size — this is the number that should pop */
 .usp-toa .toa-goal-stat { font-family:Cambria,Georgia,serif; font-weight:600; font-size:42px; line-height:1; color:${BRAND}; letter-spacing:-1.2px; }
 .usp-toa .toa-goal-text { font-size:13.5px; line-height:1.6; color:${TEXT_SUB}; }
@@ -6192,7 +6194,7 @@ const TOA_CSS = `
 .usp-toa .toa-impact-card { background:#EEF0F3; border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:8px; }
 .usp-toa .toa-impact-card h3 { font-size:18px; }
 .usp-toa .toa-impact-card p { font-size:13.5px; color:${TEXT_SUB}; line-height:1.55; margin:0; }
-.usp-toa .toa-src { margin-top:auto; padding-top:10px; border-top:1px solid rgba(48,58,68,0.14); font-size:10.5px; letter-spacing:0.8px; font-weight:700; color:${BRAND}; }
+.usp-toa .toa-src { margin-top:auto; padding-top:10px; border-top:1px solid rgba(48,58,68,0.14); font-size:12.5px; letter-spacing:0.8px; font-weight:700; color:${BRAND}; }
 
 .usp-toa .toa-path-wrap { display:grid; grid-template-columns:1.1fr 1fr; gap:36px; align-items:center; }
 .usp-toa .toa-counter-card { background:${BRAND}; color:#fff; border-radius:18px; padding:40px 34px; }
