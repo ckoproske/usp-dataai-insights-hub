@@ -5864,11 +5864,14 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           carries it at full weight — while the thesis takes the headline. */}
       <section className="toa-hero">
         <div className="toa-banner">
-          <div className="toa-vision-strip">
-            <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
+          {/* Thesis leads; the vision follows as a subordinate note tied to it
+              by a left rule. Above the headline it read as an orphan block of
+              long italic copy competing with the point of the page. */}
+          <h1 className="toa-strategy-line">If we build the foundation, more impact is <em>possible</em> for every team.</h1>
+          <div className="toa-vision-note">
+            <span className="toa-vision-label">Toward our 2045 vision</span>
             <p className="toa-vision-line">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</p>
           </div>
-          <h1 className="toa-strategy-line">If we build the foundation, more impact is <em>possible</em> for every team.</h1>
 
           <div className="toa-banner-head">
             <h2 className="toa-banner-title">Theory of Action</h2>
@@ -5961,49 +5964,48 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       )}
 
       {activeCol === "goals" && (
-      <div className="toa-floor-band toa-panel">
-        <div className="toa-floor-inner">
-          <div className="toa-stage-head">
-            <h2 className="toa-on-dark">We build field-level enabling conditions.</h2>
-            <p className="toa-on-dark-sub">Shared infrastructure and public goods that raise the technical floor
-               across the entire field — captured in six 2030 goals.</p>
-          </div>
-
-          <div className="toa-feed-strip">
-            <span className="toa-feed-label">Driven by</span>
-            {drivingPortIds.map(id => {
-              const pc = PORT_COLORS[id] || {};
-              return (
-                <span key={id} className="toa-feed-chip"
-                  style={{color:pc.light,borderColor:(pc.color||BORDER)+"88",background:(pc.color||"#000")+"33"}}>
-                  {pc.label || id}
-                </span>
-              );
-            })}
-          </div>
-
-          <div className="toa-goal-grid">
-            {goals.map(g => {
-              const pc = PORT_COLORS[g.portId] || {};
-              return (
-                <div key={g.number} className="toa-goal-card">
-                  <div className="toa-goal-top">
-                    <span className="toa-goal-num">{g.number}</span>
-                    {/* Pale tint, not pc.color — the saturated portfolio
-                        colours only reach ~3.2:1 on the dark band, under the
-                        4.5:1 AA floor for text this small. */}
-                    <span className="toa-goal-origin"
-                      style={{color:pc.light||"rgba(255,255,255,0.6)"}}>{g.originPortfolio}</span>
-                  </div>
-                  <div className={"toa-goal-text"+(g.italic?" toa-italic":"")}>
-                    <b>{g.boldStat}</b> {g.text}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      <section className="toa-panel">
+        <div className="toa-stage-head">
+          <h2>We build field-level enabling conditions.</h2>
+          <p>Shared infrastructure and public goods that raise the technical floor
+             across the entire field — captured in six 2030 goals.</p>
         </div>
-      </div>
+
+        <div className="toa-feed-strip">
+          <span className="toa-feed-label">Driven by</span>
+          {drivingPortIds.map(id => {
+            const pc = PORT_COLORS[id] || {};
+            return (
+              <span key={id} className="toa-feed-chip"
+                style={{color:pc.dark,background:pc.light,borderColor:(pc.color||BORDER)+"55"}}>
+                {pc.label || id}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* The stat leads each card. Previously the goal index sat in display
+            type while the meaningful figure was bold text inside the sentence,
+            which put the emphasis on the wrong number. Portfolio origin is
+            carried by the left rule and the chip, not by the stat's colour. */}
+        <div className="toa-goal-grid">
+          {goals.map(g => {
+            const pc = PORT_COLORS[g.portId] || {};
+            return (
+              <div key={g.number} className="toa-goal-card"
+                style={{borderLeft:"3px solid "+(pc.color||BORDER)}}>
+                <div className="toa-goal-top">
+                  <span className="toa-goal-label">Goal {g.number}</span>
+                  <span className="toa-goal-origin"
+                    style={{color:pc.dark,background:pc.light}}>{g.originPortfolio}</span>
+                </div>
+                <div className="toa-goal-stat">{g.boldStat}</div>
+                <div className={"toa-goal-text"+(g.italic?" toa-italic":"")}>{g.text}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       )}
 
       {activeCol === "impact" && (
@@ -6065,12 +6067,13 @@ const TOA_CSS = `
 .usp-toa .toa-italic { font-style:italic; }
 
 .usp-toa .toa-hero { padding-top:16px; padding-bottom:8px; }
-/* Vision compressed to a slim strip so the strategy line can lead the page */
-.usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:16px; margin-bottom:20px; }
+/* Vision as a subordinate note beneath the thesis, tied to it by a left rule */
+.usp-toa .toa-vision-note { margin-top:20px; padding-left:16px; border-left:3px solid ${ACCENT_MID}; }
+.usp-toa .toa-vision-label { display:block; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:6px; }
 /* Measures set in ch, so the character count holds regardless of font size.
    68ch of "0" glyphs fits roughly 75-80 characters of running prose — the top
    of Bringhurst's comfortable range. */
-.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:17px; line-height:1.6; color:${TEXT_SUB}; margin-top:7px; max-width:68ch; }
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-size:15px; line-height:1.65; color:${TEXT_SUB}; max-width:72ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:40px; line-height:1.2; margin:0; letter-spacing:-0.4px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
@@ -6078,8 +6081,6 @@ const TOA_CSS = `
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:24px; max-width:44ch; line-height:1.3; }
 .usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:70ch; margin-top:10px; line-height:1.6; }
-.usp-toa .toa-on-dark { color:#fff; font-size:24px; max-width:44ch; line-height:1.3; }
-.usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:70ch; margin-top:10px; line-height:1.6; }
 
 /* One card holds the vision, the thesis and the diagram, so the framing runs
    straight into the Theory of Action with no seam between them */
@@ -6125,7 +6126,6 @@ const TOA_CSS = `
 .usp-toa .toa-detail { margin-top:34px; }
 /* Accent rule ties the panel back to the selected stage above */
 .usp-toa .toa-panel { border-top:2px solid ${ACCENT}; padding-top:26px; animation:fadeIn .18s ease both; }
-.usp-toa .toa-floor-band.toa-panel { padding-top:0; }
 .usp-toa .toa-row { display:flex; align-items:stretch; }
 .usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:24px 26px 24px 40px; cursor:pointer; transition:transform .18s cubic-bezier(.4,0,.2,1), background .18s, opacity .15s; }
 /* Nudge forward on hover — the band reads as motion toward 2045 */
@@ -6161,19 +6161,20 @@ const TOA_CSS = `
 .usp-toa .toa-li-desc { color:${TEXT_SUB}; font-size:12.8px; line-height:1.5; }
 .usp-toa .toa-li-note { margin-top:2px; padding-top:10px; border-top:1px dashed ${BORDER}; }
 
-.usp-toa .toa-floor-band { background:${BRAND}; border-radius:16px; }
-.usp-toa .toa-floor-inner { padding:44px 36px 48px; }
-.usp-toa .toa-feed-strip { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:26px 0 30px; }
-.usp-toa .toa-feed-label { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; font-weight:600; color:rgba(255,255,255,0.55); }
-.usp-toa .toa-feed-chip { font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; white-space:nowrap; border:1px solid transparent; }
-.usp-toa .toa-goal-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:32px; }
-.usp-toa .toa-goal-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.11); border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:14px; transition:background .2s ease, border-color .2s ease; }
-.usp-toa .toa-goal-card:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); }
-.usp-toa .toa-goal-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
-.usp-toa .toa-goal-num { font-family:Cambria,Georgia,serif; font-style:italic; font-size:29px; color:rgba(255,255,255,0.5); line-height:1; }
-.usp-toa .toa-goal-origin { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; font-weight:700; text-align:right; }
-.usp-toa .toa-goal-text { font-size:14.5px; line-height:1.55; color:rgba(255,255,255,0.88); }
-.usp-toa .toa-goal-text b { color:#fff; font-size:16px; }
+.usp-toa .toa-feed-strip { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:20px 0 0; }
+.usp-toa .toa-feed-label { font-size:10px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700; color:${TEXT_MUTED}; }
+.usp-toa .toa-feed-chip { font-size:10.5px; font-weight:700; padding:4px 11px; border-radius:20px; white-space:nowrap; border:1px solid transparent; }
+/* Three up on wide screens: six goals read as two tidy rows rather than a
+   long 2x3 column, and each card stays wide enough for its sentence */
+.usp-toa .toa-goal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(288px,1fr)); gap:14px; margin-top:26px; }
+.usp-toa .toa-goal-card { background:${SURFACE}; border:1px solid ${BORDER}; border-radius:12px; padding:18px 20px 20px; display:flex; flex-direction:column; gap:9px; transition:transform .2s ease, box-shadow .2s ease; }
+.usp-toa .toa-goal-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(48,58,68,0.09); }
+.usp-toa .toa-goal-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.usp-toa .toa-goal-label { font-size:9.5px; letter-spacing:1.6px; text-transform:uppercase; font-weight:700; color:${TEXT_MUTED}; }
+.usp-toa .toa-goal-origin { font-size:9px; letter-spacing:0.7px; text-transform:uppercase; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+/* The headline figure, at display size — this is the number that should pop */
+.usp-toa .toa-goal-stat { font-family:Cambria,Georgia,serif; font-weight:600; font-size:42px; line-height:1; color:${BRAND}; letter-spacing:-1.2px; }
+.usp-toa .toa-goal-text { font-size:13.5px; line-height:1.6; color:${TEXT_SUB}; }
 
 .usp-toa .toa-impact-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .usp-toa .toa-impact-card { background:#EEF0F3; border-radius:14px; padding:22px; display:flex; flex-direction:column; gap:8px; }
