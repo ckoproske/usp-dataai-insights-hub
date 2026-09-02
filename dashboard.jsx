@@ -5858,26 +5858,20 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
     <div className="usp-toa">
       <style>{TOA_CSS}</style>
 
-      {/* Vision + strategy framing */}
+      {/* Vision, thesis and the Theory of Action share one white card, so the
+          framing runs straight into the diagram with nothing between them.
+          The vision is a slim strip — it is the page's endpoint, and Stage 4
+          carries it at full weight — while the thesis takes the headline. */}
       <section className="toa-hero">
-        {/* Vision reduced to a slim strip — it is the page's endpoint, and
-            Stage 4 below carries it at full weight. The strategy line is the
-            thesis, so it gets the headline treatment. */}
-        <div className="toa-vision-strip">
-          <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
-          <p className="toa-vision-line">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</p>
-        </div>
-        <h1 className="toa-strategy-line">If we build the foundation, <em>every</em> team builds faster.</h1>
-        <p className="toa-sub">
-          We build a shared AI and data foundation upstream of every solution — the evidence, safety, and
-          capability layers every USP team builds on and benefits from. This is the strategic logic behind our
-          six 2030 goals and our path to 2045.
-        </p>
-
-        {/* IF / THEN / THEN / ACCELERATING chevron banner */}
         <div className="toa-banner">
-          <h2 className="toa-banner-title">Theory of Action</h2>
-          <div className="toa-banner-sub">How the foundation we build turns into impact for every USP team.
+          <div className="toa-vision-strip">
+            <span className="toa-eyebrow toa-accent">Our 2045 Vision</span>
+            <p className="toa-vision-line">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</p>
+          </div>
+          <h1 className="toa-strategy-line">If we build the foundation, more impact is <em>possible</em> for every team.</h1>
+
+          <div className="toa-banner-head">
+            <h2 className="toa-banner-title">Theory of Action</h2>
             <span className="toa-hint">Click any stage to see its detail below</span>
           </div>
           <div className="toa-colheads">
@@ -6073,18 +6067,16 @@ const TOA_CSS = `
 .usp-toa .toa-accent { color:${ACCENT}; }
 .usp-toa .toa-italic { font-style:italic; }
 
-.usp-toa .toa-hero { padding-top:20px; padding-bottom:32px; }
+.usp-toa .toa-hero { padding-top:16px; padding-bottom:8px; }
 /* Vision compressed to a slim strip so the strategy line can lead the page */
-.usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:14px; margin-bottom:22px; }
+.usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:16px; margin-bottom:20px; }
 /* Measures set in ch, so the character count holds regardless of font size.
    68ch of "0" glyphs fits roughly 75-80 characters of running prose — the top
    of Bringhurst's comfortable range. */
 .usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:17px; line-height:1.6; color:${TEXT_SUB}; margin-top:7px; max-width:68ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
-.usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1.25; margin:0 0 12px; }
+.usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:33px; line-height:1.25; margin:0; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
-/* Supporting copy sits directly beneath the strategy line, not beside it */
-.usp-toa .toa-sub { font-size:17.5px; color:${TEXT_SUB}; line-height:1.7; max-width:68ch; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
@@ -6092,10 +6084,11 @@ const TOA_CSS = `
 .usp-toa .toa-on-dark { color:#fff; font-size:31px; max-width:760px; line-height:1.25; }
 .usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:70ch; margin-top:10px; line-height:1.6; }
 
-/* The diagram is a contained object, not loose elements on the page */
-.usp-toa .toa-banner { margin-top:34px; background:${SURFACE}; border:1px solid ${BORDER}; border-radius:16px; padding:24px 28px 30px; box-shadow:0 2px 14px rgba(48,58,68,0.07); }
-.usp-toa .toa-banner-title { font-size:20px; margin-bottom:3px; }
-.usp-toa .toa-banner-sub { font-size:12.5px; color:${TEXT_MUTED}; margin-bottom:18px; }
+/* One card holds the vision, the thesis and the diagram, so the framing runs
+   straight into the Theory of Action with no seam between them */
+.usp-toa .toa-banner { background:${SURFACE}; border:1px solid ${BORDER}; border-radius:16px; padding:28px 32px 32px; box-shadow:0 2px 14px rgba(48,58,68,0.07); }
+.usp-toa .toa-banner-head { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin:30px 0 16px; padding-top:22px; border-top:1px solid ${BORDER}; }
+.usp-toa .toa-banner-title { font-size:20px; }
 .usp-toa .toa-colheads { display:flex; margin-bottom:9px; }
 .usp-toa .toa-colhead { flex:1; padding:0 0 6px 32px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
 .usp-toa .toa-colhead:hover { color:${TEXT_SUB}; }
@@ -6115,7 +6108,7 @@ const TOA_CSS = `
 .usp-toa .toa-caret { display:inline-block; margin-left:7px; font-size:11px; opacity:0.55; transform:translateY(-1px); transition:opacity .15s, color .15s; }
 .usp-toa .toa-chev:hover .toa-caret, .usp-toa .toa-box:hover .toa-caret { opacity:0.9; }
 .usp-toa .toa-chev.active .toa-caret, .usp-toa .toa-box.active .toa-caret { opacity:1; font-size:13px; }
-.usp-toa .toa-hint { display:block; margin-top:5px; font-size:11.5px; font-weight:600; color:${ACCENT}; }
+.usp-toa .toa-hint { font-size:11.5px; font-weight:600; color:${ACCENT}; }
 
 /* Feedback loop, folded in as the diagram's return path */
 .usp-toa .toa-return { margin-top:18px; }
