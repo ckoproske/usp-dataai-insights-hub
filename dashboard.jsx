@@ -6062,7 +6062,10 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
 // Every selector is scoped under .usp-toa — bare nav/section/footer selectors
 // would restyle the rest of the dashboard.
 const TOA_CSS = `
-.usp-toa { color:${TEXT}; font-family:Calibri,'Segoe UI',Arial,sans-serif; }
+/* Capped content column. The prose measures below only look right relative to
+   a bounded page — at full 1600px width a readable line fills a third of it and
+   reads as stranded. */
+.usp-toa { color:${TEXT}; font-family:Calibri,'Segoe UI',Arial,sans-serif; max-width:1120px; margin:0 auto; }
 .usp-toa * { box-sizing:border-box; }
 .usp-toa h1, .usp-toa h2, .usp-toa h3 { font-family:Cambria,Georgia,serif; margin:0; font-weight:600; color:${TEXT}; }
 .usp-toa section { margin:0 auto; padding:64px 4px 32px; scroll-margin-top:24px; }
@@ -6074,7 +6077,7 @@ const TOA_CSS = `
 /* Descending hierarchy under the thesis: headline 40px, this 18px, the vision
    note 15px behind a rule. "can" is emphasised — the layers are available to
    every team, not necessarily used by all of them. */
-.usp-toa .toa-sub { font-size:18px; color:${TEXT_SUB}; line-height:1.65; max-width:68ch; margin-top:14px; }
+.usp-toa .toa-sub { font-size:20px; color:${TEXT_SUB}; line-height:1.6; max-width:78ch; margin-top:15px; }
 .usp-toa .toa-sub em { font-style:italic; color:${TEXT}; font-weight:600; }
 /* Vision as a subordinate note beneath the thesis, tied to it by a left rule */
 .usp-toa .toa-vision-note { margin-top:20px; padding-left:16px; border-left:3px solid ${ACCENT_MID}; }
@@ -6082,14 +6085,14 @@ const TOA_CSS = `
 /* Measures set in ch, so the character count holds regardless of font size.
    68ch of "0" glyphs fits roughly 75-80 characters of running prose — the top
    of Bringhurst's comfortable range. */
-.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-size:15px; line-height:1.65; color:${TEXT_SUB}; max-width:72ch; }
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-size:16px; line-height:1.65; color:${TEXT_SUB}; max-width:84ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:40px; line-height:1.2; margin:0; letter-spacing:-0.4px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
-.usp-toa .toa-stage-head h2 { font-size:24px; max-width:44ch; line-height:1.3; }
-.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:70ch; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-stage-head h2 { font-size:24px; max-width:52ch; line-height:1.3; }
+.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:16px; max-width:88ch; margin-top:10px; line-height:1.6; }
 
 /* One card holds the vision, the thesis and the diagram, so the framing runs
    straight into the Theory of Action with no seam between them */
