@@ -6054,7 +6054,12 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       <section className="toa-panel" role="tabpanel" id="toa-panel-path2045" aria-labelledby="toa-tab-path2045">
         <div className="toa-stage-head">
           <h2>Where it all points: 2045.</h2>
-          <p>Every layer above rolls up into one number, then fans out into the areas it accelerates.</p>
+          <p>Our goals create field-level enabling conditions that raise the technical floor on impact across
+             AMB45 Pillars on the key dimensions that comprise the pilot-stage division ROI model{" "}
+             <b>(Scale × Efficacy × Durability)/Cost</b>.</p>
+          <p><b>We hypothesize our greatest impact is on the Scale and Cost terms</b> — field-level data and AI
+             infrastructure that lowers the cost of, and widens who can access, highly effective AI enabled
+             solutions.</p>
         </div>
         <div className="toa-path-wrap">
           <div className="toa-counter-card">
@@ -6111,6 +6116,9 @@ const TOA_CSS = `
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:26px; max-width:56ch; line-height:1.3; }
 .usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:17px; max-width:96ch; margin-top:10px; line-height:1.6; }
+/* Second and subsequent paragraphs need a clearer break than the first does */
+.usp-toa .toa-stage-head p + p { margin-top:14px; }
+.usp-toa .toa-stage-head b { color:${TEXT}; font-weight:700; }
 
 /* One card holds the vision, the thesis and the diagram, so the framing runs
    straight into the Theory of Action with no seam between them */
