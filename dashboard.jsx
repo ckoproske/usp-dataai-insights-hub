@@ -5999,7 +5999,11 @@ function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, select
   useEffect(() => { if (selectedGoal) setActiveTab("goals"); }, [selectedGoal]);
 
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:28}}>
+    // Capped content column, centred. Editorial best practice: with a max width
+    // on the page, the tab rail, the diagram and the prose all share the same
+    // left and right edges, so capped paragraphs read as a deliberate column
+    // rather than text stranded at the left of a very wide area.
+    <div style={{display:"flex",flexDirection:"column",gap:28,maxWidth:1240,width:"100%",margin:"0 auto"}}>
 
       {/* Sub-nav — sits at the top of the page on every tab. The vision
           statement banner that used to head this page is gone; the Strategy
@@ -6516,20 +6520,21 @@ const TOA_CSS = `
 .usp-toa .toa-hero { padding-top:20px; padding-bottom:32px; }
 /* Vision compressed to a slim strip so the strategy line can lead the page */
 .usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:14px; margin-bottom:22px; }
-/* Both intro lines run the full container width by request. Type is sized up a
-   little to suit the longer measure. */
-.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:15.5px; line-height:1.6; color:${TEXT_SUB}; margin-top:7px; }
+/* Measures set in ch, so the character count holds regardless of font size.
+   68ch of "0" glyphs fits roughly 75-80 characters of running prose — the top
+   of Bringhurst's comfortable range. */
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:17px; line-height:1.6; color:${TEXT_SUB}; margin-top:7px; max-width:68ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1.25; margin:0 0 12px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 /* Supporting copy sits directly beneath the strategy line, not beside it */
-.usp-toa .toa-sub { font-size:16.5px; color:${TEXT_SUB}; line-height:1.7; }
+.usp-toa .toa-sub { font-size:17.5px; color:${TEXT_SUB}; line-height:1.7; max-width:68ch; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
-.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:640px; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:70ch; margin-top:10px; line-height:1.6; }
 .usp-toa .toa-on-dark { color:#fff; font-size:31px; max-width:760px; line-height:1.25; }
-.usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:680px; margin-top:10px; line-height:1.6; }
+.usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:70ch; margin-top:10px; line-height:1.6; }
 
 /* The diagram is a contained object, not loose elements on the page */
 .usp-toa .toa-banner { margin-top:34px; background:${SURFACE}; border:1px solid ${BORDER}; border-radius:16px; padding:24px 28px 30px; box-shadow:0 2px 14px rgba(48,58,68,0.07); }
@@ -6560,7 +6565,7 @@ const TOA_CSS = `
 .usp-toa .toa-return { margin-top:18px; }
 .usp-toa .toa-return-bracket { height:20px; border:1px solid ${BORDER}; border-top:none; border-radius:0 0 12px 12px; position:relative; }
 .usp-toa .toa-return-bracket::after { content:""; position:absolute; left:-5px; top:-7px; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:7px solid ${TEXT_MUTED}; }
-.usp-toa .toa-return-caption { margin-top:9px; font-size:12px; color:${TEXT_SUB}; line-height:1.55; max-width:900px; }
+.usp-toa .toa-return-caption { margin-top:9px; font-size:12.5px; color:${TEXT_SUB}; line-height:1.55; max-width:80ch; }
 .usp-toa .toa-return-caption b { color:${TEXT}; font-weight:700; }
 
 /* One stage at a time, chosen from the diagram above */
