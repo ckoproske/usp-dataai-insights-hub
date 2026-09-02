@@ -68,7 +68,7 @@ function cleanTeam(name) {
 
 // Portfolio colors — muted tonal family per GF brand
 const PORT_COLORS = {
-  "cross-cutting": { color:"#64748B", light:"#F1F5F9", label:"Cross Cutting Supports",  dark:"#475569" },
+  "cross-cutting": { color:"#64748B", light:"#F1F5F9", label:"Strategy, Planning, and Management",  dark:"#475569" },
   "ai-infra":      { color:"#0891B2", light:"#CFFAFE", label:"AI Infrastructure",        dark:"#0E7490" },
   "sfl":           { color:"#EC4899", light:"#FCE7F3", label:"System Feedback Loops",    dark:"#BE185D" },
   "hub":           { color:"#9333EA", light:"#F3E8FF", label:"Data & AI Enablement Hub", dark:"#7E22CE" },
@@ -294,7 +294,7 @@ const DEFAULT_DATA = {
   portfolios: {
     "cross-cutting": {
       portfolio: {
-        name:"Cross Cutting Supports",
+        name:"Strategy, Planning, and Management",
         description:"The Cross-Cutting Portfolio provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time.",
         teamMembers:["Natasha Fedo, DDSPM","Chelsea Koproske, SPO MLE & Strategy","Lilian Tan, Senior Manager","Melanie Winslow, Interim ASO","Emily Strom, PA","Elizabeth Hankins, SPC","Nicole David, PC/PA"],
         budget:"",budget2026:"",budget2027:"",budget2028:"",budget2029:"",
@@ -4648,7 +4648,7 @@ function GoalExplorer({ strategyRatings }) {
   const PORTS = [
     {id:"ai-infra",       label:"AI Infrastructure",          color:"#3086AB", light:"#EBF4F9"},
     {id:"sfl",            label:"System Feedback Loops",       color:"#4EAB9A", light:"#ECF7F5"},
-    {id:"cross-cutting",  label:"Cross Cutting Supports",      color:"#A49A8C", light:"#F5F3ED"},
+    {id:"cross-cutting",  label:"Strategy, Planning, and Management", color:"#A49A8C", light:"#F5F3ED"},
     {id:"hub",            label:"Data & AI Enablement Hub",    color:"#FBAE40", light:"#FEF5E7", note:"Enables all"},
   ];
 
@@ -5743,6 +5743,14 @@ const TOA_PATH_2045 = {
   recipients:["K12 Teaching & Learning","PS Learning & Nav","Advocacy & Systems Impl."],
 };
 
+// On this page the cross-cutting portfolio is referred to as "Cross Cutting" —
+// it drives goal 6 but is not one of the three portfolios shown as cards, so
+// naming it in full would imply a fourth card that is not there.
+const TOA_ORIGIN_LABEL = { "cross-cutting": "Cross Cutting" };
+// Portfolios shown as cards on this page. Cross-cutting is deliberately absent:
+// the strategy is presented as three portfolios building the shared foundation.
+const TOA_PORTFOLIO_IDS = ["ai-infra", "sfl", "hub"];
+
 // Short one-line summaries shown on the portfolio cards, hardcoded from the
 // approved slide. The full description from the DB is revealed on click.
 // Keyed by bow_id. Two of these ids are not namespaced by portfolio — "bow1"
@@ -5797,7 +5805,7 @@ function toaWithEmphasis(text, emphasis) {
 // BOWs are excluded here too: this page is the outward-facing strategy
 // narrative, so a wound-down body of work should not be named on it.
 function toaPortfolios(data) {
-  return PORTFOLIOS.map(({ id }) => {
+  return TOA_PORTFOLIO_IDS.map(id => {
     const pd = data?.portfolios?.[id];
     if (!pd) return null;
     return {
@@ -5830,7 +5838,7 @@ function toaGoals() {
       boldStat: stat || String(g.number).padStart(2, "0"),
       text: rest,
       portId,
-      originPortfolio: portId ? (PORT_COLORS[portId]?.label || portId) : "Cross-cutting",
+      originPortfolio: portId ? (TOA_ORIGIN_LABEL[portId] || PORT_COLORS[portId]?.label || portId) : "Cross Cutting",
       italic: portId === "cross-cutting",
     };
   });
@@ -5958,8 +5966,8 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       {activeCol === "portfolios" && (
       <section className="toa-panel" role="tabpanel" id="toa-panel-portfolios" aria-labelledby="toa-tab-portfolios">
         <div className="toa-stage-head">
-          <h2>Four portfolios build the shared foundation.</h2>
-          <p>Four core functions carry the strategy. Inside each, you'll find the bodies of work — the big bets
+          <h2>Three portfolios build the shared foundation.</h2>
+          <p>Three core functions carry the strategy. Inside each, you'll find the bodies of work — the big bets
              we're placing to reach our 2030 goals.</p>
         </div>
 
@@ -6004,7 +6012,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
             return (
               <span key={id} className="toa-feed-chip"
                 style={{color:pc.dark,background:pc.light,borderColor:(pc.color||BORDER)+"55"}}>
-                {pc.label || id}
+                {TOA_ORIGIN_LABEL[id] || pc.label || id}
               </span>
             );
           })}
@@ -6273,7 +6281,7 @@ const PORTFOLIOS = [
   {id:"ai-infra",      label:"AI Infrastructure"},
   {id:"sfl",           label:"System Feedback Loops"},
   {id:"hub",           label:"Data & AI Enablement Hub"},
-  {id:"cross-cutting", label:"Cross Cutting Supports"},
+  {id:"cross-cutting", label:"Strategy, Planning, and Management"},
 ];
 
 function IconTable() {
