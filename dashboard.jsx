@@ -5731,7 +5731,8 @@ const TOA_IMPACT_OUTCOMES = [
 // beneath it so the tail always lands under the selected stage.
 const TOA_STAGES = [
   { key:"portfolios", tag:"IF",           text:"we build a shared AI & data foundation upstream of every solution" },
-  { key:"goals",      tag:"THEN",         text:"we build field-level enabling conditions via six 2030 goals" },
+  { key:"goals",      tag:"THEN",         text:"we raise the technical floor",
+    sub:"via six 2030 strategy goals" },
   { key:"impact",     tag:"THEN",         text:"more impact is possible for every USP team" },
   { key:"path2045",   tag:"ACCELERATING", text:"our path to 2045", terminus:true },
 ];
@@ -5882,7 +5883,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
             and capability layers every USP team <em>can</em> build on and benefit from.
           </p>
           <div className="toa-vision-note">
-            <span className="toa-vision-label">Toward our 2045 vision</span>
+            <span className="toa-vision-label">Toward our Data &amp; AI 2045 vision</span>
             <p className="toa-vision-line">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</p>
           </div>
 
@@ -5914,12 +5915,14 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                   + " toa-tone-" + (i + 1)
                   + (activeCol === s.key ? " active" : "")}
                 onClick={()=>setActiveCol(s.key)}>
-                <span className={"toa-tag"+(s.terminus?" toa-tag-dark":"")}>
+                <span className="toa-tag">
                   <span className="toa-step">{i+1}</span>
-                  {s.tag}
                   <span className="toa-caret" aria-hidden="true">▾</span>
                 </span>
-                <span className="toa-chev-text">{s.text}</span>
+                <span className="toa-chev-text">
+                  <span className="toa-conn">{s.tag}</span> {s.text}
+                </span>
+                {s.sub && <span className="toa-chev-sub">{s.sub}</span>}
               </button>
             ))}
           </div>
@@ -6094,7 +6097,7 @@ const TOA_CSS = `
 .usp-toa h1, .usp-toa h2, .usp-toa h3 { font-family:Cambria,Georgia,serif; margin:0; font-weight:600; color:${TEXT}; }
 .usp-toa section { margin:0 auto; padding:64px 4px 32px; scroll-margin-top:24px; }
 .usp-toa .toa-eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:12.5px; font-weight:600; color:${TEXT_MUTED}; display:block; }
-.usp-toa .toa-accent { color:${ACCENT}; }
+.usp-toa .toa-accent { color:${TEXT_MUTED}; }
 .usp-toa .toa-italic { font-style:italic; }
 
 .usp-toa .toa-hero { padding-top:16px; padding-bottom:8px; }
@@ -6104,13 +6107,13 @@ const TOA_CSS = `
 .usp-toa .toa-sub { font-size:22px; color:${TEXT_SUB}; line-height:1.6; max-width:88ch; margin-top:16px; }
 .usp-toa .toa-sub em { font-style:italic; color:${TEXT}; font-weight:600; }
 /* Vision as a subordinate note beneath the thesis, tied to it by a left rule */
-.usp-toa .toa-vision-note { margin-top:20px; padding-left:16px; border-left:3px solid ${ACCENT_MID}; }
+.usp-toa .toa-vision-note { margin-top:20px; padding-left:16px; border-left:3px solid ${BORDER}; }
 .usp-toa .toa-vision-label { display:block; font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:6px; }
 /* Measures set in ch, so the character count holds regardless of font size.
    68ch of "0" glyphs fits roughly 75-80 characters of running prose — the top
    of Bringhurst's comfortable range. */
 .usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-size:17px; line-height:1.65; color:${TEXT_SUB}; max-width:96ch; }
-.usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
+.usp-toa .toa-vision-line em { font-style:italic; color:${BRAND}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:40px; line-height:1.2; margin:0; letter-spacing:-0.4px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 
@@ -6133,7 +6136,7 @@ const TOA_CSS = `
 .usp-toa .toa-colhead { flex:1; margin-left:-22px; padding:0 0 6px 40px; font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
 .usp-toa .toa-colhead:first-child { margin-left:0; }
 .usp-toa .toa-colhead:hover { color:${TEXT_SUB}; }
-.usp-toa .toa-colhead.active { color:${TEXT}; border-bottom-color:${ACCENT}; }
+.usp-toa .toa-colhead.active { color:${TEXT}; border-bottom-color:${BRAND}; }
 /* Selection reads on the header underline, the chevron background and the
    caret. The chip columns stay at full strength — dimming them would make the
    diagram look faded rather than filtered. */
@@ -6143,14 +6146,14 @@ const TOA_CSS = `
 /* Selected stage lifts out of the band so the link to the panel is obvious */
 .usp-toa .toa-chev.active { background:#43505E; }
 .usp-toa .toa-chev:hover:not(.active) { background:#3A4551; }
-.usp-toa .toa-box.active { background:${ACCENT_MID}; }
+.usp-toa .toa-box.active { background:#E1E6EC; }
 
 /* Disclosure caret — the affordance that these stages open the panel below */
 .usp-toa .toa-caret { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; margin-left:auto; font-size:12px; line-height:1; border:1.5px solid rgba(255,255,255,0.4); color:rgba(255,255,255,0.85); transition:background .15s, border-color .15s, color .15s, transform .15s; flex-shrink:0; }
 .usp-toa .toa-box .toa-caret { border-color:rgba(48,58,68,0.35); color:${BRAND}; }
 .usp-toa .toa-chev:hover .toa-caret, .usp-toa .toa-box:hover .toa-caret { border-color:${ACCENT}; transform:translateY(1px); }
 .usp-toa .toa-chev.active .toa-caret, .usp-toa .toa-box.active .toa-caret { background:${ACCENT}; border-color:${ACCENT}; color:#fff; }
-.usp-toa .toa-hint { font-size:13px; font-weight:600; color:${ACCENT}; }
+.usp-toa .toa-hint { font-size:13px; font-weight:600; color:${TEXT_MUTED}; }
 
 /* Tail under the selected stage — the join that makes this read as a tab set */
 .usp-toa .toa-tails { display:flex; height:10px; }
@@ -6188,13 +6191,21 @@ const TOA_CSS = `
 .usp-toa .toa-chev-1 { clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%); margin-left:0; border-radius:10px 0 0 10px; }
 /* The terminus interlocks like the rest of the band — same notch, same overlap,
    same text inset — so the sequence flows into it instead of butting against it */
-.usp-toa .toa-box { background:${ACCENT_LIGHT}; color:${BRAND}; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%, 22px 50%); margin-left:-22px; }
-.usp-toa .toa-tag { display:flex; align-items:center; font-size:13px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:9px; }
+.usp-toa .toa-box { background:#EEF0F3; color:${BRAND}; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%, 22px 50%); margin-left:-22px; }
+.usp-toa .toa-tag { display:flex; align-items:center; margin-bottom:10px; }
+/* IF / THEN read inline as part of the claim, coloured to stand apart from it.
+   A warm tint, not ACCENT: accent orange on these slate tones is only 3.6:1
+   against BRAND and 2.6:1 against the lightest chevron, under the 4.5:1 AA
+   floor. #FFB27A clears 6.5:1 and 4.6:1 respectively. */
+.usp-toa .toa-conn { font-weight:700; letter-spacing:0.6px; color:#FFB27A; }
+.usp-toa .toa-box .toa-conn { color:#B34200; }
 /* Numbered step, so the sequence is explicit without extra copy */
 .usp-toa .toa-step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; margin-right:9px; font-size:12.5px; letter-spacing:0; background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.9); flex-shrink:0; }
 .usp-toa .toa-box .toa-step { background:rgba(48,58,68,0.14); color:${BRAND}; }
-.usp-toa .toa-tag-dark { color:${BRAND}; }
 .usp-toa .toa-chev-text { display:block; font-size:14.5px; line-height:1.45; max-width:300px; }
+/* Optional qualifying line beneath a stage, set back so the claim leads */
+.usp-toa .toa-chev-sub { display:block; font-size:13px; line-height:1.4; margin-top:5px; max-width:300px; color:rgba(255,255,255,0.62); }
+.usp-toa .toa-box .toa-chev-sub { color:rgba(48,58,68,0.62); }
 .usp-toa .toa-box .toa-chev-text { font-weight:700; }
 
 
@@ -6206,7 +6217,7 @@ const TOA_CSS = `
    the list, since the card's 14px flex gap would otherwise detach the label
    from the items it labels. */
 .usp-toa .toa-pcard-label { font-size:12px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:-7px; }
-.usp-toa .toa-more { background:none; border:none; padding:0; margin-top:5px; font-family:inherit; font-size:13px; font-weight:700; color:${ACCENT}; cursor:pointer; }
+.usp-toa .toa-more { background:none; border:none; padding:0; margin-top:5px; font-family:inherit; font-size:13px; font-weight:700; color:${BRAND}; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
 .usp-toa .toa-more:hover { text-decoration:underline; }
 .usp-toa .toa-pcard ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; }
 .usp-toa .toa-pcard li { font-size:13.5px; }
