@@ -6269,7 +6269,9 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
         {/* IF / THEN / THEN / ACCELERATING chevron banner */}
         <div className="toa-banner">
           <h2 className="toa-banner-title">Theory of Action</h2>
-          <div className="toa-banner-sub">How the foundation we build turns into impact for every USP team.</div>
+          <div className="toa-banner-sub">How the foundation we build turns into impact for every USP team.
+            <span className="toa-hint">Click any stage to see its detail below</span>
+          </div>
           <div className="toa-colheads">
             {TOA_COLS.map(c => (
               <button key={c.key}
@@ -6279,19 +6281,19 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           </div>
           <div className="toa-row">
             <div className={"toa-chev toa-chev-1"+(activeCol==="portfolios"?" active":"")} onClick={()=>setActiveCol("portfolios")}>
-              <span className="toa-tag">IF</span>
+              <span className="toa-tag">IF<span className="toa-caret">▾</span></span>
               <p>we build a shared AI &amp; data foundation upstream of every solution</p>
             </div>
             <div className={"toa-chev"+(activeCol==="goals"?" active":"")} onClick={()=>setActiveCol("goals")}>
-              <span className="toa-tag">THEN</span>
+              <span className="toa-tag">THEN<span className="toa-caret">▾</span></span>
               <p>we build field-level enabling conditions via six 2030 goals</p>
             </div>
             <div className={"toa-chev"+(activeCol==="impact"?" active":"")} onClick={()=>setActiveCol("impact")}>
-              <span className="toa-tag">THEN</span>
+              <span className="toa-tag">THEN<span className="toa-caret">▾</span></span>
               <p>more impact is possible for every USP team</p>
             </div>
             <div className={"toa-box"+(activeCol==="path2045"?" active":"")} onClick={()=>setActiveCol("path2045")}>
-              <span className="toa-tag toa-tag-dark">ACCELERATING</span>
+              <span className="toa-tag toa-tag-dark">ACCELERATING<span className="toa-caret">▾</span></span>
               <p>our path to 2045</p>
             </div>
           </div>
@@ -6514,12 +6516,14 @@ const TOA_CSS = `
 .usp-toa .toa-hero { padding-top:20px; padding-bottom:32px; }
 /* Vision compressed to a slim strip so the strategy line can lead the page */
 .usp-toa .toa-vision-strip { border-bottom:1px solid ${BORDER}; padding-bottom:14px; margin-bottom:22px; }
-.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.55; color:${TEXT_SUB}; margin-top:6px; max-width:80ch; }
+/* Both intro lines run the full container width by request. Type is sized up a
+   little to suit the longer measure. */
+.usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:15.5px; line-height:1.6; color:${TEXT_SUB}; margin-top:7px; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
 .usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1.25; margin:0 0 12px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 /* Supporting copy sits directly beneath the strategy line, not beside it */
-.usp-toa .toa-sub { font-size:15.5px; color:${TEXT_SUB}; line-height:1.65; max-width:760px; }
+.usp-toa .toa-sub { font-size:16.5px; color:${TEXT_SUB}; line-height:1.7; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
 .usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
@@ -6535,12 +6539,22 @@ const TOA_CSS = `
 .usp-toa .toa-colhead { flex:1; padding:0 0 6px 32px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
 .usp-toa .toa-colhead:hover { color:${TEXT_SUB}; }
 .usp-toa .toa-colhead.active { color:${TEXT}; border-bottom-color:${ACCENT}; }
-/* Selection reads on the header underline and the chevron. The chip columns
-   stay at full strength — dimming them would make the diagram look faded
-   rather than filtered, and it needs to read as one complete picture. */
-.usp-toa .toa-chev, .usp-toa .toa-box { opacity:0.86; transition:opacity .15s; }
+/* Selection reads on the header underline, the chevron background and the
+   caret. The chip columns stay at full strength — dimming them would make the
+   diagram look faded rather than filtered. */
+.usp-toa .toa-chev, .usp-toa .toa-box { opacity:0.9; transition:opacity .15s, background .15s; }
 .usp-toa .toa-chev.active, .usp-toa .toa-box.active,
 .usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { opacity:1; }
+/* Selected stage lifts out of the band so the link to the panel is obvious */
+.usp-toa .toa-chev.active { background:#43505E; }
+.usp-toa .toa-chev:hover:not(.active) { background:#3A4551; }
+.usp-toa .toa-box.active { background:${ACCENT_MID}; }
+
+/* Disclosure caret — the affordance that these stages open the panel below */
+.usp-toa .toa-caret { display:inline-block; margin-left:7px; font-size:11px; opacity:0.55; transform:translateY(-1px); transition:opacity .15s, color .15s; }
+.usp-toa .toa-chev:hover .toa-caret, .usp-toa .toa-box:hover .toa-caret { opacity:0.9; }
+.usp-toa .toa-chev.active .toa-caret, .usp-toa .toa-box.active .toa-caret { opacity:1; font-size:13px; }
+.usp-toa .toa-hint { display:block; margin-top:5px; font-size:11.5px; font-weight:600; color:${ACCENT}; }
 
 /* Feedback loop, folded in as the diagram's return path */
 .usp-toa .toa-return { margin-top:18px; }
