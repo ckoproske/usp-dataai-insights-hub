@@ -5501,308 +5501,7 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
   );
 }
 
-// ── StrategyMap ───────────────────────────────────────────────────────────────
-function StrategyMap({ data, onNavigateToPortfolio }) {
-  const [hoveredGoal, setHoveredGoal] = useState(null);
-  const [hoveredPort, setHoveredPort] = useState(null);
-  const [hoveredBow,  setHoveredBow]  = useState(null);
-  const [selectedPort, setSelectedPort] = useState(null);
-  const [selectedBow,  setSelectedBow]  = useState(null);
-  const detailRef = React.useRef(null);
 
-  const PORTS = [
-    { id:"ai-infra",      ...PORT_COLORS["ai-infra"],      goals:[1,2,5] },
-    { id:"sfl",           ...PORT_COLORS["sfl"],           goals:[3,4,5] },
-    { id:"cross-cutting", ...PORT_COLORS["cross-cutting"], goals:[5]     },
-    { id:"hub",           ...PORT_COLORS["hub"],           goals:[5]     },
-  ];
-
-  const portBows  = (portId) => (data.portfolios[portId]?.bows || []).filter(b => !b.retired);
-  const portData  = (portId) => data.portfolios[portId]?.portfolio || {};
-  const goalLit   = (gNum)   => hoveredGoal === gNum || (hoveredPort && PORT_GOAL_MAP[hoveredPort]?.includes(gNum));
-  const goalDim   = (gNum)   => hoveredPort && !PORT_GOAL_MAP[hoveredPort]?.includes(gNum);
-  const portLit   = (portId) => hoveredPort === portId || (hoveredGoal && PORT_GOAL_MAP[portId]?.includes(hoveredGoal));
-  const portDim   = (portId) => hoveredGoal && !PORT_GOAL_MAP[portId]?.includes(hoveredGoal);
-
-  const handlePortClick = (portId) => {
-    setSelectedBow(null);
-    setSelectedPort(prev => {
-      const next = prev === portId ? null : portId;
-      if (next) setTimeout(()=>detailRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),50);
-      return next;
-    });
-  };
-  const handleBowClick = (portId, bowId, e) => {
-    e.stopPropagation();
-    setSelectedPort(null);
-    setSelectedBow(prev => {
-      const next = prev?.bowId === bowId ? null : { portId, bowId };
-      if (next) setTimeout(()=>detailRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),50);
-      return next;
-    });
-  };
-
-  // Resolved detail
-  const detailPort = selectedPort ? PORTS.find(p => p.id === selectedPort) : null;
-  const detailPortData = selectedPort ? portData(selectedPort) : null;
-  const detailBow  = selectedBow  ? portBows(selectedBow.portId).find(b => b.id === selectedBow.bowId) : null;
-  const detailBowPort = selectedBow ? PORTS.find(p => p.id === selectedBow.portId) : null;
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:0}}>
-
-      {/* Legend */}
-      <div style={{display:"flex",alignItems:"center",gap:20,marginBottom:24,padding:"11px 16px",background:SURFACE,borderRadius:10,border:"1px solid "+BORDER}}>
-        <span style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.5,flexShrink:0}}>How to read</span>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:24,height:1.5,background:BORDER,borderRadius:1,borderTop:"1px dashed "+TEXT_MUTED}}/>
-          <span style={{fontSize:12,color:TEXT_MUTED}}>Contributes toward</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:24,height:2,background:ACCENT,borderRadius:1}}/>
-          <span style={{fontSize:12,color:TEXT_MUTED}}>Highlighted connection</span>
-        </div>
-        <span style={{fontSize:12,color:TEXT_MUTED,marginLeft:"auto"}}>Hover to highlight connections · Click a portfolio or BOW for detail ↓</span>
-      </div>
-
-      {/* Three-column map */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 24px 1.3fr 24px 1.2fr",gap:0,alignItems:"start"}}>
-
-        {/* ── Goals ── */}
-        <div style={{display:"flex",flexDirection:"column",gap:0}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:TEXT_MUTED,marginBottom:12,paddingLeft:2}}>2030 Goals</div>
-          {STRATEGY_GOALS.map(g => {
-            const lit = goalLit(g.number);
-            const dim = goalDim(g.number);
-            return (
-              <div key={g.id}
-                onMouseEnter={()=>setHoveredGoal(g.number)}
-                onMouseLeave={()=>setHoveredGoal(null)}
-                style={{marginBottom:8,borderRadius:10,
-                  border:"1.5px solid "+(lit?g.color:BORDER),
-                  background:lit?g.color+"0D":SURFACE,
-                  padding:"12px 14px",transition:"all .18s",opacity:dim?0.2:1,
-                  boxShadow:lit?"0 2px 10px rgba(0,0,0,0.06)":"none"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                  <span style={{fontSize:10,fontWeight:700,color:lit?g.color:TEXT_MUTED,letterSpacing:1}}>G{g.number}</span>
-                  <span style={{fontSize:12,fontWeight:600,color:TEXT,lineHeight:1.3,flex:1}}>{g.title}</span>
-                </div>
-                <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.5}}>{g.target}</div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Connector: Goals → Portfolios */}
-        <ConnectorColumn
-          leftItems={STRATEGY_GOALS} rightItems={PORTS}
-          getLeftId={g=>g.number} getRightId={p=>p.id}
-          isConnected={(g,p)=>(PORT_GOAL_MAP[p.id]||[]).includes(g.number)}
-          highlightLeft={hoveredGoal} highlightRight={hoveredPort}
-          getLeftColor={()=>ACCENT} getRightColor={p=>p.color}
-          leftCount={STRATEGY_GOALS.length} rightCount={PORTS.length}
-        />
-
-        {/* ── Portfolios ── */}
-        <div style={{display:"flex",flexDirection:"column",gap:0}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:TEXT_MUTED,marginBottom:12,paddingLeft:2}}>Portfolios</div>
-          {PORTS.map(p => {
-            const lit = portLit(p.id);
-            const dim = portDim(p.id);
-            const bows = portBows(p.id);
-            const isSelected = selectedPort === p.id;
-            return (
-              <div key={p.id} style={{marginBottom:8,transition:"opacity .18s",opacity:dim?0.25:1}}>
-                <div
-                  onMouseEnter={()=>setHoveredPort(p.id)}
-                  onMouseLeave={()=>setHoveredPort(null)}
-                  onClick={()=>handlePortClick(p.id)}
-                  style={{borderRadius:10,
-                    border:"1.5px solid "+(isSelected?p.color:lit?BORDER:BORDER),
-                    background:isSelected?p.color+"0D":lit?SURFACE_2:SURFACE,
-                    padding:"12px 14px",cursor:"pointer",transition:"all .18s",
-                    boxShadow:isSelected?"0 3px 14px rgba(0,0,0,0.08)":"none"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{width:8,height:8,borderRadius:"50%",background:p.color,flexShrink:0}}/>
-                    <span style={{fontSize:13,fontWeight:600,color:isSelected?p.color:TEXT,flex:1}}>{p.label}</span>
-                    <span style={{fontSize:11,color:TEXT_MUTED}}>{bows.length} BOW{bows.length!==1?"s":""}</span>
-                    <span style={{fontSize:11,color:isSelected?p.color:TEXT_MUTED,transition:"transform .15s",display:"inline-block",transform:isSelected?"rotate(90deg)":"rotate(0deg)"}}>›</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Connector: Portfolios → BOWs */}
-        <ConnectorColumn
-          leftItems={PORTS} rightItems={PORTS.flatMap(p=>portBows(p.id).map(b=>({...b,_portId:p.id,_portColor:p.color})))}
-          getLeftId={p=>p.id}
-          getRightId={b=>b.id}
-          isConnected={(p,b)=>b._portId===p.id}
-          highlightLeft={hoveredPort || selectedPort}
-          highlightRight={hoveredBow || selectedBow?.bowId}
-          getLeftColor={p=>p.color}
-          getRightColor={b=>b._portColor}
-          leftCount={PORTS.length}
-          rightCount={PORTS.reduce((s,p)=>s+portBows(p.id).length,0)}
-        />
-
-        {/* ── BOWs ── */}
-        <div style={{display:"flex",flexDirection:"column",gap:0}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:TEXT_MUTED,marginBottom:12,paddingLeft:2}}>Bodies of Work</div>
-          {PORTS.map(p => {
-            const bows = portBows(p.id);
-            if (!bows.length) return null;
-            const dim = portDim(p.id);
-            return (
-              <div key={p.id} style={{marginBottom:8,opacity:dim?0.25:1,transition:"opacity .18s"}}>
-                <div style={{fontSize:10,fontWeight:600,color:p.color,letterSpacing:1,textTransform:"uppercase",marginBottom:5,paddingLeft:2}}>
-                  {p.label}
-                </div>
-                {bows.map(b=>{
-                  const isSel = selectedBow?.bowId === b.id;
-                  return (
-                    <div key={b.id}
-                      onMouseEnter={()=>setHoveredBow(b.id)}
-                      onMouseLeave={()=>setHoveredBow(null)}
-                      onClick={(e)=>handleBowClick(p.id,b.id,e)}
-                      style={{display:"flex",alignItems:"center",gap:8,
-                        padding:"9px 12px",marginBottom:4,borderRadius:8,
-                        border:"1.5px solid "+(isSel?p.color:hoveredBow===b.id?p.color+"66":BORDER),
-                        background:isSel?p.color+"10":hoveredBow===b.id?p.color+"06":SURFACE,
-                        transition:"all .15s",cursor:"pointer",
-                        boxShadow:isSel?"0 2px 10px rgba(0,0,0,0.07)":"none"}}>
-                      <span style={{width:3,height:32,borderRadius:2,background:p.color,flexShrink:0}}/>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:isSel?600:400,color:isSel?p.color:TEXT,lineHeight:1.3}}>{b.name}</div>
-                      </div>
-                      <span style={{fontSize:10,color:isSel?p.color:TEXT_MUTED,transition:"transform .15s",transform:isSel?"rotate(90deg)":"rotate(0deg)"}}>›</span>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Detail panel ── */}
-      {(detailPort || detailBow) && (
-        <div ref={detailRef} style={{marginTop:20,borderRadius:12,border:"1.5px solid "+(detailPort?detailPort.color:detailBowPort?.color||BORDER),
-          background:SURFACE,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.07)",animation:"fadeUp .18s ease"}}>
-
-          {/* Panel header */}
-          <div style={{
-            padding:"16px 22px",
-            background:(detailPort?detailPort.color:detailBowPort?.color||BRAND)+"0D",
-            borderBottom:"1px solid "+(detailPort?detailPort.color:detailBowPort?.color||BORDER)+"33",
-            display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              {detailPort && <span style={{width:10,height:10,borderRadius:"50%",background:detailPort.color,display:"inline-block"}}/>}
-              <div>
-                <div style={{fontSize:10,fontWeight:600,color:(detailPort?detailPort.color:detailBowPort?.color),textTransform:"uppercase",letterSpacing:1.5,marginBottom:2}}>
-                  {detailPort ? "Portfolio" : "Body of Work"}
-                </div>
-                <div style={{fontSize:15,fontWeight:700,color:TEXT}}>{detailPort?.label || detailBow?.name}</div>
-              </div>
-            </div>
-            <button onClick={()=>{setSelectedPort(null);setSelectedBow(null);}}
-              style={{background:"none",border:"1px solid "+BORDER,borderRadius:6,padding:"4px 12px",fontSize:12,color:TEXT_MUTED,cursor:"pointer"}}>
-              ✕ Close
-            </button>
-          </div>
-
-          <div style={{padding:"20px 22px",display:"flex",flexDirection:"column",gap:16}}>
-
-            {/* Description */}
-            {(detailPortData?.description || detailBow?.description) && (
-              <div>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Description</div>
-                <div style={{fontSize:13,color:TEXT_SUB,lineHeight:1.7,maxWidth:860}}>
-                  {(detailPortData?.description || detailBow?.description || "").split('\n\n').map((para,i)=><p key={i} style={{margin:i===0?"0 0 8px":"0"}}>{para}</p>)}
-                </div>
-              </div>
-            )}
-
-            {/* Portfolio outcomes */}
-            {detailPort && detailPortData?.portfolioOutcomes?.length > 0 && (
-              <div>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:10}}>Portfolio Outcomes</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(260px,1fr))",gap:10}}>
-                  {detailPortData.portfolioOutcomes.map((o,i)=>(
-                    <div key={o.id} style={{padding:"12px 14px",borderRadius:9,border:"1px solid "+BORDER,background:SURFACE_2}}>
-                      <div style={{fontSize:10,fontWeight:700,color:detailPort.color,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>Outcome {i+1}</div>
-                      <div style={{fontSize:12,fontWeight:600,color:TEXT,marginBottom:4}}>{o.shortTitle}</div>
-                      <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.55}}>{o.outcome}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* BOW outcomes */}
-            {detailBow && detailBow.outcomes?.length > 0 && (
-              <div>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:10}}>Outcomes</div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {detailBow.outcomes.map((o,i)=>{
-                    const indCount = (o.impactIndicators||[]).filter(ind=>ind.text&&!ind.text.startsWith("[Placeholder]")).length;
-                    return (
-                      <div key={o.id} style={{padding:"12px 16px",borderRadius:9,border:"1px solid "+BORDER,background:SURFACE_2,display:"flex",gap:14,alignItems:"flex-start"}}>
-                        <span style={{width:24,height:24,borderRadius:"50%",background:detailBowPort?.color||ACCENT,color:"#fff",fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{o.number}</span>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:12,fontWeight:600,color:TEXT,marginBottom:3}}>{o.shortTitle}</div>
-                          <div style={{fontSize:11,color:TEXT_MUTED,lineHeight:1.6}}>{o.title}</div>
-                          {indCount>0&&<div style={{fontSize:10,color:detailBowPort?.color,marginTop:5,fontWeight:600}}>{indCount} impact indicator{indCount!==1?"s":""}</div>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Simple SVG connector lines between two columns
-function ConnectorColumn({ leftItems, rightItems, getLeftId, getRightId, isConnected, highlightLeft, highlightRight, getLeftColor, getRightColor, leftCount, rightCount }) {
-  // Heights are approximated — 60px per goal item, 72px per portfolio item
-  const GOAL_H = 100;
-  const PORT_H = 86;
-  const TOP_OFFSET = 28; // label row height
-  const svgH = Math.max(leftCount * GOAL_H, rightCount * PORT_H) + TOP_OFFSET;
-
-  const leftCY = (i) => TOP_OFFSET + i * GOAL_H + GOAL_H / 2;
-  const rightCY = (i) => TOP_OFFSET + i * PORT_H + PORT_H / 2;
-
-  return (
-    <svg width="20" height={svgH} style={{overflow:"visible",flexShrink:0}}>
-      {leftItems.map((l, li)=>
-        rightItems.map((r, ri)=>{
-          if (!isConnected(l, r)) return null;
-          const isHigh = (getLeftId(l) === highlightLeft) || (getRightId(r) === highlightRight);
-          const color = isHigh ? (getLeftColor(l) || getLeftColor(r)) : "#D1D5DB";
-          return (
-            <line key={`${getLeftId(l)}-${getRightId(r)}`}
-              x1={0} y1={leftCY(li)}
-              x2={20} y2={rightCY(ri)}
-              stroke={color} strokeWidth={isHigh?2:1}
-              strokeDasharray={isHigh?"none":"4 3"}
-              opacity={isHigh?0.8:0.4}
-              style={{transition:"stroke .18s, stroke-width .18s"}}
-            />
-          );
-        })
-      )}
-    </svg>
-  );
-}
 
 // ── MeasurementHierarchyView ──────────────────────────────────────────────────
 function MeasurementHierarchyView() {
@@ -5991,52 +5690,11 @@ function MeasurementHierarchyView() {
 }
 
 // ── Strategy Overview ─────────────────────────────────────────────────────────
-function StrategyOverview({ data, onUpdateRatings, onNavigateToPortfolio, selectedGoal }) {
-  const ratings = data.strategyRatings||{};
-  const [activeTab, setActiveTab] = useState("toa");
-
-  // When navigating here from a portfolio goal badge, switch to Goals tab
-  useEffect(() => { if (selectedGoal) setActiveTab("goals"); }, [selectedGoal]);
-
-  return (
-    // Capped content column, centred. Editorial best practice: with a max width
-    // on the page, the tab rail, the diagram and the prose all share the same
-    // left and right edges, so capped paragraphs read as a deliberate column
-    // rather than text stranded at the left of a very wide area.
-    <div style={{display:"flex",flexDirection:"column",gap:28,maxWidth:1240,width:"100%",margin:"0 auto"}}>
-
-      {/* Sub-nav — sits at the top of the page on every tab. The vision
-          statement banner that used to head this page is gone; the Strategy
-          Overview tab carries the vision instead. */}
-      <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BORDER,marginBottom:-4,alignItems:"center"}}>
-        {[["toa","Strategy Overview"],["goals","Goals"],["map","Strategy Map"],["hierarchy","Measurement Hierarchy"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setActiveTab(id)}
-            style={{padding:"10px 20px",fontSize:13,fontWeight:activeTab===id?600:400,border:"none",background:"none",cursor:"pointer",
-              borderBottom:activeTab===id?"2px solid "+ACCENT:"2px solid transparent",
-              color:activeTab===id?TEXT:TEXT_MUTED,marginBottom:-1,transition:"color .15s"}}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {activeTab==="toa" && (
-        <StrategyToaOverview data={data} onNavigateToPortfolio={onNavigateToPortfolio}/>
-      )}
-      {activeTab==="goals" && (
-        <div>
-          <GoalTabExplorer ratings={ratings} onUpdateRatings={onUpdateRatings} goalRatings={data.goalRatings||{}} initialGoal={selectedGoal}/>
-        </div>
-      )}
-      {activeTab==="map" && (
-        <StrategyMap data={data} onNavigateToPortfolio={onNavigateToPortfolio}/>
-      )}
-      {activeTab==="hierarchy" && (
-        <MeasurementHierarchyView/>
-      )}
-
-    </div>
-  );
+// The page-level tab rail is gone: Goals and Measurement Hierarchy are now
+// their own sidebar destinations and Strategy Map has been retired, so this
+// page is the Theory of Action alone and runs the full content width.
+function StrategyOverview({ data, onNavigateToPortfolio }) {
+  return <StrategyToaOverview data={data} onNavigateToPortfolio={onNavigateToPortfolio}/>;
 }
 // ── StrategyToaOverview ───────────────────────────────────────────────────────
 // Theory-of-change narrative for the Strategy Overview page: IF we build the
@@ -9990,6 +9648,12 @@ function Sidebar({ activeView, onNavigate, currentUser, usingPlaceholder, apiAva
           onClick={()=>onNavigate({type:"strategy"})}
         />
         <NavItem
+          label="2030 Goals"
+          icon={<IconTarget/>}
+          active={activeView.type==="goals"}
+          onClick={()=>onNavigate({type:"goals"})}
+        />
+        <NavItem
           label="All Investments"
           icon={<IconTable/>}
           active={isAllInvActive}
@@ -10034,6 +9698,7 @@ function Sidebar({ activeView, onNavigate, currentUser, usingPlaceholder, apiAva
           Tools
         </div>
         <NavItem label="Explore the Data Model" active={activeView.type==="data-model"} onClick={()=>onNavigate({type:"data-model"})}/>
+        <NavItem label="Measurement Hierarchy" active={activeView.type==="measurement-hierarchy"} onClick={()=>onNavigate({type:"measurement-hierarchy"})}/>
         {[
           {label:"Decision Insights & Forecasts", soon:true},
           {label:"USP Co-Leverage Tracking", soon:true},
@@ -10111,6 +9776,15 @@ function IconGrid() {
       <rect x="8" y="0" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.7"/>
       <rect x="0" y="8" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.7"/>
       <rect x="8" y="8" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.7"/>
+    </svg>
+  );
+}
+
+function IconTarget() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="6"   stroke="currentColor" strokeWidth="1.4" opacity="0.7"/>
+      <circle cx="7" cy="7" r="2.4" fill="currentColor" opacity="0.7"/>
     </svg>
   );
 }
@@ -10275,7 +9949,17 @@ function App() {
             <DataModelExplorer/>
           )}
           {activeView.type==="strategy"&&(
-            <StrategyOverview data={data} onUpdateRatings={r=>setData(prev=>({...prev,strategyRatings:r}))} onNavigateToPortfolio={id=>setActiveView({type:"portfolio",portId:id})} selectedGoal={activeView.goalNumber}/>
+            <StrategyOverview data={data} onNavigateToPortfolio={id=>setActiveView({type:"portfolio",portId:id})}/>
+          )}
+          {activeView.type==="goals"&&(
+            <GoalTabExplorer
+              ratings={data.strategyRatings||{}}
+              onUpdateRatings={r=>setData(prev=>({...prev,strategyRatings:r}))}
+              goalRatings={data.goalRatings||{}}
+              initialGoal={activeView.goalNumber}/>
+          )}
+          {activeView.type==="measurement-hierarchy"&&(
+            <MeasurementHierarchyView/>
           )}
           {activeView.type==="all-investments"&&(
             <AllInvestmentsView onNavigate={setActiveView}/>
@@ -10300,7 +9984,7 @@ function App() {
               onUpdateBows={bows=>updateBows(activePortId,bows)}
               onNavigateToOutcome={idx=>{}}
               onNavigateToBow={bowId=>{}}
-              onNavigateToStrategy={(goalNumber)=>setActiveView({type:"strategy",goalNumber})}/>
+              onNavigateToStrategy={(goalNumber)=>setActiveView({type:"goals",goalNumber})}/>
           )}
         </div>
       </div>
