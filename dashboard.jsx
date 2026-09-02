@@ -5972,6 +5972,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                     cursor:onNavigateToPortfolio?"pointer":"default"}}>
                   {p.name}
                 </button>
+                <div className="toa-pcard-label">Bodies of Work</div>
                 <ul>
                   {p.bodiesOfWork.map(bow => <ToaBowRow key={bow.id} bow={bow}/>)}
                   {p.note && (
@@ -6201,6 +6202,10 @@ const TOA_CSS = `
 .usp-toa .toa-pcard { border-radius:14px; padding:20px; background:${SURFACE}; border:1px solid ${BORDER}; display:flex; flex-direction:column; gap:14px; transition:transform .2s ease, box-shadow .2s ease; }
 .usp-toa .toa-pcard:hover { transform:translateY(-3px); box-shadow:0 10px 24px rgba(48,58,68,0.10); }
 .usp-toa .toa-ptag { align-self:flex-start; font-size:13px; font-weight:700; padding:5px 11px; border-radius:20px; border:none; font-family:inherit; }
+/* Names what the list beneath it is. Negative bottom margin pulls it against
+   the list, since the card's 14px flex gap would otherwise detach the label
+   from the items it labels. */
+.usp-toa .toa-pcard-label { font-size:12px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:-7px; }
 .usp-toa .toa-more { background:none; border:none; padding:0; margin-top:5px; font-family:inherit; font-size:13px; font-weight:700; color:${ACCENT}; cursor:pointer; }
 .usp-toa .toa-more:hover { text-decoration:underline; }
 .usp-toa .toa-pcard ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px; }
