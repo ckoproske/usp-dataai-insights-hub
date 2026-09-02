@@ -6189,63 +6189,9 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
   // The 2045 figure renders statically. A count-up animation reads as
   // promotional on a page whose job is to be credible about measurement.
 
-  // ── Connector curves: portfolio chips → goals icon → outcome chips → ~10M ────
-  const toaWrapRef       = useRef(null);
-  const goalsIconRef     = useRef(null);
-  const tenMRef          = useRef(null);
-  const portfolioChipRefs = useRef([]);
-  const outcomeChipRefs   = useRef([]);
-  const [connectorPaths, setConnectorPaths] = useState([]);
-  const [connectorSize, setConnectorSize]   = useState({ w:0, h:0 });
-
-  // Reset per render, repopulated by the ref callbacks below as chips mount.
-  portfolioChipRefs.current = [];
-  outcomeChipRefs.current = [];
-  const registerPortfolioChip = (el) => { if (el) portfolioChipRefs.current.push(el); };
-  const registerOutcomeChip   = (el) => { if (el) outcomeChipRefs.current.push(el); };
-
-  const drawConnectors = useCallback(() => {
-    const wrap = toaWrapRef.current, goalsIcon = goalsIconRef.current, tenM = tenMRef.current;
-    if (!wrap || !goalsIcon || !tenM) return;
-    if (window.innerWidth <= 860) { setConnectorPaths([]); return; }
-    if (!portfolioChipRefs.current.length || !outcomeChipRefs.current.length) return;
-
-    const wrapRect = wrap.getBoundingClientRect();
-    setConnectorSize({ w:wrapRect.width, h:wrapRect.height });
-
-    const center = (el, side) => {
-      const r = el.getBoundingClientRect();
-      return { x: side === "left" ? r.left - wrapRect.left : r.right - wrapRect.left,
-               y: r.top - wrapRect.top + r.height / 2 };
-    };
-    const curve = (p1, p2) => {
-      const midX = (p1.x + p2.x) / 2;
-      return `M ${p1.x} ${p1.y} C ${midX} ${p1.y}, ${midX} ${p2.y}, ${p2.x} ${p2.y}`;
-    };
-
-    const goalsLeft = center(goalsIcon, "left");
-    const goalsRight = center(goalsIcon, "right");
-    const tenMLeft = center(tenM, "left");
-    const paths = [];
-    portfolioChipRefs.current.forEach((chip, i) =>
-      paths.push({ id:`p-${i}`, d:curve(center(chip,"right"), goalsLeft), arrow:false }));
-    outcomeChipRefs.current.forEach((chip, i) =>
-      paths.push({ id:`g-${i}`, d:curve(goalsRight, center(chip,"left")), arrow:false }));
-    outcomeChipRefs.current.forEach((chip, i) =>
-      paths.push({ id:`o-${i}`, d:curve(center(chip,"right"), tenMLeft),
-                   arrow: i === outcomeChipRefs.current.length - 1 }));
-    setConnectorPaths(paths);
-  }, []);
-
-  React.useLayoutEffect(() => { drawConnectors(); }, [drawConnectors, portfolios.length, outcomes.length]);
-
-  useEffect(() => {
-    let timer;
-    const onResize = () => { clearTimeout(timer); timer = setTimeout(drawConnectors, 120); };
-    window.addEventListener("resize", onResize);
-    if (document.fonts?.ready) document.fonts.ready.then(drawConnectors);
-    return () => window.removeEventListener("resize", onResize);
-  }, [drawConnectors]);
+  // The flow is drawn with one CSS arrow between adjacent columns, so there is
+  // no measured geometry to maintain — the twelve-curve SVG this replaced
+  // needed refs on every chip plus redraws on resize and font load.
 
   // Portfolios that actually own a goal, for the "Driven by" strip
   const drivingPortIds = [...new Set(goals.map(g => g.portId).filter(Boolean))];
@@ -6302,60 +6248,36 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
             </div>
           </div>
 
-          <div className="toa-connector-wrap" ref={toaWrapRef}>
-            <svg className="toa-connectors" width={connectorSize.w} height={connectorSize.h}>
-              <defs>
-                <marker id="toaArrow" viewBox="0 0 10 10" refX="8" refY="5"
-                  markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path className="toa-arrowhead" d="M0 0 L10 5 L0 10 z"/>
-                </marker>
-              </defs>
-              {connectorPaths.map(p => (
-                <path key={p.id} className="toa-connector-line" d={p.d}
-                  markerEnd={p.arrow ? "url(#toaArrow)" : undefined}/>
+          {/* One arrow between adjacent columns, not a curve per chip. The
+              chips stack vertically so each column reads as a tidy list. */}
+          <div className="toa-content-row">
+            <div className="toa-content" onClick={()=>setActiveCol("portfolios")}>
+              {portfolios.map(p => {
+                const pc = PORT_COLORS[p.id] || {};
+                return (
+                  <span key={p.id} className="toa-chip"
+                    style={{background:pc.light,color:pc.dark}}>{p.name}</span>
+                );
+              })}
+              <span className="toa-arrow" aria-hidden="true">→</span>
+            </div>
+
+            <div className="toa-content toa-center" onClick={()=>setActiveCol("goals")}>
+              <span className="toa-goalcount">{goals.length}</span>
+              <span className="toa-label">2030 strategy goals</span>
+              <span className="toa-arrow" aria-hidden="true">→</span>
+            </div>
+
+            <div className="toa-content" onClick={()=>setActiveCol("impact")}>
+              {outcomes.map(o => (
+                <span key={o.name} className="toa-chip toa-chip-neutral">{o.name}</span>
               ))}
-            </svg>
+              <span className="toa-arrow" aria-hidden="true">→</span>
+            </div>
 
-            <div className="toa-content-row">
-              <div className="toa-content" onClick={()=>setActiveCol("portfolios")}>
-                {portfolios.map(p => {
-                  const pc = PORT_COLORS[p.id] || {};
-                  return (
-                    <span key={p.id} className="toa-chip" ref={registerPortfolioChip}
-                      style={{background:pc.light,color:pc.dark}}>{p.name}</span>
-                  );
-                })}
-              </div>
-
-              <div className="toa-content toa-center" onClick={()=>setActiveCol("goals")}>
-                <svg className="toa-goals-icon" viewBox="0 0 60 52" ref={goalsIconRef}>
-                  <g stroke={BORDER} strokeWidth="1">
-                    {[[30,6,47,16],[30,6,47,36],[30,6,30,46],[30,6,13,36],[30,6,13,16],
-                      [47,16,47,36],[47,16,30,46],[47,16,13,36],[47,16,13,16],
-                      [47,36,30,46],[47,36,13,36],[47,36,13,16],
-                      [30,46,13,36],[30,46,13,16],[13,36,13,16]].map(([x1,y1,x2,y2],i)=>(
-                      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}/>
-                    ))}
-                  </g>
-                  {[[30,6],[47,16],[47,36],[30,46],[13,36],[13,16]].map(([cx,cy])=>(
-                    <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.5" fill={BRAND}/>
-                  ))}
-                </svg>
-                <span className="toa-label">{goals.length} 2030 strategy goals</span>
-              </div>
-
-              <div className="toa-content" onClick={()=>setActiveCol("impact")}>
-                {outcomes.map(o => (
-                  <span key={o.name} className="toa-chip toa-chip-neutral" ref={registerOutcomeChip}>
-                    {o.name}
-                  </span>
-                ))}
-              </div>
-
-              <div className="toa-content toa-center" onClick={()=>setActiveCol("path2045")}>
-                <span className="toa-bignum" ref={tenMRef}>~{path2045.value}{path2045.unit}</span>
-                <span className="toa-label">learners with credentials of value</span>
-              </div>
+            <div className="toa-content toa-center" onClick={()=>setActiveCol("path2045")}>
+              <span className="toa-bignum">~{path2045.value}{path2045.unit}</span>
+              <span className="toa-label">learners with credentials of value</span>
             </div>
           </div>
 
@@ -6582,17 +6504,17 @@ const TOA_CSS = `
 .usp-toa .toa-chev p, .usp-toa .toa-box p { font-size:13.5px; line-height:1.42; margin:0; max-width:230px; }
 .usp-toa .toa-box p { font-weight:700; }
 
-.usp-toa .toa-connector-wrap { position:relative; }
-.usp-toa .toa-connectors { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; z-index:0; }
-.usp-toa .toa-connector-line { fill:none; stroke:${TEXT_MUTED}; stroke-width:1.8; }
-.usp-toa .toa-arrowhead { fill:${TEXT_MUTED}; }
-.usp-toa .toa-content-row { display:flex; margin-top:16px; position:relative; z-index:1; }
-.usp-toa .toa-content { flex:1; padding:0 22px 0 32px; cursor:pointer; display:flex; flex-wrap:wrap; align-items:flex-start; align-content:flex-start; gap:7px; }
-.usp-toa .toa-content.toa-center { flex-direction:column; align-items:flex-start; gap:4px; }
+.usp-toa .toa-content-row { display:flex; margin-top:18px; align-items:stretch; }
+/* Chips stack one per line so each column reads as a tidy list rather than a
+   ragged wrapped cluster. position:relative anchors the arrow. */
+.usp-toa .toa-content { flex:1; padding:0 30px 0 32px; cursor:pointer; display:flex; flex-direction:column; align-items:flex-start; gap:6px; position:relative; }
+.usp-toa .toa-content.toa-center { gap:3px; }
+/* One arrow per boundary, vertically centred in the gap between columns */
+.usp-toa .toa-arrow { position:absolute; right:4px; top:50%; transform:translateY(-50%); font-size:17px; line-height:1; color:${TEXT_MUTED}; pointer-events:none; }
+.usp-toa .toa-goalcount { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1; color:${BRAND}; }
 .usp-toa .toa-chip { font-size:11px; font-weight:700; padding:5px 11px; border-radius:20px; white-space:nowrap; }
 .usp-toa .toa-chip-neutral { background:#EEF0F3; color:${BRAND}; }
 .usp-toa .toa-bignum { font-family:Cambria,Georgia,serif; font-weight:600; font-size:30px; color:${TEXT}; line-height:1; }
-.usp-toa .toa-goals-icon { width:72px; height:62px; margin-bottom:4px; }
 .usp-toa .toa-label { font-size:11.5px; color:${TEXT_SUB}; }
 
 .usp-toa .toa-portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
@@ -6646,7 +6568,8 @@ const TOA_CSS = `
   .usp-toa .toa-row, .usp-toa .toa-content-row { flex-direction:column; }
   .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
   .usp-toa .toa-content { padding-left:22px; margin-bottom:14px; }
-  .usp-toa .toa-connectors { display:none; }
+  /* Columns stack, so a right-hand arrow would point nowhere */
+  .usp-toa .toa-arrow { display:none; }
 }
 `;
 
