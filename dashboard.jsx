@@ -5727,6 +5727,15 @@ const TOA_IMPACT_OUTCOMES = [
     description:"Key decisionmakers have meaningful access to learner and workforce outcomes across sectors and act on them in time." },
 ];
 
+// The four stages of the band, in order. Shared by the tablist and the tail row
+// beneath it so the tail always lands under the selected stage.
+const TOA_STAGES = [
+  { key:"portfolios", tag:"IF",           text:"we build a shared AI & data foundation upstream of every solution" },
+  { key:"goals",      tag:"THEN",         text:"we build field-level enabling conditions via six 2030 goals" },
+  { key:"impact",     tag:"THEN",         text:"more impact is possible for every USP team" },
+  { key:"path2045",   tag:"ACCELERATING", text:"our path to 2045", terminus:true },
+];
+
 const TOA_PATH_2045 = {
   value:10, unit:"M",
   label:"Learners with credentials of value, by 2045",
@@ -5891,14 +5900,15 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
           {/* The band now stands alone, so it carries the whole flow: numbered
               steps, a tone that lightens left to right toward the 2045
               terminus, and a nudge on hover. */}
-          <div className="toa-row">
-            {[
-              { key:"portfolios", tag:"IF",           text:<>we build a shared AI &amp; data foundation upstream of every solution</> },
-              { key:"goals",      tag:"THEN",         text:<>we build field-level enabling conditions via six 2030 goals</> },
-              { key:"impact",     tag:"THEN",         text:<>more impact is possible for every USP team</> },
-              { key:"path2045",   tag:"ACCELERATING", text:<>our path to 2045</>, terminus:true },
-            ].map((s, i) => (
-              <div key={s.key}
+          {/* A real tablist. These were divs with onClick, which gave no focus
+              ring, no keyboard path and no announced state — and visually read
+              as an infographic rather than a control. */}
+          <div className="toa-row" role="tablist" aria-label="Theory of action stages">
+            {TOA_STAGES.map((s, i) => (
+              <button key={s.key} type="button" role="tab"
+                id={"toa-tab-"+s.key}
+                aria-selected={activeCol === s.key}
+                aria-controls={"toa-panel-"+s.key}
                 className={(s.terminus ? "toa-box" : "toa-chev")
                   + (i === 0 ? " toa-chev-1" : "")
                   + " toa-tone-" + (i + 1)
@@ -5907,10 +5917,18 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                 <span className={"toa-tag"+(s.terminus?" toa-tag-dark":"")}>
                   <span className="toa-step">{i+1}</span>
                   {s.tag}
-                  <span className="toa-caret">▾</span>
+                  <span className="toa-caret" aria-hidden="true">▾</span>
                 </span>
-                <p>{s.text}</p>
-              </div>
+                <span className="toa-chev-text">{s.text}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Tail under the selected stage, pointing at its panel. Mirrors the
+              chevron row's geometry so it lands under the right stage. */}
+          <div className="toa-tails" aria-hidden="true">
+            {TOA_STAGES.map(s => (
+              <span key={s.key} className={"toa-tail"+(activeCol===s.key?" active":"")}/>
             ))}
           </div>
 
@@ -5935,7 +5953,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       <div className="toa-detail">
 
       {activeCol === "portfolios" && (
-      <section className="toa-panel">
+      <section className="toa-panel" role="tabpanel" id="toa-panel-portfolios" aria-labelledby="toa-tab-portfolios">
         <div className="toa-stage-head">
           <h2>Four portfolios build the shared foundation.</h2>
           <p>Four core functions carry the strategy. Inside each, you'll find the bodies of work — the big bets
@@ -5968,7 +5986,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       )}
 
       {activeCol === "goals" && (
-      <section className="toa-panel">
+      <section className="toa-panel" role="tabpanel" id="toa-panel-goals" aria-labelledby="toa-tab-goals">
         <div className="toa-stage-head">
           <h2>We build field-level enabling conditions.</h2>
           <p>Shared infrastructure and public goods that raise the technical floor
@@ -6013,7 +6031,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       )}
 
       {activeCol === "impact" && (
-      <section className="toa-panel">
+      <section className="toa-panel" role="tabpanel" id="toa-panel-impact" aria-labelledby="toa-tab-impact">
         <div className="toa-stage-head">
           <h2>More impact is possible for every USP team.</h2>
           <p>We coordinate rather than centralize — teams still make their own domain-specific bets, but
@@ -6033,7 +6051,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       )}
 
       {activeCol === "path2045" && (
-      <section className="toa-panel">
+      <section className="toa-panel" role="tabpanel" id="toa-panel-path2045" aria-labelledby="toa-tab-path2045">
         <div className="toa-stage-head">
           <h2>Where it all points: 2045.</h2>
           <p>Every layer above rolls up into one number, then fans out into the areas it accelerates.</p>
@@ -6119,10 +6137,17 @@ const TOA_CSS = `
 .usp-toa .toa-box.active { background:${ACCENT_MID}; }
 
 /* Disclosure caret — the affordance that these stages open the panel below */
-.usp-toa .toa-caret { display:inline-block; margin-left:7px; font-size:13px; opacity:0.55; transform:translateY(-1px); transition:opacity .15s, color .15s; }
-.usp-toa .toa-chev:hover .toa-caret, .usp-toa .toa-box:hover .toa-caret { opacity:0.9; }
-.usp-toa .toa-chev.active .toa-caret, .usp-toa .toa-box.active .toa-caret { opacity:1; font-size:13px; }
+.usp-toa .toa-caret { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; margin-left:auto; font-size:12px; line-height:1; border:1.5px solid rgba(255,255,255,0.4); color:rgba(255,255,255,0.85); transition:background .15s, border-color .15s, color .15s, transform .15s; flex-shrink:0; }
+.usp-toa .toa-box .toa-caret { border-color:rgba(48,58,68,0.35); color:${BRAND}; }
+.usp-toa .toa-chev:hover .toa-caret, .usp-toa .toa-box:hover .toa-caret { border-color:${ACCENT}; transform:translateY(1px); }
+.usp-toa .toa-chev.active .toa-caret, .usp-toa .toa-box.active .toa-caret { background:${ACCENT}; border-color:${ACCENT}; color:#fff; }
 .usp-toa .toa-hint { font-size:13px; font-weight:600; color:${ACCENT}; }
+
+/* Tail under the selected stage — the join that makes this read as a tab set */
+.usp-toa .toa-tails { display:flex; height:10px; }
+.usp-toa .toa-tail { flex:1; margin-left:-22px; position:relative; }
+.usp-toa .toa-tail:first-child { margin-left:0; }
+.usp-toa .toa-tail.active::after { content:""; position:absolute; left:calc(50% - 10px); top:0; width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-top:10px solid ${ACCENT}; }
 
 /* Feedback loop, folded in as the diagram's return path */
 .usp-toa .toa-return { margin-top:18px; }
@@ -6137,11 +6162,12 @@ const TOA_CSS = `
    wrapper, not on .toa-panel — the goals panel carries .toa-panel on the same
    element as its dark background, so padding there fell inside the dark box:
    no gap above it, and 80px of dead dark space inside it. */
-.usp-toa .toa-detail { margin-top:34px; }
+.usp-toa .toa-detail { margin-top:20px; }
 /* Accent rule ties the panel back to the selected stage above */
-.usp-toa .toa-panel { border-top:2px solid ${ACCENT}; padding-top:26px; animation:fadeIn .18s ease both; }
+.usp-toa .toa-panel { border-top:3px solid ${ACCENT}; padding-top:26px; animation:fadeIn .18s ease both; }
 .usp-toa .toa-row { display:flex; align-items:stretch; }
-.usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:24px 26px 24px 40px; cursor:pointer; transition:transform .18s cubic-bezier(.4,0,.2,1), background .18s, opacity .15s; }
+.usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:24px 26px 24px 40px; cursor:pointer; transition:transform .18s cubic-bezier(.4,0,.2,1), background .18s, opacity .15s; border:none; font-family:inherit; text-align:left; display:block; }
+.usp-toa .toa-chev:focus-visible, .usp-toa .toa-box:focus-visible { outline:3px solid ${ACCENT}; outline-offset:-3px; }
 /* Nudge forward on hover — the band reads as motion toward 2045 */
 .usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { transform:translateX(4px); }
 .usp-toa .toa-chev { background:${BRAND}; color:#fff; clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 22px 50%); margin-left:-22px; }
@@ -6159,8 +6185,8 @@ const TOA_CSS = `
 .usp-toa .toa-step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; margin-right:9px; font-size:12.5px; letter-spacing:0; background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.9); flex-shrink:0; }
 .usp-toa .toa-box .toa-step { background:rgba(48,58,68,0.14); color:${BRAND}; }
 .usp-toa .toa-tag-dark { color:${BRAND}; }
-.usp-toa .toa-chev p, .usp-toa .toa-box p { font-size:14.5px; line-height:1.45; margin:0; max-width:300px; }
-.usp-toa .toa-box p { font-weight:700; }
+.usp-toa .toa-chev-text { display:block; font-size:14.5px; line-height:1.45; max-width:300px; }
+.usp-toa .toa-box .toa-chev-text { font-weight:700; }
 
 
 .usp-toa .toa-portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
