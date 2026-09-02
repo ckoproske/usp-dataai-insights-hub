@@ -5868,6 +5868,10 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
               by a left rule. Above the headline it read as an orphan block of
               long italic copy competing with the point of the page. */}
           <h1 className="toa-strategy-line">If we build the foundation, more impact is <em>possible</em> for every team.</h1>
+          <p className="toa-sub">
+            We build a shared AI and data foundation upstream of every solution — the evidence, insight, safety,
+            and capability layers every USP team <em>can</em> build on and benefit from.
+          </p>
           <div className="toa-vision-note">
             <span className="toa-vision-label">Toward our 2045 vision</span>
             <p className="toa-vision-line">{toaWithEmphasis(TOA_VISION.statement, TOA_VISION.emphasis)}</p>
@@ -6067,6 +6071,11 @@ const TOA_CSS = `
 .usp-toa .toa-italic { font-style:italic; }
 
 .usp-toa .toa-hero { padding-top:16px; padding-bottom:8px; }
+/* Descending hierarchy under the thesis: headline 40px, this 18px, the vision
+   note 15px behind a rule. "can" is emphasised — the layers are available to
+   every team, not necessarily used by all of them. */
+.usp-toa .toa-sub { font-size:18px; color:${TEXT_SUB}; line-height:1.65; max-width:68ch; margin-top:14px; }
+.usp-toa .toa-sub em { font-style:italic; color:${TEXT}; font-weight:600; }
 /* Vision as a subordinate note beneath the thesis, tied to it by a left rule */
 .usp-toa .toa-vision-note { margin-top:20px; padding-left:16px; border-left:3px solid ${ACCENT_MID}; }
 .usp-toa .toa-vision-label { display:block; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; margin-bottom:6px; }
