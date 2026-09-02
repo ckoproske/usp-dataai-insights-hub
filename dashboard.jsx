@@ -5894,6 +5894,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
               <div key={s.key}
                 className={(s.terminus ? "toa-box" : "toa-chev")
                   + (i === 0 ? " toa-chev-1" : "")
+                  + " toa-tone-" + (i + 1)
                   + (activeCol === s.key ? " active" : "")}
                 onClick={()=>setActiveCol(s.key)}>
                 <span className={"toa-tag"+(s.terminus?" toa-tag-dark":"")}>
@@ -5929,7 +5930,6 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       {activeCol === "portfolios" && (
       <section className="toa-panel">
         <div className="toa-stage-head">
-          <div className="toa-eyebrow">Stage 1 · If</div>
           <h2>Four portfolios build the shared foundation.</h2>
           <p>Four core functions carry the strategy. Inside each, you'll find the bodies of work — the big bets
              we're placing to reach our 2030 goals.</p>
@@ -5964,7 +5964,6 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       <div className="toa-floor-band toa-panel">
         <div className="toa-floor-inner">
           <div className="toa-stage-head">
-            <div className="toa-eyebrow toa-accent">Stage 2 · Then — the core commitment</div>
             <h2 className="toa-on-dark">We build field-level enabling conditions.</h2>
             <p className="toa-on-dark-sub">Shared infrastructure and public goods that raise the technical floor
                across the entire field — captured in six 2030 goals.</p>
@@ -6010,7 +6009,6 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       {activeCol === "impact" && (
       <section className="toa-panel">
         <div className="toa-stage-head">
-          <div className="toa-eyebrow">Stage 3 · Then</div>
           <h2>More impact is possible for every USP team.</h2>
           <p>We coordinate rather than centralize — teams still make their own domain-specific bets, but
              capabilities, evaluation frameworks, and safety standards get built once here and reused across
@@ -6031,7 +6029,6 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
       {activeCol === "path2045" && (
       <section className="toa-panel">
         <div className="toa-stage-head">
-          <div className="toa-eyebrow">Stage 4 · Accelerating our path</div>
           <h2>Where it all points: 2045.</h2>
           <p>Every layer above rolls up into one number, then fans out into the areas it accelerates.</p>
         </div>
@@ -6075,22 +6072,26 @@ const TOA_CSS = `
    of Bringhurst's comfortable range. */
 .usp-toa .toa-vision-line { font-family:Cambria,Georgia,serif; font-style:italic; font-size:17px; line-height:1.6; color:${TEXT_SUB}; margin-top:7px; max-width:68ch; }
 .usp-toa .toa-vision-line em { font-style:italic; color:${ACCENT}; font-weight:600; }
-.usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:33px; line-height:1.25; margin:0; }
+.usp-toa h1.toa-strategy-line { font-family:Cambria,Georgia,serif; font-weight:600; font-size:40px; line-height:1.2; margin:0; letter-spacing:-0.4px; }
 .usp-toa h1.toa-strategy-line em { font-style:italic; color:${ACCENT}; }
 
 .usp-toa .toa-stage-head { margin-bottom:32px; }
-.usp-toa .toa-stage-head h2 { font-size:29px; max-width:760px; line-height:1.25; margin-top:8px; }
+.usp-toa .toa-stage-head h2 { font-size:24px; max-width:44ch; line-height:1.3; }
 .usp-toa .toa-stage-head p { color:${TEXT_SUB}; font-size:14.5px; max-width:70ch; margin-top:10px; line-height:1.6; }
-.usp-toa .toa-on-dark { color:#fff; font-size:31px; max-width:760px; line-height:1.25; }
+.usp-toa .toa-on-dark { color:#fff; font-size:24px; max-width:44ch; line-height:1.3; }
 .usp-toa .toa-on-dark-sub { color:#EDEFF2; font-size:15px; max-width:70ch; margin-top:10px; line-height:1.6; }
 
 /* One card holds the vision, the thesis and the diagram, so the framing runs
    straight into the Theory of Action with no seam between them */
 .usp-toa .toa-banner { background:${SURFACE}; border:1px solid ${BORDER}; border-radius:16px; padding:28px 32px 32px; box-shadow:0 2px 14px rgba(48,58,68,0.07); }
 .usp-toa .toa-banner-head { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin:30px 0 16px; padding-top:22px; border-top:1px solid ${BORDER}; }
-.usp-toa .toa-banner-title { font-size:20px; }
+.usp-toa .toa-banner-title { font-size:16px; }
+/* Headers mirror the chevron row's own geometry — same flex basis, same -22px
+   interlock, same 40px text inset. Without the offsets the labels drifted up to
+   66px right of the stage they name by the fourth column. */
 .usp-toa .toa-colheads { display:flex; margin-bottom:9px; }
-.usp-toa .toa-colhead { flex:1; padding:0 0 6px 32px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
+.usp-toa .toa-colhead { flex:1; margin-left:-22px; padding:0 0 6px 40px; font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:${TEXT_MUTED}; background:none; border:none; border-bottom:2px solid transparent; font-family:inherit; text-align:left; cursor:pointer; transition:color .15s, border-color .15s; }
+.usp-toa .toa-colhead:first-child { margin-left:0; }
 .usp-toa .toa-colhead:hover { color:${TEXT_SUB}; }
 .usp-toa .toa-colhead.active { color:${TEXT}; border-bottom-color:${ACCENT}; }
 /* Selection reads on the header underline, the chevron background and the
@@ -6112,24 +6113,33 @@ const TOA_CSS = `
 
 /* Feedback loop, folded in as the diagram's return path */
 .usp-toa .toa-return { margin-top:18px; }
-.usp-toa .toa-return-bracket { height:20px; border:1px solid ${BORDER}; border-top:none; border-radius:0 0 12px 12px; position:relative; }
-.usp-toa .toa-return-bracket::after { content:""; position:absolute; left:-5px; top:-7px; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:7px solid ${TEXT_MUTED}; }
+.usp-toa .toa-return-bracket { height:30px; border:1.5px solid ${TEXT_MUTED}; border-top:none; border-radius:0 0 14px 14px; position:relative; opacity:0.7; }
+.usp-toa .toa-return-bracket::after { content:""; position:absolute; left:-7px; top:-10px; width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:10px solid ${TEXT_MUTED}; }
 .usp-toa .toa-return-caption { margin-top:9px; font-size:12.5px; color:${TEXT_SUB}; line-height:1.55; max-width:80ch; }
 .usp-toa .toa-return-caption b { color:${TEXT}; font-weight:700; }
 
-/* One stage at a time, chosen from the diagram above */
-.usp-toa .toa-detail { margin-top:4px; }
-.usp-toa .toa-panel { padding-top:36px; animation:fadeIn .18s ease both; }
+/* One stage at a time, chosen from the diagram above. The gap lives on the
+   wrapper, not on .toa-panel — the goals panel carries .toa-panel on the same
+   element as its dark background, so padding there fell inside the dark box:
+   no gap above it, and 80px of dead dark space inside it. */
+.usp-toa .toa-detail { margin-top:34px; }
+/* Accent rule ties the panel back to the selected stage above */
+.usp-toa .toa-panel { border-top:2px solid ${ACCENT}; padding-top:26px; animation:fadeIn .18s ease both; }
+.usp-toa .toa-floor-band.toa-panel { padding-top:0; }
 .usp-toa .toa-row { display:flex; align-items:stretch; }
 .usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:24px 26px 24px 40px; cursor:pointer; transition:transform .18s cubic-bezier(.4,0,.2,1), background .18s, opacity .15s; }
 /* Nudge forward on hover — the band reads as motion toward 2045 */
 .usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { transform:translateX(4px); }
 .usp-toa .toa-chev { background:${BRAND}; color:#fff; clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 22px 50%); margin-left:-22px; }
-/* Tone lightens left to right so the eye travels the sequence */
-.usp-toa .toa-row > .toa-chev:nth-child(2) { background:#39434E; }
-.usp-toa .toa-row > .toa-chev:nth-child(3) { background:#434E5B; }
+/* Tone lightens left to right so the eye travels the sequence. Keyed on an
+   explicit class, not :nth-child — as a pseudo-class that outweighed
+   .toa-chev.active and silently killed the selected state on stages 2 and 3. */
+.usp-toa .toa-tone-2 { background:#39434E; }
+.usp-toa .toa-tone-3 { background:#434E5B; }
 .usp-toa .toa-chev-1 { clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%); margin-left:0; border-radius:10px 0 0 10px; }
-.usp-toa .toa-box { background:${ACCENT_LIGHT}; color:${BRAND}; border-radius:0 10px 10px 0; margin-left:-4px; padding-left:36px; }
+/* The terminus interlocks like the rest of the band — same notch, same overlap,
+   same text inset — so the sequence flows into it instead of butting against it */
+.usp-toa .toa-box { background:${ACCENT_LIGHT}; color:${BRAND}; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%, 22px 50%); margin-left:-22px; }
 .usp-toa .toa-tag { display:flex; align-items:center; font-size:11px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:9px; }
 /* Numbered step, so the sequence is explicit without extra copy */
 .usp-toa .toa-step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; margin-right:9px; font-size:10px; letter-spacing:0; background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.9); flex-shrink:0; }
@@ -6185,7 +6195,7 @@ const TOA_CSS = `
 @media (max-width:860px) {
   .usp-toa .toa-portfolio-grid, .usp-toa .toa-goal-grid,
   .usp-toa .toa-impact-grid, .usp-toa .toa-path-wrap { grid-template-columns:1fr; }
-  .usp-toa h1.toa-strategy-line { font-size:26px; }
+  .usp-toa h1.toa-strategy-line { font-size:28px; }
   .usp-toa .toa-colheads { display:none; }
   .usp-toa .toa-row { flex-direction:column; }
   .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
