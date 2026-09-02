@@ -5839,7 +5839,7 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
   const TOA_COLS = [
     { key:"portfolios", head:"Portfolios"  },
     { key:"goals",      head:"2030 Goals"  },
-    { key:"impact",     head:"Team Impact" },
+    { key:"impact",     head:"Division Impact" },
     { key:"path2045",   head:"2045"        },
   ];
   const [activeCol, setActiveCol] = useState("portfolios");
@@ -5887,57 +5887,33 @@ function StrategyToaOverview({ data, onNavigateToPortfolio }) {
                 onClick={()=>setActiveCol(c.key)}>{c.head}</button>
             ))}
           </div>
+          {/* The band now stands alone, so it carries the whole flow: numbered
+              steps, a tone that lightens left to right toward the 2045
+              terminus, and a nudge on hover. */}
           <div className="toa-row">
-            <div className={"toa-chev toa-chev-1"+(activeCol==="portfolios"?" active":"")} onClick={()=>setActiveCol("portfolios")}>
-              <span className="toa-tag">IF<span className="toa-caret">▾</span></span>
-              <p>we build a shared AI &amp; data foundation upstream of every solution</p>
-            </div>
-            <div className={"toa-chev"+(activeCol==="goals"?" active":"")} onClick={()=>setActiveCol("goals")}>
-              <span className="toa-tag">THEN<span className="toa-caret">▾</span></span>
-              <p>we build field-level enabling conditions via six 2030 goals</p>
-            </div>
-            <div className={"toa-chev"+(activeCol==="impact"?" active":"")} onClick={()=>setActiveCol("impact")}>
-              <span className="toa-tag">THEN<span className="toa-caret">▾</span></span>
-              <p>more impact is possible for every USP team</p>
-            </div>
-            <div className={"toa-box"+(activeCol==="path2045"?" active":"")} onClick={()=>setActiveCol("path2045")}>
-              <span className="toa-tag toa-tag-dark">ACCELERATING<span className="toa-caret">▾</span></span>
-              <p>our path to 2045</p>
-            </div>
+            {[
+              { key:"portfolios", tag:"IF",           text:<>we build a shared AI &amp; data foundation upstream of every solution</> },
+              { key:"goals",      tag:"THEN",         text:<>we build field-level enabling conditions via six 2030 goals</> },
+              { key:"impact",     tag:"THEN",         text:<>more impact is possible for every USP team</> },
+              { key:"path2045",   tag:"ACCELERATING", text:<>our path to 2045</>, terminus:true },
+            ].map((s, i) => (
+              <div key={s.key}
+                className={(s.terminus ? "toa-box" : "toa-chev")
+                  + (i === 0 ? " toa-chev-1" : "")
+                  + (activeCol === s.key ? " active" : "")}
+                onClick={()=>setActiveCol(s.key)}>
+                <span className={"toa-tag"+(s.terminus?" toa-tag-dark":"")}>
+                  <span className="toa-step">{i+1}</span>
+                  {s.tag}
+                  <span className="toa-caret">▾</span>
+                </span>
+                <p>{s.text}</p>
+              </div>
+            ))}
           </div>
 
-          {/* One arrow between adjacent columns, not a curve per chip. The
-              chips stack vertically so each column reads as a tidy list. */}
-          <div className="toa-content-row">
-            <div className="toa-content" onClick={()=>setActiveCol("portfolios")}>
-              {portfolios.map(p => {
-                const pc = PORT_COLORS[p.id] || {};
-                return (
-                  <span key={p.id} className="toa-chip"
-                    style={{background:pc.light,color:pc.dark}}>{p.name}</span>
-                );
-              })}
-              <span className="toa-arrow" aria-hidden="true">→</span>
-            </div>
-
-            <div className="toa-content toa-center" onClick={()=>setActiveCol("goals")}>
-              <span className="toa-goalcount">{goals.length}</span>
-              <span className="toa-label">2030 strategy goals</span>
-              <span className="toa-arrow" aria-hidden="true">→</span>
-            </div>
-
-            <div className="toa-content" onClick={()=>setActiveCol("impact")}>
-              {outcomes.map(o => (
-                <span key={o.name} className="toa-chip toa-chip-neutral">{o.name}</span>
-              ))}
-              <span className="toa-arrow" aria-hidden="true">→</span>
-            </div>
-
-            <div className="toa-content toa-center" onClick={()=>setActiveCol("path2045")}>
-              <span className="toa-bignum">~{path2045.value}{path2045.unit}</span>
-              <span className="toa-label">learners with credentials of value</span>
-            </div>
-          </div>
+          {/* No static row beneath the band — each stage opens its own detail
+              panel, so repeating the chips and counts here said it twice. */}
 
           {/* The feedback loop is the return arrow of the theory of action, so
               it lives inside the diagram rather than in its own closing band. */}
@@ -6151,29 +6127,24 @@ const TOA_CSS = `
 /* One stage at a time, chosen from the diagram above */
 .usp-toa .toa-detail { margin-top:4px; }
 .usp-toa .toa-panel { padding-top:36px; animation:fadeIn .18s ease both; }
-.usp-toa .toa-row { display:flex; }
-.usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:18px 22px 18px 32px; cursor:pointer; transition:filter .15s ease; }
-.usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { filter:brightness(1.12); }
+.usp-toa .toa-row { display:flex; align-items:stretch; }
+.usp-toa .toa-chev, .usp-toa .toa-box { flex:1; padding:24px 26px 24px 40px; cursor:pointer; transition:transform .18s cubic-bezier(.4,0,.2,1), background .18s, opacity .15s; }
+/* Nudge forward on hover — the band reads as motion toward 2045 */
+.usp-toa .toa-chev:hover, .usp-toa .toa-box:hover { transform:translateX(4px); }
 .usp-toa .toa-chev { background:${BRAND}; color:#fff; clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 22px 50%); margin-left:-22px; }
+/* Tone lightens left to right so the eye travels the sequence */
+.usp-toa .toa-row > .toa-chev:nth-child(2) { background:#39434E; }
+.usp-toa .toa-row > .toa-chev:nth-child(3) { background:#434E5B; }
 .usp-toa .toa-chev-1 { clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%); margin-left:0; border-radius:10px 0 0 10px; }
 .usp-toa .toa-box { background:${ACCENT_LIGHT}; color:${BRAND}; border-radius:0 10px 10px 0; margin-left:-4px; padding-left:36px; }
-.usp-toa .toa-tag { display:block; font-size:10.5px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:7px; }
+.usp-toa .toa-tag { display:flex; align-items:center; font-size:11px; letter-spacing:1.5px; font-weight:700; color:${ACCENT}; margin-bottom:9px; }
+/* Numbered step, so the sequence is explicit without extra copy */
+.usp-toa .toa-step { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; margin-right:9px; font-size:10px; letter-spacing:0; background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.9); flex-shrink:0; }
+.usp-toa .toa-box .toa-step { background:rgba(48,58,68,0.14); color:${BRAND}; }
 .usp-toa .toa-tag-dark { color:${BRAND}; }
 .usp-toa .toa-chev p, .usp-toa .toa-box p { font-size:13.5px; line-height:1.42; margin:0; max-width:230px; }
 .usp-toa .toa-box p { font-weight:700; }
 
-.usp-toa .toa-content-row { display:flex; margin-top:18px; align-items:stretch; }
-/* Chips stack one per line so each column reads as a tidy list rather than a
-   ragged wrapped cluster. position:relative anchors the arrow. */
-.usp-toa .toa-content { flex:1; padding:0 30px 0 32px; cursor:pointer; display:flex; flex-direction:column; align-items:flex-start; gap:6px; position:relative; }
-.usp-toa .toa-content.toa-center { gap:3px; }
-/* One arrow per boundary, vertically centred in the gap between columns */
-.usp-toa .toa-arrow { position:absolute; right:4px; top:50%; transform:translateY(-50%); font-size:17px; line-height:1; color:${TEXT_MUTED}; pointer-events:none; }
-.usp-toa .toa-goalcount { font-family:Cambria,Georgia,serif; font-weight:600; font-size:34px; line-height:1; color:${BRAND}; }
-.usp-toa .toa-chip { font-size:11px; font-weight:700; padding:5px 11px; border-radius:20px; white-space:nowrap; }
-.usp-toa .toa-chip-neutral { background:#EEF0F3; color:${BRAND}; }
-.usp-toa .toa-bignum { font-family:Cambria,Georgia,serif; font-weight:600; font-size:30px; color:${TEXT}; line-height:1; }
-.usp-toa .toa-label { font-size:11.5px; color:${TEXT_SUB}; }
 
 .usp-toa .toa-portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
 .usp-toa .toa-pcard { border-radius:14px; padding:20px; background:${SURFACE}; border:1px solid ${BORDER}; display:flex; flex-direction:column; gap:14px; transition:transform .2s ease, box-shadow .2s ease; }
@@ -6223,11 +6194,9 @@ const TOA_CSS = `
   .usp-toa .toa-impact-grid, .usp-toa .toa-path-wrap { grid-template-columns:1fr; }
   .usp-toa h1.toa-strategy-line { font-size:26px; }
   .usp-toa .toa-colheads { display:none; }
-  .usp-toa .toa-row, .usp-toa .toa-content-row { flex-direction:column; }
+  .usp-toa .toa-row { flex-direction:column; }
   .usp-toa .toa-chev, .usp-toa .toa-box { clip-path:none !important; margin-left:0 !important; border-radius:10px; margin-bottom:6px; }
-  .usp-toa .toa-content { padding-left:22px; margin-bottom:14px; }
   /* Columns stack, so a right-hand arrow would point nowhere */
-  .usp-toa .toa-arrow { display:none; }
 }
 `;
 
