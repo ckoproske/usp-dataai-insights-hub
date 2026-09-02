@@ -32,7 +32,8 @@ ORDER BY sort_order;
 -- =============================================================================
 
 UPDATE usp_data.usp_strategy.portfolios
-SET title = 'Strategy, Planning, and Management'
+SET title       = 'Strategy, Planning, and Management',
+    description = 'The Strategy, Planning, and Management Portfolio provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time.'
 WHERE portfolio_id = 'cross-cutting';
 
 
@@ -45,9 +46,10 @@ SELECT portfolio_id, title, sort_order
 FROM usp_data.usp_strategy.portfolios
 ORDER BY sort_order;
 
--- The description still opens "The Cross-Cutting Portfolio provides the
--- strategic, operational, and learning infrastructure...". Review whether it
--- should be reworded to match the new name — it renders on the portfolio page.
-SELECT portfolio_id, LEFT(description, 160) AS description_opening
+-- Description should now open "The Strategy, Planning, and Management
+-- Portfolio provides..." with no remaining reference to the old name.
+SELECT portfolio_id,
+       LEFT(description, 90) AS description_opening,
+       description LIKE '%Cross%' AS still_mentions_old_name
 FROM usp_data.usp_strategy.portfolios
 WHERE portfolio_id = 'cross-cutting';

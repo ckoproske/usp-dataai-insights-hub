@@ -295,7 +295,7 @@ const DEFAULT_DATA = {
     "cross-cutting": {
       portfolio: {
         name:"Strategy, Planning, and Management",
-        description:"The Cross-Cutting Portfolio provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time.",
+        description:"The Strategy, Planning, and Management Portfolio provides the strategic, operational, and learning infrastructure that enables USP Data & AI to execute its strategy effectively and adapt over time.",
         teamMembers:["Natasha Fedo, DDSPM","Chelsea Koproske, SPO MLE & Strategy","Lilian Tan, Senior Manager","Melanie Winslow, Interim ASO","Emily Strom, PA","Elizabeth Hankins, SPC","Nicole David, PC/PA"],
         budget:"",budget2026:"",budget2027:"",budget2028:"",budget2029:"",
         portfolioOutcomes:[
