@@ -6779,6 +6779,7 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     notes: "", designated_approver: "", approver_note: "", reviewer_note: "",
   };
   const [colFilters, setColFilters] = useState(_emptyFilters);
+  const [searchQuery, setSearchQuery] = useState("");
   const [reviewApproverFilter, setReviewApproverFilter] = useState(null);
   const [sortConfig, setSortConfig] = useState({ col: null, dir: null });
   const [moveRowId, setMoveRowId]   = useState(null);
@@ -6912,6 +6913,40 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     });
   };
 
+  // Portfolio and BOW cells show a resolved display name, so search and sort
+  // must use that name rather than the raw id stored on the row.
+  const ideaPortfolioName = (idea) =>
+    (portfolios || []).find(p => p.portfolio_id === idea.primary_portfolio)?.name
+    || idea.primary_portfolio || "";
+  const ideaBowName = (idea) =>
+    (allBows || []).find(bw => bw.bow_id === idea.primary_bow)?.name
+    || idea.primary_bow || "";
+
+  // Every column in the table, in render order, with what it sorts on. "text"
+  // compares with localeCompare, "num" numerically, "date" by timestamp, and
+  // "stage" by pipeline position rather than alphabetically.
+  const IDEA_COLUMNS = [
+    { label:"Title",             key:"title",               type:"text" },
+    { label:"Objective",         key:"objective",           type:"text" },
+    { label:"Stage",             key:"stage",               type:"stage" },
+    { label:"Type",              key:"idea_type",           type:"text" },
+    { label:"Submitted By",      key:"submitted_by",        type:"text" },
+    { label:"Date Added",        key:"submitted_at",        type:"date" },
+    { label:"Portfolio",         key:"primary_portfolio",   type:"text", get:ideaPortfolioName },
+    { label:"BOW",               key:"primary_bow",         type:"text", get:ideaBowName },
+    { label:"Add'l BOWs",     key:"additional_bows",     type:"text" },
+    { label:"Partner",           key:"potential_partner",   type:"text" },
+    { label:"Total $",           key:"est_total_amount",    type:"num" },
+    { label:"2026 $",            key:"est_2026_amount",     type:"num" },
+    { label:"Start Date",        key:"desired_start_date",  type:"date" },
+    { label:"Duration",          key:"est_duration",        type:"num" },
+    { label:"Additional Notes",  key:"notes",               type:"text" },
+    { label:"Approver Requests", key:"reviewer_note",       type:"text" },
+    { label:"Approver",          key:"designated_approver", type:"text" },
+    { label:"Approval Status",   key:"approver_note",       type:"text",
+      get:(i)=> i.approver_note || (i.approved_by ? "Approved by " + i.approved_by : "") },
+  ];
+
   const filteredIdeas = activeIdeas.filter(idea => {
     if (stageFilter && idea.stage !== stageFilter) return false;
     if (reviewApproverFilter) {
@@ -6920,6 +6955,20 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
     }
     const cf = colFilters;
     const lc = s => (s || "").toLowerCase();
+    // Free-text search across every field shown in the table, so one box finds
+    // an idea without the user working out which column it lives in.
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const hay = [
+        idea.title, idea.objective, idea.stage, idea.idea_type, idea.submitted_by,
+        idea.additional_bows, idea.potential_partner, idea.est_duration,
+        idea.notes, idea.reviewer_note, idea.designated_approver,
+        idea.approver_note, idea.approved_by, idea.desired_start_date,
+        idea.est_total_amount, idea.est_2026_amount,
+        ideaPortfolioName(idea), ideaBowName(idea),
+      ].map(v => (v === null || v === undefined) ? "" : String(v).toLowerCase());
+      if (!hay.some(v => v.includes(q))) return false;
+    }
     if (cf.title        && !lc(idea.title).includes(lc(cf.title)))                   return false;
     if (cf.objective    && !lc(idea.objective).includes(lc(cf.objective)))           return false;
     if (cf.stage        && idea.stage !== cf.stage)                                   return false;
@@ -6943,29 +6992,35 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
   const displayIdeas = (() => {
     const sc = sortConfig;
     if (!sc.col) return filteredIdeas;
-    return [...filteredIdeas].sort((a, b) => {
-      if (sc.col === "title") {
-        const cmp = (a.title || "").localeCompare(b.title || "");
-        return sc.dir === "asc" ? cmp : -cmp;
+    const col = IDEA_COLUMNS.find(c => c.key === sc.col);
+    if (!col) return filteredIdeas;
+    const sign = sc.dir === "asc" ? 1 : -1;
+    const raw = (idea) => col.get ? col.get(idea) : idea[col.key];
+
+    // Blanks always sort last, whichever direction — an empty cell is not a
+    // small value, and floating them to the top buries the populated rows.
+    const isBlank = (v) => v === null || v === undefined || v === "";
+
+    return [...filteredIdeas].sort((x, y) => {
+      const vx = raw(x), vy = raw(y);
+      if (isBlank(vx) && isBlank(vy)) return 0;
+      if (isBlank(vx)) return 1;
+      if (isBlank(vy)) return -1;
+
+      if (col.type === "num") {
+        return sign * ((parseFloat(vx) || 0) - (parseFloat(vy) || 0));
       }
-      let va, vb;
-      if (sc.col === "est_total_amount" || sc.col === "est_2026_amount") {
-        va = parseFloat(a[sc.col]) || 0;
-        vb = parseFloat(b[sc.col]) || 0;
-      } else if (sc.col === "est_duration") {
-        va = parseFloat(a.est_duration) || 0;
-        vb = parseFloat(b.est_duration) || 0;
-      } else if (sc.col === "desired_start_date") {
-        const tA = a.desired_start_date ? new Date(a.desired_start_date).getTime() : (sc.dir === "asc" ? Infinity : -Infinity);
-        const tB = b.desired_start_date ? new Date(b.desired_start_date).getTime() : (sc.dir === "asc" ? Infinity : -Infinity);
-        va = tA; vb = tB;
-      } else if (sc.col === "submitted_at") {
-        va = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
-        vb = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
+      if (col.type === "date") {
+        return sign * (new Date(vx).getTime() - new Date(vy).getTime());
       }
-      if (va < vb) return sc.dir === "asc" ? -1 : 1;
-      if (va > vb) return sc.dir === "asc" ? 1 : -1;
-      return 0;
+      if (col.type === "stage") {
+        // Pipeline order, not alphabetical — "Brainstorming" before "Ready for
+        // Review" is what a reader expects from a stage column.
+        const ix = IDEA_STAGES.findIndex(st => st.name === vx);
+        const iy = IDEA_STAGES.findIndex(st => st.name === vy);
+        return sign * ((ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy));
+      }
+      return sign * String(vx).localeCompare(String(vy), undefined, { numeric:true, sensitivity:"base" });
     });
   })();
 
@@ -7195,9 +7250,38 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                 {error}
               </div>
             )}
+            {/* Search sits outside the results block so it stays reachable when a
+                query matches nothing — otherwise you could search yourself into a
+                dead end with no way to clear it. */}
+            {!loading && !error && (
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"2px 0 10px" }}>
+                <div style={{ position:"relative", flex:"0 1 380px" }}>
+                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)",
+                    fontSize:12, color:TEXT_MUTED, pointerEvents:"none" }}>⌕</span>
+                  <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search ideas — title, objective, partner, notes, approver…"
+                    style={{ width:"100%", padding:"7px 30px 7px 26px", borderRadius:8, fontSize:13,
+                      border:"1px solid " + (searchQuery ? "#6366F1" : BORDER), outline:"none",
+                      fontFamily:"inherit", background:SURFACE, color:TEXT }}/>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} title="Clear search"
+                      style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)",
+                        border:"none", background:"none", cursor:"pointer", color:TEXT_MUTED,
+                        fontSize:15, lineHeight:1, padding:"2px 4px" }}>×</button>
+                  )}
+                </div>
+                {searchQuery && (
+                  <span style={{ fontSize:12, color:TEXT_SUB }}>
+                    {displayIdeas.length} {displayIdeas.length === 1 ? "match" : "matches"}
+                  </span>
+                )}
+              </div>
+            )}
             {!loading && !error && displayIdeas.length === 0 && (
               <div style={{ padding: 24, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
-                {stageFilter ? `No ideas in "${stageFilter}".` : "No ideas yet. Click \"+ New Idea\" to create one!"}
+                {searchQuery
+                  ? `No ideas match "${searchQuery}".`
+                  : stageFilter ? `No ideas in "${stageFilter}".` : "No ideas yet. Click \"+ New Idea\" to create one!"}
               </div>
             )}
             {!loading && !error && displayIdeas.length > 0 && (
@@ -7215,14 +7299,28 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
               <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 2200, tableLayout: "auto" }}>
                 <thead>
                   <tr style={{ background: SURFACE, position: "sticky", top: 0, zIndex: 2 }}>
-                    {["Title", "Objective", "Stage", "Type", "Submitted By", "Submitted", "Portfolio", "BOW", "Add'l BOWs", "Partner", "Total $", "2026 $", "Start Date", "Duration", "Additional Notes", "Approver Requests", "Approver", "Approval Status"].map(h => (
-                      <th key={h} style={{ padding: "8px 14px", textAlign: "left",
-                        fontSize: 9, fontWeight: 700, color: TEXT_MUTED,
-                        textTransform: "uppercase", letterSpacing: 0.6,
-                        borderBottom: "none", whiteSpace: "nowrap" }}>
-                        {h}
-                      </th>
-                    ))}
+                    {/* Every header sorts. Previously only five columns did, and
+                        clicking any other simply did nothing. */}
+                    {IDEA_COLUMNS.map(c => {
+                      const active = sortConfig.col === c.key;
+                      const defaultDir = (c.type === "date" || c.type === "num") ? "desc" : "asc";
+                      return (
+                        <th key={c.label} onClick={() => toggleSort(c.key, defaultDir)}
+                          title={"Sort by " + c.label}
+                          style={{ padding: "8px 14px", textAlign: "left",
+                            fontSize: 9, fontWeight: 700,
+                            color: active ? "#4338CA" : TEXT_MUTED,
+                            background: active ? "#EEF2FF" : "transparent",
+                            textTransform: "uppercase", letterSpacing: 0.6,
+                            borderBottom: "none", whiteSpace: "nowrap",
+                            cursor: "pointer", userSelect: "none" }}>
+                          {c.label}
+                          <span style={{ marginLeft: 5, opacity: active ? 1 : 0.35 }}>
+                            {active ? (sortConfig.dir === "asc" ? "↑" : "↓") : "↕"}
+                          </span>
+                        </th>
+                      );
+                    })}
                   </tr>
                   {/* Filter / Sort row */}
                   {(() => {
@@ -7238,26 +7336,10 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         {opts}
                       </select>
                     );
-                    const fSort = (col, defaultDir, labels) => {
-                      const active = sortConfig.col === col;
-                      const lbl = active
-                        ? (sortConfig.dir === "desc" ? labels[0] : labels[1])
-                        : "↕";
-                      return fTh(
-                        <button onClick={() => toggleSort(col, defaultDir)}
-                          style={{ width: "100%", padding: "3px 6px", borderRadius: 4, cursor: "pointer",
-                            border: active ? "1px solid #6366F1" : "1px solid " + BORDER,
-                            background: active ? "#EEF2FF" : SURFACE, fontSize: 10,
-                            color: active ? "#4338CA" : TEXT_MUTED,
-                            fontWeight: active ? 700 : 400, textAlign: "center", whiteSpace: "nowrap" }}>
-                          {lbl}
-                        </button>
-                      );
-                    };
                     return (
                       <tr style={{ background: "#F1F5F9", position: "sticky", top: 29, zIndex: 2 }}>
-                        {/* Title — A-Z sort */}
-                        {fSort("title", "asc", ["Z → A ↓", "A → Z ↑"])}
+                        {/* Title — sorting moved onto the header */}
+                        {fTh(null)}
                         {/* Objective — no filter */}
                         {fTh(null)}
                         {/* Stage */}
@@ -7266,8 +7348,8 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         {fSel("idea_type", IDEA_TYPES.map(t => <option key={t} value={t}>{t}</option>))}
                         {/* Submitted By */}
                         {fSel("submitted_by", submittedByOptions.map(n => <option key={n} value={n}>{n}</option>))}
-                        {/* Submitted — most recent first by default */}
-                        {fSort("submitted_at", "desc", ["Newest → Oldest ↓", "Oldest → Newest ↑"])}
+                        {/* Date Added — sorting moved onto the header */}
+                        {fTh(null)}
                         {/* Portfolio */}
                         {fSel("primary_portfolio", (portfolios || []).map(p => <option key={p.portfolio_id} value={p.portfolio_id}>{p.name}</option>))}
                         {/* BOW — cascades off portfolio filter */}
@@ -7291,13 +7373,13 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         {/* Partner — A-Z dropdown */}
                         {fSel("potential_partner", partnerOptions.map(p => <option key={p} value={p}>{p}</option>))}
                         {/* Total $ — sort high→low */}
-                        {fSort("est_total_amount", "desc", ["High → Low ↓", "Low → High ↑"])}
+                        {fTh(null)}
                         {/* 2026 $ — sort high→low */}
-                        {fSort("est_2026_amount", "desc", ["High → Low ↓", "Low → High ↑"])}
+                        {fTh(null)}
                         {/* Start Date — sort nearest first */}
-                        {fSort("desired_start_date", "asc", ["Furthest ↓", "Nearest ↑"])}
+                        {fTh(null)}
                         {/* Duration — sort high→low */}
-                        {fSort("est_duration", "desc", ["High → Low ↓", "Low → High ↑"])}
+                        {fTh(null)}
                         {/* Notes — no filter */}
                         {fTh(null)}
                         {/* Approver Requests — no filter */}
@@ -7386,9 +7468,12 @@ function InvestmentIdeaTracker({ currentUser, appData }) {
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 120 }}>
                           {idea.submitted_by || "—"}
                         </td>
+                        {/* Date Added — absolute date leads, since this column is
+                            now sortable and a date is easier to scan against a
+                            sort than "3 days ago". Relative stays in the title. */}
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap", minWidth: 110 }}
-                          title={fmtNoteDate(idea.submitted_at)}>
-                          {fmtRelativeDate(idea.submitted_at)}
+                          title={fmtRelativeDate(idea.submitted_at)}>
+                          {idea.submitted_at ? fmtDate(idea.submitted_at) : "—"}
                         </td>
                         <td style={{ padding: "9px 14px", color: TEXT_SUB, whiteSpace: "nowrap",
                           minWidth: 160, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
