@@ -112,21 +112,20 @@ let STRATEGY_GOALS = [
     chartNote:"Benchmark performance score over time — solutions using vs. not using public goods (illustrative, mock data pending real tracking)",
     baseline:{year:"2026", total:0},
     speedSeries:[
-      { period:"Q1", usingPublicGoods:30, notUsing:29 },
-      { period:"Q2", usingPublicGoods:40, notUsing:32 },
-      { period:"Q3", usingPublicGoods:52, notUsing:35 },
-      { period:"Q4", usingPublicGoods:66, notUsing:38 },
-      { period:"Q5", usingPublicGoods:80, notUsing:42 },
-      { period:"Q6", usingPublicGoods:92, notUsing:46 },
+      { period:"2026", usingPublicGoods:30, notUsing:29 },
+      { period:"2027", usingPublicGoods:45, notUsing:33 },
+      { period:"2028", usingPublicGoods:62, notUsing:37 },
+      { period:"2029", usingPublicGoods:78, notUsing:41 },
+      { period:"2030", usingPublicGoods:92, notUsing:46 },
     ],
     speedLabelA:"Using Public Goods",
     speedLabelB:"Not Using Public Goods",
     speedYAxisLabel:"Benchmark performance score (0–100)",
     goalNote:"Illustrative mock trajectory — real benchmark-speed data will populate once tracking is in place. Shows solutions using public goods (memory specs, eval tooling, benchmarks) closing the performance gap roughly 2x faster than solutions that don't.",
     adoptionPct:{
-      current:12, target2030:50,
+      current:0, target2030:50,
       trend:[
-        { year:"2026", pct:12 },
+        { year:"2026", pct:0 },
         { year:"2027", pct:20 },
         { year:"2028", pct:30 },
         { year:"2029", pct:40 },
@@ -141,12 +140,7 @@ let STRATEGY_GOALS = [
       { name:"Solution E", type:"Instruction + Tutoring", embedsPublicGoods:true,  benchmarkScore:81, detail:"Full integration — portable memory spec, domain benchmarks, and safety guardrails all embedded." },
       { name:"Solution F", type:"Advising + Navigation",  embedsPublicGoods:true,  benchmarkScore:70, detail:"Adopted CSGA knowledge graph integration in 2026; benchmark score trending up." },
     ],
-    keyBenchmarks:[
-      { name:"Tutoring Efficacy Benchmark", description:"Domain-specific benchmark measuring learning-gain efficacy for instruction & tutoring solutions." },
-      { name:"Advising Pathway Accuracy Benchmark", description:"Measures correctness/relevance of pathway recommendations for advising & navigation solutions." },
-      { name:"Portable Memory Continuity Test", description:"Evaluates whether a solution retains learner context and memory reliably across sessions." },
-      { name:"CSGA Competency Alignment Benchmark", description:"Measures how accurately a solution's skill/competency tagging aligns with the CSGA knowledge graph." },
-    ],
+    keyBenchmarks:[],
   },
   { id:"g2", number:2, title:"Evidence & Safety Measures that Shift the Market", color:"#313A44",
     target:"75% of recognized independent verification bodies voluntarily adopt our OS evaluation infrastructure.",
@@ -4743,30 +4737,6 @@ function GoalExplorer({ strategyRatings }) {
   );
 }
 
-// ── ScenarioModelingButton ────────────────────────────────────────────────────
-function ScenarioModelingButton() {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div style={{position:"relative",display:"inline-block"}}>
-      <button
-        onMouseEnter={()=>setHovered(true)}
-        onMouseLeave={()=>setHovered(false)}
-        style={{display:"inline-flex",alignItems:"center",gap:8,padding:"9px 18px",borderRadius:8,border:"2px dashed "+BORDER,background:SURFACE,cursor:"default",fontSize:14,fontWeight:700,color:TEXT_SUB,transition:"opacity .15s",opacity:hovered?1:0.7}}>
-        <span style={{fontSize:15}}>🔮</span>
-        Future Scenario Modeling
-        <span style={{fontSize:11,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.15)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
-      </button>
-      {hovered&&(
-        <div style={{position:"absolute",bottom:"calc(100% + 8px)",left:0,zIndex:20,background:BRAND,borderRadius:10,padding:"14px 16px",boxShadow:"0 8px 24px rgba(10,37,64,0.18)",width:320,pointerEvents:"none"}}>
-          <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:6}}>Future Scenario Modeling Tool</div>
-          <div style={{fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.6}}>Explore how different portfolio investments and field conditions might shape progress toward this goal. Model optimistic, baseline, and risk scenarios to inform strategic planning and resource allocation.</div>
-          <div style={{marginTop:10,fontSize:12,color:"rgba(255,255,255,0.4)"}}>This tool is under development and will be available in a future release.</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── CoLeverageButton ─────────────────────────────────────────────────────────
 function CoLeverageButton() {
   const [hovered, setHovered] = useState(false);
@@ -5259,7 +5229,6 @@ function GoalDetailChart({ g }) {
               <div style={{fontSize:22,fontWeight:800,color:"#059669"}}>{g.leverageTotals.stretch}</div>
               <div style={{fontSize:11,color:"#065F46",marginTop:2,opacity:0.7}}>Optimistic scenario with Hyperscaler uptake</div>
             </div>
-            <ScenarioModelingButton/>
             <CoLeverageButton/>
           </div>
         </div>
@@ -5348,7 +5317,6 @@ function GoalDetailChart({ g }) {
                 <div style={{fontSize:11,color:TEXT_SUB,marginTop:3}}>{Math.round(composite.current/composite.target2030*100)}% toward {composite.target2030}% goal</div>
               </div>
             )}
-            <ScenarioModelingButton/>
           </div>
         </div>
 
@@ -5371,6 +5339,15 @@ function GoalDetailChart({ g }) {
     return (
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
+
+        {/* Prominent illustrative-trajectory banner — baseline/target are confirmed, the curve between them is not */}
+        <div style={{display:"flex",gap:12,alignItems:"flex-start",padding:"14px 16px",background:"rgba(245,158,11,0.1)",borderRadius:10,border:"1px solid rgba(245,158,11,0.35)"}}>
+          <span style={{fontSize:18,lineHeight:1}}>⚠</span>
+          <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>
+            <span style={{fontWeight:700}}>Baseline ({g.baseline?.year}): {g.current2026}% → 2030 Target: {g.goal2030}% — both confirmed.</span> The trajectory shown between them is illustrative and will be replaced with tracked data as it becomes available.
+          </div>
+        </div>
+
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
 
           {/* LEFT — two-line recharts comparison */}
@@ -5427,12 +5404,10 @@ function GoalDetailChart({ g }) {
                 {g.goalNote}
               </div>
             )}
-            <ScenarioModelingButton/>
           </div>
         </div>
 
-        {(adoptionPct || keyBenchmarks.length > 0) && (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
             {adoptionPct && (
               <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
                 <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Adoption of Public Infrastructure</div>
@@ -5454,9 +5429,14 @@ function GoalDetailChart({ g }) {
                 <div style={{fontSize:10,color:TEXT_SUB,opacity:0.75,marginTop:6}}>⚠ Illustrative, mock data pending real tracking.</div>
               </div>
             )}
-            {keyBenchmarks.length > 0 && (
-              <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-                <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:12}}>Key Benchmarks</div>
+            <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:TEXT}}>Key Benchmarks</div>
+                {keyBenchmarks.length === 0 && (
+                  <span style={{fontSize:11,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.15)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
+                )}
+              </div>
+              {keyBenchmarks.length > 0 ? (
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {keyBenchmarks.map(b=>(
                     <div key={b.name}>
@@ -5465,10 +5445,19 @@ function GoalDetailChart({ g }) {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.55}}>The specific benchmarks used to assess PST solutions have not been finalized yet.</div>
+              )}
+            </div>
           </div>
-        )}
+
+        {/* Illustrative-data banner for the mock solutions list below */}
+        <div style={{display:"flex",gap:12,alignItems:"flex-start",padding:"14px 16px",background:"rgba(245,158,11,0.1)",borderRadius:10,border:"1px solid rgba(245,158,11,0.35)"}}>
+          <span style={{fontSize:18,lineHeight:1}}>⚠</span>
+          <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>
+            The solutions and benchmark scores listed below are <span style={{fontWeight:700}}>mock, illustrative examples</span> — not real submissions. Actual PST solutions and scores will populate this list once tracking is in place.
+          </div>
+        </div>
 
         {solutions.length > 0 && (
           <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 20px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
@@ -5489,10 +5478,6 @@ function GoalDetailChart({ g }) {
             ))}
           </div>
         )}
-
-        <div style={{fontSize:11,color:TEXT_SUB,opacity:0.75}}>
-          ⚠ {g.chartNote || "Illustrative, mock data pending real tracking."}
-        </div>
       </div>
     );
   }
@@ -5544,7 +5529,6 @@ function GoalDetailChart({ g }) {
                 {g.goalNote}
               </div>
             )}
-            <ScenarioModelingButton/>
           </div>
         </div>
 
@@ -5675,7 +5659,6 @@ function GoalDetailChart({ g }) {
             </div>
             <div style={{fontSize:11,color:TEXT_SUB,marginTop:3}}>{pct}% of target</div>
           </div>
-          <ScenarioModelingButton/>
         </div>
       </div>
     </div>
@@ -5769,11 +5752,8 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
         </div>
       )}
 
-      {/* Right detail panel — split: main content | Ambition 2045 sidebar */}
-      <div style={{flex:1,display:"flex",minWidth:0}}>
-
-        {/* Main content */}
-        <div style={{flex:1,padding:"28px 32px",display:"flex",flexDirection:"column",gap:20,minWidth:0}}>
+      {/* Right detail panel */}
+      <div style={{flex:1,padding:"28px 32px",display:"flex",flexDirection:"column",gap:20,minWidth:0}}>
 
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
@@ -5811,23 +5791,6 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        </div>
-
-        {/* Ambition 2045 — vertical RH sidebar */}
-        <div style={{width:220,flexShrink:0,borderLeft:"1px solid "+BORDER,background:"#FEF5E7",padding:"22px 18px",display:"flex",flexDirection:"column",gap:14}}>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-              <span style={{fontSize:16}}>⭐</span>
-              <div style={{fontSize:13,fontWeight:700,color:"#92400E",lineHeight:1.3}}>Contribution to Ambition 2045</div>
-            </div>
-            <span style={{fontSize:10,fontWeight:700,color:YELLOW,background:"rgba(245,158,11,0.15)",borderRadius:4,padding:"2px 8px",border:"1px solid "+YELLOW+"44",textTransform:"uppercase",letterSpacing:0.5}}>Coming Soon</span>
-          </div>
-          <div style={{fontSize:13,color:"#92400E",opacity:0.7,lineHeight:1.65}}>This section will describe how progress on this goal connects to the broader Ambition 2045 vision of equitable, AI-enabled learning outcomes for all learners.</div>
-          <div style={{marginTop:"auto",paddingTop:16,borderTop:"1px solid #FDE68A"}}>
-            <div style={{fontSize:11,color:"#92400E",opacity:0.5,lineHeight:1.5}}>Ambition 2045 linkages will be defined as part of the strategy refresh.</div>
           </div>
         </div>
 
