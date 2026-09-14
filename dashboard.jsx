@@ -5728,7 +5728,7 @@ function GoalTabExplorer({ ratings, onUpdateRatings, initialGoal, goalRatings })
     .map(([id])=>id);
 
   return (
-    <div style={{display:"flex",gap:0,background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,boxShadow:"0 1px 8px rgba(0,0,0,0.05)",overflow:"hidden"}}>
+    <div style={{display:"flex",gap:0,background:SURFACE,borderRadius:14,border:"1px solid "+BORDER,boxShadow:"0 1px 8px rgba(0,0,0,0.05)",overflow:"hidden",flexShrink:0}}>
 
       {/* Left tabs — only shown on Strategy Overview (no initialGoal) */}
       {!initialGoal && (
