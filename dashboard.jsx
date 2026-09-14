@@ -197,18 +197,26 @@ let STRATEGY_GOALS = [
     solutionSpaces:[
       { label:"Instruction + Tutoring",   pct:17 },
       { label:"Advising + Navigation",    pct:23 },
-      { label:"Assessment",               pct:9 },
-      { label:"Content Generation",       pct:6 },
     ],
     goalNote:"Illustrative mock baseline by solution space — real per-space benchmark coverage will populate as evidence comes in. The 40% line marks the 2030 target for every space.",
     baseline:{year:"2026", total:null, text:"Pending, insufficient evidence"} },
   { id:"g4", number:4, title:"Data-Informed Decision Making", color:"#313A44",
     target:"70% of district and postsecondary data decision-makers report using better, higher-quality data to support learning and advising",
+    boldStat:"70%",
     earliest:"Q4 2025 — Annual Update in PR",
     metric:"% decision makers", unit:"%", goal2030:70, current2026:21,
-    baseline:{year:"2026", total:21} },
+    baseline:{year:"2026", total:21},
+    chartType:"context-metric-bars",
+    chartNote:"% leaders reporting that the data they use most often meets each high-quality criteria",
+    subheading:"High-quality data is timely, comprehensive, and actionable",
+    criteria:[
+      { label:"Timely",        detail:"Cross-sector insights within a week",                                  pct:42 },
+      { label:"Interoperable", detail:"Combining across systems “not at all hard”",                  pct:9 },
+      { label:"Actionable",    detail:"Used to make teaching & learning or advising & navigation decision",    pct:69 },
+    ] },
   { id:"g5", number:5, title:"Comprehensive EW Momentum Measurement", color:"#313A44",
-    target:"40% of field leaders have comprehensive data access within 6 months to all 5 E-W Momentum Points",
+    target:"40% of field leaders have comprehensive data access within six months to at least two E-W Momentum Points",
+    boldStat:"40%",
     earliest:"Q1 2026 — Annual Update in PR",
     metric:"% of field leaders", unit:"%", goal2030:40, current2026:5,
     baseline:{year:"2026", total:5, text:"≤ 5%"},
@@ -222,6 +230,23 @@ let STRATEGY_GOALS = [
       { label:"Earned a Credential of Value",             short:"Credential of Value", current:22, target2030:72 },
       { label:"All 5 Points (Composite)",                 short:"All 5 (Composite)", current:18, target2030:70 },
     ],
+    sectorContext:{
+      headerNote:"Reported does not mean reached",
+      intro:"Reporting and access don't move together — work is needed on both availability and access.",
+      detail:"Cross-sector data access for K12 and PS leaders lags behind state reporting, but Algebra by 9th grade only requires within-school data, making it easier for leaders to access and use.",
+      points:[
+        { short:"Algebra by 9th",     statesReportingN:10, statesReportingTotal:51, leadersAccessPct:51 },
+        { short:"Gateway Courses",    statesReportingN:22, statesReportingTotal:51, leadersAccessPct:25 },
+        { short:"PS Enrollment",      statesReportingN:49, statesReportingTotal:51, leadersAccessPct:27 },
+        { short:"Learning Applied",   statesReportingN:null, statesReportingTotal:51, leadersAccessPct:27 },
+        { short:"Credential Earned", statesReportingN:42, statesReportingTotal:51, leadersAccessPct:36 },
+        { short:"ALL",                statesReportingN:7,  statesReportingTotal:51, leadersAccessPct:5, leadersAccessDisplay:"≤ 5%" },
+      ],
+      k12CoveragePct:11.6,
+      psCoveragePct:10.6,
+      waitTimeMonths:16,
+      ambConnection:"Supporting 10M learners to a credential of value depends on decision-makers having comprehensive and actionable access to data at every momentum point along the way. By 2045, 45% of field leaders have comprehensive data access within 6 months to all 5 E-W Momentum Points.",
+    },
   },
   { id:"g6", number:6, title:"Amplify Coordination and Impact", color:"#313A44",
     target:"2-3x ($415-540M) leverage on USP Data investment through key partnerships.",
@@ -5025,6 +5050,100 @@ function IvoAdoptionMap({ procurementStates }) {
   );
 }
 
+// ── SectorContextDumbbell — reporting vs. access dumbbell chart + stat boxes ──
+function SectorContextDumbbell({ g, ctx }) {
+  const REPORT_COLOR = "#2563EB", ACCESS_COLOR = "#D97706";
+  const points = ctx.points || [];
+  return (
+    <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"18px 20px"}}>
+      {/* Header: centered title + right-aligned baseline stat */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"start",marginBottom:6}}>
+        <div/>
+        <div style={{fontSize:14,fontWeight:800,color:"#1D4ED8",textAlign:"center",whiteSpace:"nowrap"}}>Sector / Context Metrics</div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:10,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5}}>{g.baseline?.year} Baseline</div>
+          <div style={{fontSize:20,fontWeight:900,color:TEXT,lineHeight:1.1}}>{g.baseline?.text || (g.current2026+"%")}</div>
+        </div>
+      </div>
+
+      {ctx.headerNote && (
+        <div style={{fontSize:13,fontWeight:800,color:"#C2410C",textAlign:"center",marginBottom:8}}>{ctx.headerNote}</div>
+      )}
+      {ctx.intro && (
+        <div style={{fontSize:12,fontWeight:700,color:TEXT,fontStyle:"italic",textAlign:"center",marginBottom:4,lineHeight:1.5}}>{ctx.intro}</div>
+      )}
+      {ctx.detail && (
+        <div style={{fontSize:11,color:TEXT_SUB,fontStyle:"italic",textAlign:"center",marginBottom:16,lineHeight:1.5}}>{ctx.detail}</div>
+      )}
+
+      {/* Column headers */}
+      <div style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 90px",gap:10,alignItems:"end",marginBottom:6}}>
+        <div/>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:TEXT_MUTED}}>
+          {["0%","25%","50%","75%","100%"].map(t=><span key={t}>{t}</span>)}
+        </div>
+        <div style={{fontSize:10,fontWeight:700,color:REPORT_COLOR,textAlign:"center"}}>States Reporting</div>
+        <div style={{fontSize:10,fontWeight:700,color:ACCESS_COLOR,textAlign:"center"}}>Leaders W/ Access</div>
+      </div>
+
+      {/* Dumbbell rows */}
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {points.map((p,i)=>{
+          const reportPct = p.statesReportingN==null ? null : (p.statesReportingN/p.statesReportingTotal*100);
+          const accessPct = p.leadersAccessPct;
+          const lo = reportPct==null ? accessPct : Math.min(reportPct,accessPct);
+          const hi = reportPct==null ? accessPct : Math.max(reportPct,accessPct);
+          return (
+            <div key={i} style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 90px",gap:10,alignItems:"center"}}>
+              <span style={{fontSize:12,fontWeight:600,color:TEXT}}>{p.short}</span>
+              <div style={{position:"relative",height:16}}>
+                <div style={{position:"absolute",left:0,right:0,top:"50%",height:1,background:BORDER}}/>
+                {reportPct!=null && (
+                  <div style={{position:"absolute",top:"50%",height:2,background:"#CBD5E1",
+                    left:lo+"%",width:(hi-lo)+"%",transform:"translateY(-50%)"}}/>
+                )}
+                {reportPct!=null && (
+                  <div style={{position:"absolute",left:reportPct+"%",top:"50%",width:10,height:10,borderRadius:"50%",
+                    background:REPORT_COLOR,border:"2px solid #fff",transform:"translate(-50%,-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+                )}
+                <div style={{position:"absolute",left:accessPct+"%",top:"50%",width:10,height:10,borderRadius:"50%",
+                  background:ACCESS_COLOR,border:"2px solid #fff",transform:"translate(-50%,-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:REPORT_COLOR,textAlign:"center"}}>
+                {p.statesReportingN==null ? "—" : p.statesReportingN}/{p.statesReportingTotal}
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:ACCESS_COLOR,textAlign:"center"}}>
+                {p.leadersAccessDisplay || (p.leadersAccessPct+"%")}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* K12/PS coverage + wait-time stat boxes */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:18}}>
+        <div style={{background:"#FFF7ED",borderRadius:8,border:"1px solid #FED7AA",padding:"12px 14px",textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:800,color:"#C2410C"}}>
+            {ctx.k12CoveragePct}% (K12) &nbsp; {ctx.psCoveragePct}% (PS)
+          </div>
+          <div style={{fontSize:11,color:"#9A3412",marginTop:4,lineHeight:1.4}}>Students covered by states with ALL momentum points.</div>
+        </div>
+        <div style={{background:"#EFF6FF",borderRadius:8,border:"1px solid #BFDBFE",padding:"12px 14px",textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:800,color:"#1D4ED8"}}>{ctx.waitTimeMonths} Months</div>
+          <div style={{fontSize:11,color:"#1E40AF",marginTop:4,lineHeight:1.4}}>Current cross sector data wait time for district leaders.</div>
+        </div>
+      </div>
+
+      {/* AMB45 connection */}
+      {ctx.ambConnection && (
+        <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid "+BORDER,fontSize:11,color:TEXT_SUB,lineHeight:1.6}}>
+          <span style={{fontWeight:800,color:TEXT}}>AMB45 Connection: </span>{ctx.ambConnection}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── GoalDetailChart ───────────────────────────────────────────────────────────
 function GoalDetailChart({ g }) {
   const pct = Math.round((g.current2026 / g.goal2030) * 100);
@@ -5397,6 +5516,9 @@ function GoalDetailChart({ g }) {
 
         {/* US Heatmap */}
         <MomentumHeatmap points={g.momentumPoints.filter(p=>p.short!=="All 5 (Composite)")}/>
+
+        {/* Sector / Context Metrics — reporting vs. access dumbbell chart */}
+        {g.sectorContext && <SectorContextDumbbell g={g} ctx={g.sectorContext}/>}
       </div>
     );
   }
@@ -5690,6 +5812,55 @@ function GoalDetailChart({ g }) {
                 );
               })}
             </div>
+          </div>
+        </div>
+        {g.goalNote && (
+          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.55,padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+            {g.goalNote}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Goal 4: sector / context metrics ──────────────────────────────────────
+  if (g.chartType === "context-metric-bars") {
+    const criteria = g.criteria || [];
+    const BLUE = "#2563EB", BLUE_LIGHT = "#93C5FD";
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
+        <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"18px 20px"}}>
+          {/* Header: centered title + right-aligned baseline stat */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"start",marginBottom:14}}>
+            <div/>
+            <div style={{fontSize:14,fontWeight:800,color:BLUE,textAlign:"center",whiteSpace:"nowrap"}}>Sector / Context Metrics</div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:10,color:TEXT_SUB}}>{g.baseline?.year} Baseline</div>
+              <div style={{fontSize:20,fontWeight:900,color:TEXT,lineHeight:1.1}}>{g.current2026}%</div>
+            </div>
+          </div>
+
+          {g.subheading && (
+            <div style={{fontSize:13,fontWeight:700,color:TEXT,textAlign:"center",marginBottom:4}}>{g.subheading}</div>
+          )}
+          {g.chartNote && (
+            <div style={{fontSize:11,color:TEXT_SUB,textAlign:"center",marginBottom:16}}>{g.chartNote}</div>
+          )}
+
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {criteria.map((c,i)=>(
+              <div key={i} style={{display:"grid",gridTemplateColumns:"260px 1fr 44px",gap:10,alignItems:"center"}}>
+                <div style={{fontSize:12,lineHeight:1.4}}>
+                  <span style={{fontWeight:700,color:BLUE}}>{c.label}</span>
+                  <span style={{color:TEXT_SUB}}> ({c.detail})</span>
+                </div>
+                <div style={{position:"relative",height:14,background:"#fff",border:"1px solid "+BORDER,borderRadius:4,overflow:"hidden"}}>
+                  <div style={{position:"absolute",left:0,top:0,height:"100%",width:c.pct+"%",background:BLUE_LIGHT,borderRadius:4,transition:"width .4s"}}/>
+                </div>
+                <div style={{fontSize:12,fontWeight:800,color:TEXT,textAlign:"right"}}>{c.pct}%</div>
+              </div>
+            ))}
           </div>
         </div>
         {g.goalNote && (

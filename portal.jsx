@@ -6651,6 +6651,16 @@ function GoalChartConfigEditor({ goal, user }) {
   const [procurementStatesList, setProcurementStatesList] = useState(parsed.procurementStates?.states || []);
   const [threshold, setThreshold] = useState(String(parsed.threshold ?? ""));
   const [solutionSpaces, setSolutionSpaces] = useState(parsed.solutionSpaces || []);
+  const [subheading, setSubheading] = useState(parsed.subheading || "");
+  const [criteria, setCriteria] = useState(parsed.criteria || []);
+  const [scHeaderNote, setScHeaderNote] = useState(parsed.sectorContext?.headerNote || "");
+  const [scIntro, setScIntro] = useState(parsed.sectorContext?.intro || "");
+  const [scDetail, setScDetail] = useState(parsed.sectorContext?.detail || "");
+  const [scPoints, setScPoints] = useState(parsed.sectorContext?.points || []);
+  const [scK12, setScK12] = useState(String(parsed.sectorContext?.k12CoveragePct ?? ""));
+  const [scPs, setScPs] = useState(String(parsed.sectorContext?.psCoveragePct ?? ""));
+  const [scWait, setScWait] = useState(String(parsed.sectorContext?.waitTimeMonths ?? ""));
+  const [scAmb, setScAmb] = useState(parsed.sectorContext?.ambConnection || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -6662,7 +6672,16 @@ function GoalChartConfigEditor({ goal, user }) {
     setSaving(true); setError(null); setSaved(false);
     let chart_config;
     if (goal.chart_type === "bar-grouped") chart_config = { groupedData, rightBreakout };
-    else if (goal.chart_type === "momentum-points") chart_config = { momentumPoints };
+    else if (goal.chart_type === "momentum-points") chart_config = {
+      momentumPoints,
+      sectorContext: (scHeaderNote || scIntro || scDetail || scPoints.length || scK12 || scPs || scWait || scAmb) ? {
+        headerNote: scHeaderNote, intro: scIntro, detail: scDetail, points: scPoints,
+        k12CoveragePct: scK12 === "" ? null : parseFloat(scK12),
+        psCoveragePct: scPs === "" ? null : parseFloat(scPs),
+        waitTimeMonths: scWait === "" ? null : parseFloat(scWait),
+        ambConnection: scAmb,
+      } : null,
+    };
     else if (goal.chart_type === "stacked-bar-leverage") chart_config = { leverageData, leverageTotals };
     else if (goal.chart_type === "benchmark-speed-comparison") chart_config = {
       speedSeries, speedLabelA, speedLabelB, speedYAxisLabel,
@@ -6682,6 +6701,7 @@ function GoalChartConfigEditor({ goal, user }) {
       },
     };
     else if (goal.chart_type === "threshold-bars") chart_config = { threshold: threshold === "" ? null : parseFloat(threshold), solutionSpaces };
+    else if (goal.chart_type === "context-metric-bars") chart_config = { subheading, criteria };
     else chart_config = {};
     try {
       const res = await api(`/api/goals/${goal.goal_id}`, {
@@ -6773,6 +6793,50 @@ function GoalChartConfigEditor({ goal, user }) {
             onClick={() => setMomentumPoints(mp => [...mp, { label: "", short: "", current: 0, target2030: 0 }])}>
             + Add momentum point
           </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8, marginTop: 20 }}>
+            Sector / Context Metrics (reporting vs. access)
+          </div>
+          <Field label="Header note" helper="Short bold callout, e.g. 'Reported does not mean reached'.">
+            <input value={scHeaderNote} style={inputStyle} onChange={e => setScHeaderNote(e.target.value)} />
+          </Field>
+          <Field label="Intro line" helper="Bold italic summary sentence.">
+            <input value={scIntro} style={inputStyle} onChange={e => setScIntro(e.target.value)} />
+          </Field>
+          <Field label="Detail line" helper="Smaller italic explanatory sentence.">
+            <input value={scDetail} style={inputStyle} onChange={e => setScDetail(e.target.value)} />
+          </Field>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8, marginTop: 12 }}>
+            Reporting vs. access, by momentum point
+          </div>
+          {scPoints.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Short label" value={row.short || ""} style={{ ...smallInput, width: 120 }}
+                onChange={e => setScPoints(p => p.map((r, j) => j === i ? { ...r, short: e.target.value } : r))} />
+              <input placeholder="States reporting #" type="number" value={row.statesReportingN ?? ""} style={{ ...smallInput, width: 110 }}
+                onChange={e => setScPoints(p => p.map((r, j) => j === i ? { ...r, statesReportingN: e.target.value === "" ? null : parseFloat(e.target.value) } : r))} />
+              <input placeholder="States total" type="number" value={row.statesReportingTotal ?? ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setScPoints(p => p.map((r, j) => j === i ? { ...r, statesReportingTotal: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="Leaders access %" type="number" value={row.leadersAccessPct ?? ""} style={{ ...smallInput, width: 120 }}
+                onChange={e => setScPoints(p => p.map((r, j) => j === i ? { ...r, leadersAccessPct: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="Access display override" value={row.leadersAccessDisplay || ""} style={{ ...smallInput, width: 130 }}
+                onChange={e => setScPoints(p => p.map((r, j) => j === i ? { ...r, leadersAccessDisplay: e.target.value } : r))} />
+              <button onClick={() => setScPoints(p => p.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 16 }}
+            onClick={() => setScPoints(p => [...p, { short: "", statesReportingN: null, statesReportingTotal: 51, leadersAccessPct: 0 }])}>
+            + Add momentum point row
+          </Btn>
+          <div style={rowStyle}>
+            <Field label="K12 coverage %"><input type="number" value={scK12} style={smallInput} onChange={e => setScK12(e.target.value)} /></Field>
+            <Field label="PS coverage %"><input type="number" value={scPs} style={smallInput} onChange={e => setScPs(e.target.value)} /></Field>
+            <Field label="Wait time (months)"><input type="number" value={scWait} style={smallInput} onChange={e => setScWait(e.target.value)} /></Field>
+          </div>
+          <Field label="AMB45 Connection" helper="Text shown at the bottom of the metrics box.">
+            <textarea value={scAmb} style={{ ...inputStyle, minHeight: 70 }} onChange={e => setScAmb(e.target.value)} />
+          </Field>
         </>
       )}
 
@@ -7013,6 +7077,33 @@ function GoalChartConfigEditor({ goal, user }) {
           <Btn variant="secondary" size="sm"
             onClick={() => setSolutionSpaces(sp => [...sp, { label: "", pct: 0 }])}>
             + Add solution space
+          </Btn>
+        </>
+      )}
+
+      {goal.chart_type === "context-metric-bars" && (
+        <>
+          <Field label="Subheading" helper="Bold statement shown under the header, e.g. what 'high-quality data' means.">
+            <input value={subheading} style={inputStyle} onChange={e => setSubheading(e.target.value)} />
+          </Field>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8, marginTop: 8 }}>
+            Criteria
+          </div>
+          {criteria.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Label" value={row.label || ""} style={{ ...smallInput, width: 130 }}
+                onChange={e => setCriteria(c => c.map((r, j) => j === i ? { ...r, label: e.target.value } : r))} />
+              <input placeholder="Detail (in parens)" value={row.detail || ""} style={{ ...smallInput, flex: 1 }}
+                onChange={e => setCriteria(c => c.map((r, j) => j === i ? { ...r, detail: e.target.value } : r))} />
+              <input placeholder="Pct" type="number" value={row.pct ?? ""} style={{ ...smallInput, width: 80 }}
+                onChange={e => setCriteria(c => c.map((r, j) => j === i ? { ...r, pct: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setCriteria(c => c.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm"
+            onClick={() => setCriteria(c => [...c, { label: "", detail: "", pct: 0 }])}>
+            + Add criterion
           </Btn>
         </>
       )}
