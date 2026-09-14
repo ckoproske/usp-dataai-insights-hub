@@ -4804,15 +4804,15 @@ const STATE_COVERAGE = {
 // Simple Albers-like projected state centroids for a schematic tile map
 // Using a cartogram-style grid layout (col, row) for clarity
 const STATE_GRID = {
-  AK:{c:0,r:7}, ME:{c:11,r:0}, VT:{c:10,r:0}, NH:{c:11,r:1},
+  AK:{c:0,r:7}, ME:{c:11,r:0}, VT:{c:10,r:1}, NH:{c:11,r:1},
   WA:{c:1,r:0}, MT:{c:2,r:0}, ND:{c:3,r:0}, MN:{c:4,r:0}, IL:{c:5,r:1}, WI:{c:6,r:0}, MI:{c:7,r:0}, NY:{c:9,r:1}, MA:{c:11,r:2}, RI:{c:11,r:3},
   OR:{c:1,r:1}, ID:{c:2,r:1}, SD:{c:3,r:1}, IA:{c:5,r:2}, IN:{c:6,r:2}, OH:{c:7,r:1}, PA:{c:8,r:1}, NJ:{c:9,r:2}, CT:{c:10,r:2}, DE:{c:9,r:3},
-  CA:{c:1,r:2}, NV:{c:2,r:2}, WY:{c:3,r:2}, NE:{c:4,r:2}, MO:{c:5,r:3}, KY:{c:6,r:3}, WV:{c:7,r:2}, VA:{c:8,r:2}, MD:{c:9,r:2},
+  CA:{c:1,r:2}, NV:{c:2,r:2}, WY:{c:3,r:2}, NE:{c:4,r:2}, MO:{c:5,r:3}, KY:{c:6,r:3}, WV:{c:7,r:2}, VA:{c:8,r:2}, MD:{c:9,r:4},
   AZ:{c:2,r:4}, UT:{c:2,r:3}, CO:{c:3,r:3}, KS:{c:4,r:3}, AR:{c:5,r:4}, TN:{c:6,r:4}, NC:{c:7,r:3}, SC:{c:8,r:3},
   NM:{c:2,r:5}, OK:{c:4,r:4}, MS:{c:5,r:5}, AL:{c:6,r:5}, GA:{c:7,r:4},
   TX:{c:4,r:5}, LA:{c:5,r:6}, FL:{c:7,r:6},
   HI:{c:2,r:7},
-  DC:{c:9,r:3}, VT:{c:10,r:1},
+  DC:{c:10,r:3},
 };
 
 function coverageColor(val) {
