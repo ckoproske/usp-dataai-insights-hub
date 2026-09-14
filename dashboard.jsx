@@ -103,69 +103,102 @@ const PO_SHORT_TITLES_CC  = ["Cross-Division Alignment","Data-Driven Insights","
 // live data from strategy_goals/chart_config; also used if the API is unreachable.
 let STRATEGY_GOALS = [
   { id:"g1", number:1, title:"Shared Technical Public Goods", color:"#313A44",
-    target:"50% of PST solutions using our public goods show 2x the efficacy of those that don't",
+    target:"50% of PST solutions using our public goods close the gap to top performance twice as fast as those that don't (as measured by key benchmarks).",
+    boldStat:"50%",
     earliest:"Q1 2026 — Annual Update in PR",
     source:"", updateFreq:"Annual",
     metric:"% of PST solutions", unit:"%", goal2030:50, current2026:0,
-    chartType:"bar-grouped",
-    chartNote:"% of students in K-12 and PS reached, by solution type. 'All Learners' reflects share of the 40% goal reached. Early directional estimates.",
+    chartType:"benchmark-speed-comparison",
+    chartNote:"Benchmark performance score over time — solutions using vs. not using public goods (illustrative, mock data pending real tracking)",
     baseline:{year:"2026", total:0},
-    groupedData:[
-      { year:"2028", instruction:65, advising:21, allLearners:28 },
-      { year:"2030", instruction:60, advising:23, allLearners:40 },
+    speedSeries:[
+      { period:"Q1", usingPublicGoods:30, notUsing:29 },
+      { period:"Q2", usingPublicGoods:40, notUsing:32 },
+      { period:"Q3", usingPublicGoods:52, notUsing:35 },
+      { period:"Q4", usingPublicGoods:66, notUsing:38 },
+      { period:"Q5", usingPublicGoods:80, notUsing:42 },
+      { period:"Q6", usingPublicGoods:92, notUsing:46 },
     ],
-    goalNote:"By 2030, 40% of all learners are reached. Within that, 60% via Instruction + Tutoring and 23% via Advising + Navigation. Breakdown estimates show how those solution-type shares further split by capability.",
-    rightBreakout:{
-      advising:{ pct:23, rows:[
-        {label:"Context Only", val:24},
-        {label:"Memory Only",  val:14},
-        {label:"Both",         val:8},
-        {label:"Not Covered",  val:55},
-      ]},
-      instruction:{ pct:17, rows:[
-        {label:"Context Only", val:26},
-        {label:"Memory Only",  val:15},
-        {label:"Both",         val:9},
-        {label:"Not Covered",  val:50},
-      ]},
+    speedLabelA:"Using Public Goods",
+    speedLabelB:"Not Using Public Goods",
+    speedYAxisLabel:"Benchmark performance score (0–100)",
+    goalNote:"Illustrative mock trajectory — real benchmark-speed data will populate once tracking is in place. Shows solutions using public goods (memory specs, eval tooling, benchmarks) closing the performance gap roughly 2x faster than solutions that don't.",
+    adoptionPct:{
+      current:12, target2030:50,
+      trend:[
+        { year:"2026", pct:12 },
+        { year:"2027", pct:20 },
+        { year:"2028", pct:30 },
+        { year:"2029", pct:40 },
+        { year:"2030", pct:50 },
+      ],
     },
+    solutions:[
+      { name:"Solution A", type:"Instruction + Tutoring", embedsPublicGoods:true,  benchmarkScore:78, detail:"Uses portable memory spec v1 and domain benchmark eval; scored in top quartile on the Tutoring Efficacy Benchmark." },
+      { name:"Solution B", type:"Advising + Navigation",  embedsPublicGoods:true,  benchmarkScore:64, detail:"Embeds CSGA competency tags for pathway recommendations; mid-tier on Advising Pathway Accuracy Benchmark." },
+      { name:"Solution C", type:"Instruction + Tutoring", embedsPublicGoods:false, benchmarkScore:41, detail:"Does not yet embed portable memory spec; benchmark score reflects baseline performance without public-goods integration." },
+      { name:"Solution D", type:"Advising + Navigation",  embedsPublicGoods:false, benchmarkScore:38, detail:"No public-goods integration; flagged as a priority outreach target for 2027." },
+      { name:"Solution E", type:"Instruction + Tutoring", embedsPublicGoods:true,  benchmarkScore:81, detail:"Full integration — portable memory spec, domain benchmarks, and safety guardrails all embedded." },
+      { name:"Solution F", type:"Advising + Navigation",  embedsPublicGoods:true,  benchmarkScore:70, detail:"Adopted CSGA knowledge graph integration in 2026; benchmark score trending up." },
+    ],
+    keyBenchmarks:[
+      { name:"Tutoring Efficacy Benchmark", description:"Domain-specific benchmark measuring learning-gain efficacy for instruction & tutoring solutions." },
+      { name:"Advising Pathway Accuracy Benchmark", description:"Measures correctness/relevance of pathway recommendations for advising & navigation solutions." },
+      { name:"Portable Memory Continuity Test", description:"Evaluates whether a solution retains learner context and memory reliably across sessions." },
+      { name:"CSGA Competency Alignment Benchmark", description:"Measures how accurately a solution's skill/competency tagging aligns with the CSGA knowledge graph." },
+    ],
   },
   { id:"g2", number:2, title:"Evidence & Safety Measures that Shift the Market", color:"#313A44",
-    target:"75% of independent verification bodies using our evaluation infrastructure investments",
+    target:"75% of recognized independent verification bodies voluntarily adopt our OS evaluation infrastructure.",
+    boldStat:"75%",
     earliest:"Q1 2026 — Annual Update in PR",
     source:"", updateFreq:"Annual",
     metric:"% of independent verification bodies", unit:"%", goal2030:75, current2026:0,
-    chartType:"bar-grouped",
-    chartNote:"% of students in K-12 and PS reached, by solution type. 'All Learners' reflects share of the 50% goal reached. Early directional estimates.",
+    chartType:"adoption-progress",
+    chartNote:"Cumulative independent verification bodies adopting the OS evaluation infrastructure, by year",
     baseline:{year:"2026", total:0},
-    groupedData:[
-      { year:"2028",
-        instruction:60, advising:27, allLearners:30 },
-      { year:"2030",
-        instruction:50, advising:30, allLearners:50 },
+    milestones:[
+      { year:"2026", count:2 },
+      { year:"2027", count:4 },
+      { year:"2028", count:12 },
+      { year:"2029", count:36 },
+      { year:"2030", count:75 },
     ],
-    goalNote:"By 2030, 50% of all learners are reached. Within that, 50% via Instruction + Tutoring and 30% via Advising + Navigation. Breakdown estimates show how those solution-type shares further split by capability.",
-    rightBreakout:{
-      advising:{ pct:30, rows:[
-        {label:"Eval Tech + Efficacy",  val:10},
-        {label:"Guardrails + Safety",   val:20},
-        {label:"Both",                  val:6},
-        {label:"Not Covered",           val:64},
-      ]},
-      instruction:{ pct:20, rows:[
-        {label:"Eval Tech + Efficacy",  val:20},
-        {label:"Guardrails + Safety",   val:15},
-        {label:"Both",                  val:4},
-        {label:"Not Covered",           val:61},
-      ]},
+    unitLabel:"verification bodies",
+    goalNote:"Milestones mirror the vendor-adoption targets from the Develop AI Evaluation Infrastructure BOW (2 → 4 → 12 → 36 → 75+ vendors publicizing performance results, 2026–2030).",
+    verificationBodies:[
+      { name:"EdSAFE AI Alliance", type:"Nonprofit consortium", status:"Publishing results", notes:"Early adopter; publishes vendor scorecards quarterly." },
+      { name:"Digital Promise", type:"Research nonprofit", status:"Publishing results", notes:"Runs its own edtech efficacy review process." },
+      { name:"1EdTech Consortium", type:"Standards body", status:"Onboarding", notes:"Piloting interoperability + evaluation standards alignment." },
+      { name:"ISTE", type:"Professional association", status:"Onboarding", notes:"Exploring seal-of-alignment program tied to our benchmarks." },
+      { name:"WestEd Evaluation Lab", type:"Research org", status:"Not yet engaged", notes:"Identified as a priority target for 2027 outreach." },
+      { name:"Jefferson Education Exchange", type:"Research nonprofit", status:"Not yet engaged", notes:"Runs its own edtech evidence ratings; potential alignment partner." },
+    ],
+    procurementStates:{
+      current:1,
+      states:[
+        { state:"Texas", sinceYear:"2026", notes:"State board rule requires third-party efficacy review before district procurement of AI tutoring tools." },
+      ],
     },
   },
-  // New goal in the 2026 re-cut — no chart yet, and no numeric baseline (the
-  // baseline.text pending label renders in place of a value).
+  // New goal in the 2026 re-cut — no numeric baseline (the baseline.text
+  // pending label renders in place of a value). Chart refresh (v7) gave it
+  // a threshold-bars chart; per schema.dbml, bold_stat is left unset since
+  // the target text does not start with "40%".
   { id:"g3", number:3, title:"Infrastructure Designed for the Learners Who Need it Most", color:"#313A44",
-    target:"40% of target populations served by solutions that perform well on key benchmarks that center them",
+    target:"Within each solution space, at least 40% of target population served by solutions that perform well on key benchmarks that center them",
     earliest:"Q1 2026 — Annual Update in PR",
     metric:"% of target populations", unit:"%", goal2030:40, current2026:null,
+    chartType:"threshold-bars",
+    chartNote:"% of target population served by benchmark-strong solutions, by solution space (illustrative, mock data)",
+    threshold:40,
+    solutionSpaces:[
+      { label:"Instruction + Tutoring",   pct:17 },
+      { label:"Advising + Navigation",    pct:23 },
+      { label:"Assessment",               pct:9 },
+      { label:"Content Generation",       pct:6 },
+    ],
+    goalNote:"Illustrative mock baseline by solution space — real per-space benchmark coverage will populate as evidence comes in. The 40% line marks the 2030 target for every space.",
     baseline:{year:"2026", total:null, text:"Pending, insufficient evidence"} },
   { id:"g4", number:4, title:"Data-Informed Decision Making", color:"#313A44",
     target:"70% of district and postsecondary data decision-makers report using better, higher-quality data to support learning and advising",
@@ -4920,6 +4953,33 @@ function MomentumHeatmap({ points }) {
   );
 }
 
+// ── Shared expandable list row (used by GoalDetailChart's g1 solutions list and
+//    g2 verification-bodies list, so both feel like the same list component) ──
+function GoalExpandableListRow({ title, subtitle, badgeLabel, badgeColor, metricValue, metricLabel, detail, isOpen, onToggle }) {
+  return (
+    <div style={{border:"1px solid "+BORDER,borderRadius:8,marginBottom:8,overflow:"hidden"}}>
+      <button onClick={onToggle} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:isOpen?BG:SURFACE,border:"none",cursor:"pointer",fontFamily:"inherit",padding:"10px 12px",textAlign:"left"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:700,color:TEXT}}>{title}</div>
+          {subtitle && <div style={{fontSize:11,color:TEXT_SUB,marginTop:1}}>{subtitle}</div>}
+        </div>
+        {badgeLabel && (
+          <span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:20,background:(badgeColor||{}).bg||"#F3F4F6",color:(badgeColor||{}).color||"#6B7280",whiteSpace:"nowrap"}}>{badgeLabel}</span>
+        )}
+        {metricValue!=null && (
+          <span style={{fontSize:13,fontWeight:800,color:TEXT,minWidth:30,textAlign:"right"}}>{metricValue}{metricLabel?" "+metricLabel:""}</span>
+        )}
+        <span style={{fontSize:10,color:TEXT_SUB,opacity:0.7}}>{isOpen?"▴":"▾"}</span>
+      </button>
+      {isOpen && detail && (
+        <div style={{padding:"10px 12px",background:BG,fontSize:11,color:TEXT_SUB,lineHeight:1.55,borderTop:"1px solid "+BORDER}}>
+          {detail}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── GoalDetailChart ───────────────────────────────────────────────────────────
 function GoalDetailChart({ g }) {
   const pct = Math.round((g.current2026 / g.goal2030) * 100);
@@ -5298,7 +5358,282 @@ function GoalDetailChart({ g }) {
     );
   }
 
-  // ── Default: simple line chart (Goal 3) ──────────────────────────────────────
+  // ── Goal 1: benchmark performance speed comparison ───────────────────────────
+  if (g.chartType === "benchmark-speed-comparison") {
+    const C_USING    = BRAND;
+    const C_NOTUSING = TEXT_MUTED;
+    const series = g.speedSeries || [];
+    const last = series[series.length - 1] || {};
+    const [expandedSolution, setExpandedSolution] = useState(null);
+    const adoptionPct = g.adoptionPct || null;
+    const solutions = g.solutions || [];
+    const keyBenchmarks = g.keyBenchmarks || [];
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
+
+          {/* LEFT — two-line recharts comparison */}
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Benchmark Performance Over Time</div>
+            <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14}}>{g.speedYAxisLabel}</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={series} margin={{top:8,right:20,bottom:0,left:-16}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+                <XAxis dataKey="period" tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
+                <YAxis domain={[0,100]} tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
+                <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER,boxShadow:"0 4px 12px rgba(10,37,64,0.1)"}}/>
+                <Line type="monotone" dataKey="usingPublicGoods" name={g.speedLabelA} stroke={C_USING} strokeWidth={2.5}
+                  dot={{r:4,fill:C_USING,stroke:"#fff",strokeWidth:2}}/>
+                <Line type="monotone" dataKey="notUsing" name={g.speedLabelB} stroke={C_NOTUSING} strokeWidth={1.5}
+                  strokeDasharray="5 3" opacity={0.7}
+                  dot={{r:3,fill:C_NOTUSING,stroke:"#fff",strokeWidth:1.5,opacity:0.7}}/>
+              </LineChart>
+            </ResponsiveContainer>
+            {/* Legend */}
+            <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>
+              {[
+                {c:C_USING,l:g.speedLabelA,solid:true},
+                {c:C_NOTUSING,l:g.speedLabelB,solid:false},
+              ].map(x=>(
+                <div key={x.l} style={{display:"flex",alignItems:"center",gap:5}}>
+                  <svg width={18} height={8}>
+                    <line x1={0} y1={4} x2={18} y2={4} stroke={x.c} strokeWidth={x.solid?2.5:1.5}
+                      strokeDasharray={x.solid?"none":"5 3"} opacity={x.solid?1:0.7}/>
+                  </svg>
+                  <span style={{fontSize:10,color:TEXT}}>{x.l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — headline stats + note */}
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{padding:"14px 16px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
+              <div style={{fontSize:12,color:TEXT_SUB,marginBottom:4}}>Latest ({last.period})</div>
+              <div style={{display:"flex",gap:16}}>
+                <div>
+                  <div style={{fontSize:22,fontWeight:800,color:C_USING}}>{last.usingPublicGoods}</div>
+                  <div style={{fontSize:10,color:TEXT_SUB}}>{g.speedLabelA}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:22,fontWeight:800,color:C_NOTUSING}}>{last.notUsing}</div>
+                  <div style={{fontSize:10,color:TEXT_SUB}}>{g.speedLabelB}</div>
+                </div>
+              </div>
+            </div>
+            {g.goalNote && (
+              <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.55,padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+                {g.goalNote}
+              </div>
+            )}
+            <ScenarioModelingButton/>
+          </div>
+        </div>
+
+        {(adoptionPct || keyBenchmarks.length > 0) && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
+            {adoptionPct && (
+              <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+                <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Adoption of Public Infrastructure</div>
+                <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14}}>% of PST solutions that embed our public infrastructure</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:12}}>
+                  <span style={{fontSize:34,fontWeight:900,color:BRAND,lineHeight:1,letterSpacing:-1}}>{adoptionPct.current}%</span>
+                  <span style={{fontSize:12,color:TEXT_SUB}}>of {adoptionPct.target2030}% 2030 target</span>
+                </div>
+                {adoptionPct.trend && adoptionPct.trend.length > 0 && (
+                  <ResponsiveContainer width="100%" height={90}>
+                    <LineChart data={adoptionPct.trend} margin={{top:4,right:8,bottom:0,left:-24}}>
+                      <XAxis dataKey="year" tick={{fontSize:9,fill:TEXT_MUTED}} tickLine={false} axisLine={false}/>
+                      <YAxis hide domain={[0, adoptionPct.target2030]}/>
+                      <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER}} formatter={(v)=>[v+"%","Adoption"]}/>
+                      <Line type="monotone" dataKey="pct" stroke={BRAND} strokeWidth={2} dot={{r:3,fill:BRAND,stroke:"#fff",strokeWidth:1.5}}/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+                <div style={{fontSize:10,color:TEXT_SUB,opacity:0.75,marginTop:6}}>⚠ Illustrative, mock data pending real tracking.</div>
+              </div>
+            )}
+            {keyBenchmarks.length > 0 && (
+              <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+                <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:12}}>Key Benchmarks</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {keyBenchmarks.map(b=>(
+                    <div key={b.name}>
+                      <div style={{fontSize:12,fontWeight:700,color:TEXT}}>{b.name}</div>
+                      <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5,marginTop:2}}>{b.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {solutions.length > 0 && (
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 20px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>PST Solutions</div>
+            <div style={{fontSize:11,color:TEXT_SUB,marginBottom:12}}>Click a solution to see benchmark detail</div>
+            {solutions.map(s=>(
+              <GoalExpandableListRow key={s.name}
+                title={s.name}
+                subtitle={s.type}
+                badgeLabel={s.embedsPublicGoods?"Embeds":"Not Yet"}
+                badgeColor={s.embedsPublicGoods?{bg:"#ECFDF5",color:"#059669"}:{bg:"#F3F4F6",color:"#6B7280"}}
+                metricValue={s.benchmarkScore}
+                metricLabel="score"
+                detail={s.detail}
+                isOpen={expandedSolution===s.name}
+                onToggle={()=>setExpandedSolution(e=>e===s.name?null:s.name)}
+              />
+            ))}
+          </div>
+        )}
+
+        <div style={{fontSize:11,color:TEXT_SUB,opacity:0.75}}>
+          ⚠ {g.chartNote || "Illustrative, mock data pending real tracking."}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Goal 2: cumulative adoption progress ─────────────────────────────────────
+  if (g.chartType === "adoption-progress") {
+    const milestones = g.milestones || [];
+    const final = milestones[milestones.length - 1] || {};
+    const [expandedBody, setExpandedBody] = useState(null);
+    const verificationBodies = g.verificationBodies || [];
+    const procurementStates = g.procurementStates || null;
+    const VB_STATUS_COLOR = {
+      "Publishing results":  { bg:"#ECFDF5", color:"#059669" },
+      "Onboarding":          { bg:"#FEF5E7", color:"#D97706" },
+      "Not yet engaged":     { bg:"#F3F4F6", color:"#6B7280" },
+    };
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
+
+          {/* LEFT — bar chart of cumulative milestones */}
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Cumulative Adoption</div>
+            <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14}}>{g.unitLabel}</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={milestones} margin={{top:8,right:20,bottom:0,left:-16}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+                <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
+                <YAxis tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
+                <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER,boxShadow:"0 4px 12px rgba(10,37,64,0.1)"}}
+                  formatter={(v)=>[v+" "+(g.unitLabel||""), "Count"]}/>
+                <Bar dataKey="count" name={g.unitLabel} fill={BRAND} radius={[4,4,0,0]}>
+                  <LabelList dataKey="count" position="top" style={{fontSize:10,fill:TEXT,fontWeight:700}}/>
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* RIGHT — headline stat + note */}
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{padding:"14px 16px",background:"#ECFDF5",borderRadius:10,border:"1px solid #6EE7B7"}}>
+              <div style={{fontSize:12,color:"#065F46",marginBottom:4,fontWeight:700}}>{final.year} Target</div>
+              <div style={{fontSize:40,fontWeight:900,color:"#059669",lineHeight:1,letterSpacing:-1}}>{final.count}+</div>
+              <div style={{fontSize:11,color:"#059669",marginTop:4}}>{g.unitLabel}</div>
+            </div>
+            {g.goalNote && (
+              <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.55,padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+                {g.goalNote}
+              </div>
+            )}
+            <ScenarioModelingButton/>
+          </div>
+        </div>
+
+        {procurementStates && (
+          <div style={{background:"#ECFDF5",borderRadius:12,border:"1px solid #6EE7B7",padding:"18px 20px"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#065F46",marginBottom:2}}>States Requiring Independent Evaluation Prior to Procurement</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,margin:"8px 0 12px"}}>
+              <span style={{fontSize:34,fontWeight:900,color:"#059669",lineHeight:1,letterSpacing:-1}}>{procurementStates.current}</span>
+              <span style={{fontSize:12,color:"#065F46"}}>state{procurementStates.current===1?"":"s"} require independent evaluation prior to procurement</span>
+            </div>
+            {(procurementStates.states||[]).map((s,i)=>(
+              <div key={s.state} style={{padding:"10px 12px",background:"#fff",borderRadius:8,border:"1px solid #6EE7B7",marginBottom:i<procurementStates.states.length-1?8:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                  <span style={{fontSize:12,fontWeight:700,color:TEXT}}>{s.state}</span>
+                  <span style={{fontSize:11,color:TEXT_SUB}}>Since {s.sinceYear}</span>
+                </div>
+                {s.notes && <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5,marginTop:4}}>{s.notes}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {verificationBodies.length > 0 && (
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 20px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Independent Verification Bodies</div>
+            <div style={{fontSize:11,color:TEXT_SUB,marginBottom:12}}>Click a body to see notes</div>
+            {verificationBodies.map(v=>(
+              <GoalExpandableListRow key={v.name}
+                title={v.name}
+                subtitle={v.type}
+                badgeLabel={v.status}
+                badgeColor={VB_STATUS_COLOR[v.status]}
+                detail={v.notes}
+                isOpen={expandedBody===v.name}
+                onToggle={()=>setExpandedBody(e=>e===v.name?null:v.name)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Goal 3: solution-space threshold bars ─────────────────────────────────────
+  if (g.chartType === "threshold-bars") {
+    const spaces = g.solutionSpaces || [];
+    const threshold = g.threshold ?? 40;
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
+        <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"16px 18px"}}>
+          <div style={{fontSize:11,color:TEXT_SUB,marginBottom:16,lineHeight:1.5}}>{g.chartNote}</div>
+          <div style={{position:"relative",paddingLeft:0}}>
+            {/* Threshold reference line, spans the full bar-track height */}
+            <div style={{position:"absolute",left:threshold+"%",top:0,bottom:0,width:0,
+              borderLeft:"2px dashed "+ACCENT,zIndex:1}}/>
+            <div style={{position:"absolute",left:threshold+"%",top:-18,transform:"translateX(-50%)",
+              fontSize:10,fontWeight:700,color:ACCENT,whiteSpace:"nowrap",zIndex:1}}>
+              {threshold}% target
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:14,paddingTop:22}}>
+              {spaces.map((s,i)=>{
+                const below = s.pct < threshold;
+                return (
+                  <div key={i}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                      <span style={{fontSize:12,fontWeight:600,color:TEXT}}>{s.label}</span>
+                      <span style={{fontSize:12,fontWeight:800,color:below?"#DC2626":"#059669"}}>{s.pct}%</span>
+                    </div>
+                    <div style={{position:"relative",height:14,background:BORDER,borderRadius:4,overflow:"hidden"}}>
+                      <div style={{position:"absolute",left:0,top:0,height:"100%",
+                        width:s.pct+"%",background:below?"#DC2626":"#059669",borderRadius:4,transition:"width .4s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        {g.goalNote && (
+          <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.55,padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+            {g.goalNote}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Default: simple line chart (used when a goal has no chartType) ──────────
   const yearData = [
     {year:"Base", value:0, target:null},
     {year:"2026", value:g.current2026, target:null},
@@ -9250,7 +9585,7 @@ const DM_GROUPS = [
   {id:"tracking",    label:"Notes & Tracking",          color:"#92400E", tables:["bow_notes","portfolio_tracking","partner_tracking","team_members","pending_actuals","content_edit_log","comments","feedback"]},
 ];
 const DM_TABLES = {
-  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float",note:"NULL when no baseline established"},{n:"baseline_text",t:"string",note:"display override, e.g. \"≤ 5%\" or \"Pending, insufficient evidence\""},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, or leverageData/leverageTotals"},{n:"target_2026",t:"string"},{n:"target_2027",t:"string"},{n:"target_2028",t:"string"},{n:"target_2029",t:"string"},{n:"target_2030",t:"string"},{n:"bold_stat",t:"string",note:"headline stat for Strategy Overview goal cards, e.g. \"50%\" or \"2-3x\""},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
+  strategy_goals:{cols:[{n:"goal_id",t:"string",pk:true},{n:"title",t:"string"},{n:"target_text",t:"string"},{n:"number",t:"int"},{n:"metric",t:"string"},{n:"unit",t:"string"},{n:"goal_2030",t:"float"},{n:"current_2026",t:"float"},{n:"sort_order",t:"int"},{n:"earliest",t:"string"},{n:"source",t:"string"},{n:"update_freq",t:"string"},{n:"chart_type",t:"string",note:"bar-grouped | momentum-points | stacked-bar-leverage | benchmark-speed-comparison | adoption-progress | threshold-bars | null"},{n:"chart_note",t:"string"},{n:"goal_note",t:"string"},{n:"note",t:"string"},{n:"baseline_year",t:"string"},{n:"baseline_total",t:"float",note:"NULL when no baseline established"},{n:"baseline_text",t:"string",note:"display override, e.g. \"≤ 5%\" or \"Pending, insufficient evidence\""},{n:"chart_config",t:"string",note:"JSON — groupedData/rightBreakout, momentumPoints, leverageData/leverageTotals, speedSeries/speedLabelA/speedLabelB/speedYAxisLabel + adoptionPct(current/target2030/trend)/solutions/keyBenchmarks (benchmark-speed-comparison), milestones/unitLabel + verificationBodies/procurementStates(current/states) (adoption-progress), or threshold/solutionSpaces"},{n:"target_2026",t:"string"},{n:"target_2027",t:"string"},{n:"target_2028",t:"string"},{n:"target_2029",t:"string"},{n:"target_2030",t:"string"},{n:"bold_stat",t:"string",note:"headline stat for Strategy Overview goal cards, e.g. \"50%\" or \"2-3x\""},{n:"last_updated",t:"timestamp"},{n:"updated_by",t:"string"}],refs:[]},
   portfolios:{cols:[{n:"portfolio_id",t:"string",pk:true},{n:"title",t:"string"},{n:"description",t:"string"},{n:"note",t:"string",note:"optional italic footnote on the portfolio card"},{n:"sort_order",t:"int"}],refs:[]},
   portfolio_goal_links:{cols:[{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"goal_id",t:"string",fk:"strategy_goals"}],refs:["portfolios","strategy_goals"]},
   bows:{cols:[{n:"bow_id",t:"string",pk:true},{n:"portfolio_id",t:"string",fk:"portfolios"},{n:"title",t:"string"},{n:"description",t:"string"},{n:"invest_bow_id",t:"string",note:"INVEST BoW_ID e.g. B06039"},{n:"sort_order",t:"int"},{n:"is_draft",t:"boolean",note:"default false — portal-only draft, hidden from dashboard + indicator catalog"}],refs:["portfolios"]},

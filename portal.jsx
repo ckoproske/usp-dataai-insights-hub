@@ -6635,6 +6635,22 @@ function GoalChartConfigEditor({ goal, user }) {
   const [momentumPoints, setMomentumPoints] = useState(parsed.momentumPoints || []);
   const [leverageData, setLeverageData] = useState(parsed.leverageData || []);
   const [leverageTotals, setLeverageTotals] = useState(parsed.leverageTotals || { target: "", stretch: "" });
+  const [speedSeries, setSpeedSeries] = useState(parsed.speedSeries || []);
+  const [speedLabelA, setSpeedLabelA] = useState(parsed.speedLabelA || "");
+  const [speedLabelB, setSpeedLabelB] = useState(parsed.speedLabelB || "");
+  const [speedYAxisLabel, setSpeedYAxisLabel] = useState(parsed.speedYAxisLabel || "");
+  const [adoptionPctCurrent, setAdoptionPctCurrent] = useState(String(parsed.adoptionPct?.current ?? ""));
+  const [adoptionPctTarget2030, setAdoptionPctTarget2030] = useState(String(parsed.adoptionPct?.target2030 ?? ""));
+  const [adoptionPctTrend, setAdoptionPctTrend] = useState(parsed.adoptionPct?.trend || []);
+  const [solutions, setSolutions] = useState(parsed.solutions || []);
+  const [keyBenchmarks, setKeyBenchmarks] = useState(parsed.keyBenchmarks || []);
+  const [milestones, setMilestones] = useState(parsed.milestones || []);
+  const [unitLabel, setUnitLabel] = useState(parsed.unitLabel || "");
+  const [verificationBodies, setVerificationBodies] = useState(parsed.verificationBodies || []);
+  const [procurementStatesCurrent, setProcurementStatesCurrent] = useState(String(parsed.procurementStates?.current ?? ""));
+  const [procurementStatesList, setProcurementStatesList] = useState(parsed.procurementStates?.states || []);
+  const [threshold, setThreshold] = useState(String(parsed.threshold ?? ""));
+  const [solutionSpaces, setSolutionSpaces] = useState(parsed.solutionSpaces || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -6648,6 +6664,24 @@ function GoalChartConfigEditor({ goal, user }) {
     if (goal.chart_type === "bar-grouped") chart_config = { groupedData, rightBreakout };
     else if (goal.chart_type === "momentum-points") chart_config = { momentumPoints };
     else if (goal.chart_type === "stacked-bar-leverage") chart_config = { leverageData, leverageTotals };
+    else if (goal.chart_type === "benchmark-speed-comparison") chart_config = {
+      speedSeries, speedLabelA, speedLabelB, speedYAxisLabel,
+      adoptionPct: {
+        current: adoptionPctCurrent === "" ? 0 : parseFloat(adoptionPctCurrent),
+        target2030: adoptionPctTarget2030 === "" ? 0 : parseFloat(adoptionPctTarget2030),
+        trend: adoptionPctTrend,
+      },
+      solutions, keyBenchmarks,
+    };
+    else if (goal.chart_type === "adoption-progress") chart_config = {
+      milestones, unitLabel,
+      verificationBodies,
+      procurementStates: {
+        current: procurementStatesCurrent === "" ? 0 : parseFloat(procurementStatesCurrent),
+        states: procurementStatesList,
+      },
+    };
+    else if (goal.chart_type === "threshold-bars") chart_config = { threshold: threshold === "" ? null : parseFloat(threshold), solutionSpaces };
     else chart_config = {};
     try {
       const res = await api(`/api/goals/${goal.goal_id}`, {
@@ -6776,6 +6810,210 @@ function GoalChartConfigEditor({ goal, user }) {
                 onChange={e => setLeverageTotals(lt => ({ ...lt, stretch: e.target.value }))} />
             </Field>
           </div>
+        </>
+      )}
+
+      {goal.chart_type === "benchmark-speed-comparison" && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <Field label="Series A label">
+              <input value={speedLabelA} style={inputStyle} onChange={e => setSpeedLabelA(e.target.value)} />
+            </Field>
+            <Field label="Series B label">
+              <input value={speedLabelB} style={inputStyle} onChange={e => setSpeedLabelB(e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Y-axis label">
+            <input value={speedYAxisLabel} style={inputStyle} onChange={e => setSpeedYAxisLabel(e.target.value)} />
+          </Field>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8, marginTop: 8 }}>
+            Speed series by period
+          </div>
+          {speedSeries.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Period" value={row.period || ""} style={{ ...smallInput, width: 80 }}
+                onChange={e => setSpeedSeries(ss => ss.map((r, j) => j === i ? { ...r, period: e.target.value } : r))} />
+              <input placeholder="Using public goods" type="number" value={row.usingPublicGoods ?? ""} style={{ ...smallInput, width: 140 }}
+                onChange={e => setSpeedSeries(ss => ss.map((r, j) => j === i ? { ...r, usingPublicGoods: parseFloat(e.target.value) || 0 } : r))} />
+              <input placeholder="Not using" type="number" value={row.notUsing ?? ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setSpeedSeries(ss => ss.map((r, j) => j === i ? { ...r, notUsing: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setSpeedSeries(ss => ss.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setSpeedSeries(ss => [...ss, { period: "", usingPublicGoods: 0, notUsing: 0 }])}>
+            + Add period
+          </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            Adoption of public infrastructure
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
+            <Field label="Current %">
+              <input type="number" value={adoptionPctCurrent} style={inputStyle}
+                onChange={e => setAdoptionPctCurrent(e.target.value)} />
+            </Field>
+            <Field label="2030 target %">
+              <input type="number" value={adoptionPctTarget2030} style={inputStyle}
+                onChange={e => setAdoptionPctTarget2030(e.target.value)} />
+            </Field>
+          </div>
+          {adoptionPctTrend.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Year" value={row.year || ""} style={{ ...smallInput, width: 80 }}
+                onChange={e => setAdoptionPctTrend(t => t.map((r, j) => j === i ? { ...r, year: e.target.value } : r))} />
+              <input placeholder="Pct" type="number" value={row.pct ?? ""} style={{ ...smallInput, width: 90 }}
+                onChange={e => setAdoptionPctTrend(t => t.map((r, j) => j === i ? { ...r, pct: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setAdoptionPctTrend(t => t.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setAdoptionPctTrend(t => [...t, { year: "", pct: 0 }])}>
+            + Add trend year
+          </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            PST solutions
+          </div>
+          {solutions.map((row, i) => (
+            <div key={i} style={{ ...rowStyle, flexWrap: "wrap" }}>
+              <input placeholder="Name" value={row.name || ""} style={{ ...smallInput, width: 110 }}
+                onChange={e => setSolutions(ss => ss.map((r, j) => j === i ? { ...r, name: e.target.value } : r))} />
+              <input placeholder="Type" value={row.type || ""} style={{ ...smallInput, width: 160 }}
+                onChange={e => setSolutions(ss => ss.map((r, j) => j === i ? { ...r, type: e.target.value } : r))} />
+              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: TEXT_SUB }}>
+                <input type="checkbox" checked={!!row.embedsPublicGoods}
+                  onChange={e => setSolutions(ss => ss.map((r, j) => j === i ? { ...r, embedsPublicGoods: e.target.checked } : r))} />
+                Embeds
+              </label>
+              <input placeholder="Benchmark score" type="number" value={row.benchmarkScore ?? ""} style={{ ...smallInput, width: 130 }}
+                onChange={e => setSolutions(ss => ss.map((r, j) => j === i ? { ...r, benchmarkScore: parseFloat(e.target.value) || 0 } : r))} />
+              <textarea placeholder="Detail" value={row.detail || ""} rows={1} style={{ ...smallInput, flex: 1, minWidth: 200, resize: "vertical" }}
+                onChange={e => setSolutions(ss => ss.map((r, j) => j === i ? { ...r, detail: e.target.value } : r))} />
+              <button onClick={() => setSolutions(ss => ss.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setSolutions(ss => [...ss, { name: "", type: "", embedsPublicGoods: false, benchmarkScore: 0, detail: "" }])}>
+            + Add solution
+          </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            Key benchmarks
+          </div>
+          {keyBenchmarks.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Name" value={row.name || ""} style={{ ...smallInput, width: 200 }}
+                onChange={e => setKeyBenchmarks(kb => kb.map((r, j) => j === i ? { ...r, name: e.target.value } : r))} />
+              <textarea placeholder="Description" value={row.description || ""} rows={1} style={{ ...smallInput, flex: 1, resize: "vertical" }}
+                onChange={e => setKeyBenchmarks(kb => kb.map((r, j) => j === i ? { ...r, description: e.target.value } : r))} />
+              <button onClick={() => setKeyBenchmarks(kb => kb.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm"
+            onClick={() => setKeyBenchmarks(kb => [...kb, { name: "", description: "" }])}>
+            + Add benchmark
+          </Btn>
+        </>
+      )}
+
+      {goal.chart_type === "adoption-progress" && (
+        <>
+          <Field label="Unit label" helper="e.g. 'verification bodies'">
+            <input value={unitLabel} style={inputStyle} onChange={e => setUnitLabel(e.target.value)} />
+          </Field>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8, marginTop: 8 }}>
+            Cumulative milestones by year
+          </div>
+          {milestones.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Year" value={row.year || ""} style={{ ...smallInput, width: 80 }}
+                onChange={e => setMilestones(ms => ms.map((r, j) => j === i ? { ...r, year: e.target.value } : r))} />
+              <input placeholder="Count" type="number" value={row.count ?? ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setMilestones(ms => ms.map((r, j) => j === i ? { ...r, count: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setMilestones(ms => ms.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setMilestones(ms => [...ms, { year: "", count: 0 }])}>
+            + Add year
+          </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            Independent verification bodies
+          </div>
+          {verificationBodies.map((row, i) => (
+            <div key={i} style={{ ...rowStyle, flexWrap: "wrap" }}>
+              <input placeholder="Name" value={row.name || ""} style={{ ...smallInput, width: 160 }}
+                onChange={e => setVerificationBodies(vb => vb.map((r, j) => j === i ? { ...r, name: e.target.value } : r))} />
+              <input placeholder="Type" value={row.type || ""} style={{ ...smallInput, width: 160 }}
+                onChange={e => setVerificationBodies(vb => vb.map((r, j) => j === i ? { ...r, type: e.target.value } : r))} />
+              <input placeholder="Status" value={row.status || ""} style={{ ...smallInput, width: 150 }}
+                onChange={e => setVerificationBodies(vb => vb.map((r, j) => j === i ? { ...r, status: e.target.value } : r))} />
+              <textarea placeholder="Notes" value={row.notes || ""} rows={1} style={{ ...smallInput, flex: 1, minWidth: 200, resize: "vertical" }}
+                onChange={e => setVerificationBodies(vb => vb.map((r, j) => j === i ? { ...r, notes: e.target.value } : r))} />
+              <button onClick={() => setVerificationBodies(vb => vb.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
+            onClick={() => setVerificationBodies(vb => [...vb, { name: "", type: "", status: "", notes: "" }])}>
+            + Add verification body
+          </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            States requiring independent evaluation prior to procurement
+          </div>
+          <Field label="Current count" helper="Live-tracked, not illustrative.">
+            <input type="number" value={procurementStatesCurrent} style={{ ...inputStyle, width: 140 }}
+              onChange={e => setProcurementStatesCurrent(e.target.value)} />
+          </Field>
+          {procurementStatesList.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="State" value={row.state || ""} style={{ ...smallInput, width: 140 }}
+                onChange={e => setProcurementStatesList(ps => ps.map((r, j) => j === i ? { ...r, state: e.target.value } : r))} />
+              <input placeholder="Since year" value={row.sinceYear || ""} style={{ ...smallInput, width: 100 }}
+                onChange={e => setProcurementStatesList(ps => ps.map((r, j) => j === i ? { ...r, sinceYear: e.target.value } : r))} />
+              <textarea placeholder="Notes" value={row.notes || ""} rows={1} style={{ ...smallInput, flex: 1, resize: "vertical" }}
+                onChange={e => setProcurementStatesList(ps => ps.map((r, j) => j === i ? { ...r, notes: e.target.value } : r))} />
+              <button onClick={() => setProcurementStatesList(ps => ps.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm"
+            onClick={() => setProcurementStatesList(ps => [...ps, { state: "", sinceYear: "", notes: "" }])}>
+            + Add state
+          </Btn>
+        </>
+      )}
+
+      {goal.chart_type === "threshold-bars" && (
+        <>
+          <Field label="Threshold %" helper="Vertical reference line marking the 2030 target.">
+            <input type="number" value={threshold} style={inputStyle} onChange={e => setThreshold(e.target.value)} />
+          </Field>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8, marginTop: 8 }}>
+            Solution spaces
+          </div>
+          {solutionSpaces.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Label" value={row.label || ""} style={{ ...smallInput, flex: 1 }}
+                onChange={e => setSolutionSpaces(sp => sp.map((r, j) => j === i ? { ...r, label: e.target.value } : r))} />
+              <input placeholder="Pct" type="number" value={row.pct ?? ""} style={{ ...smallInput, width: 90 }}
+                onChange={e => setSolutionSpaces(sp => sp.map((r, j) => j === i ? { ...r, pct: parseFloat(e.target.value) || 0 } : r))} />
+              <button onClick={() => setSolutionSpaces(sp => sp.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm"
+            onClick={() => setSolutionSpaces(sp => [...sp, { label: "", pct: 0 }])}>
+            + Add solution space
+          </Btn>
         </>
       )}
 
