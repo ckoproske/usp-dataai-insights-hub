@@ -171,8 +171,10 @@ let STRATEGY_GOALS = [
     procurementStates:{
       current:1,
       states:[
-        { state:"Texas", sinceYear:"2026", notes:"State board rule requires third-party efficacy review before district procurement of AI tutoring tools." },
+        { state:"Delaware", sinceYear:"2026", notes:"Established via Delaware's State Education Agency (SEA) through a newly created entity, the AI Assurance Lab, which requires independent verification (IVO) prior to AI tool procurement." },
       ],
+      contextAsOf:"Q3 2026",
+      context:"IVOs are a new concept in AI governance, and no state has yet enacted a full IVO framework. Four proposals were introduced in California (SB 813), Virginia (HB 797/SB 384), Ohio (HB 628), and Minnesota (HF 4544/SF 4636). This year, Virginia passed its bill, which directs the state to study a future IVO framework, while the Ohio and Minnesota bills did not advance. California's SB 813, which was enrolled and awaits signature by the Governor, would create professional audit standards and an IVO designation for qualified AI auditors. Importantly, these proposals generally establish the infrastructure for independent AI auditing rather than themselves requiring developers or deployers to undergo an IVO audit; a separate future legal requirement would be needed to mandate use of an IVO. At the federal level, the FRONTIER Act (H.R. 9925) would create a federal IVO framework, though the bill has not yet advanced.",
     },
   },
   // New goal in the 2026 re-cut — no numeric baseline (the baseline.text
@@ -5538,7 +5540,7 @@ function GoalDetailChart({ g }) {
               <span style={{fontSize:12,color:"#065F46"}}>state{procurementStates.current===1?"":"s"} require independent evaluation prior to procurement</span>
             </div>
             {(procurementStates.states||[]).map((s,i)=>(
-              <div key={s.state} style={{padding:"10px 12px",background:"#fff",borderRadius:8,border:"1px solid #6EE7B7",marginBottom:i<procurementStates.states.length-1?8:0}}>
+              <div key={s.state} style={{padding:"10px 12px",background:"#fff",borderRadius:8,border:"1px solid #6EE7B7",marginBottom:8}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
                   <span style={{fontSize:12,fontWeight:700,color:TEXT}}>{s.state}</span>
                   <span style={{fontSize:11,color:TEXT_SUB}}>Since {s.sinceYear}</span>
@@ -5546,6 +5548,14 @@ function GoalDetailChart({ g }) {
                 {s.notes && <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.5,marginTop:4}}>{s.notes}</div>}
               </div>
             ))}
+            {procurementStates.context && (
+              <div style={{padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+                <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.8,marginBottom:5}}>
+                  Broader National Context{procurementStates.contextAsOf?" (as of "+procurementStates.contextAsOf+")":""}
+                </div>
+                <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.6}}>{procurementStates.context}</div>
+              </div>
+            )}
           </div>
         )}
 
