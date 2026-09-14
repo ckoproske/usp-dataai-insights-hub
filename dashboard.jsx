@@ -5340,24 +5340,16 @@ function GoalDetailChart({ g }) {
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <div style={{fontSize:10,fontWeight:600,color:AI.dark,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
 
-        {/* Prominent hypothesized-trajectory banner — baseline/target are confirmed, the curve between them is not */}
-        <div style={{display:"flex",gap:12,alignItems:"flex-start",padding:"14px 16px",background:"rgba(245,158,11,0.1)",borderRadius:10,border:"1px solid rgba(245,158,11,0.35)"}}>
-          <span style={{fontSize:18,lineHeight:1}}>⚠</span>
-          <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>
-            <span style={{fontWeight:700}}>Baseline ({g.baseline?.year}): {g.current2026}% → 2030 Target: {g.goal2030}% — both confirmed.</span> The curve shown between them is <span style={{fontWeight:700}}>hypothesized, not measured</span> — no real tracking data exists yet. It illustrates the shape of the "2x as fast" claim, not an actual trajectory.
-          </div>
-        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1.7fr 1fr",gap:20,alignItems:"start"}}>
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
-
-          {/* LEFT — two-line recharts comparison */}
-          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,borderTop:"3px solid "+AI.color,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:2}}>
-              <div style={{fontSize:12,fontWeight:700,color:TEXT}}>Benchmark Performance Over Time</div>
+          {/* LEFT — two-line recharts comparison — emphasized as the primary chart */}
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,borderTop:"4px solid "+AI.color,padding:"24px 26px 18px",boxShadow:"0 4px 18px rgba(8,145,178,0.12)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:3}}>
+              <div style={{fontSize:15,fontWeight:800,color:TEXT}}>Benchmark Performance Over Time</div>
               <span style={{fontSize:10,fontWeight:700,color:"#92400E",background:"rgba(245,158,11,0.15)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5,whiteSpace:"nowrap"}}>Hypothesized</span>
             </div>
-            <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14}}>{g.speedYAxisLabel}</div>
-            <ResponsiveContainer width="100%" height={200}>
+            <div style={{fontSize:12,color:TEXT_SUB,marginBottom:16}}>{g.speedYAxisLabel}</div>
+            <ResponsiveContainer width="100%" height={260}>
               <LineChart data={series} margin={{top:8,right:20,bottom:0,left:-16}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
                 <XAxis dataKey="period" tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
@@ -5386,6 +5378,7 @@ function GoalDetailChart({ g }) {
                 </div>
               ))}
             </div>
+            <div style={{fontSize:10,color:"#92400E",opacity:0.85,marginTop:10}}>⚠ Hypothesized trajectory — no real tracking data yet.</div>
           </div>
 
           {/* RIGHT — headline stats + note */}
@@ -5457,10 +5450,10 @@ function GoalDetailChart({ g }) {
           </div>
 
         {/* Illustrative-data banner for the mock solutions list below */}
-        <div style={{display:"flex",gap:12,alignItems:"flex-start",padding:"14px 16px",background:"rgba(245,158,11,0.1)",borderRadius:10,border:"1px solid rgba(245,158,11,0.35)"}}>
-          <span style={{fontSize:18,lineHeight:1}}>⚠</span>
-          <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>
-            The solutions and benchmark scores listed below are <span style={{fontWeight:700}}>mock, illustrative examples</span> — not real submissions. Actual PST solutions and scores will populate this list once tracking is in place.
+        <div style={{display:"flex",gap:8,alignItems:"flex-start",padding:"6px 10px",background:"rgba(245,158,11,0.1)",borderRadius:7,border:"1px solid rgba(245,158,11,0.3)"}}>
+          <span style={{fontSize:12,lineHeight:1.4}}>⚠</span>
+          <div style={{fontSize:10.5,color:"#92400E",lineHeight:1.45}}>
+            The solutions and benchmark scores listed below are <span style={{fontWeight:700}}>mock, illustrative examples</span> — not real submissions.
           </div>
         </div>
 
