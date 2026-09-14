@@ -40,7 +40,7 @@ SET
   bold_stat   = '70%',
   chart_type  = 'context-metric-bars',
   chart_note  = '% leaders reporting that the data they use most often meets each high-quality criteria',
-  chart_config = '{"subheading":"High-quality data is timely, comprehensive, and actionable","criteria":[{"label":"Timely","detail":"Cross-sector insights within a week","pct":42},{"label":"Interoperable","detail":"Combining across systems \"not at all hard\"","pct":9},{"label":"Actionable","detail":"Used to make teaching & learning or advising & navigation decision","pct":69}]}',
+  chart_config = '{"subheading":"High-quality data is timely, comprehensive, and actionable","criteria":[{"label":"Timely","detail":"Cross-sector insights within a week","pct":42},{"label":"Interoperable","detail":"Combining across systems \\"not at all hard\\"","pct":9},{"label":"Actionable","detail":"Used to make teaching & learning or advising & navigation decision","pct":69}]}',
   last_updated = current_timestamp(),
   updated_by  = 'migration:v12-g4-context-metrics'
 WHERE goal_id = 'g4';
