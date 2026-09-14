@@ -171,10 +171,16 @@ let STRATEGY_GOALS = [
     procurementStates:{
       current:1,
       states:[
-        { state:"Delaware", sinceYear:"2026", notes:"Established via Delaware's State Education Agency (SEA) through a newly created entity, the AI Assurance Lab, which requires independent verification (IVO) prior to AI tool procurement." },
+        { state:"Delaware", abbr:"DE", sinceYear:"2026", notes:"Established via Delaware's State Education Agency (SEA) through a newly created entity, the AI Assurance Lab, which requires independent verification (IVO) prior to AI tool procurement." },
+      ],
+      proposals:[
+        { abbr:"CA", state:"California", bill:"SB 813", status:"enrolled" },
+        { abbr:"VA", state:"Virginia", bill:"HB 797 / SB 384", status:"passed_study" },
+        { abbr:"OH", state:"Ohio", bill:"HB 628", status:"stalled" },
+        { abbr:"MN", state:"Minnesota", bill:"HF 4544 / SF 4636", status:"stalled" },
       ],
       contextAsOf:"Q3 2026",
-      context:"IVOs are a new concept in AI governance, and no state has yet enacted a full IVO framework. Four proposals were introduced in California (SB 813), Virginia (HB 797/SB 384), Ohio (HB 628), and Minnesota (HF 4544/SF 4636). This year, Virginia passed its bill, which directs the state to study a future IVO framework, while the Ohio and Minnesota bills did not advance. California's SB 813, which was enrolled and awaits signature by the Governor, would create professional audit standards and an IVO designation for qualified AI auditors. Importantly, these proposals generally establish the infrastructure for independent AI auditing rather than themselves requiring developers or deployers to undergo an IVO audit; a separate future legal requirement would be needed to mandate use of an IVO. At the federal level, the FRONTIER Act (H.R. 9925) would create a federal IVO framework, though the bill has not yet advanced.",
+      context:"IVOs are a new concept in AI governance — no state has yet enacted a full IVO framework. These proposals generally establish the infrastructure for independent AI auditing rather than themselves requiring developers or deployers to undergo an IVO audit; a separate future legal requirement would be needed to mandate use of an IVO. At the federal level, the FRONTIER Act (H.R. 9925) would create a federal IVO framework, though the bill has not yet advanced.",
     },
   },
   // New goal in the 2026 re-cut — no numeric baseline (the baseline.text
@@ -4952,6 +4958,73 @@ function GoalExpandableListRow({ title, subtitle, badgeLabel, badgeColor, metric
   );
 }
 
+// ── IvoAdoptionMap — schematic US tile map of IVO procurement/legislative status ──
+const IVO_STATUS_COLORS = {
+  active:       { color:"#059669", label:"Requires independent evaluation prior to procurement" },
+  enrolled:     { color:"#2563EB", label:"Bill enrolled, awaiting governor's signature" },
+  passed_study: { color:"#0891B2", label:"Passed — directs a study of a future IVO framework" },
+  stalled:      { color:"#9CA3AF", label:"Proposal did not advance" },
+};
+
+function IvoAdoptionMap({ procurementStates }) {
+  const [hovered, setHovered] = useState(null);
+  const CELL = 30, GAP = 2, COLS = 12, ROWS = 8;
+  const W = COLS * (CELL + GAP), H = ROWS * (CELL + GAP);
+
+  const byAbbr = {};
+  (procurementStates.states || []).forEach(s => { if (s.abbr) byAbbr[s.abbr] = { status: "active", ...s }; });
+  (procurementStates.proposals || []).forEach(p => { byAbbr[p.abbr] = p; });
+
+  const states = Object.entries(STATE_GRID);
+
+  return (
+    <div style={{display:"flex",gap:22,alignItems:"flex-start",flexWrap:"wrap"}}>
+      <div style={{position:"relative",flexShrink:0}}>
+        <svg width={W} height={H} style={{display:"block"}}>
+          {states.map(([abbr, pos]) => {
+            const entry = byAbbr[abbr];
+            const sc = entry ? IVO_STATUS_COLORS[entry.status] : null;
+            const x = pos.c * (CELL + GAP), y = pos.r * (CELL + GAP);
+            return (
+              <g key={abbr}
+                onMouseEnter={() => entry && setHovered({ abbr, entry })}
+                onMouseLeave={() => setHovered(null)}>
+                <rect x={x} y={y} width={CELL} height={CELL} rx={4}
+                  fill={sc ? sc.color : "#F1F5F9"} stroke="#fff" strokeWidth={1.5}
+                  opacity={sc ? 1 : 0.7}/>
+                <text x={x + CELL/2} y={y + CELL/2} textAnchor="middle" dominantBaseline="middle"
+                  style={{fontSize:"9px",fontWeight:sc?800:600,fill:sc?"#fff":TEXT_MUTED,pointerEvents:"none",userSelect:"none"}}>
+                  {abbr}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+        {hovered && (
+          <div style={{position:"absolute",bottom:"100%",left:0,marginBottom:6,background:BRAND,color:"#fff",borderRadius:8,padding:"8px 12px",fontSize:11,fontWeight:600,zIndex:20,boxShadow:"0 4px 16px rgba(10,37,64,0.2)",maxWidth:260,whiteSpace:"normal"}}>
+            <div style={{fontWeight:800,marginBottom:2,whiteSpace:"nowrap"}}>{hovered.entry.state}{hovered.entry.bill ? " — " + hovered.entry.bill : ""}</div>
+            <div style={{opacity:0.85,fontWeight:400}}>{IVO_STATUS_COLORS[hovered.entry.status]?.label}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div style={{display:"flex",flexDirection:"column",gap:8,minWidth:220}}>
+        {Object.entries(IVO_STATUS_COLORS).map(([key, sc]) => (
+          <div key={key} style={{display:"flex",alignItems:"flex-start",gap:8}}>
+            <div style={{width:14,height:14,borderRadius:3,background:sc.color,flexShrink:0,marginTop:1}}/>
+            <span style={{fontSize:11,color:TEXT_SUB,lineHeight:1.4}}>{sc.label}</span>
+          </div>
+        ))}
+        <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+          <div style={{width:14,height:14,borderRadius:3,background:"#F1F5F9",border:"1px solid "+BORDER,flexShrink:0,marginTop:1}}/>
+          <span style={{fontSize:11,color:TEXT_SUB,lineHeight:1.4}}>No known IVO proposal</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── GoalDetailChart ───────────────────────────────────────────────────────────
 function GoalDetailChart({ g }) {
   const pct = Math.round((g.current2026 / g.goal2030) * 100);
@@ -5538,6 +5611,9 @@ function GoalDetailChart({ g }) {
             <div style={{display:"flex",alignItems:"baseline",gap:8,margin:"8px 0 12px"}}>
               <span style={{fontSize:34,fontWeight:900,color:"#059669",lineHeight:1,letterSpacing:-1}}>{procurementStates.current}</span>
               <span style={{fontSize:12,color:"#065F46"}}>state{procurementStates.current===1?"":"s"} require independent evaluation prior to procurement</span>
+            </div>
+            <div style={{padding:"14px",background:"#fff",borderRadius:8,border:"1px solid #6EE7B7",marginBottom:12}}>
+              <IvoAdoptionMap procurementStates={procurementStates}/>
             </div>
             {(procurementStates.states||[]).map((s,i)=>(
               <div key={s.state} style={{padding:"10px 12px",background:"#fff",borderRadius:8,border:"1px solid #6EE7B7",marginBottom:8}}>
