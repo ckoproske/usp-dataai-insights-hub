@@ -5328,31 +5328,34 @@ function GoalDetailChart({ g }) {
 
   // ── Goal 1: benchmark performance speed comparison ───────────────────────────
   if (g.chartType === "benchmark-speed-comparison") {
-    const C_USING    = BRAND;
+    const AI = { color:"#0891B2", light:"#CFFAFE", dark:"#0E7490" }; // ai-infra portfolio accent
+    const C_USING    = AI.color;
     const C_NOTUSING = TEXT_MUTED;
     const series = g.speedSeries || [];
-    const last = series[series.length - 1] || {};
     const [expandedSolution, setExpandedSolution] = useState(null);
     const adoptionPct = g.adoptionPct || null;
     const solutions = g.solutions || [];
     const keyBenchmarks = g.keyBenchmarks || [];
     return (
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
+        <div style={{fontSize:10,fontWeight:600,color:AI.dark,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
 
-        {/* Prominent illustrative-trajectory banner — baseline/target are confirmed, the curve between them is not */}
+        {/* Prominent hypothesized-trajectory banner — baseline/target are confirmed, the curve between them is not */}
         <div style={{display:"flex",gap:12,alignItems:"flex-start",padding:"14px 16px",background:"rgba(245,158,11,0.1)",borderRadius:10,border:"1px solid rgba(245,158,11,0.35)"}}>
           <span style={{fontSize:18,lineHeight:1}}>⚠</span>
           <div style={{fontSize:12,color:"#92400E",lineHeight:1.55}}>
-            <span style={{fontWeight:700}}>Baseline ({g.baseline?.year}): {g.current2026}% → 2030 Target: {g.goal2030}% — both confirmed.</span> The trajectory shown between them is illustrative and will be replaced with tracked data as it becomes available.
+            <span style={{fontWeight:700}}>Baseline ({g.baseline?.year}): {g.current2026}% → 2030 Target: {g.goal2030}% — both confirmed.</span> The curve shown between them is <span style={{fontWeight:700}}>hypothesized, not measured</span> — no real tracking data exists yet. It illustrates the shape of the "2x as fast" claim, not an actual trajectory.
           </div>
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
 
           {/* LEFT — two-line recharts comparison */}
-          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-            <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Benchmark Performance Over Time</div>
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,borderTop:"3px solid "+AI.color,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:2}}>
+              <div style={{fontSize:12,fontWeight:700,color:TEXT}}>Benchmark Performance Over Time</div>
+              <span style={{fontSize:10,fontWeight:700,color:"#92400E",background:"rgba(245,158,11,0.15)",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(245,158,11,0.3)",textTransform:"uppercase",letterSpacing:0.5,whiteSpace:"nowrap"}}>Hypothesized</span>
+            </div>
             <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14}}>{g.speedYAxisLabel}</div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={series} margin={{top:8,right:20,bottom:0,left:-16}}>
@@ -5361,6 +5364,7 @@ function GoalDetailChart({ g }) {
                 <YAxis domain={[0,100]} tick={{fontSize:10,fill:TEXT}} tickLine={false}/>
                 <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER,boxShadow:"0 4px 12px rgba(10,37,64,0.1)"}}/>
                 <Line type="monotone" dataKey="usingPublicGoods" name={g.speedLabelA} stroke={C_USING} strokeWidth={2.5}
+                  strokeDasharray="6 3"
                   dot={{r:4,fill:C_USING,stroke:"#fff",strokeWidth:2}}/>
                 <Line type="monotone" dataKey="notUsing" name={g.speedLabelB} stroke={C_NOTUSING} strokeWidth={1.5}
                   strokeDasharray="5 3" opacity={0.7}
@@ -5376,7 +5380,7 @@ function GoalDetailChart({ g }) {
                 <div key={x.l} style={{display:"flex",alignItems:"center",gap:5}}>
                   <svg width={18} height={8}>
                     <line x1={0} y1={4} x2={18} y2={4} stroke={x.c} strokeWidth={x.solid?2.5:1.5}
-                      strokeDasharray={x.solid?"none":"5 3"} opacity={x.solid?1:0.7}/>
+                      strokeDasharray="5 3" opacity={x.solid?1:0.7}/>
                   </svg>
                   <span style={{fontSize:10,color:TEXT}}>{x.l}</span>
                 </div>
@@ -5386,21 +5390,22 @@ function GoalDetailChart({ g }) {
 
           {/* RIGHT — headline stats + note */}
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{padding:"14px 16px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
-              <div style={{fontSize:12,color:TEXT_SUB,marginBottom:4}}>Latest ({last.period})</div>
-              <div style={{display:"flex",gap:16}}>
+            <div style={{padding:"14px 16px",background:SURFACE,borderRadius:10,border:"1.5px dashed "+BORDER}}>
+              <div style={{fontSize:12,color:TEXT_SUB,marginBottom:4}}>Current Tracked Performance</div>
+              <div style={{display:"flex",gap:16,marginBottom:6}}>
                 <div>
-                  <div style={{fontSize:22,fontWeight:800,color:C_USING}}>{last.usingPublicGoods}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:TEXT_MUTED}}>—</div>
                   <div style={{fontSize:10,color:TEXT_SUB}}>{g.speedLabelA}</div>
                 </div>
                 <div>
-                  <div style={{fontSize:22,fontWeight:800,color:C_NOTUSING}}>{last.notUsing}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:TEXT_MUTED}}>—</div>
                   <div style={{fontSize:10,color:TEXT_SUB}}>{g.speedLabelB}</div>
                 </div>
               </div>
+              <div style={{fontSize:10,color:TEXT_SUB,fontStyle:"italic"}}>No data yet — benchmark tracking hasn't started.</div>
             </div>
             {g.goalNote && (
-              <div style={{fontSize:11,color:TEXT_SUB,lineHeight:1.55,padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+              <div style={{fontSize:11,color:AI.dark,lineHeight:1.55,padding:"10px 12px",background:AI.light+"55",borderRadius:8,border:"1px solid "+AI.color+"44"}}>
                 {g.goalNote}
               </div>
             )}
@@ -5409,11 +5414,11 @@ function GoalDetailChart({ g }) {
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
             {adoptionPct && (
-              <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+              <div style={{background:AI.light+"33",borderRadius:12,border:"1px solid "+AI.color+"44",borderTop:"3px solid "+AI.color,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
                 <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>Adoption of Public Infrastructure</div>
                 <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14}}>% of PST solutions that embed our public infrastructure</div>
                 <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:12}}>
-                  <span style={{fontSize:34,fontWeight:900,color:BRAND,lineHeight:1,letterSpacing:-1}}>{adoptionPct.current}%</span>
+                  <span style={{fontSize:34,fontWeight:900,color:AI.dark,lineHeight:1,letterSpacing:-1}}>{adoptionPct.current}%</span>
                   <span style={{fontSize:12,color:TEXT_SUB}}>of {adoptionPct.target2030}% 2030 target</span>
                 </div>
                 {adoptionPct.trend && adoptionPct.trend.length > 0 && (
@@ -5421,15 +5426,15 @@ function GoalDetailChart({ g }) {
                     <LineChart data={adoptionPct.trend} margin={{top:4,right:8,bottom:0,left:-24}}>
                       <XAxis dataKey="year" tick={{fontSize:9,fill:TEXT_MUTED}} tickLine={false} axisLine={false}/>
                       <YAxis hide domain={[0, adoptionPct.target2030]}/>
-                      <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER}} formatter={(v)=>[v+"%","Adoption"]}/>
-                      <Line type="monotone" dataKey="pct" stroke={BRAND} strokeWidth={2} dot={{r:3,fill:BRAND,stroke:"#fff",strokeWidth:1.5}}/>
+                      <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER}} formatter={(v)=>[v+"%","Hypothesized adoption"]}/>
+                      <Line type="monotone" dataKey="pct" stroke={AI.color} strokeWidth={2} strokeDasharray="6 3" dot={{r:3,fill:AI.color,stroke:"#fff",strokeWidth:1.5}}/>
                     </LineChart>
                   </ResponsiveContainer>
                 )}
-                <div style={{fontSize:10,color:TEXT_SUB,opacity:0.75,marginTop:6}}>⚠ Illustrative, mock data pending real tracking.</div>
+                <div style={{fontSize:10,color:"#92400E",opacity:0.85,marginTop:6}}>⚠ Hypothesized trajectory — no real tracking data yet.</div>
               </div>
             )}
-            <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+            <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,borderTop:"3px solid "+AI.color,padding:"20px 20px 14px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 <div style={{fontSize:12,fontWeight:700,color:TEXT}}>Key Benchmarks</div>
                 {keyBenchmarks.length === 0 && (
@@ -5460,7 +5465,7 @@ function GoalDetailChart({ g }) {
         </div>
 
         {solutions.length > 0 && (
-          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"18px 20px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+          <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,borderTop:"3px solid "+AI.color,padding:"18px 20px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
             <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>PST Solutions</div>
             <div style={{fontSize:11,color:TEXT_SUB,marginBottom:12}}>Click a solution to see benchmark detail</div>
             {solutions.map(s=>(
