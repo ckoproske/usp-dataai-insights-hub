@@ -4545,7 +4545,14 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
             onClick={()=>{
               if(tab.id==="portfolio-overview") setActiveTab("portfolio-overview");
               else if(tab.id==="partners") setActiveTab("partners");
-              else if(!inMeasurement) setActiveTab("portfolio-progress");
+              else if(!inMeasurement){
+                // Portfolio Progress page is hidden for now (coming back to it later) —
+                // default straight into the first BOW instead.
+                setActiveTab("bow");
+                setActiveBow(bows[0]?.id||null);
+                setBowView("progress");
+                setActiveBowOutcomeIdx(0);
+              }
             }}
             style={{padding:"14px 20px",fontWeight:500,fontSize:13,border:"none",background:"none",cursor:"pointer",
               borderBottom:active?"2px solid "+pc.color:"2px solid transparent",
@@ -4556,16 +4563,9 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       </div>
       {inMeasurement&&(
         <div style={{background:BG,borderBottom:"1px solid "+BORDER,borderTop:"none",display:"flex",alignItems:"stretch",paddingLeft:0}}>
-          {/* Portfolio Progress tab */}
-          <button onClick={()=>setActiveTab("portfolio-progress")}
-            style={{padding:"10px 20px",fontWeight:600,fontSize:13,border:"none",cursor:"pointer",
-              background:activeTab==="portfolio-progress"?SURFACE:"transparent",
-              borderBottom:activeTab==="portfolio-progress"?"3px solid "+TEXT:"3px solid transparent",
-              borderRight:"1px solid "+BORDER,
-              color:activeTab==="portfolio-progress"?TEXT:TEXT_SUB,
-              marginBottom:-1,whiteSpace:"nowrap",transition:"all .15s",flexShrink:0}}>
-            Portfolio Progress
-          </button>
+          {/* Portfolio Progress tab — hidden for now (coming back to it later);
+              the "portfolio-progress" activeTab value and PortfolioOutcomesView
+              render branch below are left intact, just unreachable from here. */}
           {/* Divider + BOW label */}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 14px",borderRight:"1px solid "+BORDER,flexShrink:0}}>
             <span style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2}}>Bodies of Work</span>
