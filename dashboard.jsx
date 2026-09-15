@@ -4873,37 +4873,6 @@ function CoLeverageButton() {
 }
 
 // ── MomentumHeatmap ───────────────────────────────────────────────────────────
-// Placeholder state-level coverage data per momentum point (0–100)
-const STATE_COVERAGE = {
-  // [algebra, gateway, psEnroll, recognized, credential]
-  AL:{n:"AL",v:[55,40,30,15,25]}, AK:{n:"AK",v:[30,25,18,8,12]},
-  AZ:{n:"AZ",v:[60,48,42,22,35]}, AR:{n:"AR",v:[45,35,28,12,20]},
-  CA:{n:"CA",v:[72,65,58,38,50]}, CO:{n:"CO",v:[68,60,54,32,45]},
-  CT:{n:"CT",v:[75,70,62,42,55]}, DE:{n:"DE",v:[65,58,50,28,42]},
-  FL:{n:"FL",v:[62,52,45,25,38]}, GA:{n:"GA",v:[58,48,40,20,32]},
-  HI:{n:"HI",v:[50,42,36,18,28]}, ID:{n:"ID",v:[48,38,32,14,22]},
-  IL:{n:"IL",v:[70,62,55,35,48]}, IN:{n:"IN",v:[60,52,44,24,36]},
-  IA:{n:"IA",v:[65,55,48,28,40]}, KS:{n:"KS",v:[58,48,42,22,34]},
-  KY:{n:"KY",v:[50,42,35,16,26]}, LA:{n:"LA",v:[48,38,30,12,20]},
-  ME:{n:"ME",v:[62,52,46,26,38]}, MD:{n:"MD",v:[72,65,58,38,52]},
-  MA:{n:"MA",v:[78,72,65,45,60]}, MI:{n:"MI",v:[65,55,48,28,40]},
-  MN:{n:"MN",v:[70,62,56,36,50]}, MS:{n:"MS",v:[42,32,25,10,16]},
-  MO:{n:"MO",v:[58,48,42,22,34]}, MT:{n:"MT",v:[45,36,30,12,20]},
-  NE:{n:"NE",v:[62,52,46,26,38]}, NV:{n:"NV",v:[55,45,38,18,30]},
-  NH:{n:"NH",v:[68,60,54,34,46]}, NJ:{n:"NJ",v:[75,68,62,42,55]},
-  NM:{n:"NM",v:[48,38,30,12,20]}, NY:{n:"NY",v:[74,67,60,40,54]},
-  NC:{n:"NC",v:[62,52,45,25,38]}, ND:{n:"ND",v:[55,45,38,18,28]},
-  OH:{n:"OH",v:[65,55,48,28,40]}, OK:{n:"OK",v:[52,42,35,15,25]},
-  OR:{n:"OR",v:[65,56,50,30,42]}, PA:{n:"PA",v:[68,60,54,34,46]},
-  RI:{n:"RI",v:[70,62,55,35,48]}, SC:{n:"SC",v:[55,45,38,18,30]},
-  SD:{n:"SD",v:[52,42,36,16,26]}, TN:{n:"TN",v:[55,45,38,18,30]},
-  TX:{n:"TX",v:[65,55,48,28,40]}, UT:{n:"UT",v:[60,50,44,24,36]},
-  VT:{n:"VT",v:[68,60,54,34,46]}, VA:{n:"VA",v:[70,62,56,36,50]},
-  WA:{n:"WA",v:[70,62,56,36,50]}, WV:{n:"WV",v:[45,35,28,10,18]},
-  WI:{n:"WI",v:[65,55,48,28,40]}, WY:{n:"WY",v:[48,38,32,14,22]},
-  DC:{n:"DC",v:[78,72,65,45,60]},
-};
-
 // Simple Albers-like projected state centroids for a schematic tile map
 // Using a cartogram-style grid layout (col, row) for clarity
 const STATE_GRID = {
@@ -4918,40 +4887,53 @@ const STATE_GRID = {
   DC:{c:10,r:3},
 };
 
-function coverageColor(val) {
-  // Amber scale: low = light cream, high = deep amber
-  if (val === undefined || val === null) return "#F1F5F9";
-  if (val >= 70) return "#B45309";
-  if (val >= 55) return "#D97706";
-  if (val >= 40) return "#F59E0B";
-  if (val >= 25) return "#FCD34D";
-  return "#FEF3C7";
-}
+const STATE_NAME_TO_ABBR = {
+  Alabama:"AL", Alaska:"AK", Arizona:"AZ", Arkansas:"AR", California:"CA", Colorado:"CO",
+  Connecticut:"CT", Delaware:"DE", DC:"DC", Florida:"FL", Georgia:"GA", Hawaii:"HI",
+  Idaho:"ID", Illinois:"IL", Indiana:"IN", Iowa:"IA", Kansas:"KS", Kentucky:"KY",
+  Louisiana:"LA", Maine:"ME", Maryland:"MD", Massachusetts:"MA", Michigan:"MI",
+  Minnesota:"MN", Mississippi:"MS", Missouri:"MO", Montana:"MT", Nebraska:"NE",
+  Nevada:"NV", "New Hampshire":"NH", "New Jersey":"NJ", "New Mexico":"NM", "New York":"NY",
+  "North Carolina":"NC", "North Dakota":"ND", Ohio:"OH", Oklahoma:"OK", Oregon:"OR",
+  Pennsylvania:"PA", "Rhode Island":"RI", "South Carolina":"SC", "South Dakota":"SD",
+  Tennessee:"TN", Texas:"TX", Utah:"UT", Vermont:"VT", Virginia:"VA", Washington:"WA",
+  "West Virginia":"WV", Wisconsin:"WI", Wyoming:"WY",
+};
 
+// Binary reported/not-reported tile map for a single momentum point, driven by
+// sectorContext.points[].reportingStates — not a continuous coverage estimate.
 function MomentumHeatmap({ points }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  const [tooltip, setTooltip] = useState(null);
+  const [hovered, setHovered] = useState(null);
   const CELL = 38, GAP = 2;
   const COLS = 12, ROWS = 8;
   const W = COLS * (CELL + GAP), H = ROWS * (CELL + GAP);
+  const REPORTED_COLOR = "#2563EB";
 
   const states = Object.entries(STATE_GRID);
+  const activePoint = points[activeIdx];
+  const reportingByAbbr = {};
+  (activePoint?.reportingStates || []).forEach(s => {
+    const abbr = STATE_NAME_TO_ABBR[s.state];
+    if (abbr) reportingByAbbr[abbr] = s;
+  });
+  const hasStateList = (activePoint?.reportingStates || []).length > 0;
 
   return (
     <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 24px",boxShadow:"0 1px 6px rgba(10,37,64,0.06)"}}>
       {/* Header + indicator selector */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,marginBottom:16,flexWrap:"wrap"}}>
         <div>
-          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:4}}>State Coverage Heatmap</div>
-          <div style={{fontSize:12,color:TEXT_SUB}}>% of state/district systems able to measure this E-W Momentum Point — Placeholder data</div>
+          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:4}}>State Reporting Coverage</div>
+          <div style={{fontSize:12,color:TEXT_SUB}}>Whether each state reports this E-W Momentum Point — reported or not, not a coverage estimate</div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {points.map((pt,i)=>(
             <button key={i} onClick={()=>setActiveIdx(i)}
               style={{padding:"5px 12px",fontSize:12,fontWeight:700,borderRadius:20,border:"none",cursor:"pointer",
-                background:activeIdx===i?"#F59E0B":BG,
+                background:activeIdx===i?REPORTED_COLOR:BG,
                 color:activeIdx===i?"#fff":TEXT_SUB,
-                boxShadow:activeIdx===i?"0 2px 6px rgba(245,158,11,0.35)":"none",
+                boxShadow:activeIdx===i?"0 2px 6px rgba(37,99,235,0.35)":"none",
                 transition:"all .15s"}}>
               {i+1}. {pt.short}
             </button>
@@ -4965,69 +4947,74 @@ function MomentumHeatmap({ points }) {
         <div style={{position:"relative",flexShrink:0}}>
           <svg width={W} height={H} style={{display:"block"}}>
             {states.map(([abbr, pos])=>{
-              const sd = STATE_COVERAGE[abbr];
-              if (!sd) return null;
-              const val = sd.v[activeIdx];
+              const s = reportingByAbbr[abbr];
+              const reported = !!s;
               const x = pos.c * (CELL + GAP);
               const y = pos.r * (CELL + GAP);
-              const fill = coverageColor(val);
               return (
                 <g key={abbr}
-                  onMouseEnter={e=>setTooltip({abbr,val,x:e.clientX,y:e.clientY})}
-                  onMouseLeave={()=>setTooltip(null)}
+                  onMouseEnter={e=>setHovered({abbr, s, reported, x:e.clientX, y:e.clientY})}
+                  onMouseLeave={()=>setHovered(null)}
                   style={{cursor:"default"}}>
-                  <rect x={x} y={y} width={CELL} height={CELL} rx={4} fill={fill} stroke="#fff" strokeWidth={1.5}/>
-                  <text x={x+CELL/2} y={y+CELL/2-4} textAnchor="middle" dominantBaseline="middle"
-                    style={{fontSize:"8px",fontWeight:700,fill: val>=40?"#78350F":"#92400E",pointerEvents:"none",userSelect:"none"}}>
+                  <rect x={x} y={y} width={CELL} height={CELL} rx={4}
+                    fill={reported?REPORTED_COLOR:"#F1F5F9"} stroke="#fff" strokeWidth={1.5}
+                    opacity={reported?1:0.7}/>
+                  <text x={x+CELL/2} y={y+CELL/2} textAnchor="middle" dominantBaseline="middle"
+                    style={{fontSize:"9px",fontWeight:reported?800:600,fill:reported?"#fff":TEXT_MUTED,pointerEvents:"none",userSelect:"none"}}>
                     {abbr}
-                  </text>
-                  <text x={x+CELL/2} y={y+CELL/2+7} textAnchor="middle" dominantBaseline="middle"
-                    style={{fontSize:"9px",fontWeight:800,fill: val>=40?"#78350F":"#B45309",pointerEvents:"none",userSelect:"none"}}>
-                    {val}%
                   </text>
                 </g>
               );
             })}
           </svg>
           {/* Tooltip */}
-          {tooltip && (
-            <div style={{position:"fixed",top:tooltip.y-48,left:tooltip.x+10,background:BRAND,color:"#fff",borderRadius:8,padding:"7px 12px",fontSize:12,fontWeight:700,pointerEvents:"none",zIndex:9999,boxShadow:"0 4px 16px rgba(10,37,64,0.2)",whiteSpace:"nowrap"}}>
-              {tooltip.abbr} — {tooltip.val}% coverage
-              <div style={{fontSize:10,fontWeight:400,opacity:0.7,marginTop:2}}>{points[activeIdx]?.label}</div>
+          {hovered && (
+            <div style={{position:"fixed",top:hovered.y-8,left:hovered.x+14,transform:"translateY(-100%)",background:BRAND,color:"#fff",borderRadius:8,padding:"10px 12px",fontSize:12,fontWeight:700,pointerEvents:"none",zIndex:9999,boxShadow:"0 4px 16px rgba(10,37,64,0.2)",whiteSpace:"nowrap",minWidth:200}}>
+              <div style={{marginBottom:4}}>{hovered.s?.state || hovered.abbr} — {hovered.reported?"Reported":"Not Reported"}</div>
+              {hovered.reported ? (
+                <>
+                  <div style={{fontSize:11,fontWeight:400,opacity:0.85}}>
+                    K-12 enrollment: {hovered.s.k12Enrollment.toLocaleString()}
+                    {activePoint?.k12EnrollmentTotal ? " ("+Math.round(hovered.s.k12Enrollment/activePoint.k12EnrollmentTotal*100)+"% of total)" : ""}
+                  </div>
+                  <div style={{fontSize:11,fontWeight:400,opacity:0.85,marginTop:2}}>
+                    PS enrollment: {hovered.s.psEnrollment!=null ? hovered.s.psEnrollment.toLocaleString() : "— (not yet available)"}
+                  </div>
+                </>
+              ) : (
+                <div style={{fontSize:11,fontWeight:400,opacity:0.7}}>Not reported for this momentum point</div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Color legend + national stats */}
-        <div style={{display:"flex",flexDirection:"column",gap:14,minWidth:160}}>
+        {/* Legend + summary */}
+        <div style={{display:"flex",flexDirection:"column",gap:14,minWidth:180}}>
           <div>
-            <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Coverage Level</div>
-            {[
-              {range:"70–100%", color:"#B45309", label:"Strong"},
-              {range:"55–69%",  color:"#D97706", label:"Developing"},
-              {range:"40–54%",  color:"#F59E0B", label:"Emerging"},
-              {range:"25–39%",  color:"#FCD34D", label:"Limited"},
-              {range:"0–24%",   color:"#FEF3C7", label:"Minimal"},
-            ].map(l=>(
-              <div key={l.range} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                <div style={{width:14,height:14,borderRadius:3,background:l.color,flexShrink:0,border:"1px solid rgba(0,0,0,0.08)"}}/>
-                <span style={{fontSize:11,color:TEXT_SUB}}><strong>{l.range}</strong> — {l.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* National summary for active indicator */}
-          <div style={{background:"#FEF5E7",borderRadius:8,border:"1px solid #FDE68A",padding:"12px 14px"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#92400E",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>National Avg.</div>
-            <div style={{fontSize:22,fontWeight:800,color:"#B45309"}}>
-              {Math.round(Object.values(STATE_COVERAGE).reduce((s,d)=>s+(d.v[activeIdx]||0),0)/Object.keys(STATE_COVERAGE).length)}%
+            <div style={{fontSize:11,fontWeight:700,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Legend</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <div style={{width:14,height:14,borderRadius:3,background:REPORTED_COLOR,flexShrink:0}}/>
+              <span style={{fontSize:11,color:TEXT_SUB}}>Reported</span>
             </div>
-            <div style={{fontSize:11,color:"#92400E",marginTop:3,lineHeight:1.4}}>{points[activeIdx]?.label}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:14,height:14,borderRadius:3,background:"#F1F5F9",border:"1px solid "+BORDER,flexShrink:0}}/>
+              <span style={{fontSize:11,color:TEXT_SUB}}>Not reported</span>
+            </div>
           </div>
 
-          <div style={{fontSize:10,color:TEXT_SUB,lineHeight:1.5}}>
-            ⚠ Placeholder data only. Not for distribution.
+          <div style={{background:"#EFF6FF",borderRadius:8,border:"1px solid #BFDBFE",padding:"12px 14px"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#1D4ED8",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>States Reporting</div>
+            <div style={{fontSize:22,fontWeight:800,color:"#1D4ED8"}}>
+              {activePoint?.statesReportingN==null ? "—" : activePoint.statesReportingN}/{activePoint?.statesReportingTotal ?? 51}
+            </div>
+            <div style={{fontSize:11,color:"#1E40AF",marginTop:3,lineHeight:1.4}}>{activePoint?.short}</div>
           </div>
+
+          {!hasStateList && (
+            <div style={{fontSize:10,color:TEXT_SUB,lineHeight:1.5}}>
+              ⚠ No confirmed state list yet for this momentum point.
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -5589,7 +5576,7 @@ function GoalDetailChart({ g }) {
         {g.sectorContext && <SectorContextDumbbell g={g} ctx={g.sectorContext} showHeader={false}/>}
 
         {/* US Heatmap — state-by-state reporting coverage, at the bottom */}
-        <MomentumHeatmap points={g.momentumPoints.filter(p=>p.short!=="All 5 (Composite)")}/>
+        <MomentumHeatmap points={(g.sectorContext?.points || []).filter(p=>p.short!=="ALL")}/>
       </div>
     );
   }
