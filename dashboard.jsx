@@ -239,11 +239,85 @@ let STRATEGY_GOALS = [
       intro:"Reporting and access don't move together — work is needed on both availability and access.",
       detail:"Cross-sector data access for K12 and PS leaders lags behind state reporting, but Algebra by 9th grade only requires within-school data, making it easier for leaders to access and use.",
       points:[
-        { short:"Algebra by 9th",     statesReportingN:10, statesReportingTotal:51, leadersAccessPct:51 },
-        { short:"Gateway Courses",    statesReportingN:22, statesReportingTotal:51, leadersAccessPct:25 },
-        { short:"PS Enrollment",      statesReportingN:49, statesReportingTotal:51, leadersAccessPct:27 },
+        { short:"Algebra by 9th",     statesReportingN:10, statesReportingTotal:51, leadersAccessPct:51,
+          k12EnrollmentTotal:9547459,
+          reportingStates:[
+            { state:"Connecticut", k12Enrollment:494937 }, { state:"Florida", k12Enrollment:2871192 },
+            { state:"Idaho", k12Enrollment:316265 }, { state:"Mississippi", k12Enrollment:436523 },
+            { state:"North Carolina", k12Enrollment:1544289 }, { state:"Ohio", k12Enrollment:1674543 },
+            { state:"Oregon", k12Enrollment:538452 }, { state:"South Carolina", k12Enrollment:793760 },
+            { state:"Hawaii", k12Enrollment:169308 }, { state:"Louisiana", k12Enrollment:708190 },
+          ] },
+        { short:"Gateway Courses",    statesReportingN:22, statesReportingTotal:51, leadersAccessPct:25,
+          k12EnrollmentTotal:21804724,
+          reportingStates:[
+            { state:"Alabama", k12Enrollment:748650 }, { state:"Alaska", k12Enrollment:131243 },
+            { state:"Arizona", k12Enrollment:1117053 }, { state:"Arkansas", k12Enrollment:485019 },
+            { state:"Colorado", k12Enrollment:865205 }, { state:"Connecticut", k12Enrollment:494937 },
+            { state:"Idaho", k12Enrollment:316265 }, { state:"Indiana", k12Enrollment:1032536 },
+            { state:"Louisiana", k12Enrollment:708190 }, { state:"Michigan", k12Enrollment:1377459 },
+            { state:"New York", k12Enrollment:2509617 }, { state:"North Carolina", k12Enrollment:1544289 },
+            { state:"Ohio", k12Enrollment:1674543 }, { state:"Tennessee", k12Enrollment:1003492 },
+            { state:"Utah", k12Enrollment:689791 }, { state:"Wisconsin", k12Enrollment:813869 },
+            { state:"Wyoming", k12Enrollment:91036 }, { state:"Washington", k12Enrollment:1089309 },
+            { state:"Missouri", k12Enrollment:891248 }, { state:"Florida", k12Enrollment:2871192 },
+            { state:"Massachusetts", k12Enrollment:913258 }, { state:"Mississippi", k12Enrollment:436523 },
+          ] },
+        { short:"PS Enrollment",      statesReportingN:47, statesReportingTotal:51, leadersAccessPct:27,
+          k12EnrollmentTotal:46200504,
+          reportingStates:[
+            { state:"Alabama", k12Enrollment:748650 }, { state:"Connecticut", k12Enrollment:494937 },
+            { state:"DC", k12Enrollment:92579 }, { state:"Florida", k12Enrollment:2871192 },
+            { state:"Georgia", k12Enrollment:1749701 }, { state:"Illinois", k12Enrollment:1845607 },
+            { state:"Indiana", k12Enrollment:1032536 }, { state:"Kentucky", k12Enrollment:656407 },
+            { state:"Maine", k12Enrollment:167702 }, { state:"Maryland", k12Enrollment:889531 },
+            { state:"Massachusetts", k12Enrollment:913258 }, { state:"Michigan", k12Enrollment:1377459 },
+            { state:"Minnesota", k12Enrollment:869967 }, { state:"Nebraska", k12Enrollment:329162 },
+            { state:"New Hampshire", k12Enrollment:165404 }, { state:"North Carolina", k12Enrollment:1544289 },
+            { state:"North Dakota", k12Enrollment:118895 }, { state:"Ohio", k12Enrollment:1674543 },
+            { state:"Oregon", k12Enrollment:538452 }, { state:"Pennsylvania", k12Enrollment:1669364 },
+            { state:"Rhode Island", k12Enrollment:133254 }, { state:"South Dakota", k12Enrollment:141022 },
+            { state:"Utah", k12Enrollment:689791 }, { state:"West Virginia", k12Enrollment:245837 },
+            { state:"California", k12Enrollment:5818042 }, { state:"Alaska", k12Enrollment:131243 },
+            { state:"Arizona", k12Enrollment:1117053 }, { state:"Arkansas", k12Enrollment:485019 },
+            { state:"Colorado", k12Enrollment:865205 }, { state:"Delaware", k12Enrollment:141842 },
+            { state:"Hawaii", k12Enrollment:169308 }, { state:"Idaho", k12Enrollment:316265 },
+            { state:"Iowa", k12Enrollment:501416 }, { state:"Kansas", k12Enrollment:479468 },
+            { state:"Louisiana", k12Enrollment:708190 }, { state:"Mississippi", k12Enrollment:436523 },
+            { state:"Montana", k12Enrollment:148895 }, { state:"Nevada", k12Enrollment:484358 },
+            { state:"New Jersey", k12Enrollment:1356496 }, { state:"Oklahoma", k12Enrollment:698594 },
+            { state:"South Carolina", k12Enrollment:793760 }, { state:"Tennessee", k12Enrollment:1003492 },
+            { state:"Virginia", k12Enrollment:1258852 }, { state:"Wisconsin", k12Enrollment:813869 },
+            { state:"Texas", k12Enrollment:5532518 }, { state:"Washington", k12Enrollment:1089309 },
+            { state:"Missouri", k12Enrollment:891248 },
+          ] },
         { short:"Learning Applied",   statesReportingN:null, statesReportingTotal:51, leadersAccessPct:27 },
-        { short:"Credential Earned", statesReportingN:42, statesReportingTotal:51, leadersAccessPct:36 },
+        { short:"Credential Earned", statesReportingN:43, statesReportingTotal:51, leadersAccessPct:36,
+          k12EnrollmentTotal:40636225,
+          reportingStates:[
+            { state:"Alabama", k12Enrollment:748650 }, { state:"Alaska", k12Enrollment:131243 },
+            { state:"Arizona", k12Enrollment:1117053 }, { state:"Colorado", k12Enrollment:865205 },
+            { state:"Connecticut", k12Enrollment:494937 }, { state:"DC", k12Enrollment:92579 },
+            { state:"Idaho", k12Enrollment:316265 }, { state:"Louisiana", k12Enrollment:708190 },
+            { state:"Maine", k12Enrollment:167702 }, { state:"Massachusetts", k12Enrollment:913258 },
+            { state:"Mississippi", k12Enrollment:436523 }, { state:"Nevada", k12Enrollment:484358 },
+            { state:"New Hampshire", k12Enrollment:165404 }, { state:"New Jersey", k12Enrollment:1356496 },
+            { state:"New Mexico", k12Enrollment:309955 }, { state:"New York", k12Enrollment:2509617 },
+            { state:"North Carolina", k12Enrollment:1544289 }, { state:"North Dakota", k12Enrollment:118895 },
+            { state:"Ohio", k12Enrollment:1674543 }, { state:"Oklahoma", k12Enrollment:698594 },
+            { state:"Oregon", k12Enrollment:538452 }, { state:"Rhode Island", k12Enrollment:133254 },
+            { state:"South Dakota", k12Enrollment:141022 }, { state:"Vermont", k12Enrollment:78828 },
+            { state:"Virginia", k12Enrollment:1258852 }, { state:"Wisconsin", k12Enrollment:813869 },
+            { state:"Wyoming", k12Enrollment:91036 }, { state:"Washington", k12Enrollment:1089309 },
+            { state:"California", k12Enrollment:5818042 }, { state:"Missouri", k12Enrollment:891248 },
+            { state:"Georgia", k12Enrollment:1749701 }, { state:"Indiana", k12Enrollment:1032536 },
+            { state:"Kansas", k12Enrollment:479468 }, { state:"Kentucky", k12Enrollment:656407 },
+            { state:"Maryland", k12Enrollment:889531 }, { state:"Michigan", k12Enrollment:1377459 },
+            { state:"Montana", k12Enrollment:148895 }, { state:"Nebraska", k12Enrollment:329162 },
+            { state:"South Carolina", k12Enrollment:793760 }, { state:"Tennessee", k12Enrollment:1003492 },
+            { state:"Utah", k12Enrollment:689791 }, { state:"West Virginia", k12Enrollment:245837 },
+            { state:"Texas", k12Enrollment:5532518 },
+          ] },
         { short:"ALL",                statesReportingN:7,  statesReportingTotal:51, leadersAccessPct:5, leadersAccessDisplay:"≤ 5%" },
       ],
       k12CoveragePct:11.6,
@@ -5058,6 +5132,7 @@ function IvoAdoptionMap({ procurementStates }) {
 function SectorContextDumbbell({ g, ctx, showHeader = true }) {
   const REPORT_COLOR = "#2563EB", ACCESS_COLOR = "#D97706";
   const points = ctx.points || [];
+  const [expanded, setExpanded] = useState(null);
   return (
     <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"18px 20px"}}>
       {/* Header: centered title + right-aligned baseline stat — the primary
@@ -5100,28 +5175,53 @@ function SectorContextDumbbell({ g, ctx, showHeader = true }) {
           const accessPct = p.leadersAccessPct;
           const lo = reportPct==null ? accessPct : Math.min(reportPct,accessPct);
           const hi = reportPct==null ? accessPct : Math.max(reportPct,accessPct);
+          const hasDetail = (p.reportingStates||[]).length>0;
+          const isOpen = expanded===i;
           return (
-            <div key={i} style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 90px",gap:10,alignItems:"center"}}>
-              <span style={{fontSize:12,fontWeight:600,color:TEXT}}>{p.short}</span>
-              <div style={{position:"relative",height:16}}>
-                <div style={{position:"absolute",left:0,right:0,top:"50%",height:1,background:BORDER}}/>
-                {reportPct!=null && (
-                  <div style={{position:"absolute",top:"50%",height:2,background:"#CBD5E1",
-                    left:lo+"%",width:(hi-lo)+"%",transform:"translateY(-50%)"}}/>
-                )}
-                {reportPct!=null && (
-                  <div style={{position:"absolute",left:reportPct+"%",top:"50%",width:10,height:10,borderRadius:"50%",
-                    background:REPORT_COLOR,border:"2px solid #fff",transform:"translate(-50%,-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
-                )}
-                <div style={{position:"absolute",left:accessPct+"%",top:"50%",width:10,height:10,borderRadius:"50%",
-                  background:ACCESS_COLOR,border:"2px solid #fff",transform:"translate(-50%,-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+            <div key={i}>
+              <div onClick={()=>hasDetail && setExpanded(e=>e===i?null:i)}
+                style={{display:"grid",gridTemplateColumns:"150px 1fr 80px 90px 16px",gap:10,alignItems:"center",cursor:hasDetail?"pointer":"default"}}>
+                <span style={{fontSize:12,fontWeight:600,color:TEXT}}>{p.short}</span>
+                <div style={{position:"relative",height:16}}>
+                  <div style={{position:"absolute",left:0,right:0,top:"50%",height:1,background:BORDER}}/>
+                  {reportPct!=null && (
+                    <div style={{position:"absolute",top:"50%",height:2,background:"#CBD5E1",
+                      left:lo+"%",width:(hi-lo)+"%",transform:"translateY(-50%)"}}/>
+                  )}
+                  {reportPct!=null && (
+                    <div style={{position:"absolute",left:reportPct+"%",top:"50%",width:10,height:10,borderRadius:"50%",
+                      background:REPORT_COLOR,border:"2px solid #fff",transform:"translate(-50%,-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+                  )}
+                  <div style={{position:"absolute",left:accessPct+"%",top:"50%",width:10,height:10,borderRadius:"50%",
+                    background:ACCESS_COLOR,border:"2px solid #fff",transform:"translate(-50%,-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+                </div>
+                <div style={{fontSize:12,fontWeight:700,color:REPORT_COLOR,textAlign:"center"}}>
+                  {p.statesReportingN==null ? "—" : p.statesReportingN}/{p.statesReportingTotal}
+                </div>
+                <div style={{fontSize:12,fontWeight:700,color:ACCESS_COLOR,textAlign:"center"}}>
+                  {p.leadersAccessDisplay || (p.leadersAccessPct+"%")}
+                </div>
+                <span style={{fontSize:10,color:TEXT_SUB,opacity:hasDetail?0.7:0,textAlign:"center"}}>{isOpen?"▴":"▾"}</span>
               </div>
-              <div style={{fontSize:12,fontWeight:700,color:REPORT_COLOR,textAlign:"center"}}>
-                {p.statesReportingN==null ? "—" : p.statesReportingN}/{p.statesReportingTotal}
-              </div>
-              <div style={{fontSize:12,fontWeight:700,color:ACCESS_COLOR,textAlign:"center"}}>
-                {p.leadersAccessDisplay || (p.leadersAccessPct+"%")}
-              </div>
+              {isOpen && hasDetail && (
+                <div style={{marginTop:8,marginLeft:150,padding:"12px 14px",background:SURFACE,border:"1px solid "+BORDER,borderRadius:8}}>
+                  <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+                    K-12 Enrollment in Reporting States{!p.reportingStates.some(s=>s.psEnrollment!=null)?" (PS enrollment by state pending)":""}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"4px 16px",maxHeight:180,overflowY:"auto"}}>
+                    {p.reportingStates.map(s=>(
+                      <div key={s.state} style={{display:"flex",justifyContent:"space-between",fontSize:11,color:TEXT_SUB,gap:8}}>
+                        <span>{s.state}</span>
+                        <span style={{fontWeight:600,color:TEXT}}>{s.k12Enrollment.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"1px solid "+BORDER,fontSize:11,fontWeight:800,color:TEXT}}>
+                    <span>{p.reportingStates.length} states</span>
+                    <span>{p.k12EnrollmentTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
