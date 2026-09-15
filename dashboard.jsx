@@ -213,6 +213,10 @@ let STRATEGY_GOALS = [
       { label:"Timely",        detail:"Cross-sector insights within a week",                                  pct:42 },
       { label:"Interoperable", detail:"Combining across systems “not at all hard”",                  pct:9 },
       { label:"Actionable",    detail:"Used to make teaching & learning or advising & navigation decision",    pct:69 },
+    ],
+    breakdown:[
+      { key:"district", label:"District Decision-Makers", pct:null },
+      { key:"ps",        label:"Postsecondary Decision-Makers", pct:null },
     ] },
   { id:"g5", number:5, title:"Comprehensive EW Momentum Measurement", color:"#313A44",
     target:"40% of field leaders have comprehensive data access within six months to at least two E-W Momentum Points",
@@ -5051,20 +5055,23 @@ function IvoAdoptionMap({ procurementStates }) {
 }
 
 // ── SectorContextDumbbell — reporting vs. access dumbbell chart + stat boxes ──
-function SectorContextDumbbell({ g, ctx }) {
+function SectorContextDumbbell({ g, ctx, showHeader = true }) {
   const REPORT_COLOR = "#2563EB", ACCESS_COLOR = "#D97706";
   const points = ctx.points || [];
   return (
     <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"18px 20px"}}>
-      {/* Header: centered title + right-aligned baseline stat */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"start",marginBottom:6}}>
-        <div/>
-        <div style={{fontSize:14,fontWeight:800,color:"#1D4ED8",textAlign:"center",whiteSpace:"nowrap"}}>Sector / Context Metrics</div>
-        <div style={{textAlign:"right"}}>
-          <div style={{fontSize:10,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5}}>{g.baseline?.year} Baseline</div>
-          <div style={{fontSize:20,fontWeight:900,color:TEXT,lineHeight:1.1}}>{g.baseline?.text || (g.current2026+"%")}</div>
+      {/* Header: centered title + right-aligned baseline stat — the primary
+          progress chart already shows baseline/target, so this is optional */}
+      {showHeader && (
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"start",marginBottom:6}}>
+          <div/>
+          <div style={{fontSize:14,fontWeight:800,color:"#1D4ED8",textAlign:"center",whiteSpace:"nowrap"}}>Sector / Context Metrics</div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:10,color:TEXT_SUB,textTransform:"uppercase",letterSpacing:0.5}}>{g.baseline?.year} Baseline</div>
+            <div style={{fontSize:20,fontWeight:900,color:TEXT,lineHeight:1.1}}>{g.baseline?.text || (g.current2026+"%")}</div>
+          </div>
         </div>
-      </div>
+      )}
 
       {ctx.headerNote && (
         <div style={{fontSize:13,fontWeight:800,color:"#C2410C",textAlign:"center",marginBottom:8}}>{ctx.headerNote}</div>
@@ -5430,95 +5437,59 @@ function GoalDetailChart({ g }) {
     );
   }
 
-  // ── Goal 4: E-W Momentum Points horizontal bar chart + US heatmap ────────────
+  // ── Goal 5: primary progress chart + reporting/access context + US heatmap ──
   if (g.chartType === "momentum-points") {
-    const AMBER = "#F59E0B";
-    const AMBER_LIGHT = "#FEF5E7";
-    const AMBER_MID = "#FDE68A";
-    const points = g.momentumPoints.filter(p => p.short !== "All 5 (Composite)");
-    const composite = g.momentumPoints.find(p => p.short === "All 5 (Composite)");
+    const primaryData = [
+      { year:"Base", value:0, target:null },
+      { year:g.baseline?.year || "2026", value:g.current2026, target:null },
+      { year:"2027", value:null, target:null },
+      { year:"2028", value:null, target:null },
+      { year:"2029", value:null, target:null },
+      { year:"2030", value:null, target:g.goal2030 },
+    ];
     return (
       <div style={{display:"flex",flexDirection:"column",gap:20}}>
         <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
 
-          {/* Horizontal bar chart */}
-          <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"16px 18px"}}>
-            <div style={{fontSize:11,color:TEXT_SUB,marginBottom:14,lineHeight:1.5}}>{g.chartNote}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {points.map((pt, i) => (
-                <div key={i}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
-                    <span style={{fontSize:12,fontWeight:600,color:TEXT,lineHeight:1.35}}>{pt.label}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:AMBER,flexShrink:0,marginLeft:8}}>{pt.current}%</span>
-                  </div>
-                  <div style={{position:"relative",height:10,background:BORDER,borderRadius:5,overflow:"hidden"}}>
-                    <div style={{position:"absolute",left:0,top:0,height:"100%",width:pt.target2030+"%",background:AMBER_MID,borderRadius:5}}/>
-                    <div style={{position:"absolute",left:0,top:0,height:"100%",width:pt.current+"%",background:AMBER,borderRadius:5,transition:"width .4s"}}/>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"flex-end",marginTop:2}}>
-                    <span style={{fontSize:10,color:TEXT}}>Target: {pt.target2030}%</span>
-                  </div>
-                </div>
-              ))}
-              {composite && (
-                <div style={{marginTop:6,paddingTop:10,borderTop:"1px dashed "+BORDER}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
-                    <span style={{fontSize:12,fontWeight:800,color:TEXT}}>All 5 Points (Composite)</span>
-                    <span style={{fontSize:12,fontWeight:800,color:BRAND,flexShrink:0,marginLeft:8}}>{composite.current}%</span>
-                  </div>
-                  <div style={{position:"relative",height:12,background:BORDER,borderRadius:6,overflow:"hidden"}}>
-                    <div style={{position:"absolute",left:0,top:0,height:"100%",width:composite.target2030+"%",background:AMBER_MID,borderRadius:6}}/>
-                    <div style={{position:"absolute",left:0,top:0,height:"100%",width:composite.current+"%",background:BRAND,borderRadius:6,transition:"width .4s"}}/>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-                    <span style={{fontSize:10,color:TEXT}}>Current (2026)</span>
-                    <span style={{fontSize:10,color:TEXT}}>2030 Target: {composite.target2030}%</span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div style={{display:"flex",gap:14,marginTop:14,paddingTop:12,borderTop:"1px solid "+BORDER}}>
-              <div style={{display:"flex",alignItems:"center",gap:5}}>
-                <div style={{width:12,height:8,borderRadius:2,background:AMBER,flexShrink:0}}/>
-                <span style={{fontSize:10,color:TEXT}}>Current (2026)</span>
+        {/* Primary chart — % of field leaders with access to at least 2 of the 5 points */}
+        <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 16px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+          <div style={{fontSize:12,fontWeight:700,color:TEXT,marginBottom:2}}>% of Field Leaders with Access to At Least 2 of 5 E-W Momentum Points</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"center",marginTop:10}}>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={primaryData} margin={{top:8,right:16,bottom:0,left:-10}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+                <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT}}/>
+                <YAxis domain={[0,100]} tick={{fontSize:10,fill:TEXT}} tickFormatter={v=>v+"%"}/>
+                <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER}}
+                  formatter={(v,n)=>[v!==null?v+"%":"—",n]}/>
+                <Line type="monotone" dataKey="value" name="Actual" stroke={BRAND} strokeWidth={2.5}
+                  dot={(props)=>props.payload.value!==null?<circle cx={props.cx} cy={props.cy} r={4} fill={BRAND} stroke="#fff" strokeWidth={1.5}/>:<circle r={0}/>}
+                  connectNulls={false}/>
+                <Line type="monotone" dataKey="target" name="2030 Target" stroke={BORDER} strokeWidth={2}
+                  strokeDasharray="6 4"
+                  dot={(props)=>props.payload.target!==null?<circle cx={props.cx} cy={props.cy} r={5} fill={BRAND+"44"} stroke={BRAND} strokeWidth={1.5}/>:<circle r={0}/>}
+                  connectNulls={false}/>
+              </LineChart>
+            </ResponsiveContainer>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{padding:"12px 14px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
+                <div style={{fontSize:11,color:TEXT_SUB,marginBottom:3}}>{g.baseline?.year} Baseline</div>
+                <div style={{fontSize:24,fontWeight:800,color:BRAND}}>{g.baseline?.text || (g.current2026+"%")}</div>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:5}}>
-                <div style={{width:12,height:8,borderRadius:2,background:AMBER_MID,flexShrink:0}}/>
-                <span style={{fontSize:10,color:TEXT}}>2030 Target</span>
+              <div style={{padding:"12px 14px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
+                <div style={{fontSize:11,color:TEXT_SUB,marginBottom:3}}>2030 Target</div>
+                <div style={{fontSize:24,fontWeight:800,color:TEXT}}>{g.goal2030}%</div>
               </div>
             </div>
-          </div>
-
-          {/* Stat cards */}
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{padding:"14px 16px",background:AMBER_LIGHT,borderRadius:10,border:"1px solid "+AMBER_MID}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#92400E",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>5 E-W Momentum Points</div>
-              {points.map((pt,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:i<points.length-1?6:0}}>
-                  <span style={{width:16,height:16,borderRadius:"50%",background:AMBER,color:"#fff",fontSize:9,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</span>
-                  <span style={{fontSize:12,color:"#78350F",lineHeight:1.4}}>{pt.label}</span>
-                </div>
-              ))}
-            </div>
-            {composite && (
-              <div style={{padding:"14px 16px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
-                <div style={{fontSize:12,color:TEXT_SUB,marginBottom:4}}>Systems Measuring All 5 (2026)</div>
-                <div style={{fontSize:26,fontWeight:800,color:BRAND}}>{composite.current}%</div>
-                <div style={{marginTop:8,height:5,background:BORDER,borderRadius:3,overflow:"hidden"}}>
-                  <div style={{width:(composite.current/composite.target2030*100)+"%",height:"100%",background:AMBER,borderRadius:3}}/>
-                </div>
-                <div style={{fontSize:11,color:TEXT_SUB,marginTop:3}}>{Math.round(composite.current/composite.target2030*100)}% toward {composite.target2030}% goal</div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* US Heatmap */}
-        <MomentumHeatmap points={g.momentumPoints.filter(p=>p.short!=="All 5 (Composite)")}/>
+        {/* Reporting vs. access context, moved up — header suppressed since the
+            primary chart above already carries the baseline/target framing */}
+        {g.sectorContext && <SectorContextDumbbell g={g} ctx={g.sectorContext} showHeader={false}/>}
 
-        {/* Sector / Context Metrics — reporting vs. access dumbbell chart */}
-        {g.sectorContext && <SectorContextDumbbell g={g} ctx={g.sectorContext}/>}
+        {/* US Heatmap — state-by-state reporting coverage, at the bottom */}
+        <MomentumHeatmap points={g.momentumPoints.filter(p=>p.short!=="All 5 (Composite)")}/>
       </div>
     );
   }
@@ -5826,21 +5797,84 @@ function GoalDetailChart({ g }) {
   // ── Goal 4: sector / context metrics ──────────────────────────────────────
   if (g.chartType === "context-metric-bars") {
     const criteria = g.criteria || [];
+    const breakdown = g.breakdown || [];
     const BLUE = "#2563EB", BLUE_LIGHT = "#93C5FD";
+
+    // Primary progress chart — baseline -> 2030 target, plus an "Avg" line and
+    // one line per breakdown entry that has a real value. Entries without a
+    // value yet (district/PS not broken out) render as a pending note below
+    // instead of a line, but need no code change once real values land.
+    const primaryData = [
+      { year:"Base", avg:0, target:null },
+      { year:g.baseline?.year || "2026", avg:g.current2026, target:null },
+      { year:"2027", avg:null, target:null },
+      { year:"2028", avg:null, target:null },
+      { year:"2029", avg:null, target:null },
+      { year:"2030", avg:null, target:g.goal2030 },
+    ];
+    const BREAKDOWN_COLORS = ["#0891B2","#7C3AED","#059669"];
+    breakdown.forEach((b,i)=>{
+      if (b.pct!=null) primaryData[1][b.key] = b.pct;
+    });
+
     return (
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
         <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2}}>Progress Toward 2030 Target</div>
-        <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"18px 20px"}}>
-          {/* Header: centered title + right-aligned baseline stat */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"start",marginBottom:14}}>
-            <div/>
-            <div style={{fontSize:14,fontWeight:800,color:BLUE,textAlign:"center",whiteSpace:"nowrap"}}>Sector / Context Metrics</div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:10,color:TEXT_SUB}}>{g.baseline?.year} Baseline</div>
-              <div style={{fontSize:20,fontWeight:900,color:TEXT,lineHeight:1.1}}>{g.current2026}%</div>
+
+        {/* Primary progress chart */}
+        <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"20px 20px 16px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"center"}}>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={primaryData} margin={{top:8,right:16,bottom:0,left:-10}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8"/>
+                <XAxis dataKey="year" tick={{fontSize:10,fill:TEXT}}/>
+                <YAxis domain={[0,100]} tick={{fontSize:10,fill:TEXT}} tickFormatter={v=>v+"%"}/>
+                <Tooltip contentStyle={{fontSize:11,borderRadius:8,border:"1px solid "+BORDER}}
+                  formatter={(v,n)=>[v!==null?v+"%":"—",n]}/>
+                <Legend wrapperStyle={{fontSize:11}}/>
+                <Line type="monotone" dataKey="avg" name="All Decision-Makers (Avg)" stroke={BRAND} strokeWidth={2.5}
+                  dot={(props)=>props.payload.avg!==null?<circle cx={props.cx} cy={props.cy} r={4} fill={BRAND} stroke="#fff" strokeWidth={1.5}/>:<circle r={0}/>}
+                  connectNulls={false}/>
+                <Line type="monotone" dataKey="target" name="2030 Target" stroke={BORDER} strokeWidth={2}
+                  strokeDasharray="6 4"
+                  dot={(props)=>props.payload.target!==null?<circle cx={props.cx} cy={props.cy} r={5} fill={BRAND+"44"} stroke={BRAND} strokeWidth={1.5}/>:<circle r={0}/>}
+                  connectNulls={false}/>
+                {breakdown.map((b,i)=>b.pct!=null && (
+                  <Line key={b.key} type="monotone" dataKey={b.key} name={b.label} stroke={BREAKDOWN_COLORS[i%BREAKDOWN_COLORS.length]} strokeWidth={2}
+                    strokeDasharray="4 3"
+                    dot={(props)=>props.payload[b.key]!=null?<circle cx={props.cx} cy={props.cy} r={4} fill={BREAKDOWN_COLORS[i%BREAKDOWN_COLORS.length]} stroke="#fff" strokeWidth={1.5}/>:<circle r={0}/>}
+                    connectNulls={false}/>
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{padding:"12px 14px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
+                <div style={{fontSize:11,color:TEXT_SUB,marginBottom:3}}>{g.baseline?.year} Baseline</div>
+                <div style={{fontSize:24,fontWeight:800,color:BRAND}}>{g.current2026}%</div>
+              </div>
+              <div style={{padding:"12px 14px",background:BG,borderRadius:10,border:"1px solid "+BORDER}}>
+                <div style={{fontSize:11,color:TEXT_SUB,marginBottom:3}}>2030 Target</div>
+                <div style={{fontSize:24,fontWeight:800,color:TEXT}}>{g.goal2030}%</div>
+              </div>
+              {breakdown.length>0 && (
+                <div style={{padding:"10px 12px",background:BG,borderRadius:8,border:"1px solid "+BORDER}}>
+                  <div style={{fontSize:10,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>By Decision-Maker Type</div>
+                  {breakdown.map((b,i)=>(
+                    <div key={b.key} style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:i<breakdown.length-1?4:0}}>
+                      <span style={{fontSize:11,color:TEXT_SUB}}>{b.label}</span>
+                      <span style={{fontSize:11,fontWeight:700,color:b.pct!=null?BREAKDOWN_COLORS[i%BREAKDOWN_COLORS.length]:TEXT_MUTED}}>
+                        {b.pct!=null ? b.pct+"%" : "Not yet broken out"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
+        {/* Supporting measures — what "high-quality" is defined by */}
+        <div style={{background:BG,borderRadius:10,border:"1px solid "+BORDER,padding:"18px 20px"}}>
           {g.subheading && (
             <div style={{fontSize:13,fontWeight:700,color:TEXT,textAlign:"center",marginBottom:4}}>{g.subheading}</div>
           )}

@@ -6653,6 +6653,7 @@ function GoalChartConfigEditor({ goal, user }) {
   const [solutionSpaces, setSolutionSpaces] = useState(parsed.solutionSpaces || []);
   const [subheading, setSubheading] = useState(parsed.subheading || "");
   const [criteria, setCriteria] = useState(parsed.criteria || []);
+  const [breakdown, setBreakdown] = useState(parsed.breakdown || []);
   const [scHeaderNote, setScHeaderNote] = useState(parsed.sectorContext?.headerNote || "");
   const [scIntro, setScIntro] = useState(parsed.sectorContext?.intro || "");
   const [scDetail, setScDetail] = useState(parsed.sectorContext?.detail || "");
@@ -6701,7 +6702,7 @@ function GoalChartConfigEditor({ goal, user }) {
       },
     };
     else if (goal.chart_type === "threshold-bars") chart_config = { threshold: threshold === "" ? null : parseFloat(threshold), solutionSpaces };
-    else if (goal.chart_type === "context-metric-bars") chart_config = { subheading, criteria };
+    else if (goal.chart_type === "context-metric-bars") chart_config = { subheading, criteria, breakdown };
     else chart_config = {};
     try {
       const res = await api(`/api/goals/${goal.goal_id}`, {
@@ -7101,9 +7102,33 @@ function GoalChartConfigEditor({ goal, user }) {
                 style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
             </div>
           ))}
-          <Btn variant="secondary" size="sm"
+          <Btn variant="secondary" size="sm" style={{ marginBottom: 20 }}
             onClick={() => setCriteria(c => [...c, { label: "", detail: "", pct: 0 }])}>
             + Add criterion
+          </Btn>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_SUB, marginBottom: 8 }}>
+            Breakdown by decision-maker type (primary chart)
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>
+            Leave "Pct" blank until this breakdown is available — the chart shows it as
+            "Not yet broken out" and adds a line automatically once a value is entered.
+          </div>
+          {breakdown.map((row, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Key (e.g. district)" value={row.key || ""} style={{ ...smallInput, width: 120 }}
+                onChange={e => setBreakdown(b => b.map((r, j) => j === i ? { ...r, key: e.target.value } : r))} />
+              <input placeholder="Label" value={row.label || ""} style={{ ...smallInput, flex: 1 }}
+                onChange={e => setBreakdown(b => b.map((r, j) => j === i ? { ...r, label: e.target.value } : r))} />
+              <input placeholder="Pct" type="number" value={row.pct ?? ""} style={{ ...smallInput, width: 80 }}
+                onChange={e => setBreakdown(b => b.map((r, j) => j === i ? { ...r, pct: e.target.value === "" ? null : parseFloat(e.target.value) } : r))} />
+              <button onClick={() => setBreakdown(b => b.filter((_, j) => j !== i))}
+                style={{ background: "none", border: "none", color: DANGER, cursor: "pointer", fontSize: 13 }}>Remove</button>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm"
+            onClick={() => setBreakdown(b => [...b, { key: "", label: "", pct: null }])}>
+            + Add breakdown category
           </Btn>
         </>
       )}
