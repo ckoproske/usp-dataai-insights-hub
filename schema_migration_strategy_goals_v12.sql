@@ -55,15 +55,22 @@ SELECT goal_id, number, title, chart_type, bold_stat, updated_by, last_updated
 FROM usp_data.usp_strategy.strategy_goals
 WHERE goal_id = 'g4';
 
--- 2. Confirm chart_config parses as valid JSON and has 3 criteria
+-- 2. Confirm chart_config parses as valid JSON and has exactly 3 criteria
+--    (get_json_object reads the raw JSON directly, so this doesn't depend on
+--    from_json's schema-casting, which can mask a real fix behind an
+--    unrelated type-mismatch null)
 SELECT goal_id,
-       get_json_object(chart_config, '$.subheading') AS subheading,
-       size(from_json(chart_config, 'struct<criteria:array<string>>').criteria) AS criteria_count,
-       get_json_object(chart_config, '$.criteria[0].label') AS criterion_1,
-       get_json_object(chart_config, '$.criteria[0].pct')   AS criterion_1_pct
+       get_json_object(chart_config, '$.subheading')         AS subheading,
+       get_json_object(chart_config, '$.criteria[0].label')  AS criterion_1,
+       get_json_object(chart_config, '$.criteria[0].pct')    AS criterion_1_pct,
+       get_json_object(chart_config, '$.criteria[1].detail') AS criterion_2_detail,
+       get_json_object(chart_config, '$.criteria[2].label')  AS criterion_3,
+       get_json_object(chart_config, '$.criteria[3].label')  AS criterion_4_should_be_null
 FROM usp_data.usp_strategy.strategy_goals
 WHERE goal_id = 'g4';
--- Expect: criteria_count=3, criterion_1='Timely', criterion_1_pct='42'.
+-- Expect: criterion_1='Timely', criterion_1_pct='42',
+--         criterion_2_detail='Combining across systems "not at all hard"',
+--         criterion_3='Actionable', criterion_4_should_be_null=NULL.
 
 -- 3. Confirm g1, g2, g3, g5, g6 were NOT touched by this migration
 SELECT goal_id, number, title, updated_by, last_updated
