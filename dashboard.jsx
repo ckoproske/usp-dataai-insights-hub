@@ -2554,8 +2554,13 @@ function BowPerformanceRatings({ bow }) {
   return (
     <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid " + BORDER }}>
       <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
-          textTransform: "uppercase", letterSpacing: 2 }}>Performance Ratings</span>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: TEXT,
+            textTransform: "uppercase", letterSpacing: 1.2 }}>Performance Ratings</div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
+            Pulled directly from INVEST
+          </div>
+        </div>
         <Row label="Impact"    field="impact" />
         <Row label="Execution" field="execution" />
         <button onClick={() => setOpen(o => !o)}
@@ -4455,7 +4460,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
       </div>
       {/* Portfolio sub-tabs */}
       <div style={{background:SURFACE,borderBottom:"1px solid "+BORDER,display:"flex",gap:0,paddingLeft:4}}>
-        {[{id:"portfolio-overview",label:"Overview"},{id:"measurement",label:"Measurement & Reporting"},{id:"partners",label:"Partners"}].map(tab=>{
+        {[{id:"portfolio-overview",label:"Overview"},{id:"measurement",label:"Bodies of Work"},{id:"partners",label:"Partners"}].map(tab=>{
           const active = tab.id==="portfolio-overview"?activeTab==="portfolio-overview"
             :tab.id==="partners"?activeTab==="partners"
             :inMeasurement;
@@ -4551,7 +4556,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
 
               {/* Description — full width */}
               <div>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Description</div>
+                <div style={{fontSize:14,fontWeight:800,color:TEXT,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Description</div>
                 <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.7}}>
                   {currentBow.description.split('\n\n').map((para,i)=><p key={i} style={{margin:i===0?"0 0 10px 0":"0"}}>{para}</p>)}
                 </div>
@@ -4560,14 +4565,14 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               {/* Outcomes — full text */}
               {currentBow.outcomes.length>0&&(
                 <div style={{marginTop:16}}>
-                  <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Outcomes</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{fontSize:14,fontWeight:800,color:TEXT,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Outcomes</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
                     {currentBow.outcomes.map((o,i)=>(
-                      <div key={o.id} style={{display:"flex",gap:10,alignItems:"baseline"}}>
-                        <span style={{fontSize:12,fontWeight:700,color:TEXT_MUTED,flexShrink:0,minWidth:22}}>{o.number||i+1}.</span>
+                      <div key={o.id} style={{display:"flex",gap:12,alignItems:"flex-start",background:BG,border:"1px solid "+BORDER,borderLeft:"4px solid "+pc.color,borderRadius:8,padding:"10px 14px"}}>
+                        <span style={{width:24,height:24,borderRadius:"50%",background:pc.color,color:"#fff",fontSize:12,fontWeight:800,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{o.number||i+1}</span>
                         <div style={{fontSize:14,color:TEXT_SUB,lineHeight:1.6}}>
-                          {(o.title||o.shortTitle)&&<span style={{fontWeight:700,color:TEXT}}>{o.title||o.shortTitle}</span>}
-                          {o.desc&&<span>{(o.title||o.shortTitle)?" — ":""}{o.desc}</span>}
+                          {(o.title||o.shortTitle)&&<div style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:o.desc?2:0}}>{o.title||o.shortTitle}</div>}
+                          {o.desc&&<div>{o.desc}</div>}
                         </div>
                       </div>
                     ))}
@@ -4577,6 +4582,7 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               <BowPerformanceRatings key={currentBow.id} bow={currentBow}/>
             </div>
             {/* ── BOW KPI strip ── */}
+            <div style={{fontSize:14,fontWeight:800,color:TEXT,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Measurement & Reporting</div>
             {(()=>{
               const yrIdx = YEARS.indexOf(CURRENT_YEAR);
               const bowAllTargets = currentBow.outcomes.flatMap(o =>
