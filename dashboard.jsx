@@ -8570,9 +8570,6 @@ function AllInvestmentsView({ onNavigate }) {
   const [currentUser, setCurrentUser]               = useState(null);
   const [viewMode, setViewMode]                     = useState("table");
   const [selectedOwner, setSelectedOwner]           = useState("all");
-  const [showApprover, setShowApprover]             = useState(true);
-  const [showNotes, setShowNotes]                   = useState(false);
-  const [approverDropdownPos, setApproverDropdownPos] = useState({ top: 0, left: 0 });
   const [paymentPopover, setPaymentPopover]         = useState(null);
   const paymentCache   = React.useRef({});
   const popoverTimeout = React.useRef(null);
@@ -9371,17 +9368,6 @@ function AllInvestmentsView({ onNavigate }) {
                           </>
                         )}
                       </th>
-                      {/* Approver — always visible */}
-                      {plainCol("Approver", false)}
-                      {/* Notes — collapsible */}
-                      <th onClick={() => setShowNotes(v => !v)}
-                        style={{ ...hStyle(false), borderRight: "none", cursor: "pointer",
-                          userSelect: "none", padding: showNotes ? "9px 12px" : "9px 6px",
-                          textAlign: showNotes ? "left" : "center", whiteSpace: "nowrap", overflow: "hidden" }}>
-                        {showNotes
-                          ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Investment Coordinator Notes <span style={{ fontSize: 9, opacity: 0.5 }}>◀</span></span>
-                          : <span style={{ fontSize: 11, color: TEXT_MUTED }} title="Expand Investment Coordinator Notes">+</span>}
-                      </th>
                     </tr>
                   );
                 })()}
@@ -9570,93 +9556,11 @@ function AllInvestmentsView({ onNavigate }) {
                           )}
                         </td>
 
-                        {/* Approver — collapsible */}
-                        <td style={{ ...tdBase, padding: showApprover ? "8px 12px" : 0, overflow: "hidden" }}>
-                          {showApprover && inv.status === "In Process" && (
-                            <div style={{ position: "relative" }}>
-                              <div onClick={e => {
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setApproverDropdownPos({ top: rect.bottom + 4, left: rect.left });
-                                  setOpenDropdown(openDropdown === `appr-${inv.id}` ? null : `appr-${inv.id}`);
-                                }}
-                                style={{ fontSize: 10, cursor: "pointer", userSelect: "none",
-                                  display: "flex", alignItems: "center", gap: 3,
-                                  color: inv.approver ? TEXT_SUB : TEXT_MUTED }}>
-                                <span>👤</span>
-                                {inv.approver || "Set approver…"}
-                                <span style={{ fontSize: 8, opacity: 0.6 }}>▼</span>
-                              </div>
-                              {openDropdown === `appr-${inv.id}` && (
-                                <>
-                                  <div onClick={() => setOpenDropdown(null)}
-                                    style={{ position: "fixed", inset: 0, zIndex: 199 }} />
-                                  <div style={{ position: "fixed", top: approverDropdownPos.top, left: approverDropdownPos.left, zIndex: 200,
-                                    background: SURFACE, border: "1px solid " + BORDER, borderRadius: 8,
-                                    padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,0.14)", minWidth: 160 }}>
-                                    {APPROVERS.map(name => (
-                                      <div key={name}
-                                        onClick={() => { saveApprover(inv.id, name); setOpenDropdown(null); }}
-                                        style={{ padding: "7px 14px", fontSize: 12, cursor: "pointer",
-                                          background: inv.approver === name ? pc.color + "12" : "transparent",
-                                          color: inv.approver === name ? pc.color : TEXT,
-                                          fontWeight: inv.approver === name ? 700 : 400 }}>
-                                        {name}
-                                      </div>
-                                    ))}
-                                    {inv.approver && (
-                                      <div onClick={() => { saveApprover(inv.id, null); setOpenDropdown(null); }}
-                                        style={{ padding: "6px 14px", fontSize: 11, cursor: "pointer",
-                                          color: TEXT_MUTED, borderTop: "1px solid " + BORDER }}>
-                                        Clear
-                                      </div>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Notes — collapsible */}
-                        <td style={{ ...tdBase, padding: showNotes ? "8px 12px" : 0, borderRight: "none", overflow: "hidden" }}>
-                          {showNotes && (isEditing ? (
-                            <>
-                              <PortfolioNotesEditor
-                                value={inv.internal_notes || ""}
-                                onSave={notes => saveNotes(inv.id, notes)}
-                                isSaving={isSaving}
-                              />
-                              <button onClick={() => setEditingId(null)}
-                                style={{ alignSelf: "flex-start", fontSize: 10, fontWeight: 700,
-                                  cursor: "pointer", borderRadius: 5, padding: "2px 7px",
-                                  border: "1px solid " + pc.color, background: pc.color,
-                                  color: "#fff", whiteSpace: "nowrap", marginTop: 4 }}>
-                                Done
-                              </button>
-                            </>
-                          ) : (
-                            <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 11, lineHeight: 1.5,
-                                  color: inv.internal_notes ? TEXT : TEXT_MUTED,
-                                  fontStyle: inv.internal_notes ? "normal" : "italic" }}>
-                                  {inv.internal_notes || "Add note…"}
-                                </div>
-                              </div>
-                              <button onClick={() => setEditingId(inv.id)}
-                                style={{ fontSize: 10, cursor: "pointer", flexShrink: 0,
-                                  border: "1px solid " + BORDER, borderRadius: 4,
-                                  padding: "2px 6px", background: BG, color: TEXT_MUTED }}>
-                                ✎
-                              </button>
-                            </div>
-                          ))}
-                        </td>
                       </tr>
 
                       {isEditing && (
                         <tr>
-                          <td colSpan={14} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
+                          <td colSpan={12} style={{ background: "#F0F7FF", borderTop: "1px solid #BFDBFE",
                             padding: "10px 16px", borderBottom: rowBorder }}>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
                               {[
