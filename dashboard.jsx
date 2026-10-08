@@ -93,6 +93,33 @@ const COMPLETION_ORDER = ["Not Started","On Track","Delayed","Complete"];
 const COMPLETION_MIGRATE = { "In Progress":"On Track","Blocked":"Delayed","Complete":"Complete","Not Started":"Not Started","On Track":"On Track","Delayed":"Delayed" };
 
 const YEARS        = [2026,2027,2028,2029,2030];
+
+// Client-side CSV export — downloads exactly the rows the caller passes in.
+// Leading BOM so Excel reads UTF-8; text starting with = + @ (or a non-numeric -)
+// is prefixed with ' so spreadsheets don't evaluate it as a formula.
+function downloadCsv(filename, headers, rows) {
+  const cell = v => {
+    let s = v === null || v === undefined ? "" : String(v);
+    if (/^[=+@]/.test(s) || /^-(?![\d.])/.test(s)) s = "'" + s;
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csv = [headers, ...rows].map(r => r.map(cell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function ExportButton({ onClick, label = "Export CSV", disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      style={{ padding: "5px 12px", fontSize: 12, fontWeight: 600, borderRadius: 7, flexShrink: 0,
+        cursor: disabled ? "default" : "pointer", border: "1px solid " + BORDER,
+        background: SURFACE, color: disabled ? TEXT_MUTED : TEXT_SUB, opacity: disabled ? 0.6 : 1 }}>
+      ⬇ {label}
+    </button>
+  );
+}
 const BUDGET_YEARS = [2026,2027,2028,2029];
 const STORAGE_KEY  = "usp-strategy-dashboard-v43";
 const STRATEGY_TOTAL = 258;
@@ -4582,7 +4609,44 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
               <BowPerformanceRatings key={currentBow.id} bow={currentBow}/>
             </div>
             {/* ── BOW KPI strip ── */}
-            <div style={{fontSize:14,fontWeight:800,color:TEXT,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Measurement & Reporting</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <div style={{fontSize:14,fontWeight:800,color:TEXT,textTransform:"uppercase",letterSpacing:1.2}}>Measurement & Reporting</div>
+              <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+                <ExportButton label="Export indicators & actuals" onClick={()=>{
+                  const rows=[];
+                  currentBow.outcomes.forEach((o,oi)=>{
+                    (o.impactIndicators||[]).filter(i=>i.text&&!i.text.startsWith("[Placeholder]")).forEach(ind=>{
+                      rows.push([
+                        currentBow.name, o.number||oi+1, o.title||o.shortTitle||"",
+                        ind.id, ind.name||"", ind.text||"", ind.source||"", ind.baseline||"", ind.updateFreq||"",
+                        ...YEARS.map(y=>(ind.targets||{})[y]||""),
+                        ...YEARS.map(y=>(ind.actuals||{})[y]??""),
+                        (ind.actualsList||[]).map(a=>a.year+(a.period?" "+a.period:"")+"="+a.value).join("; "),
+                        ind.lastUpdated||"",
+                      ]);
+                    });
+                  });
+                  downloadCsv(`${currentBow.name}_indicators_actuals.csv`.replace(/[\\/:*?"<>|]+/g,"-"),
+                    ["BOW","Outcome #","Outcome","Indicator ID","Name","Indicator","Source","Baseline","Frequency",
+                     ...YEARS.map(y=>"Target "+y),...YEARS.map(y=>"Actual "+y),"All readings (year period=value)","Last reading date"],
+                    rows);
+                }}/>
+                <ExportButton label="Export execution targets" onClick={()=>{
+                  const rows=[];
+                  currentBow.outcomes.forEach((o,oi)=>{
+                    YEARS.forEach(y=>{
+                      (o.executionTargets[y]||[]).forEach(t=>{
+                        const tt=typeof t==="string"?{text:t,completion:"Not Started"}:{...t,completion:migrateCompletion(t.completion)};
+                        if(!tt.text||tt.text.startsWith("[Placeholder]")) return;
+                        rows.push([currentBow.name,o.number||oi+1,o.title||o.shortTitle||"",y,tt.text,tt.completion,tt.notes||"",tt.last_updated||"",tt.updated_by||""]);
+                      });
+                    });
+                  });
+                  downloadCsv(`${currentBow.name}_execution_targets.csv`.replace(/[\\/:*?"<>|]+/g,"-"),
+                    ["BOW","Outcome #","Outcome","Year","Target","Completion","Notes","Last updated","Updated by"],rows);
+                }}/>
+              </div>
+            </div>
             {(()=>{
               const yrIdx = YEARS.indexOf(CURRENT_YEAR);
               const bowAllTargets = currentBow.outcomes.flatMap(o =>
@@ -8907,6 +8971,20 @@ function AllInvestmentsView({ onNavigate }) {
             </button>
           ))}
         </div>
+        {viewMode === "table" && (
+          <ExportButton disabled={filtered.length === 0} label={`Export CSV (${filtered.length})`} onClick={() => {
+            downloadCsv("investments.csv",
+              ["Investment ID","Title","Grantee","Description","Status","Workflow step","Type","Owner","Secondary owner",
+               "BOWs","Portfolio","Investment amount","Approved amount","Paid amount","Outstanding balance",
+               "Start date","End date","Co-funding teams","Special initiative","INVEST URL"],
+              filtered.map(inv => [
+                inv.id, inv.initiative, inv.grantee, inv.description, inv.status, inv.stage, inv.type, inv.owner, inv.secondaryOwner,
+                (inv.bowTitles || []).join("; "), (inv.bowPortfolioIds || []).join("; "),
+                inv.amount, inv.approvedAmount, inv.paidAmount, inv.outstanding,
+                inv.startDate, inv.endDate, inv.coFundingTeams, inv.specialInitiative, inv.investmentUrl,
+              ]));
+          }}/>
+        )}
         {/* Portfolio filter dropdown */}
         <select value={selectedPortfolio}
           onChange={e => { setSelectedPortfolio(e.target.value); setSelectedBows([]); setSelectedCoFundingTeam("all"); setSelectedOwner("all"); }}
