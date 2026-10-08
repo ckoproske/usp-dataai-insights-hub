@@ -1,4 +1,4 @@
-﻿// ── CDN Shims — replaces import statements (loaded via index.html script tags) ──
+// ── CDN Shims — replaces import statements (loaded via index.html script tags) ──
 const DASHBOARD_BUILD = "2026-09-01-strategy-overview";  // bump this string on every deploy to verify cache is busted
 console.log(`%c[Dashboard] build ${DASHBOARD_BUILD} loaded`, "color:#059669;font-weight:bold");
 const { useState, useEffect, useRef, useCallback } = React;
@@ -2486,172 +2486,84 @@ function PortfolioOutcomePanel({ po, poIdx, onChange, portShortTitles }) {
 }
 
 
-// ── BowRatingsPopover ─────────────────────────────────────────────────────────
-function BowRatingsPopover({ bow, onUpdate }) {
-  const [show, setShow]               = useState(false);
-  const [showRationale, setShowRationale] = useState(null); // "impact" | "execution" | null
-  const ref = React.useRef();
- 
-  const RATING_YEARS = [2026, 2027, 2028, 2029, 2030];
- 
-  // bow.ratings is populated by loadFromAPI:
-  // { current: [{ year, impact_rating, impact_rationale, execution_rating,
-  //               execution_rationale, is_estimate, assessed_at }],
-  //   historical: [{ impact_rating, impact_rationale, execution_rating,
-  //                  execution_rationale, is_estimate: false }] }
-  const currentRatings    = (bow.ratings?.current    || []);
-  const historicalRatings = (bow.ratings?.historical || []);
- 
-  // Build a map: year → { impact, execution, source, rationale }
-  const ratingMap = {};
- 
-  historicalRatings.forEach(r => {
-    // historical rows don't have year from v_bow_details — mark as confirmed
-    // If year is available use it, otherwise tag as "confirmed"
-    const yr = r.year || "confirmed";
-    ratingMap[yr] = {
-      impact:              r.impact_rating,
-      impactRationale:     r.Impact_Performance_Rating_Rationale || r.impact_rationale || "",
-      execution:           r.execution_rating,
-      executionRationale:  r.Execution_Performance_Rating_Rationale || r.execution_rationale || "",
-      isEstimate:          false,
-      source:              "INVEST",
-    };
-  });
- 
-  currentRatings.forEach(r => {
-    ratingMap[r.year] = {
-      impact:             r.impact_rating,
-      impactRationale:    r.impact_rationale || "",
-      execution:          r.execution_rating,
-      executionRationale: r.execution_rationale || "",
-      isEstimate:         true,
-      assessedAt:         r.assessed_at,
-      source:             "Claude estimate",
-    };
-  });
- 
-  React.useEffect(() => {
-    if (!show) return;
-    const h = e => {
-      if (ref.current && !ref.current.contains(e.target)) setShow(false);
-    };
-    window.addEventListener("mousedown", h);
-    return () => window.removeEventListener("mousedown", h);
-  }, [show]);
- 
-  const RatingCell = ({ value, rationale, isEstimate, source }) => {
-    const rs = value ? STATUS[value] : null;
+// ── BowPerformanceRatings ─────────────────────────────────────────────────────
+// Always-visible impact + execution rating and full rationale for a BOW.
+// Source: bow.ratings (bow_ratings estimates + confirmed invest.v_bow_details).
+function BowPerformanceRatings({ bow }) {
+  const current    = bow.ratings?.current    || [];
+  const historical = bow.ratings?.historical || [];
+
+  // Newest estimate first; fall back to the confirmed INVEST rating (no year).
+  const estimates = [...current].sort((a, b) => (b.year || 0) - (a.year || 0));
+  const entries = [
+    ...estimates.map(r => ({
+      key: String(r.year), label: String(r.year), source: "Claude estimate", r,
+    })),
+    ...historical.map(r => ({
+      key: "confirmed", label: "Confirmed (INVEST)", source: "INVEST", r,
+    })),
+  ].filter(e => e.r.impact_rating || e.r.execution_rating
+             || e.r.impact_rationale || e.r.execution_rationale);
+
+  const [sel, setSel] = useState(null);
+  if (entries.length === 0) return null;
+  const active = entries.find(e => e.key === sel) || entries[0];
+  const r = active.r;
+
+  const Block = ({ title, rating, rationale }) => {
+    const rs = rating ? STATUS[rating] : null;
     return (
-      <td style={{ textAlign: "center", padding: "8px 6px", verticalAlign: "middle" }}>
-        {value ? (
-          <div style={{ display: "flex", flexDirection: "column",
-            alignItems: "center", gap: 3 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4,
-              padding: "4px 10px", borderRadius: 7,
+      <div style={{ flex: 1, minWidth: 260 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+            textTransform: "uppercase", letterSpacing: 2 }}>{title}</span>
+          {rating ? (
+            <span style={{ padding: "3px 10px", borderRadius: 7, fontSize: 12, fontWeight: 700,
               border: "1.5px solid " + (rs?.color || BORDER) + "88",
-              background: rs?.pill || BG, color: rs?.color || TEXT_SUB,
-              fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>
-              {rs?.label || value}
+              background: rs?.pill || BG, color: rs?.color || TEXT_SUB }}>
+              {rs?.label || rating}
             </span>
-            {rationale && (
-              <div style={{ fontSize: 10, color: TEXT_MUTED, maxWidth: 120,
-                textAlign: "center", lineHeight: 1.4, marginTop: 2 }}>
-                {rationale.length > 60 ? rationale.slice(0, 60) + "…" : rationale}
-              </div>
-            )}
-          </div>
-        ) : (
-          <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
-        )}
-      </td>
+          ) : (
+            <span style={{ fontSize: 12, color: TEXT_MUTED }}>Not rated</span>
+          )}
+        </div>
+        <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          {rationale || <span style={{ color: TEXT_MUTED }}>No rationale recorded.</span>}
+        </div>
+      </div>
     );
   };
- 
+
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <button
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        style={{ display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "5px 13px", fontSize: 14, fontWeight: 700, borderRadius: 7,
-          border: "1px solid " + BORDER, background: SURFACE,
-          color: TEXT_SUB, cursor: "pointer", whiteSpace: "nowrap" }}>
-        BOW Ratings
-      </button>
- 
-      {show && (
-        <div
-          onMouseEnter={() => setShow(true)}
-          onMouseLeave={() => setShow(false)}
-          style={{ position: "absolute", top: "calc(100% + 8px)", left: 0,
-            zIndex: 9999, background: SURFACE, border: "1px solid " + BORDER,
-            borderRadius: 12, boxShadow: "0 8px 30px rgba(10,37,64,0.13)",
-            padding: "16px 18px", minWidth: 480 }}>
- 
-          <div style={{ display: "flex", justifyContent: "space-between",
-            alignItems: "flex-start", marginBottom: 14 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
-              {bow.name} — Ratings by Year
-            </div>
-            <div style={{ fontSize: 11, color: TEXT_MUTED }}>
-              Ratings pulled from INVEST
-            </div>
+    <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid " + BORDER }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED,
+          textTransform: "uppercase", letterSpacing: 2 }}>Performance Ratings</span>
+        {entries.length > 1 ? (
+          <div style={{ display: "flex", gap: 6 }}>
+            {entries.map(e => (
+              <button key={e.key} onClick={() => setSel(e.key)}
+                style={{ padding: "2px 9px", fontSize: 11, fontWeight: 600, borderRadius: 6,
+                  cursor: "pointer", border: "1px solid " + BORDER,
+                  background: e.key === active.key ? TEXT : SURFACE,
+                  color: e.key === active.key ? SURFACE : TEXT_SUB }}>
+                {e.label}
+              </button>
+            ))}
           </div>
- 
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid " + BORDER }}>
-                <th style={{ textAlign: "left", padding: "4px 8px 10px",
-                  color: TEXT_SUB, fontWeight: 600, fontSize: 13, width: 90 }} />
-                {RATING_YEARS.map(yr => (
-                  <th key={yr} style={{ textAlign: "center", padding: "4px 8px 10px",
-                    color: TEXT_SUB, fontWeight: 600, fontSize: 12 }}>
-                    {yr}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {["impact", "execution"].map((type, ri) => (
-                <tr key={type}
-                  style={{ borderBottom: ri === 0 ? "1px solid " + BORDER : "none" }}>
-                  <td style={{ padding: "10px 8px", color: TEXT_SUB, fontWeight: 600,
-                    fontSize: 13, textTransform: "capitalize",
-                    whiteSpace: "nowrap", verticalAlign: "middle" }}>
-                    {type}
-                  </td>
-                  {RATING_YEARS.map(yr => {
-                    const r = ratingMap[yr];
-                    const value     = r ? (type === "impact" ? r.impact : r.execution) : null;
-                    const rationale = r ? (type === "impact" ? r.impactRationale : r.executionRationale) : "";
-                    return (
-                      <RatingCell
-                        key={yr}
-                        value={value}
-                        rationale={rationale}
-                        isEstimate={r?.isEstimate}
-                        source={r?.source}
-                      />
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
- 
-          <div style={{ marginTop: 10, fontSize: 12, color: TEXT_MUTED,
-            borderTop: "1px solid " + BORDER, paddingTop: 8,
-            display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>
-              Estimates generated by Claude · Confirmed ratings entered in INVEST at annual reporting
-            </span>
-            <span style={{ fontSize: 11, color: "#D97706", fontWeight: 600 }}>
-              Overrides: leadership + MLE only
-            </span>
-          </div>
-        </div>
-      )}
+        ) : (
+          <span style={{ fontSize: 11, color: TEXT_MUTED }}>{active.label}</span>
+        )}
+        <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+          {active.source === "INVEST"
+            ? "Confirmed in INVEST at annual reporting"
+            : "Estimate — to be confirmed at annual reporting"}
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
+        <Block title="Impact"    rating={r.impact_rating}    rationale={r.impact_rationale} />
+        <Block title="Execution" rating={r.execution_rating} rationale={r.execution_rationale} />
+      </div>
     </div>
   );
 }
@@ -4700,9 +4612,6 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                   <span style={{fontSize:16,fontWeight:700,color:TEXT}}>{currentBow.name}</span>
                   <span style={{fontSize:11,fontWeight:600,color:TEXT_MUTED,background:BG,borderRadius:5,padding:"2px 7px",border:"1px solid "+BORDER}}>Body of Work</span>
                 </div>
-                <div style={{marginLeft:"auto"}}>
-                  <BowRatingsPopover bow={currentBow} onUpdate={updated=>onUpdateBows(bows.map(b=>b.id!==activeBow?b:updated))}/>
-                </div>
               </div>
 
               {/* Description — full width */}
@@ -4712,6 +4621,8 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                   {currentBow.description.split('\n\n').map((para,i)=><p key={i} style={{margin:i===0?"0 0 10px 0":"0"}}>{para}</p>)}
                 </div>
               </div>
+
+              <BowPerformanceRatings key={currentBow.id} bow={currentBow}/>
             </div>
             <div>
               {currentBow.outcomes.length>0&&(

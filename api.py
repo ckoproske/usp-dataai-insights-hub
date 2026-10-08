@@ -949,7 +949,7 @@ def add_goal_actual():
 # ═════════════════════════════════════════════════════════════════════════════
 # RATINGS — Claude-assessed (read) + restricted override (write)
 # Current year: read from bow_ratings / portfolio_outcome_ratings / goal_ratings
-# Historical confirmed: read from invest_bow_details (INVEST source of truth)
+# Historical confirmed: read from invest.v_bow_details (INVEST source of truth)
 # ═════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/ratings/bow/<bow_id>")
@@ -974,7 +974,7 @@ def get_bow_ratings(bow_id):
               FALSE AS is_estimate,
               'Confirmed — INVEST' AS rating_status
             FROM {SCHEMA}.bows b
-            JOIN {SCHEMA}.invest_bow_details d
+            JOIN {INVEST_SCHEMA}.v_bow_details d
               ON b.invest_bow_id = d.BoW_ID
             WHERE b.bow_id = ?""",
         [bow_id]
