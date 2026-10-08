@@ -4618,9 +4618,12 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                 {label:"Off Track",    value:offTrack,   sub:"indicators", color:"#DC2626"},
                 {label:"Missing Data", value:missingData,sub:"no "+CURRENT_YEAR+" actual", color:TEXT_MUTED},
               ];
+              const indPieData = bowAllInds.length > 0
+                ? indKpis.filter(k=>k.value>0).map(k=>({name:k.label,value:k.value,color:k.color}))
+                : [{name:"None",value:1,color:BORDER}];
 
               return (
-                <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr 1fr 1fr 1fr",gap:14,marginBottom:22}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:22}}>
                   {/* Targets — pie chart card */}
                   <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"16px 18px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
                     <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:12}}>Execution Targets — {CURRENT_YEAR}</div>
@@ -4642,15 +4645,27 @@ function PortfolioDashboard({ portId, portData, portColor, onUpdatePortfolio, on
                       </div>
                     </div>
                   </div>
-                  {/* Indicator stat cards */}
-                  {indKpis.map(k=>(
-                    <div key={k.label} style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"16px 18px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
-                      <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>{k.label}</div>
-                      <div style={{fontSize:32,fontWeight:800,color:k.color,lineHeight:1,marginBottom:5}}>{k.value}</div>
-                      <div style={{fontSize:12,color:TEXT_SUB}}>{k.sub}</div>
+                  {/* Impact indicators — donut card */}
+                  <div style={{background:SURFACE,borderRadius:12,border:"1px solid "+BORDER,padding:"16px 18px",boxShadow:"0 1px 4px rgba(10,37,64,0.05)"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:TEXT_MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:12}}>Impact Indicators — {CURRENT_YEAR}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:14}}>
+                      <PieChart width={80} height={80} style={{flexShrink:0}}>
+                        <Pie data={indPieData} cx={40} cy={40} innerRadius={22} outerRadius={36} dataKey="value" strokeWidth={0}>
+                          {indPieData.map((entry,i)=><Cell key={i} fill={entry.color}/>)}
+                        </Pie>
+                      </PieChart>
+                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                        {indKpis.map(k=>(
+                          <div key={k.label} style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{width:8,height:8,borderRadius:"50%",background:k.color,flexShrink:0}}/>
+                            <span style={{fontSize:13,fontWeight:700,color:TEXT,minWidth:18}}>{k.value}</span>
+                            <span style={{fontSize:11,color:TEXT_MUTED}}>{k.label}</span>
+                          </div>
+                        ))}
+                        <div style={{fontSize:11,color:TEXT_MUTED,marginTop:2}}>{bowAllInds.length} total</div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>                </div>
               );
             })()}
             <div>
